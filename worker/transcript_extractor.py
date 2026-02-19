@@ -122,14 +122,15 @@ class TranscriptExtractor:
                 except Exception:
                     continue
 
-            # If no preferred language found, try to get any available transcript
+            # If no preferred language found individually, try all at once —
+            # the API will pick the first available. This handles French videos
+            # that have FR transcripts but no EN, without falling back to Whisper.
             if transcript_data is None:
                 try:
-                    # Try without language specification (gets default)
                     api = YouTubeTranscriptApi()
-                    transcript_data = api.fetch(video_id)
-                    detected_lang = 'unknown'
-                    logger.info(f"Using default transcript")
+                    transcript_data = api.fetch(video_id, languages=preferred_languages)
+                    detected_lang = 'auto'
+                    logger.info("Found transcript via multi-language fallback")
                 except Exception as e:
                     logger.error(f"Could not find any transcript: {e}")
                     # Don't return here — fall through to Whisper fallback below

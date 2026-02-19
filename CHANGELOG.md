@@ -2,6 +2,10 @@
 
 ## 2026-02-19
 
+FIX: Transcript extractor — fallback "any language" call used no language spec, defaulting to English; French videos with FR transcripts were falling back to Whisper unnecessarily, burning Groq quota; now passes preferred_languages to the fallback call
+
+FIX: Old videos backlog — cleared 2019 pending deliveries and 1933 queued jobs from pre-subscription era; deleted 3 orphan accounts (the maintainer's account, user-v***@gmail.com, user-c***@gmail.com) and their data via CASCADE
+
 FEATURE: Referral system — referral_code on profiles, referrals table, 30-day cookie tracking, reward on Stripe checkout (20% monthly / 1 free month annual), ReferralSection on profile page, ShareListButton on list pages
 
 FIX: Trial users can now upgrade to paid Pro — show upgrade button when isTrial even though isPro is true
