@@ -37,3 +37,8 @@ APP_URL = os.getenv("APP_URL", "https://brief-tube.com")
 # Gemini
 COOKIES_FILE = COOKIES_DIR / "gemini_session.json"
 BROWSER_PROFILE_DIR = COOKIES_DIR / "browser_profile"
+
+# YouTube cookies (Netscape format) to bypass IP-based transcript API blocks.
+# Export from your browser with the "Get cookies.txt LOCALLY" extension while
+# logged into YouTube, then save to worker/cookies/youtube.txt.
+YOUTUBE_COOKIES_FILE = COOKIES_DIR / "youtube.txt"

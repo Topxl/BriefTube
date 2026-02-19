@@ -112,6 +112,49 @@ async def _process_video(
             preferred_languages=[user_language, 'fr', 'en']
         )
 
+        # ── Post-transcript alerts ──────────────────────────────────────
+
+        # Alert once per day if YouTube is IP-blocking this server
+        if transcript_extractor.last_ip_blocked and not stats.ip_block_alert_sent:
+            stats.ip_block_alert_sent = True
+            await alert_system.send_alert(
+                "⚠️ **YouTube bloque les requêtes transcripts**\n\n"
+                "L'IP du serveur est bloquée par YouTube — Whisper (Groq) "
+                "sera utilisé en fallback. Surveille le quota Groq.\n\n"
+                "Solution : ajoute un fichier cookies YouTube dans "
+                "<code>worker/cookies/youtube.txt</code>.",
+                level="WARNING",
+            )
+
+        # Track Groq usage and alert on quota milestones
+        if transcript_cost > 0:
+            groq_seconds = (transcript_cost / 0.00067) * 60
+            stats.record_groq_usage(groq_seconds, transcript_cost)
+            if stats.groq_quota_pct >= 80 and not stats.groq_alert_80_sent:
+                stats.groq_alert_80_sent = True
+                await alert_system.send_alert(
+                    f"⚠️ **Quota Groq à {stats.groq_quota_pct:.0f}%**\n\n"
+                    f"Utilisé : {stats.groq_seconds_today:.0f} / 28800s\n"
+                    f"Coût du jour : ${stats.groq_cost_today:.3f}\n"
+                    "Reset à minuit UTC.",
+                    level="WARNING",
+                )
+
+        # Alert on Groq rate-limit 429 (quota exhausted)
+        if error and ("rate_limit_exceeded" in error or "429" in error):
+            import re as _re
+            m = _re.search(r"Used (\d+), Requested (\d+)", error)
+            quota_info = ""
+            if m:
+                used, req = int(m.group(1)), int(m.group(2))
+                quota_info = f"\n{used}/{used + req}s utilisés ({used/28800*100:.0f}%)"
+            await alert_system.send_alert(
+                f"🔴 **Quota Groq épuisé**{quota_info}\n\n"
+                "Les vidéos sans transcript YouTube échoueront jusqu'au reset "
+                "à minuit UTC.",
+                level="ERROR",
+            )
+
         if not transcript:
             logger.error(f"[{video_id}] Transcript extraction failed: {error}")
             if TranscriptExtractor.should_retry(error):

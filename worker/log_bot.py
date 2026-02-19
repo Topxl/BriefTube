@@ -148,6 +148,50 @@ def _delivery_stats() -> dict:
         return {}
 
 
+def _groq_stats_today() -> dict:
+    """Parse today's Groq Whisper usage from worker.log.
+
+    Returns cost, audio minutes, transcriptions count, rate-limit hits,
+    and last known quota (seconds used from the 429 error message).
+    """
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    total_cost = 0.0
+    transcriptions = 0
+    rate_limits = 0
+    last_quota_used = 0
+    ip_blocks = 0
+    _COST_RE = re.compile(r"cost: ~\$(\d+\.\d+)")
+    _QUOTA_RE = re.compile(r"Used (\d+), Requested \d+")
+
+    try:
+        with open(LOG_FILE, "r", encoding="utf-8", errors="replace") as f:
+            for line in f:
+                if today not in line:
+                    continue
+                m = _COST_RE.search(line)
+                if m and "Transcription complete" in line:
+                    total_cost += float(m.group(1))
+                    transcriptions += 1
+                if "rate_limit_exceeded" in line or "Rate limit reached" in line:
+                    rate_limits += 1
+                    qm = _QUOTA_RE.search(line)
+                    if qm:
+                        last_quota_used = max(last_quota_used, int(qm.group(1)))
+                if "blocking requests" in line.lower() or "YouTube is blocking" in line:
+                    ip_blocks += 1
+    except Exception:
+        pass
+
+    return {
+        "cost": total_cost,
+        "minutes": total_cost / 0.00067 if total_cost else 0.0,
+        "transcriptions": transcriptions,
+        "rate_limits": rate_limits,
+        "quota_used": last_quota_used,
+        "ip_blocks": ip_blocks,
+    }
+
+
 def _recent_errors(n: int = 10) -> list[str]:
     """Dernières erreurs/warnings reformatés lisiblement."""
     try:
@@ -254,6 +298,8 @@ def _text_menu() -> str:
 def _text_stats() -> str:
     q = _queue_stats()
     d = _delivery_stats()
+    g = _groq_stats_today()
+
     queued = q.get("queued", 0)
     processing = q.get("processing", 0)
     completed = q.get("completed", 0)
@@ -261,6 +307,30 @@ def _text_stats() -> str:
     d_sent = d.get("sent", 0)
     d_pending = d.get("pending", 0)
     d_failed = d.get("failed", 0)
+
+    # Groq quota display
+    quota_used = g["quota_used"]
+    quota_pct = quota_used / 28800 * 100 if quota_used else 0
+    if quota_pct >= 95:
+        quota_emoji = "🔴"
+    elif quota_pct >= 80:
+        quota_emoji = "🟡"
+    else:
+        quota_emoji = "🟢"
+
+    groq_lines = (
+        f"\n<b>Groq Whisper (aujourd'hui)</b>\n"
+        f"• Coût          ${g['cost']:.4f}\n"
+        f"• Audio         {g['minutes']:.0f} min\n"
+        f"• Transcriptions {g['transcriptions']}\n"
+    )
+    if quota_used:
+        groq_lines += f"• Quota  {quota_emoji} {quota_used}/28800s ({quota_pct:.0f}%)\n"
+    if g["rate_limits"]:
+        groq_lines += f"• Rate limits   ⚠️ {g['rate_limits']}\n"
+    if g["ip_blocks"]:
+        groq_lines += f"• IP bloquée    🔴 {g['ip_blocks']}x\n"
+
     return (
         f"<b>Statistiques</b>\n\n"
         f"<b>File de traitement</b>\n"
@@ -272,6 +342,7 @@ def _text_stats() -> str:
         f"• Envoyées      {d_sent}\n"
         f"• En attente    {d_pending}\n"
         f"• Échouées      {d_failed}"
+        f"{groq_lines}"
     )
 
 

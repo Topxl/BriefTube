@@ -9,6 +9,8 @@ Strategy:
 
 import logging
 import os
+import threading
+from pathlib import Path
 from typing import Optional, Tuple
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api._errors import (
@@ -18,6 +20,10 @@ from youtube_transcript_api._errors import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Path to YouTube cookies file (Netscape format).
+# Set YOUTUBE_COOKIES_FILE in .env, or place cookies at worker/cookies/youtube.txt.
+_COOKIES_FILE = Path(__file__).parent / "cookies" / "youtube.txt"
 
 # Import Whisper transcriber (optional, only if API key is set)
 WHISPER_AVAILABLE = False
@@ -46,6 +52,11 @@ class TranscriptExtractor:
         self.enable_whisper_fallback = enable_whisper_fallback and WHISPER_AVAILABLE
         self.whisper_transcriber = None
 
+        # Thread-safe flag: True if the last YouTube transcript call was IP-blocked.
+        # Read this after get_transcript() returns to detect IP bans.
+        self._ip_blocked_lock = threading.Lock()
+        self.last_ip_blocked = False
+
         if self.enable_whisper_fallback:
             try:
                 self.whisper_transcriber = WhisperTranscriber()
@@ -53,6 +64,18 @@ class TranscriptExtractor:
             except Exception as e:
                 logger.error(f"Failed to initialize Whisper fallback: {e}")
                 self.enable_whisper_fallback = False
+
+        # Log whether cookies are available
+        if _COOKIES_FILE.exists():
+            logger.info(f"YouTube cookies loaded: {_COOKIES_FILE}")
+        else:
+            logger.info("No YouTube cookies found — transcript API may be IP-blocked on cloud IPs")
+
+    def _get_api(self) -> YouTubeTranscriptApi:
+        """Return a YouTubeTranscriptApi instance, using cookies if available."""
+        if _COOKIES_FILE.exists():
+            return YouTubeTranscriptApi(cookies=str(_COOKIES_FILE))
+        return YouTubeTranscriptApi()
 
     @staticmethod
     def extract_video_id(url: str) -> Optional[str]:
@@ -109,17 +132,19 @@ class TranscriptExtractor:
             # Try to get transcript in preferred language order
             transcript_data = None
             detected_lang = None
+            ip_blocked = False
 
             for lang in preferred_languages:
                 try:
-                    api = YouTubeTranscriptApi()
-                    transcript_data = api.fetch(video_id, languages=[lang])
+                    transcript_data = self._get_api().fetch(video_id, languages=[lang])
                     detected_lang = lang
                     logger.info(f"Found transcript in preferred language: {lang}")
                     break
                 except NoTranscriptFound:
                     continue
-                except Exception:
+                except Exception as e:
+                    if "blocking requests" in str(e).lower():
+                        ip_blocked = True
                     continue
 
             # If no preferred language found individually, try all at once —
@@ -127,13 +152,18 @@ class TranscriptExtractor:
             # that have FR transcripts but no EN, without falling back to Whisper.
             if transcript_data is None:
                 try:
-                    api = YouTubeTranscriptApi()
-                    transcript_data = api.fetch(video_id, languages=preferred_languages)
+                    transcript_data = self._get_api().fetch(video_id, languages=preferred_languages)
                     detected_lang = 'auto'
                     logger.info("Found transcript via multi-language fallback")
                 except Exception as e:
+                    if "blocking requests" in str(e).lower():
+                        ip_blocked = True
                     logger.error(f"Could not find any transcript: {e}")
                     # Don't return here — fall through to Whisper fallback below
+
+            # Record whether this call was IP-blocked (thread-safe)
+            with self._ip_blocked_lock:
+                self.last_ip_blocked = ip_blocked
 
             if transcript_data is None:
                 # YouTube transcripts not available (disabled, IP-blocked, or not found) - try Whisper fallback
@@ -152,7 +182,8 @@ class TranscriptExtractor:
 
         except TranscriptsDisabled:
             logger.warning(f"Transcripts are disabled for video: {video_id}")
-            # Try Whisper fallback
+            with self._ip_blocked_lock:
+                self.last_ip_blocked = False
             if self.enable_whisper_fallback and self.whisper_transcriber:
                 logger.info("Trying Whisper API fallback...")
                 return self._whisper_fallback(youtube_url, preferred_languages)

@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-02-20
+
+FEATURE: YouTube cookies support — place cookies/youtube.txt (Netscape format) to bypass IP blocks on transcript API; transcript_extractor auto-loads them if present; startup log indicates cookie status
+
+FEATURE: Groq quota tracking — WorkerStats now tracks seconds/cost used today with daily reset; proactive Telegram alerts when IP is blocked (once/day), when quota reaches 80%, and when rate limit 429 is hit (with quota info)
+
+FEATURE: Log bot Groq dashboard — Stats view now shows daily Groq cost, audio minutes, transcriptions, quota bar (🟢/🟡/🔴), rate limit hits, and IP block count parsed from worker.log
+
 ## 2026-02-19
 
 CHORE: Best practices — env validation (required vars crash at startup), select specific columns on profiles, cancel_url → /dashboard/profile, SiteConfig template data cleaned, DB search_path hardened on 4 functions, processing_queue RLS policy added, transcript_cost_analytics SECURITY DEFINER removed

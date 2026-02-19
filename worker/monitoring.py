@@ -121,6 +121,14 @@ class WorkerStats:
         self.avg_processing_time = 0
         self.processing_times = []
 
+        # Groq / Whisper usage (resets at midnight UTC each day)
+        self.groq_seconds_today: float = 0.0
+        self.groq_cost_today: float = 0.0
+        self._groq_day = datetime.utcnow().date()
+        # Alert thresholds already sent today (avoid spam)
+        self.groq_alert_80_sent = False
+        self.ip_block_alert_sent = False
+
     def record_video_processed(self, processing_time: float):
         """Record a successfully processed video."""
         self.videos_processed += 1
@@ -150,6 +158,23 @@ class WorkerStats:
     def record_delivery_failed(self):
         """Record a failed delivery."""
         self.deliveries_failed += 1
+
+    def record_groq_usage(self, audio_seconds: float, cost_usd: float) -> None:
+        """Track Groq Whisper usage, auto-resetting daily at midnight UTC."""
+        today = datetime.utcnow().date()
+        if today != self._groq_day:
+            self.groq_seconds_today = 0.0
+            self.groq_cost_today = 0.0
+            self._groq_day = today
+            self.groq_alert_80_sent = False
+            self.ip_block_alert_sent = False
+        self.groq_seconds_today += audio_seconds
+        self.groq_cost_today += cost_usd
+
+    @property
+    def groq_quota_pct(self) -> float:
+        """Percentage of daily Groq free-tier quota used (limit: 28800s/day)."""
+        return min(self.groq_seconds_today / 28800 * 100, 100.0)
 
     def get_uptime(self) -> str:
         """Get formatted uptime."""
@@ -182,7 +207,10 @@ class WorkerStats:
             "recent_errors": [
                 {"time": t.isoformat(), "message": msg}
                 for t, msg in self.last_errors[-5:]
-            ]
+            ],
+            "groq_seconds_today": round(self.groq_seconds_today, 1),
+            "groq_cost_today": round(self.groq_cost_today, 4),
+            "groq_quota_pct": round(self.groq_quota_pct, 1),
         }
 
 
