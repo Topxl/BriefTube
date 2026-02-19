@@ -27,6 +27,12 @@ from datetime import datetime, time as datetime_time
 
 # ── Logging ────────────────────────────────────────────────────
 
+# Ensure deno (used by yt-dlp for YouTube JS extraction) is in PATH
+import os as _os
+_deno = Path.home() / ".deno" / "bin"
+if _deno.exists() and str(_deno) not in _os.environ.get("PATH", ""):
+    _os.environ["PATH"] = str(_deno) + ":" + _os.environ.get("PATH", "")
+
 LOG_FILE = Path(__file__).parent / "worker.log"
 log_fmt = logging.Formatter("%(asctime)s [%(name)s] %(levelname)s %(message)s")
 

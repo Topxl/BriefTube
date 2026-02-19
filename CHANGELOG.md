@@ -2,6 +2,10 @@
 
 ## 2026-02-20
 
+FEATURE: yt-dlp subtitle fallback — 3-step transcript pipeline: (1) youtube-transcript-api, (2) yt-dlp VTT download with cookies/proxy (free, bypasses API IP block), (3) Groq Whisper; add deno to PATH at startup for yt-dlp JS runtime
+
+FEATURE: E2E tests — auth redirects, onboarding wizard, dashboard channels (Playwright + Supabase magic link auth helper)
+
 FEATURE: YouTube cookies support — place cookies/youtube.txt (Netscape format) to bypass IP blocks on transcript API; transcript_extractor auto-loads them if present; startup log indicates cookie status
 
 FEATURE: Groq quota tracking — WorkerStats now tracks seconds/cost used today with daily reset; proactive Telegram alerts when IP is blocked (once/day), when quota reaches 80%, and when rate limit 429 is hit (with quota info)

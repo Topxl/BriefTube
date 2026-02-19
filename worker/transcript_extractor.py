@@ -198,7 +198,12 @@ class TranscriptExtractor:
                 self.last_ip_blocked = ip_blocked
 
             if transcript_data is None:
-                # YouTube transcripts not available (disabled, IP-blocked, or not found) - try Whisper fallback
+                # Step 2b: Try yt-dlp subtitle download before Whisper (free, no quota)
+                vtt_text, vtt_lang = self._ytdlp_subtitles(youtube_url, preferred_languages)
+                if vtt_text:
+                    return vtt_text, vtt_lang, None, 0.0
+
+                # Step 3: Whisper API fallback (paid, uses Groq quota)
                 if self.enable_whisper_fallback and self.whisper_transcriber:
                     logger.warning("YouTube transcripts not available, trying Whisper API fallback...")
                     return self._whisper_fallback(youtube_url, preferred_languages)
@@ -232,6 +237,107 @@ class TranscriptExtractor:
                 logger.info("Trying Whisper API fallback after error...")
                 return self._whisper_fallback(youtube_url, preferred_languages)
             return None, None, f"error: {str(e)}", 0.0
+
+    def _ytdlp_subtitles(
+        self,
+        youtube_url: str,
+        preferred_languages: list[str],
+    ) -> tuple[Optional[str], Optional[str]]:
+        """Download subtitles via yt-dlp as a free fallback before Whisper.
+
+        Uses the authenticated cookies session (if available) to download VTT
+        subtitle files. Returns (text, language) or (None, None) on failure.
+        This is free and bypasses the youtube-transcript-api IP block issue
+        since yt-dlp uses a different YouTube endpoint.
+        """
+        import yt_dlp
+        import glob
+        import tempfile
+
+        cookies_file = str(_COOKIES_FILE) if _COOKIES_FILE.exists() else None
+        deno_path = Path.home() / ".deno" / "bin" / "deno"
+
+        ydl_opts: dict = {
+            "skip_download": True,
+            "writesubtitles": True,
+            "writeautomaticsub": True,
+            "subtitleslangs": list(dict.fromkeys(preferred_languages)),
+            "subtitlesformat": "vtt",
+            "quiet": True,
+            "no_warnings": True,
+            "noprogress": True,
+        }
+        if cookies_file:
+            ydl_opts["cookiefile"] = cookies_file
+        if deno_path.exists():
+            ydl_opts["js_runtimes"] = {"deno": {"path": str(deno_path)}}
+
+        http_proxy = os.environ.get("YOUTUBE_PROXY_HTTP", "")
+        if http_proxy:
+            ydl_opts["proxy"] = http_proxy
+
+        try:
+            with tempfile.TemporaryDirectory(prefix="brieftube_vtt_") as tmp:
+                ydl_opts["outtmpl"] = os.path.join(tmp, "%(id)s")
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    ydl.download([youtube_url])
+
+                vtt_files = glob.glob(os.path.join(tmp, "*.vtt"))
+                if not vtt_files:
+                    return None, None
+
+                # Pick file matching preferred language
+                selected = vtt_files[0]
+                detected_lang = "auto"
+                for lang in preferred_languages:
+                    matches = [f for f in vtt_files if f".{lang}." in f]
+                    if matches:
+                        selected = matches[0]
+                        detected_lang = lang
+                        break
+
+                text = self._parse_vtt(selected)
+                if text:
+                    logger.info(
+                        f"✅ yt-dlp subtitle extracted ({len(text)} chars) "
+                        f"lang: {detected_lang} [FREE]"
+                    )
+                    return text, detected_lang
+
+        except Exception as e:
+            err = str(e)
+            if "429" in err or "Too Many Requests" in err:
+                logger.warning("yt-dlp subtitle: rate-limited (429) — will try Whisper")
+            elif "Sign in" in err or "bot" in err.lower():
+                logger.warning("yt-dlp subtitle: auth required — will try Whisper")
+            else:
+                logger.warning(f"yt-dlp subtitle failed: {err[:120]}")
+
+        return None, None
+
+    @staticmethod
+    def _parse_vtt(filepath: str) -> Optional[str]:
+        """Parse a WebVTT subtitle file and return deduplicated plain text."""
+        try:
+            with open(filepath, "r", encoding="utf-8", errors="replace") as f:
+                content = f.read()
+            texts: list[str] = []
+            in_cue = False
+            for line in content.splitlines():
+                line = line.strip()
+                if not line or line.startswith("WEBVTT") or line.startswith("NOTE"):
+                    in_cue = False
+                    continue
+                if "-->" in line:
+                    in_cue = True
+                    continue
+                if in_cue:
+                    clean = re.sub(r"<[^>]+>", "", line).strip()
+                    if clean and (not texts or clean != texts[-1]):
+                        texts.append(clean)
+            return " ".join(texts) if texts else None
+        except Exception:
+            return None
 
     def _whisper_fallback(
         self,
