@@ -39,11 +39,14 @@ jobs:
       RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
       EMAIL_FROM: "BriefTube <contact@brieftube.app>"
       NEXT_PUBLIC_EMAIL_CONTACT: "contact@brieftube.app"
-      # Stripe
-      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
-      NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
-      STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
-      STRIPE_PRO_PRICE_ID: ${{ secrets.STRIPE_PRO_PRICE_ID }}
+      # Stripe — fallback placeholders so env validation passes in CI
+      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY || 'sk_test_placeholder' }}
+      NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_test_placeholder' }}
+      STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET || 'whsec_placeholder' }}
+      STRIPE_PRO_PRICE_ID: ${{ secrets.STRIPE_PRO_PRICE_ID || 'price_placeholder' }}
+      # Google OAuth — fallback placeholders so env validation passes in CI
+      GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID || 'google_client_id_placeholder' }}
+      GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET || 'google_client_secret_placeholder' }}
       # Playwright
       PLAYWRIGHT_TEST_BASE_URL: "http://localhost:3000"
       HEADLESS: "true"
