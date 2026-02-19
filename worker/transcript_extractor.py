@@ -72,9 +72,41 @@ class TranscriptExtractor:
             logger.info("No YouTube cookies found — transcript API may be IP-blocked on cloud IPs")
 
     def _get_api(self) -> YouTubeTranscriptApi:
-        """Return a YouTubeTranscriptApi instance, using cookies if available."""
+        """Return a YouTubeTranscriptApi instance.
+
+        Priority:
+        1. Proxy (YOUTUBE_PROXY_HTTP env var) — bypasses cloud IP blocks
+        2. Cookies (worker/cookies/youtube.txt) — helps with auth-gated videos
+        3. Plain unauthenticated API
+
+        Note: cookies alone do NOT bypass YouTube cloud IP blocks; a proxy is
+        required for that. Configure YOUTUBE_PROXY_HTTP in worker/.env.
+        """
+        import requests
+        from http.cookiejar import MozillaCookieJar
+
+        session = requests.Session()
+
+        # Load cookies if available
         if _COOKIES_FILE.exists():
-            return YouTubeTranscriptApi(cookies=str(_COOKIES_FILE))
+            try:
+                jar = MozillaCookieJar()
+                jar.load(str(_COOKIES_FILE), ignore_discard=True, ignore_expires=True)
+                session.cookies = jar  # type: ignore[assignment]
+            except Exception as e:
+                logger.warning(f"Failed to load YouTube cookies: {e}")
+
+        # Apply proxy if configured
+        http_proxy = os.environ.get("YOUTUBE_PROXY_HTTP", "")
+        https_proxy = os.environ.get("YOUTUBE_PROXY_HTTPS", http_proxy)
+        if http_proxy:
+            session.proxies = {"http": http_proxy, "https": https_proxy}
+            return YouTubeTranscriptApi(http_client=session)
+
+        # Use cookies-only session if cookies exist, else plain API
+        if _COOKIES_FILE.exists():
+            return YouTubeTranscriptApi(http_client=session)
+
         return YouTubeTranscriptApi()
 
     @staticmethod

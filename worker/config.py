@@ -38,7 +38,14 @@ APP_URL = os.getenv("APP_URL", "https://brief-tube.com")
 COOKIES_FILE = COOKIES_DIR / "gemini_session.json"
 BROWSER_PROFILE_DIR = COOKIES_DIR / "browser_profile"
 
-# YouTube cookies (Netscape format) to bypass IP-based transcript API blocks.
-# Export from your browser with the "Get cookies.txt LOCALLY" extension while
-# logged into YouTube, then save to worker/cookies/youtube.txt.
+# YouTube cookies (Netscape format) — helps with age-restricted / login-required
+# videos, but does NOT bypass cloud IP blocks on the transcript API.
+# Export via "Get cookies.txt LOCALLY" browser extension → worker/cookies/youtube.txt
 YOUTUBE_COOKIES_FILE = COOKIES_DIR / "youtube.txt"
+
+# HTTP/HTTPS proxy for YouTube transcript API requests.
+# Cloud IPs are blocked by YouTube; routing through a residential proxy fixes this.
+# Recommended: Webshare.io (~$3/month) or any HTTP proxy.
+# Format: "http://user:pass@host:port" or "http://host:port"
+YOUTUBE_PROXY_HTTP = os.getenv("YOUTUBE_PROXY_HTTP", "")
+YOUTUBE_PROXY_HTTPS = os.getenv("YOUTUBE_PROXY_HTTPS", "")
