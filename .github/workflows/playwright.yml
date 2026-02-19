@@ -17,6 +17,7 @@ on:
       - "e2e/**"
       - "package.json"
       - "pnpm-lock.yaml"
+      - ".github/workflows/playwright.yml"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
