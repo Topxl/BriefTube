@@ -27,7 +27,6 @@ jobs:
     name: Playwright Tests
     timeout-minutes: 60
     runs-on: ubuntu-latest
-    environment: Production
 
     env:
       NODE_ENV: "production"
