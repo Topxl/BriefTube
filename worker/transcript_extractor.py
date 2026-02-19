@@ -74,38 +74,47 @@ class TranscriptExtractor:
     def _get_api(self) -> YouTubeTranscriptApi:
         """Return a YouTubeTranscriptApi instance.
 
-        Priority:
-        1. Proxy (YOUTUBE_PROXY_HTTP env var) — bypasses cloud IP blocks
-        2. Cookies (worker/cookies/youtube.txt) — helps with auth-gated videos
-        3. Plain unauthenticated API
-
-        Note: cookies alone do NOT bypass YouTube cloud IP blocks; a proxy is
-        required for that. Configure YOUTUBE_PROXY_HTTP in worker/.env.
+        Uses WebshareProxyConfig (rotating residential) if YOUTUBE_PROXY_HTTP
+        is set — this retries up to 10 times with a new IP on each block,
+        reliably bypassing YouTube's cloud IP restrictions.
+        Falls back to cookies-only or plain API if no proxy is configured.
         """
+        from youtube_transcript_api.proxies import WebshareProxyConfig, GenericProxyConfig
+
+        http_proxy = os.environ.get("YOUTUBE_PROXY_HTTP", "")
+
+        if http_proxy and "p.webshare.io" in http_proxy:
+            # Extract credentials from the URL: http://user-rotate:pass@p.webshare.io:port
+            import re as _re
+            m = _re.match(r"https?://([^:]+)-rotate:([^@]+)@p\.webshare\.io:(\d+)", http_proxy)
+            if m:
+                username, password, port = m.group(1), m.group(2), int(m.group(3))
+                proxy_config = WebshareProxyConfig(
+                    proxy_username=username,
+                    proxy_password=password,
+                    proxy_port=port,
+                    retries_when_blocked=10,
+                )
+                logger.debug(f"Using WebshareProxyConfig (rotating residential, port {port})")
+                return YouTubeTranscriptApi(proxy_config=proxy_config)
+
+        if http_proxy:
+            # Generic proxy (non-Webshare)
+            proxy_config = GenericProxyConfig(http_url=http_proxy)
+            return YouTubeTranscriptApi(proxy_config=proxy_config)
+
+        # No proxy — use cookies-only session if available
         import requests
         from http.cookiejar import MozillaCookieJar
-
         session = requests.Session()
-
-        # Load cookies if available
         if _COOKIES_FILE.exists():
             try:
                 jar = MozillaCookieJar()
                 jar.load(str(_COOKIES_FILE), ignore_discard=True, ignore_expires=True)
                 session.cookies = jar  # type: ignore[assignment]
+                return YouTubeTranscriptApi(http_client=session)
             except Exception as e:
                 logger.warning(f"Failed to load YouTube cookies: {e}")
-
-        # Apply proxy if configured
-        http_proxy = os.environ.get("YOUTUBE_PROXY_HTTP", "")
-        https_proxy = os.environ.get("YOUTUBE_PROXY_HTTPS", http_proxy)
-        if http_proxy:
-            session.proxies = {"http": http_proxy, "https": https_proxy}
-            return YouTubeTranscriptApi(http_client=session)
-
-        # Use cookies-only session if cookies exist, else plain API
-        if _COOKIES_FILE.exists():
-            return YouTubeTranscriptApi(http_client=session)
 
         return YouTubeTranscriptApi()
 
