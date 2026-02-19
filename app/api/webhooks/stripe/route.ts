@@ -2,6 +2,7 @@ import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 import { stripe } from "@/lib/stripe";
+import { SiteConfig } from "@/site-config";
 import { headers } from "next/headers";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
@@ -147,10 +148,12 @@ const checkoutSessionCompleted = async (
       const interval =
         stripeSubscription.items.data[0]?.plan?.interval ?? "month";
       const amountTotal = session.amount_total ?? 0;
+      const { monthlyRewardFraction, annualRewardMonths, currency } =
+        SiteConfig.referral;
       const creditAmount =
         interval === "year"
-          ? Math.round(amountTotal / 12)
-          : Math.round(amountTotal * 0.2);
+          ? Math.round(amountTotal / (12 / annualRewardMonths))
+          : Math.round(amountTotal * monthlyRewardFraction);
       const rewardType = interval === "year" ? "free_month" : "discount_20pct";
 
       const { data: referrer } = await supabase
@@ -175,7 +178,7 @@ const checkoutSessionCompleted = async (
       if (referrerCustomerId && creditAmount > 0) {
         await stripe.customers.createBalanceTransaction(referrerCustomerId, {
           amount: -creditAmount,
-          currency: "usd",
+          currency,
           description: `Referral reward (${rewardType}) — user converted`,
         });
 

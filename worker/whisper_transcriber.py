@@ -64,6 +64,7 @@ class WhisperTranscriber:
                 'outtmpl': str(output_path.with_suffix('')),  # yt-dlp adds .mp3
                 'quiet': True,
                 'no_warnings': True,
+                'noprogress': True,
             }
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:

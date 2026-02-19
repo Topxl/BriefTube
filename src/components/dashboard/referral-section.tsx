@@ -63,8 +63,11 @@ export function ReferralSection({ referralCode, referrals }: Props) {
         {/* Reward explanation */}
         <div className="border-t border-white/[0.04] px-4 py-3">
           <p className="text-muted-foreground text-xs">
-            Monthly subscriber converts → you earn 20% credit. Annual subscriber
-            → 1 free month credit.
+            Monthly subscriber converts → you earn{" "}
+            {Math.round(SiteConfig.referral.monthlyRewardFraction * 100)}%
+            credit. Annual subscriber → {SiteConfig.referral.annualRewardMonths}{" "}
+            free month
+            {SiteConfig.referral.annualRewardMonths > 1 ? "s" : ""} credit.
           </p>
         </div>
 

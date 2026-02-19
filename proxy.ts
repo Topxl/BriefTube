@@ -1,18 +1,16 @@
 import { updateSession } from "@/lib/supabase/middleware";
+import { SiteConfig } from "@/site-config";
 import type { NextRequest } from "next/server";
 
-const REFERRAL_COOKIE = "brieftube_ref";
-const REFERRAL_COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
-
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const response = await updateSession(request);
 
   const refCode = request.nextUrl.searchParams.get("ref");
-  if (refCode && !request.cookies.has(REFERRAL_COOKIE)) {
-    response.cookies.set(REFERRAL_COOKIE, refCode, {
+  if (refCode && !request.cookies.has(SiteConfig.referral.cookieName)) {
+    response.cookies.set(SiteConfig.referral.cookieName, refCode, {
       httpOnly: true,
       sameSite: "lax",
-      maxAge: REFERRAL_COOKIE_MAX_AGE,
+      maxAge: SiteConfig.referral.cookieTtlDays * 24 * 60 * 60,
       path: "/",
     });
   }

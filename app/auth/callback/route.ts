@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { SiteConfig } from "@/site-config";
 import { cookies } from "next/headers";
 
-const REFERRAL_COOKIE = "brieftube_ref";
+const REFERRAL_COOKIE = SiteConfig.referral.cookieName;
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
