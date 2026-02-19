@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { SummariesFeed } from "@/components/dashboard/summaries-feed";
 import { TrialBanner } from "@/components/dashboard/trial-banner";
 import { SourcesSection } from "@/components/dashboard/sources-section";
+import { SectionErrorBoundary } from "@/components/nowts/section-error-boundary";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -56,18 +57,22 @@ export default async function DashboardPage() {
       {trialDaysLeft > 0 && <TrialBanner daysLeft={trialDaysLeft} />}
 
       {/* Sources */}
-      <SourcesSection
-        initialSources={sources ?? []}
-        maxChannels={maxChannels}
-        isPro={isPro}
-      />
+      <SectionErrorBoundary>
+        <SourcesSection
+          initialSources={sources ?? []}
+          maxChannels={maxChannels}
+          isPro={isPro}
+        />
+      </SectionErrorBoundary>
 
       {/* Recent summaries */}
       <div className="space-y-3">
         <h2 className="text-sm font-semibold">Recent summaries</h2>
-        <Suspense fallback={null}>
-          <SummariesFeed />
-        </Suspense>
+        <SectionErrorBoundary>
+          <Suspense fallback={null}>
+            <SummariesFeed />
+          </Suspense>
+        </SectionErrorBoundary>
       </div>
     </div>
   );

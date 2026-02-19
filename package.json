@@ -16,6 +16,7 @@
     "start": "next start",
     "stripe-webhooks": "stripe listen --forward-to localhost:3000/api/webhooks/stripe",
     "ts": "tsc --noEmit",
+    "type:supabase": "supabase gen types typescript --local > src/types/supabase.ts",
     "vercel-build": "pnpm build",
     "test": "vitest",
     "test:e2e": "HEADLESS=0 playwright test --ui",

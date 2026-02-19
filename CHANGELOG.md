@@ -2,6 +2,11 @@
 
 ## 2026-02-20
 
+FEATURE: SectionErrorBoundary — React class error boundary for dashboard sections; wraps SourcesSection and SummariesFeed so a section crash no longer blanks the full page
+FEATURE: fetchApi + isApiError — typed fetch wrapper in src/lib/api-response.ts that throws on non-2xx or { error } bodies; unifies client-side API error handling
+REFACTOR: resolveActionResult — now resolves ActionResult<T> discriminated union and throws on { error }; exports ActionResult, ActionSuccess, ActionFailure types
+CHORE: Add type:supabase script to package.json — regenerate src/types/supabase.ts from local DB schema with one command
+
 FIX: YouTube transcript IP block — configure WebshareProxyConfig (rotating residential) via YOUTUBE_PROXY_HTTP; uses native youtube-transcript-api WebshareProxyConfig with 10 auto-retries on block; transcripts now free again via YouTube API
 
 FEATURE: yt-dlp subtitle fallback — 3-step transcript pipeline: (1) youtube-transcript-api, (2) yt-dlp VTT download with cookies/proxy (free, bypasses API IP block), (3) Groq Whisper; add deno to PATH at startup for yt-dlp JS runtime
