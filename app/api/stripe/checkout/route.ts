@@ -59,7 +59,7 @@ export async function POST() {
     ],
     ...(trialEnd ? { subscription_data: { trial_end: trialEnd } } : {}),
     success_url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/dashboard/billing?success=true`,
-    cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/pricing`,
+    cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/dashboard/profile`,
     metadata: {
       userId: user.id,
     },

@@ -13,7 +13,9 @@ export default async function ProfilePage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("*")
+    .select(
+      "subscription_status, trial_ends_at, stripe_customer_id, telegram_connected, tts_voice, max_channels, referral_code",
+    )
     .eq("id", user.id)
     .single();
 

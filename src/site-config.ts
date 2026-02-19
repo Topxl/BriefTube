@@ -11,16 +11,9 @@ export const SiteConfig = {
   appIcon: "/images/icon.png",
   company: {
     name: "BriefTube",
-    address: "421 Rue de Paris, France", // Remove if not needed
   },
   brand: {
-    primary: "#007291", // You can adjust this to your brand color
-  },
-  team: {
-    image: "https://melvynx.com/images/me/twitter-en.jpg",
-    website: "https://melvynx.com",
-    twitter: "https://twitter.com/melvyn_me",
-    name: "Melvynx",
+    primary: "#dc2626", // red-600
   },
   referral: {
     /** Name of the tracking cookie set when a visitor arrives via ?ref= */
