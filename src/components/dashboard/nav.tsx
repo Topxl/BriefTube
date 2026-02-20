@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -87,7 +88,9 @@ export function DashboardNav({ email, plan }: { email: string; plan: string }) {
           {/* Center: search bar — desktop only, dashboard only */}
           {onDashboard && (
             <div className="mx-6 hidden w-full max-w-sm flex-1 md:block">
-              <ChannelSearchBar />
+              <Suspense fallback={null}>
+                <ChannelSearchBar />
+              </Suspense>
             </div>
           )}
 
@@ -110,7 +113,9 @@ export function DashboardNav({ email, plan }: { email: string; plan: string }) {
         {/* Mobile search row — dashboard only */}
         {onDashboard && (
           <div className="border-t border-white/[0.04] px-4 pt-2 pb-3 md:hidden">
-            <ChannelSearchBar />
+            <Suspense fallback={null}>
+              <ChannelSearchBar />
+            </Suspense>
           </div>
         )}
       </nav>
