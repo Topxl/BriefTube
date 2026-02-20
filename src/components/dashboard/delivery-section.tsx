@@ -22,6 +22,47 @@ type Props = {
   initialVoice: string;
 };
 
+function VoicePicker({
+  currentVoice,
+  onSelect,
+}: {
+  currentVoice: string;
+  onSelect: (v: string) => void;
+}) {
+  return (
+    <div className="grid gap-1.5 sm:grid-cols-2">
+      {voices.map((v) => (
+        <button
+          key={v.value}
+          onClick={() => onSelect(v.value)}
+          className={`flex items-center gap-2.5 rounded-lg border px-3 py-2 text-left transition-all duration-200 ${
+            currentVoice === v.value
+              ? "text-foreground border-red-500/25 bg-red-500/[0.06]"
+              : "text-muted-foreground hover:text-foreground border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]"
+          }`}
+        >
+          <div
+            className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+              currentVoice === v.value
+                ? "bg-red-500/20 text-red-400"
+                : "text-muted-foreground bg-white/[0.06]"
+            }`}
+          >
+            {v.label.charAt(0)}
+          </div>
+          <div className="min-w-0">
+            <p className="text-[12px] leading-none font-medium">{v.label}</p>
+            <p className="text-muted-foreground mt-0.5 text-[10px]">{v.lang}</p>
+          </div>
+          {currentVoice === v.value && (
+            <Check className="ml-auto h-3 w-3 shrink-0 text-red-400" />
+          )}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function TelegramConnectContent({ onConnected }: { onConnected: () => void }) {
   const supabase = createClient();
   const [connectToken, setConnectToken] = useState("");
@@ -142,6 +183,8 @@ export function DeliverySection({
   const [voice, setVoice] = useState(initialVoice);
   const [savingVoice, setSavingVoice] = useState(false);
 
+  const currentVoiceMeta = voices.find((v) => v.value === voice);
+
   const openTelegramModal = () => {
     dialogManager.custom({
       title: "Connect Telegram",
@@ -166,9 +209,27 @@ export function DeliverySection({
     toast.success("Voice updated");
   };
 
+  const openVoicePicker = () => {
+    dialogManager.custom({
+      title: "Audio voice",
+      size: "sm",
+      children: (
+        <VoicePicker
+          currentVoice={voice}
+          onSelect={(v) => {
+            dialogManager.closeAll();
+            void updateVoice(v);
+          }}
+        />
+      ),
+    });
+  };
+
   return (
-    <div className="space-y-4">
-      <h2 className="text-sm font-semibold">Delivery</h2>
+    <section className="space-y-2">
+      <h2 className="text-muted-foreground/50 px-1 text-xs font-medium tracking-wide uppercase">
+        Delivery
+      </h2>
 
       <div className="divide-y divide-white/[0.04] overflow-hidden rounded-xl border border-white/[0.06]">
         {/* Telegram row */}
@@ -211,53 +272,27 @@ export function DeliverySection({
         </div>
 
         {/* Voice row */}
-        <div className="px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium">Audio voice</p>
-              <p className="text-muted-foreground text-[11px]">
-                {voices.find((v) => v.value === voice)?.label ?? "Denise"} ·{" "}
-                {voices.find((v) => v.value === voice)?.lang ?? "French"}
-              </p>
-            </div>
+        <div className="flex items-center justify-between px-4 py-3">
+          <div>
+            <p className="text-sm font-medium">Audio voice</p>
+            <p className="text-muted-foreground text-[11px]">
+              {currentVoiceMeta?.label ?? "Denise"} ·{" "}
+              {currentVoiceMeta?.lang ?? "French"}
+            </p>
           </div>
-          <div className="mt-3 grid gap-1.5 sm:grid-cols-2">
-            {voices.map((v) => (
-              <button
-                key={v.value}
-                onClick={() => void updateVoice(v.value)}
-                disabled={savingVoice}
-                className={`flex items-center gap-2.5 rounded-lg border px-3 py-2 text-left text-sm transition-all duration-200 ${
-                  voice === v.value
-                    ? "text-foreground border-red-500/25 bg-red-500/[0.06]"
-                    : "text-muted-foreground hover:text-foreground border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]"
-                }`}
-              >
-                <div
-                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
-                    voice === v.value
-                      ? "bg-red-500/20 text-red-400"
-                      : "text-muted-foreground bg-white/[0.06]"
-                  }`}
-                >
-                  {v.label.charAt(0)}
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[12px] leading-none font-medium">
-                    {v.label}
-                  </p>
-                  <p className="text-muted-foreground mt-0.5 text-[10px]">
-                    {v.lang}
-                  </p>
-                </div>
-                {voice === v.value && (
-                  <Check className="ml-auto h-3 w-3 shrink-0 text-red-400" />
-                )}
-              </button>
-            ))}
-          </div>
+          <button
+            onClick={openVoicePicker}
+            disabled={savingVoice}
+            className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-xs transition-colors disabled:opacity-50"
+          >
+            {savingVoice ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              "Change"
+            )}
+          </button>
         </div>
       </div>
-    </div>
+    </section>
   );
 }
