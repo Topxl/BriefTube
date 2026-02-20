@@ -64,10 +64,27 @@ def get_all_known_video_ids() -> set[str]:
 
     Used by the RSS scanner to check new videos in O(1) locally instead
     of making one DB query per video (which causes 3000+ queries per scan).
+    Paginates past the PostgREST 1000-row default limit so the full set is
+    returned even when processed_videos has thousands of rows.
     """
     sb = get_client()
-    res = sb.table("processed_videos").select("video_id").execute()
-    return {row["video_id"] for row in (res.data or [])}
+    known: set[str] = set()
+    offset = 0
+    while True:
+        res = (
+            sb.table("processed_videos")
+            .select("video_id")
+            .range(offset, offset + 999)
+            .execute()
+        )
+        if not res.data:
+            break
+        for row in res.data:
+            known.add(row["video_id"])
+        if len(res.data) < 1000:
+            break
+        offset += 1000
+    return known
 
 
 def mark_video_completed(video_id: str, summary: str, audio_url: str, metadata: dict = None):
@@ -99,7 +116,12 @@ def mark_video_failed(video_id: str):
 
 
 def insert_new_video(video_id: str, channel_id: str, video_title: str, video_url: str):
-    """Insert a new video into processed_videos (status=pending)."""
+    """Insert a new video into processed_videos (status=pending).
+
+    Uses ignore_duplicates=True so existing records (skipped, completed, failed)
+    are never overwritten — prevents the scanner from downgrading skipped videos
+    back to pending when a pagination gap causes them to appear "unknown".
+    """
     sb = get_client()
     sb.table("processed_videos").upsert({
         "video_id": video_id,
@@ -107,7 +129,7 @@ def insert_new_video(video_id: str, channel_id: str, video_title: str, video_url
         "video_title": video_title,
         "video_url": video_url,
         "status": "pending",
-    }, on_conflict="video_id").execute()
+    }, on_conflict="video_id", ignore_duplicates=True).execute()
 
 
 # ── Processing Queue ───────────────────────────────────────────
@@ -120,7 +142,7 @@ def enqueue_video(video_id: str, youtube_url: str, video_title: str, channel_id:
         "video_title": video_title,
         "channel_id": channel_id,
         "status": "queued",
-    }, on_conflict="video_id").execute()
+    }, on_conflict="video_id", ignore_duplicates=True).execute()
 
 
 def pick_next_job() -> dict | None:
