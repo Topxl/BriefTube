@@ -101,7 +101,11 @@ export default async function PricingPage() {
                 Current Plan
               </Button>
             ) : (
-              <form action="/api/stripe/checkout" method="POST">
+              <form
+                action="/api/stripe/checkout"
+                method="POST"
+                data-form-type="other"
+              >
                 <Button type="submit" className="w-full">
                   Upgrade to Pro
                 </Button>

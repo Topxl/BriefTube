@@ -2,6 +2,9 @@
 
 ## 2026-02-20
 
+FIX: Add data-form-type="other" to YouTube channel input to prevent Dashlane autofill
+UX: Limit sources list to 3 visible by default with search bar + "Show more" (+10) navigation
+
 FIX: Fix security advisor — remove SECURITY DEFINER from transcript_cost_analytics view
 FIX: Fix security advisor — add SET search_path to generate_referral_code, pick_next_processing_job, prevent_sensitive_profile_changes
 CHORE: Fix all RLS performance advisors — replace auth.uid() with (select auth.uid()) across 13 policies

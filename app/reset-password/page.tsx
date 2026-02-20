@@ -132,7 +132,11 @@ export default function ResetPasswordPage() {
           {!sessionReady && (
             <p className="mb-4 text-sm text-yellow-500">{tl.sessionLoading}</p>
           )}
-          <form onSubmit={handleReset} className="space-y-4">
+          <form
+            onSubmit={handleReset}
+            className="space-y-4"
+            data-form-type="other"
+          >
             <div>
               <Label htmlFor="password">{tl.newPasswordLabel}</Label>
               <Input

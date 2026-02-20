@@ -110,7 +110,11 @@ export default function ForgotPasswordPage() {
           <p className="text-muted-foreground text-sm">{tl.subtitle}</p>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleReset} className="space-y-4">
+          <form
+            onSubmit={handleReset}
+            className="space-y-4"
+            data-form-type="other"
+          >
             <div>
               <Label htmlFor="email">{tl.emailLabel}</Label>
               <Input

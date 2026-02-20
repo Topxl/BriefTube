@@ -276,7 +276,11 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
       </div>
 
       {/* Unified search / add bar */}
-      <form onSubmit={(e) => void addSource(e)} className="relative flex gap-2">
+      <form
+        onSubmit={(e) => void addSource(e)}
+        className="relative flex gap-2"
+        data-form-type="other"
+      >
         <div className="relative flex-1">
           {isAddMode ? (
             <Youtube className="text-muted-foreground absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2" />

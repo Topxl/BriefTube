@@ -244,7 +244,11 @@ export function EditListForm({
           <h1 className="text-2xl font-bold">Edit list</h1>
         </div>
 
-        <form onSubmit={(e) => void handleSave(e)} className="space-y-6">
+        <form
+          onSubmit={(e) => void handleSave(e)}
+          className="space-y-6"
+          data-form-type="other"
+        >
           {/* Name */}
           <div className="space-y-1.5">
             <label className="text-sm font-medium">Name</label>

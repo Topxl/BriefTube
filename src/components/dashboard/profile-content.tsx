@@ -165,7 +165,11 @@ export function ProfileContent({
 
           {hasStripeCustomer && (
             <div className="border-t border-white/[0.04] px-4 py-3">
-              <form action="/api/stripe/portal" method="POST">
+              <form
+                action="/api/stripe/portal"
+                method="POST"
+                data-form-type="other"
+              >
                 <button
                   type="submit"
                   className="text-muted-foreground hover:text-foreground text-xs transition-colors"
