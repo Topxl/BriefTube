@@ -20,7 +20,6 @@ function isActive(href: string, pathname: string) {
 
 export function DashboardNav() {
   const pathname = usePathname();
-  const onDashboard = pathname === "/dashboard";
 
   return (
     <>
@@ -66,14 +65,12 @@ export function DashboardNav() {
             </div>
           </div>
 
-          {/* Center: search bar — all screen sizes on dashboard */}
-          {onDashboard && (
-            <div className="mx-3 w-full flex-1 md:mx-6 md:max-w-sm">
-              <Suspense fallback={null}>
-                <ChannelSearchBar />
-              </Suspense>
-            </div>
-          )}
+          {/* Center: search bar — always visible */}
+          <div className="mx-3 w-full flex-1 md:mx-6 md:max-w-sm">
+            <Suspense fallback={null}>
+              <ChannelSearchBar />
+            </Suspense>
+          </div>
         </div>
       </nav>
 
