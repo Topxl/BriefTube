@@ -2,6 +2,10 @@
 
 ## 2026-02-21
 
+FIX: SummariesFeed — memoize supabase client with useMemo to stop infinite re-render loop (createClient() was returning a new instance each render, invalidating useCallback/useEffect chain)
+
+FIX: Move admin dashboard from /admin to /dashboard/admin — eliminates persistent redirect bug by reusing the reliable dashboard layout instead of a standalone layout with its own auth guard
+
 FIX: worker/db.py — enqueue_video: check all statuses (not just queued/processing) to avoid 23505 duplicate key on already-completed videos; create_deliveries_for_video: replace upsert(on_conflict) with select+insert to avoid 42P10 (no unique constraint on deliveries table)
 FIX: worker/rss_scanner.py — also catch 42P10 errors in known_video_ids to prevent deleting processed_videos entry and causing infinite re-detection loop
 FEATURE: worker — atomic security: PID file (_enforce_single_instance) kills stale worker processes at startup; claim_delivery atomically transitions pending→sending so concurrent instances cannot double-send; reset_sending_deliveries recovers stuck claims on startup
