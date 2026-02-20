@@ -51,10 +51,10 @@ export function TrialBanner({ daysLeft }: { daysLeft: number }) {
       <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400" />
       <p className="text-muted-foreground min-w-0 flex-1 text-xs">
         <span className="font-medium text-amber-300/90">
-          {daysLeft === 1 ? "Dernier jour" : `${daysLeft} jours`}
+          {daysLeft === 1 ? "Last day" : `${daysLeft} days`}
         </span>{" "}
-        restants dans ta période Pro &middot; Chaînes illimitées, voix TTS,
-        traitement prioritaire
+        left in your Pro trial &middot; Unlimited channels, TTS voices, priority
+        processing
       </p>
       <div className="flex shrink-0 items-center gap-0.5">
         <Button
@@ -63,12 +63,12 @@ export function TrialBanner({ daysLeft }: { daysLeft: number }) {
           className="h-7 px-2.5 text-xs text-amber-400/80 hover:bg-amber-500/10 hover:text-amber-300"
           asChild
         >
-          <Link href="/dashboard/billing">Passer en Pro</Link>
+          <Link href="/dashboard/billing">Upgrade to Pro</Link>
         </Button>
         <button
           onClick={dismiss}
           className="text-muted-foreground/30 hover:text-muted-foreground flex h-7 w-7 items-center justify-center rounded-md transition-colors hover:bg-white/[0.06]"
-          title="Fermer"
+          title="Dismiss"
         >
           <X className="h-3.5 w-3.5" />
         </button>
