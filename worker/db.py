@@ -46,6 +46,17 @@ def is_video_processed(video_id: str) -> bool:
     return len(res.data) > 0
 
 
+def get_all_known_video_ids() -> set[str]:
+    """Return the set of ALL video_ids already in processed_videos.
+
+    Used by the RSS scanner to check new videos in O(1) locally instead
+    of making one DB query per video (which causes 3000+ queries per scan).
+    """
+    sb = get_client()
+    res = sb.table("processed_videos").select("video_id").execute()
+    return {row["video_id"] for row in (res.data or [])}
+
+
 def mark_video_completed(video_id: str, summary: str, audio_url: str, metadata: dict = None):
     sb = get_client()
     update_data = {

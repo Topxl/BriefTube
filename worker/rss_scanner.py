@@ -59,6 +59,11 @@ def scan_all_channels():
     channel_ids = db.get_all_channel_ids()
     logger.info(f"Scanning {len(channel_ids)} channels...")
 
+    # Load all known video IDs once — avoids 3000+ individual DB queries per scan
+    # (225 channels × 15 videos = up to 3375 is_video_processed calls otherwise).
+    known_video_ids = db.get_all_known_video_ids()
+    logger.info(f"Loaded {len(known_video_ids)} known video IDs into memory")
+
     new_count = 0
     for channel_id in channel_ids:
         try:
@@ -66,8 +71,8 @@ def scan_all_channels():
             for video in videos:
                 vid = video["video_id"]
 
-                # Skip if already known
-                if db.is_video_processed(vid):
+                # Skip if already known (local set lookup — no DB call)
+                if vid in known_video_ids:
                     continue
 
                 # Skip YouTube Shorts

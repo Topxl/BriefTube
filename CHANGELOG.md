@@ -2,6 +2,10 @@
 
 ## 2026-02-20
 
+FIX: RSS scanner — was making 3375 individual DB queries per scan (225 channels × 15 videos × is_video_processed); replaced with a single get_all_known_video_ids() call that loads all IDs into a Python set; reduces Supabase load by 99% and eliminates Server disconnected errors during scans
+
+FIX: Worker systemd services — brieftube-worker and brieftube-logbot now managed by systemd user services; guaranteed single instance, auto-restart on crash, starts at session login
+
 FEATURE: SectionErrorBoundary — React class error boundary for dashboard sections; wraps SourcesSection and SummariesFeed so a section crash no longer blanks the full page
 FEATURE: fetchApi + isApiError — typed fetch wrapper in src/lib/api-response.ts that throws on non-2xx or { error } bodies; unifies client-side API error handling
 REFACTOR: resolveActionResult — now resolves ActionResult<T> discriminated union and throws on { error }; exports ActionResult, ActionSuccess, ActionFailure types
