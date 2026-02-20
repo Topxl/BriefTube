@@ -461,6 +461,42 @@ def mark_delivery_failed(delivery_id: str):
     sb.table("deliveries").update({"status": "failed"}).eq("id", delivery_id).execute()
 
 
+def claim_delivery(delivery_id: str) -> bool:
+    """Atomically claim a delivery: pending → sending.
+
+    Returns True only if this call successfully transitioned the row from
+    'pending' to 'sending'. If another worker instance already claimed it
+    (status is no longer 'pending'), returns False so the caller skips it.
+    This prevents duplicate sends when two worker processes run simultaneously.
+    """
+    sb = get_client()
+    res = (
+        sb.table("deliveries")
+        .update({"status": "sending"})
+        .eq("id", delivery_id)
+        .eq("status", "pending")
+        .execute()
+    )
+    return len(res.data or []) > 0
+
+
+def reset_sending_deliveries() -> int:
+    """Reset deliveries stuck in 'sending' back to 'pending'.
+
+    Called at startup to recover deliveries that were claimed but never
+    completed because the previous worker instance crashed or was killed.
+    Returns the number of rows reset.
+    """
+    sb = get_client()
+    res = (
+        sb.table("deliveries")
+        .update({"status": "pending"})
+        .eq("status", "sending")
+        .execute()
+    )
+    return len(res.data or [])
+
+
 def count_on_demand_this_month(user_id: str) -> int:
     """Count on-demand deliveries for a user in the current calendar month."""
     sb = get_client()

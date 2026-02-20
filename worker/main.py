@@ -9,9 +9,12 @@ Three concurrent loops:
 """
 
 import asyncio
+import atexit
 import logging
 import os
 import re
+import signal
+import time
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
@@ -58,6 +61,52 @@ if not os.environ.get("INVOCATION_ID"):
 logger = logging.getLogger("worker")
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
+
+# ── Single-instance enforcement ────────────────────────────────
+
+PID_FILE = Path(__file__).parent / "worker.pid"
+
+
+def _cleanup_pid_file() -> None:
+    """Remove the PID file on clean exit (only if it belongs to this process)."""
+    try:
+        if PID_FILE.exists() and PID_FILE.read_text().strip() == str(os.getpid()):
+            PID_FILE.unlink()
+    except Exception:
+        pass
+
+
+def _enforce_single_instance() -> None:
+    """Kill any previous worker instance and register this process's PID.
+
+    Prevents two simultaneous workers from processing the same deliveries,
+    writing to the same log file, or holding the Telegram polling session.
+    """
+    if PID_FILE.exists():
+        try:
+            old_pid = int(PID_FILE.read_text().strip())
+            os.kill(old_pid, 0)  # Raises ProcessLookupError if already dead
+            logger.warning(f"Stale worker instance found (PID {old_pid}) — sending SIGTERM")
+            os.kill(old_pid, signal.SIGTERM)
+            for _ in range(20):  # Wait up to 10 s
+                time.sleep(0.5)
+                try:
+                    os.kill(old_pid, 0)
+                except ProcessLookupError:
+                    logger.info(f"Previous worker (PID {old_pid}) terminated cleanly")
+                    break
+            else:
+                logger.warning(f"PID {old_pid} did not exit after SIGTERM — sending SIGKILL")
+                try:
+                    os.kill(old_pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+        except (ProcessLookupError, ValueError):
+            pass  # Process already dead or PID file is corrupt — nothing to do
+
+    PID_FILE.write_text(str(os.getpid()))
+    atexit.register(_cleanup_pid_file)
+    logger.info(f"Single-instance lock acquired (PID {os.getpid()}, file: {PID_FILE})")
 logging.getLogger("httpcore").setLevel(logging.WARNING)
 # Suppress verbose Conflict errors from Updater polling (another instance may hold the session)
 logging.getLogger("telegram.ext.Updater").setLevel(logging.CRITICAL)
@@ -403,6 +452,13 @@ async def delivery_loop(alert_system: MonitoringAlert):
 
             for d in deliveries:
                 try:
+                    # Atomically claim the delivery (pending → sending).
+                    # If another instance already claimed it, skip silently.
+                    claimed = await asyncio.to_thread(db.claim_delivery, d["delivery_id"])
+                    if not claimed:
+                        logger.debug(f"Delivery {d['delivery_id']} already claimed by another instance — skipping")
+                        continue
+
                     video_id = d["video_id"]
                     audio_url = d.get("audio_url", "")
                     delivery_language = d.get("language", "fr")
@@ -501,6 +557,19 @@ async def main():
     logger.info("=" * 50)
     logger.info("BriefTube SaaS Worker starting...")
     logger.info("=" * 50)
+
+    # Enforce single instance: kill stale process, write PID file.
+    # Must run before any loops start so orphan processes can't race.
+    _enforce_single_instance()
+
+    # Reset deliveries stuck in 'sending' from a previous crashed instance.
+    # Without this, any delivery that was claimed but not sent would be stuck forever.
+    try:
+        reset_count = db.reset_sending_deliveries()
+        if reset_count:
+            logger.warning(f"Reset {reset_count} stuck 'sending' deliveries → 'pending' (previous crash recovery)")
+    except Exception as e:
+        logger.warning(f"Could not reset sending deliveries: {e}")
 
     # Lower process priority so the worker never starves other applications.
     # nice=10 means any normal-priority process (nice=0) will be preferred by
