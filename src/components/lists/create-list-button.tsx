@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { Plus } from "@/lib/icons";
 import { useRouter } from "next/navigation";
 import { dialogManager } from "@/features/dialog-manager/dialog-manager";
 

@@ -7,7 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { SiteConfig } from "@/site-config";
-import { Mail } from "lucide-react";
+import { Mail } from "@/lib/icons";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {

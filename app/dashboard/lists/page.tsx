@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Pencil, Star } from "lucide-react";
+import { Pencil, Star } from "@/lib/icons";
 import { CreateListButton } from "@/components/lists/create-list-button";
 import { FollowedListsSection } from "@/components/lists/followed-lists-section";
 import { ShareListButton } from "@/components/lists/share-list-button";

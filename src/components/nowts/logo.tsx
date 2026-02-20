@@ -1,4 +1,4 @@
-import type { LucideProps } from "lucide-react";
+import type { LucideProps } from "@/lib/icons";
 
 const LogoMap = {
   github: (props: LucideProps) => (

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Check } from "lucide-react";
+import { Check } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import { t } from "@/locales";
 

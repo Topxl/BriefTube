@@ -3,7 +3,7 @@
 import { useRef, useState, useCallback } from "react";
 import Image from "next/image";
 import { formatDate } from "@/lib/format";
-import { ChevronDown, ExternalLink, Play, Pause } from "lucide-react";
+import { ChevronDown, ExternalLink, Play, Pause } from "@/lib/icons";
 import { t } from "@/locales";
 
 const tl = t.dashboard.summaries;
@@ -116,6 +116,7 @@ export function SummaryRow({
             src={thumbnailUrl}
             alt={video?.video_title ?? ""}
             fill
+            suppressHydrationWarning
             className="object-cover opacity-80 transition-opacity group-hover:opacity-100"
             sizes="72px"
           />

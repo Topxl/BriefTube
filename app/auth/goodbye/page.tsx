@@ -7,7 +7,7 @@ import {
   CardHeader,
 } from "@/components/ui/card";
 import { SiteConfig } from "@/site-config";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle } from "@/lib/icons";
 import type { Metadata } from "next";
 import Link from "next/link";
 

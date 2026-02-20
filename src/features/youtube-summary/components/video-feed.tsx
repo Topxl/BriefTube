@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { PlayIcon, ExternalLinkIcon } from "lucide-react";
+import { PlayIcon, ExternalLinkIcon } from "@/lib/icons";
 import type { ProcessedVideo } from "@/lib/supabase/client";
 
 export function VideoFeed({ videos }: { videos: ProcessedVideo[] }) {

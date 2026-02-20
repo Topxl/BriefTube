@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, ListVideo, User } from "lucide-react";
+import { LayoutDashboard, ListVideo, User } from "@/lib/icons";
 
 const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -46,7 +46,13 @@ export function DashboardNav({ email, plan }: { email: string; plan: string }) {
           {/* Left: logo + nav links */}
           <div className="flex items-center gap-6">
             <Link href="/dashboard" className="flex items-center gap-2">
-              <Image src="/logo.svg" alt="BriefTube" width={26} height={26} />
+              <Image
+                src="/logo.svg"
+                alt="BriefTube"
+                width={26}
+                height={26}
+                suppressHydrationWarning
+              />
               <span className="hidden text-sm font-semibold sm:inline">
                 BriefTube
               </span>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Share2, Check } from "lucide-react";
+import { Share2, Check } from "@/lib/icons";
 import { SiteConfig } from "@/site-config";
 
 type Props = {

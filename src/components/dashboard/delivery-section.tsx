@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Check, Loader2 } from "lucide-react";
+import { Check, Loader2 } from "@/lib/icons";
 import { dialogManager } from "@/features/dialog-manager/dialog-manager";
 
 const voices = [

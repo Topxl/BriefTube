@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ExternalLink, Loader2, Users, Youtube } from "lucide-react";
+import { ExternalLink, Loader2, Users, Youtube } from "@/lib/icons";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 

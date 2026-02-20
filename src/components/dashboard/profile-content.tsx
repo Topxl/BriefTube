@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { DeliverySection } from "@/components/dashboard/delivery-section";
 import { ReferralSection } from "@/components/dashboard/referral-section";
 import { Button } from "@/components/ui/button";
-import { LogOut, CheckCircle2 } from "lucide-react";
+import { LogOut, CheckCircle2 } from "@/lib/icons";
 
 type ReferralRow = {
   maskedEmail: string;

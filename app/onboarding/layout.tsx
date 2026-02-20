@@ -31,7 +31,7 @@ export default async function OnboardingLayout({
     <div className="bg-background min-h-screen">
       <header className="flex h-14 items-center px-4 md:px-6">
         <Link href="/" className="flex items-center gap-2">
-          <Image src="/logo.svg" alt="BriefTube" width={26} height={26} />
+          <Image src="/logo.svg" alt="BriefTube" width={26} height={26} suppressHydrationWarning />
           <span className="text-sm font-semibold">BriefTube</span>
         </Link>
       </header>

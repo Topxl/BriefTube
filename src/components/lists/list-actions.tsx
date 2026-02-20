@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Star, Users, Loader2 } from "lucide-react";
+import { Star, Users, Loader2 } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { dialogManager } from "@/features/dialog-manager/dialog-manager";

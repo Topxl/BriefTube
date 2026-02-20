@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, Youtube } from "lucide-react";
+import { ArrowLeft, Youtube } from "@/lib/icons";
 import { ListActions } from "@/components/lists/list-actions";
 import { ShareListButton } from "@/components/lists/share-list-button";
 
@@ -157,6 +157,7 @@ export default async function ListDetailPage({ params }: Props) {
                         alt={ch.channel_name}
                         width={32}
                         height={32}
+                        suppressHydrationWarning
                         className="h-8 w-8 shrink-0 rounded-full"
                       />
                     ) : (

@@ -15,7 +15,7 @@ import {
   Youtube,
   Headphones,
   Send,
-} from "lucide-react";
+} from "@/lib/icons";
 import type { Tables } from "@/types/supabase";
 
 type Subscription = Tables<"subscriptions">;
@@ -300,6 +300,7 @@ export function OnboardingWizard({ initialVoice }: Props) {
                       width={28}
                       height={28}
                       className="h-7 w-7 shrink-0 rounded-full"
+                      suppressHydrationWarning
                     />
                   ) : (
                     <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-red-500/15 text-xs font-bold text-red-400">

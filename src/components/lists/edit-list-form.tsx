@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Download, Loader2, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Download, Loader2, Plus, Trash2 } from "@/lib/icons";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -381,6 +381,7 @@ export function EditListForm({
                           alt={ch.channel_name}
                           width={28}
                           height={28}
+                          suppressHydrationWarning
                           className="h-7 w-7 shrink-0 rounded-full"
                         />
                       ) : (

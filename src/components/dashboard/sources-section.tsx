@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Plus, Loader2, Youtube, Play, Pause, Search, X } from "lucide-react";
+import { Plus, Loader2, Youtube, Play, Pause, Search, X } from "@/lib/icons";
 import { dialogManager } from "@/features/dialog-manager/dialog-manager";
 import type { Tables } from "@/types/supabase";
 
@@ -77,6 +77,7 @@ function SourceRow({
             width={32}
             height={32}
             className="h-8 w-8 shrink-0 rounded-full"
+            suppressHydrationWarning
           />
         ) : (
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-500/15 text-xs font-bold text-red-400">
