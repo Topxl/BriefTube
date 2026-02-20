@@ -47,6 +47,7 @@ src/generated
 worker/__pycache__/
 worker/venv/
 worker/*.log
+worker/*.log.*
 
 # Worker temporary files
 worker/audio/*.mp3
@@ -54,6 +55,13 @@ worker/cookies/
 worker/.env
 worker/*.json
 !worker/.env.example
+worker/test_outputs/
+
+# Root-level log files
+*.log
+
+# Infisical config (project-local only)
+.infisical.json
 
 # Local settings and AI agent configurations
 .claude/
