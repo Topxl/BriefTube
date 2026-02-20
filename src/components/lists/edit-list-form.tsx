@@ -171,13 +171,29 @@ export function EditListForm({
       );
 
       // 3. Add new channels (those without an id — never persisted yet)
+      // Split in chunks of 50 to stay within API limits, send in parallel
       const newChannels = channels.filter((c) => !c.id);
       if (newChannels.length > 0) {
-        await fetch(`/api/lists/${listId}/channels`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ channels: newChannels }),
-        });
+        const BATCH_SIZE = 50;
+        const chunks = Array.from(
+          { length: Math.ceil(newChannels.length / BATCH_SIZE) },
+          (_, i) => newChannels.slice(i * BATCH_SIZE, (i + 1) * BATCH_SIZE),
+        );
+        const responses = await Promise.all(
+          chunks.map(async (batch) =>
+            fetch(`/api/lists/${listId}/channels`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ channels: batch }),
+            }),
+          ),
+        );
+        const failed = responses.find((r) => !r.ok);
+        if (failed) {
+          const d = (await failed.json()) as { error?: string };
+          toast.error(d.error ?? "Failed to add channels");
+          return;
+        }
       }
 
       toast.success("List updated");
@@ -216,8 +232,8 @@ export function EditListForm({
   return (
     <div className="bg-background min-h-screen">
       {/* Top bar */}
-      <div className="border-b border-white/[0.06]">
-        <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-4">
+      <div className="sticky top-0 z-10 border-b border-white/[0.06] bg-black/80 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
           <Link
             href={`/lists/${listId}`}
             className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-sm transition-colors"
@@ -225,18 +241,30 @@ export function EditListForm({
             <ArrowLeft className="h-3.5 w-3.5" />
             Back to list
           </Link>
-          <button
-            type="button"
-            onClick={handleDelete}
-            disabled={deleting}
-            className="text-muted-foreground text-xs transition-colors hover:text-red-400 disabled:opacity-50"
-          >
-            {deleting ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              "Delete list"
-            )}
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={deleting}
+              className="text-muted-foreground text-xs transition-colors hover:text-red-400 disabled:opacity-50"
+            >
+              {deleting ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                "Delete list"
+              )}
+            </button>
+            <Button
+              type="submit"
+              form="edit-list-form"
+              disabled={submitting || !name.trim()}
+              size="sm"
+              className="bg-red-600 hover:bg-red-500"
+            >
+              {submitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+              Save changes
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -246,6 +274,7 @@ export function EditListForm({
         </div>
 
         <form
+          id="edit-list-form"
           onSubmit={(e) => void handleSave(e)}
           className="space-y-6"
           data-form-type="other"
@@ -404,17 +433,6 @@ export function EditListForm({
                 </div>
               </div>
             )}
-          </div>
-
-          <div className="flex justify-end pt-2">
-            <Button
-              type="submit"
-              disabled={submitting || !name.trim()}
-              className="bg-red-600 hover:bg-red-500"
-            >
-              {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-              Save changes
-            </Button>
           </div>
         </form>
       </div>
