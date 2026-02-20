@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Plus, Loader2, Youtube, Play, Pause, Search, X } from "@/lib/icons";
+import { Plus, Loader2, Youtube, Search, X } from "@/lib/icons";
 import { dialogManager } from "@/features/dialog-manager/dialog-manager";
 import type { Tables } from "@/types/supabase";
 
@@ -54,7 +54,7 @@ function SourceRow({
       nameEl = (
         <>
           {name.slice(0, idx)}
-          <mark className="rounded-sm bg-yellow-400/20 text-yellow-300">
+          <mark className="text-foreground rounded-sm bg-white/10">
             {name.slice(idx, idx + q.length)}
           </mark>
           {name.slice(idx + q.length)}
@@ -65,8 +65,8 @@ function SourceRow({
 
   return (
     <div
-      className={`flex items-center justify-between px-3 py-2.5 transition-colors hover:bg-white/[0.02] sm:px-4 sm:py-3 ${
-        !source.active ? "opacity-50" : ""
+      className={`group flex items-center justify-between px-4 py-3 transition-colors hover:bg-white/[0.03] ${
+        !source.active ? "opacity-40" : ""
       }`}
     >
       <div className="flex min-w-0 items-center gap-3">
@@ -80,7 +80,7 @@ function SourceRow({
             suppressHydrationWarning
           />
         ) : (
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-500/15 text-xs font-bold text-red-400">
+          <div className="bg-muted flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
             {source.channel_name.charAt(0).toUpperCase()}
           </div>
         )}
@@ -90,39 +90,34 @@ function SourceRow({
             href={`https://www.youtube.com/channel/${source.channel_id}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-muted-foreground hover:text-foreground text-[11px] transition-colors"
+            className="text-muted-foreground/60 hover:text-muted-foreground text-[11px] transition-colors"
           >
-            YouTube →
+            YouTube
           </a>
         </div>
       </div>
 
-      <div className="ml-2 flex shrink-0 items-center gap-1">
+      <div className="ml-2 flex shrink-0 items-center gap-3">
         <button
           onClick={() => onToggle(source)}
-          className={`flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium transition-colors ${
-            source.active
-              ? "text-emerald-400 hover:bg-emerald-500/10"
-              : atActiveLimit
-                ? "text-muted-foreground hover:text-amber-400"
-                : "text-muted-foreground hover:text-emerald-400"
-          }`}
+          className="flex items-center gap-1.5 py-1 transition-colors"
           title={source.active ? "Pause summaries" : "Activate summaries"}
         >
-          {source.active ? (
-            <>
-              <Pause className="h-3 w-3" />
-              Active
-            </>
-          ) : (
-            <>
-              <Play className="h-3 w-3" />
-              Paused
-            </>
-          )}
+          <div
+            className={`h-1.5 w-1.5 rounded-full transition-colors ${
+              source.active
+                ? "bg-emerald-400"
+                : atActiveLimit
+                  ? "bg-amber-400/50"
+                  : "bg-white/20"
+            }`}
+          />
+          <span className="text-muted-foreground/70 text-[11px]">
+            {source.active ? "Active" : "Paused"}
+          </span>
         </button>
         <button
-          className="text-muted-foreground ml-1 shrink-0 px-2 py-1 text-xs transition-colors hover:text-red-400"
+          className="text-muted-foreground/30 shrink-0 py-1 text-[11px] opacity-0 transition-all group-hover:opacity-100 hover:text-red-400"
           onClick={() => onRemove(source.id, source.channel_name)}
         >
           Remove
@@ -265,15 +260,11 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
   return (
     <div className="space-y-3">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-sm font-semibold">Sources</h2>
-          <p className="text-muted-foreground text-xs">
-            {isPro
-              ? `${sources.length} sources`
-              : `${activeCount} of ${maxChannels} active · ${sources.length} total`}
-          </p>
-        </div>
+      <div className="flex items-center gap-2">
+        <h2 className="text-sm font-semibold">Sources</h2>
+        <span className="text-muted-foreground/50 text-xs tabular-nums">
+          {isPro ? sources.length : `${activeCount}/${maxChannels}`}
+        </span>
       </div>
 
       {/* Unified search / add bar */}
@@ -339,12 +330,13 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
       {addError && <p className="text-xs text-red-400">{addError}</p>}
 
       {/* Import from YouTube */}
-      <Button variant="outline" className="w-full" asChild>
-        <a href="/api/youtube/auth">
-          <Youtube className="h-4 w-4" />
-          Import subscriptions from YouTube
-        </a>
-      </Button>
+      <a
+        href="/api/youtube/auth"
+        className="text-muted-foreground/60 hover:text-muted-foreground flex w-fit items-center gap-1.5 text-xs transition-colors"
+      >
+        <Youtube className="h-3.5 w-3.5" />
+        Import subscriptions from YouTube
+      </a>
 
       {/* Active limit banner */}
       {atActiveLimit && (
@@ -412,9 +404,9 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
           {hasMore && (
             <button
               onClick={() => setVisibleCount((n) => n + LOAD_MORE_STEP)}
-              className="text-muted-foreground hover:text-foreground w-full rounded-xl border border-white/[0.06] bg-white/[0.01] py-2.5 text-xs transition-colors hover:bg-white/[0.03]"
+              className="text-muted-foreground/50 hover:text-muted-foreground w-full py-2 text-xs transition-colors"
             >
-              Show {Math.min(LOAD_MORE_STEP, remainingCount)} more ·{" "}
+              Show {Math.min(LOAD_MORE_STEP, remainingCount)} more &middot;{" "}
               {remainingCount} remaining
             </button>
           )}

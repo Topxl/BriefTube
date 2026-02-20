@@ -2,6 +2,7 @@
 
 ## 2026-02-20
 
+UX: Dashboard design pass — compact trial banner, text-link import, dot status indicator, text-only show-more, clean header
 UX: Improve search/add bar visibility in Sources section — brighter border, background, and placeholder
 
 FIX: Create src/lib/icons.tsx barrel wrapping all Lucide icons with suppressHydrationWarning — eliminates Dark Reader SVG hydration mismatches
