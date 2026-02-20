@@ -22,50 +22,51 @@ type VoiceEntry = {
 };
 
 /**
- * Languages that have several available voices.
- * All other languages get a single voice derived from languages.ts.
+ * One female + one male voice per language.
+ * Languages not listed here get a single default voice from languages.ts.
  */
-const MULTI_VOICES: Partial<Record<string, VoiceEntry[]>> = {
-  fr: [
-    {
-      value: "fr-FR-DeniseNeural",
-      label: "Denise",
-      tone: "Natural · Expressive",
-      locale: "fr-FR",
-      sample: "Bonjour, je suis votre assistante audio.",
-    },
-    {
-      value: "fr-FR-HenriNeural",
-      label: "Henri",
-      tone: "Natural · Calm",
-      locale: "fr-FR",
-      sample: "Bonjour, je suis votre assistant audio.",
-    },
-    {
-      value: "fr-CA-SylvieNeural",
-      label: "Sylvie",
-      tone: "Natural · Warm",
-      locale: "fr-CA",
-      sample: "Bonjour, je suis votre assistante audio.",
-    },
-  ],
-  en: [
-    {
-      value: "en-US-JennyNeural",
-      label: "Jenny",
-      tone: "Friendly · Conversational",
-      locale: "en-US",
-      sample: "Hello, I'm your audio assistant.",
-    },
-    {
-      value: "en-US-GuyNeural",
-      label: "Guy",
-      tone: "Confident · Warm",
-      locale: "en-US",
-      sample: "Hello, I'm your audio assistant.",
-    },
-  ],
+const VOICE_PAIRS: Partial<Record<string, readonly [string, string]>> = {
+  fr: ["fr-FR-DeniseNeural", "fr-FR-HenriNeural"],
+  en: ["en-US-JennyNeural", "en-US-GuyNeural"],
+  es: ["es-ES-ElviraNeural", "es-ES-AlvaroNeural"],
+  de: ["de-DE-KatjaNeural", "de-DE-ConradNeural"],
+  pt: ["pt-BR-FranciscaNeural", "pt-BR-AntonioNeural"],
+  zh: ["zh-CN-XiaoxiaoNeural", "zh-CN-YunxiNeural"],
+  ja: ["ja-JP-NanamiNeural", "ja-JP-KeitaNeural"],
+  ko: ["ko-KR-SunHiNeural", "ko-KR-InJoonNeural"],
+  ar: ["ar-SA-ZariyahNeural", "ar-SA-HamedNeural"],
+  hi: ["hi-IN-SwaraNeural", "hi-IN-MadhurNeural"],
+  ru: ["ru-RU-SvetlanaNeural", "ru-RU-DmitryNeural"],
+  it: ["it-IT-ElsaNeural", "it-IT-DiegoNeural"],
+  nl: ["nl-NL-ColetteNeural", "nl-NL-MaartenNeural"],
+  tr: ["tr-TR-EmelNeural", "tr-TR-AhmetNeural"],
+  pl: ["pl-PL-ZofiaNeural", "pl-PL-MarekNeural"],
+  sv: ["sv-SE-SofieNeural", "sv-SE-MattiasNeural"],
+  nb: ["nb-NO-PernilleNeural", "nb-NO-FinnNeural"],
+  da: ["da-DK-ChristelNeural", "da-DK-JeppeNeural"],
+  fi: ["fi-FI-SelmaNeural", "fi-FI-HarriNeural"],
+  id: ["id-ID-GadisNeural", "id-ID-ArdiNeural"],
+  ms: ["ms-MY-YasminNeural", "ms-MY-OsmanNeural"],
+  vi: ["vi-VN-HoaiMyNeural", "vi-VN-NamMinhNeural"],
+  th: ["th-TH-PremwadeeNeural", "th-TH-NiwatNeural"],
+  uk: ["uk-UA-PolinaNeural", "uk-UA-OstapNeural"],
+  cs: ["cs-CZ-VlastaNeural", "cs-CZ-AntoninNeural"],
+  ro: ["ro-RO-AlinaNeural", "ro-RO-EmilNeural"],
+  hu: ["hu-HU-NoemiNeural", "hu-HU-TamasNeural"],
+  el: ["el-GR-AthinaNeural", "el-GR-NestorasNeural"],
+  he: ["he-IL-HilaNeural", "he-IL-AvriNeural"],
+  bg: ["bg-BG-KalinaNeural", "bg-BG-BorislavNeural"],
+  hr: ["hr-HR-GabrijelaNeural", "hr-HR-SreckoNeural"],
+  sk: ["sk-SK-ViktoriaNeural", "sk-SK-LukasNeural"],
+  lt: ["lt-LT-OnaNeural", "lt-LT-LeonasNeural"],
+  lv: ["lv-LV-EveritaNeural", "lv-LV-NilsNeural"],
+  et: ["et-EE-AnuNeural", "et-EE-KertNeural"],
+  ca: ["ca-ES-JoanaNeural", "ca-ES-EnricNeural"],
+  sr: ["sr-RS-SophieNeural", "sr-RS-NicholasNeural"],
+  sl: ["sl-SI-PetraNeural", "sl-SI-RokNeural"],
 };
+
+const VOICE_GENDER: ["Female", "Male"] = ["Female", "Male"];
 
 /** Derive voice name and locale from an Azure Neural voice ID like `th-TH-PremwadeeNeural`. */
 function parseVoiceId(voiceId: string): { label: string; locale: string } {
@@ -77,19 +78,27 @@ function parseVoiceId(voiceId: string): { label: string; locale: string } {
 }
 
 function getVoicesForLanguage(langCode: string): VoiceEntry[] {
-  if (MULTI_VOICES[langCode]) return MULTI_VOICES[langCode];
   const lang = languages.find((l) => l.code === langCode);
+  const sample = lang?.nativeName ?? langCode;
+
+  const pair = VOICE_PAIRS[langCode];
+  if (pair) {
+    return pair.map((voiceId, i) => {
+      const { label, locale } = parseVoiceId(voiceId);
+      return {
+        value: voiceId,
+        label,
+        tone: VOICE_GENDER[i as 0 | 1],
+        locale,
+        sample,
+      };
+    });
+  }
+
+  // Single-voice fallback for languages without a known male counterpart
   if (!lang) return [];
   const { label, locale } = parseVoiceId(lang.voice);
-  return [
-    {
-      value: lang.voice,
-      label,
-      tone: "Natural",
-      locale,
-      sample: lang.nativeName,
-    },
-  ];
+  return [{ value: lang.voice, label, tone: "Natural", locale, sample }];
 }
 
 // -----------------------------------------------------------------

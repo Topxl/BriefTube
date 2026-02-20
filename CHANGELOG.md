@@ -2,6 +2,8 @@
 
 ## 2026-02-20
 
+REFACTOR: delivery-section — simplify voice selection to one female + one male voice per language (37 languages covered); languages without a known male counterpart keep a single default voice
+
 FIX: gemini_api — cap résumé à 800 mots max (AUDIO_MAX_WORDS) pour éviter troncature mid-sentence sur vidéos longues ; ajout instruction "sois sélectif" pour transcriptions > 4500 mots (~30 min) ; prompt migré en anglais pour meilleure fiabilité du modèle
 
 FIX: VoicePicker — replace nested `<button>` inside `<button>` with `<div role="button">` to fix hydration error (invalid HTML)
