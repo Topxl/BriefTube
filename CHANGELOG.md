@@ -2,6 +2,15 @@
 
 ## 2026-02-20
 
+FIX: Fix security advisor — remove SECURITY DEFINER from transcript_cost_analytics view
+FIX: Fix security advisor — add SET search_path to generate_referral_code, pick_next_processing_job, prevent_sensitive_profile_changes
+CHORE: Fix all RLS performance advisors — replace auth.uid() with (select auth.uid()) across 13 policies
+CHORE: Add 6 missing FK indexes (channel_lists, list_follows, list_stars, profiles, referrals, subscriptions)
+CHORE: Drop 2 unused indexes (idx_processed_videos_retry, idx_processed_videos_cost)
+CHORE: Split list_channels "list owner write" ALL policy into INSERT/UPDATE/DELETE to eliminate multiple permissive SELECT policies
+CHORE: Run code-quality CI on push to main (was pull_request only)
+DEBUG: Add detailed logging to auth/callback route to diagnose production redirect issue
+
 CHORE: Delete apply_migration.py (one-off script that admitted it couldn't execute DDL)
 REFACTOR: Remove summarize_with_retry() from gemini_api.py — dead code never called by main.py
 REFACTOR: Remove video_url param from GeminiSummarizer.summarize() — was accepted but deliberately ignored; intent now documented in docstring
