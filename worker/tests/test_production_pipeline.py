@@ -6,7 +6,10 @@ Simule le traitement d'une vidéo comme dans main.py
 
 import asyncio
 import logging
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent.parent))  # worker/ directory
 from transcript_extractor import TranscriptExtractor
 from gemini_api import GeminiSummarizer
 from text_cleaner import clean_for_tts

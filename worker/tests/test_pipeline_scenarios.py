@@ -26,6 +26,8 @@ from pathlib import Path
 from typing import Optional
 from dotenv import load_dotenv
 
+sys.path.insert(0, str(Path(__file__).parent.parent))  # worker/ directory
+
 # override=True ensures .env file takes precedence over exported shell variables
 load_dotenv(override=True)
 
