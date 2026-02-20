@@ -2,6 +2,7 @@
 
 ## 2026-02-21
 
+FIX: worker/db.py — duplicate deliveries: deduplicate user_ids in create_deliveries_for_video (same user subscribed via multiple paths), select language in get_pending_deliveries, deduplicate by (user_id, video_id) before sending
 FIX: worker/main.py — double logging: StreamHandler now only added when running manually (no INVOCATION_ID), preventing duplicate lines when systemd redirects stdout/stderr to worker.log
 FEATURE: Add /admin dashboard — worker status (systemd + logs + start/stop/restart), user stats, 24h activity, processing queue and recent failures; protected by admin user ID; polls every 10s via TanStack Query
 

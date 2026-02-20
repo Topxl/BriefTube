@@ -87,7 +87,7 @@ def get_all_known_video_ids() -> set[str]:
     return known
 
 
-def mark_video_completed(video_id: str, summary: str, audio_url: str, metadata: dict = None):
+def mark_video_completed(video_id: str, summary: str, audio_url: str, metadata: dict = None, language: str = "fr"):
     sb = get_client()
     update_data = {
         "summary": summary,
@@ -97,14 +97,20 @@ def mark_video_completed(video_id: str, summary: str, audio_url: str, metadata: 
     }
     if metadata:
         update_data["metadata"] = metadata
-    sb.table("processed_videos").update(update_data).eq("video_id", video_id).execute()
+    sb.table("processed_videos").update(update_data).eq("video_id", video_id).eq("language", language).execute()
 
 
-def mark_video_failed(video_id: str):
+def mark_video_failed(video_id: str, language: str = "fr"):
     sb = get_client()
     # Increment failure_count — use execute() (not .single()) to avoid throwing
     # if the row was deleted between job pick and failure handling.
-    res = sb.table("processed_videos").select("failure_count").eq("video_id", video_id).execute()
+    res = (
+        sb.table("processed_videos")
+        .select("failure_count")
+        .eq("video_id", video_id)
+        .eq("language", language)
+        .execute()
+    )
     if not res.data:
         return  # Row gone — nothing to update
     count = (res.data[0].get("failure_count") or 0) + 1
@@ -112,11 +118,11 @@ def mark_video_failed(video_id: str):
     sb.table("processed_videos").update({
         "failure_count": count,
         "status": status,
-    }).eq("video_id", video_id).execute()
+    }).eq("video_id", video_id).eq("language", language).execute()
 
 
-def insert_new_video(video_id: str, channel_id: str, video_title: str, video_url: str):
-    """Insert a new video into processed_videos (status=pending).
+def insert_new_video(video_id: str, channel_id: str, video_title: str, video_url: str, language: str = "fr"):
+    """Insert a new video into processed_videos (status=pending) for a specific language.
 
     Uses ignore_duplicates=True so existing records (skipped, completed, failed)
     are never overwritten — prevents the scanner from downgrading skipped videos
@@ -129,20 +135,41 @@ def insert_new_video(video_id: str, channel_id: str, video_title: str, video_url
         "video_title": video_title,
         "video_url": video_url,
         "status": "pending",
-    }, on_conflict="video_id", ignore_duplicates=True).execute()
+        "language": language,
+    }, on_conflict="video_id,language", ignore_duplicates=True).execute()
 
 
 # ── Processing Queue ───────────────────────────────────────────
 
-def enqueue_video(video_id: str, youtube_url: str, video_title: str, channel_id: str):
+def enqueue_video(video_id: str, youtube_url: str, video_title: str, channel_id: str, language: str = "fr", tts_voice: str | None = None):
+    """Enqueue a video for processing in a specific language.
+
+    One job is created per unique (video_id, language) pair. If a job already
+    exists for that pair (e.g. from a previous scan), it is left unchanged.
+    """
     sb = get_client()
-    sb.table("processing_queue").upsert({
+    row = {
         "video_id": video_id,
         "youtube_url": youtube_url,
         "video_title": video_title,
         "channel_id": channel_id,
         "status": "queued",
-    }, on_conflict="video_id", ignore_duplicates=True).execute()
+        "user_language": language,
+    }
+    if tts_voice:
+        row["tts_voice"] = tts_voice
+    # No unique constraint on (video_id, language) in processing_queue, so we
+    # check manually: only insert if no queued/processing job exists for this pair.
+    existing = (
+        sb.table("processing_queue")
+        .select("id")
+        .eq("video_id", video_id)
+        .eq("user_language", language)
+        .in_("status", ["queued", "processing"])
+        .execute()
+    )
+    if not existing.data:
+        sb.table("processing_queue").insert(row).execute()
 
 
 def pick_next_job() -> dict | None:
@@ -166,10 +193,11 @@ def complete_job(job_id: str):
 def fail_job(job_id: str):
     sb = get_client()
     # Use execute() without .single() — avoids throwing if the job was deleted.
-    res = sb.table("processing_queue").select("attempts, video_id").eq("id", job_id).execute()
+    res = sb.table("processing_queue").select("attempts, video_id, user_language").eq("id", job_id).execute()
     if not res.data:
         return  # Job already gone — nothing to update
     attempts = (res.data[0].get("attempts") or 0) + 1
+    user_language = res.data[0].get("user_language") or "fr"
     status = "failed" if attempts >= 3 else "queued"
     sb.table("processing_queue").update({
         "status": status,
@@ -180,13 +208,47 @@ def fail_job(job_id: str):
     if status == "failed":
         video_id = res.data[0].get("video_id")
         if video_id:
-            mark_video_failed(video_id)
+            mark_video_failed(video_id, language=user_language)
 
 
 # ── Deliveries ─────────────────────────────────────────────────
 
-def create_deliveries_for_video(video_id: str, channel_id: str):
-    """Create delivery entries for all users subscribed to this channel."""
+def get_subscriber_languages(channel_id: str) -> list[dict]:
+    """Return the distinct (language, tts_voice) pairs for active subscribers to a channel.
+
+    Each unique preferred_language gets one entry, carrying a representative
+    tts_voice for that language (the first one found among subscribers).
+    """
+    sb = get_client()
+    subs = (
+        sb.table("subscriptions")
+        .select("user_id")
+        .eq("channel_id", channel_id)
+        .eq("active", True)
+        .execute()
+    )
+    if not subs.data:
+        return []
+
+    user_ids = [s["user_id"] for s in subs.data]
+    profiles = (
+        sb.table("profiles")
+        .select("preferred_language, tts_voice")
+        .in_("id", user_ids)
+        .execute()
+    )
+
+    seen: dict[str, str | None] = {}  # language → tts_voice
+    for p in (profiles.data or []):
+        lang = p.get("preferred_language") or "fr"
+        if lang not in seen:
+            seen[lang] = p.get("tts_voice")
+
+    return [{"language": lang, "tts_voice": voice} for lang, voice in seen.items()]
+
+
+def create_deliveries_for_video(video_id: str, channel_id: str, language: str = "fr"):
+    """Create delivery entries for all users subscribed to this channel with the given language."""
     sb = get_client()
     # Get all users subscribed to this channel
     subs = (
@@ -196,12 +258,31 @@ def create_deliveries_for_video(video_id: str, channel_id: str):
         .eq("active", True)
         .execute()
     )
-    for sub in subs.data:
+    if not subs.data:
+        return
+
+    # Deduplicate user_ids — a user may have multiple active subscriptions to
+    # the same channel (e.g. direct + via a list), which would create duplicate
+    # delivery rows and cause the same video to be sent multiple times.
+    user_ids = list({s["user_id"] for s in subs.data})
+
+    # Only create deliveries for users whose preferred_language matches
+    profiles = (
+        sb.table("profiles")
+        .select("id, preferred_language")
+        .in_("id", user_ids)
+        .execute()
+    )
+    for profile in (profiles.data or []):
+        user_lang = profile.get("preferred_language") or "fr"
+        if user_lang != language:
+            continue
         sb.table("deliveries").upsert({
-            "user_id": sub["user_id"],
+            "user_id": profile["id"],
             "video_id": video_id,
             "status": "pending",
-        }, on_conflict="user_id,video_id").execute()
+            "language": language,
+        }, on_conflict="user_id,video_id,language").execute()
 
 
 def get_pending_deliveries(limit: int = 20) -> list[dict]:
@@ -242,7 +323,7 @@ def get_pending_deliveries(limit: int = 20) -> list[dict]:
         batch = completed_ids[i : i + 100]
         res = (
             sb.table("deliveries")
-            .select("id, user_id, video_id")
+            .select("id, user_id, video_id, language")
             .eq("status", "pending")
             .in_("video_id", batch)
             .order("created_at")
@@ -253,16 +334,33 @@ def get_pending_deliveries(limit: int = 20) -> list[dict]:
         if len(raw_deliveries) >= limit * 5:
             break
 
+    # Deduplicate by (user_id, video_id) — guard against duplicate delivery rows
+    # that could cause the same video to be sent multiple times to the same user.
+    seen_pairs: set[tuple[str, str]] = set()
+    deduped: list[dict] = []
+    for d in raw_deliveries:
+        pair = (d["user_id"], d["video_id"])
+        if pair not in seen_pairs:
+            seen_pairs.add(pair)
+            deduped.append(d)
+    raw_deliveries = deduped
+
     if not raw_deliveries:
         return []
 
-    # Build a fast lookup for video metadata
-    video_map = {v["video_id"]: v for v in
-                 (sb.table("processed_videos")
-                  .select("video_id, video_title, channel_id, summary, audio_url")
-                  .eq("status", "completed")
-                  .in_("video_id", list({d["video_id"] for d in raw_deliveries}))
-                  .execute().data or [])}
+    # Build a fast lookup for video metadata keyed by (video_id, language)
+    needed_pairs = list({(d["video_id"], d.get("language", "fr")) for d in raw_deliveries})
+    needed_video_ids = list({p[0] for p in needed_pairs})
+    pv_rows = (
+        sb.table("processed_videos")
+        .select("video_id, language, video_title, channel_id, summary, audio_url")
+        .eq("status", "completed")
+        .in_("video_id", needed_video_ids)
+        .execute()
+        .data or []
+    )
+    # key: (video_id, language)
+    video_map = {(v["video_id"], v.get("language", "fr")): v for v in pv_rows}
 
     # 3. User profiles
     user_ids = list({d["user_id"] for d in raw_deliveries})
@@ -276,7 +374,8 @@ def get_pending_deliveries(limit: int = 20) -> list[dict]:
 
     results = []
     for d in raw_deliveries:
-        v = video_map.get(d["video_id"])
+        lang = d.get("language", "fr")
+        v = video_map.get((d["video_id"], lang))
         if not v:
             continue
         profile = profile_map.get(d["user_id"])
@@ -287,6 +386,7 @@ def get_pending_deliveries(limit: int = 20) -> list[dict]:
             "chat_id": profile["telegram_chat_id"],
             "tts_voice": profile.get("tts_voice"),
             "video_id": v["video_id"],
+            "language": lang,
             "video_title": v["video_title"],
             "channel_id": v["channel_id"],
             "summary": v["summary"],
@@ -397,7 +497,8 @@ def mark_existing_videos_as_skipped(channel_id: str):
                 "video_title": entry.get("title", "[initial]"),
                 "video_url": entry.get("link", f"https://www.youtube.com/watch?v={video_id}"),
                 "status": "skipped",
+                "language": "fr",  # language-agnostic sentinel; video_id in known_ids is enough
             },
-            on_conflict="video_id",
+            on_conflict="video_id,language",
             ignore_duplicates=True,
         ).execute()
