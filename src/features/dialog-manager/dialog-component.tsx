@@ -130,6 +130,10 @@ export function DialogComponent(props: { dialog: Dialog }) {
             disabled={dialog.loading || isConfirmDisabled}
             onClick={handleAction}
             variant={dialog.action.variant ?? "default"}
+            className={cn(
+              (!dialog.action.variant || dialog.action.variant === "default") &&
+                "border-transparent bg-red-600 text-white shadow-[0_0_16px_rgba(239,68,68,0.2)] hover:bg-red-500",
+            )}
           >
             {dialog.action.label ?? "OK"}
           </LoadingButton>
