@@ -1,6 +1,6 @@
 "use client";
 
-import { Component } from "react";
+import { Component, Suspense } from "react";
 import type { ErrorInfo, ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { logger } from "@/lib/logger";
@@ -14,7 +14,7 @@ type State = {
   error: Error | null;
 };
 
-export class SectionErrorBoundary extends Component<Props, State> {
+class SectionErrorBoundaryInner extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
     this.state = { hasError: false, error: null };
@@ -54,4 +54,17 @@ export class SectionErrorBoundary extends Component<Props, State> {
 
     return this.props.children;
   }
+}
+
+/**
+ * Error boundary wrapped in Suspense (React 19 + RSC pattern).
+ * Suspense must be outside the Error Boundary to handle thenables
+ * from RSC streaming before they reach the class component.
+ */
+export function SectionErrorBoundary({ children }: Props) {
+  return (
+    <Suspense fallback={null}>
+      <SectionErrorBoundaryInner>{children}</SectionErrorBoundaryInner>
+    </Suspense>
+  );
 }
