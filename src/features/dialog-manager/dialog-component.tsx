@@ -97,8 +97,10 @@ export function DialogComponent(props: { dialog: Dialog }) {
         )}
 
         {dialog.type === "input" && (
-          <div className="mt-2">
-            <Label>{dialog.input.label}</Label>
+          <div className="mt-1 space-y-1.5">
+            <Label className="text-muted-foreground text-xs font-medium">
+              {dialog.input.label}
+            </Label>
             <Input
               value={inputValue}
               placeholder={dialog.input.placeholder}
@@ -117,26 +119,29 @@ export function DialogComponent(props: { dialog: Dialog }) {
         )}
 
         <AlertDialogFooter>
-          <Button
-            variant="outline"
-            disabled={dialog.loading}
-            onClick={handleCancel}
-          >
-            {dialog.cancel?.label ?? "Cancel"}
-          </Button>
-
+          {/* Action en premier dans le DOM = en haut (mobile) / à droite (desktop sm:flex-row-reverse) */}
           <LoadingButton
             loading={dialog.loading}
             disabled={dialog.loading || isConfirmDisabled}
             onClick={handleAction}
             variant={dialog.action.variant ?? "default"}
             className={cn(
+              "w-full sm:w-auto",
               (!dialog.action.variant || dialog.action.variant === "default") &&
                 "border-transparent bg-red-600 text-white shadow-[0_0_16px_rgba(239,68,68,0.2)] hover:bg-red-500",
             )}
           >
             {dialog.action.label ?? "OK"}
           </LoadingButton>
+
+          <Button
+            variant="outline"
+            disabled={dialog.loading}
+            onClick={handleCancel}
+            className="w-full sm:w-auto"
+          >
+            {dialog.cancel?.label ?? "Cancel"}
+          </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
