@@ -109,12 +109,6 @@ export function SummariesFeed() {
 
   return (
     <div className="space-y-2.5">
-      <div className="flex items-center justify-between">
-        <h2 className="text-muted-foreground text-sm font-semibold">
-          {tl.heading}
-        </h2>
-      </div>
-
       <div className="space-y-2.5">
         {deliveries.map((delivery) => (
           <SummaryRow
