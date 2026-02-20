@@ -103,21 +103,44 @@ def scan_all_channels():
             logger.info(f"New video: {video['title']} ({vid})")
 
             try:
-                # All 3 DB ops in a single try-except so a Supabase error on
-                # enqueue or delivery creation doesn't orphan the video in
-                # processed_videos without a matching queue job.
-                db.insert_new_video(vid, channel_id, video["title"], video["url"])
-                db.enqueue_video(vid, video["url"], video["title"], channel_id)
-                db.create_deliveries_for_video(vid, channel_id)
+                # Get all distinct (language, tts_voice) pairs from current subscribers
+                subscriber_langs = db.get_subscriber_languages(channel_id)
+                if not subscriber_langs:
+                    # Channel has no active subscribers — nothing to process
+                    known_video_ids.add(vid)
+                    continue
+
+                # Enqueue one job per unique subscriber language.
+                # Each job generates a summary + audio in that language so that
+                # every subscriber receives their preferred language.
+                for lang_info in subscriber_langs:
+                    lang = lang_info["language"]
+                    tts_voice = lang_info["tts_voice"]
+                    db.insert_new_video(vid, channel_id, video["title"], video["url"], language=lang)
+                    db.enqueue_video(vid, video["url"], video["title"], channel_id, language=lang, tts_voice=tts_voice)
+                    db.create_deliveries_for_video(vid, channel_id, language=lang)
+
                 known_video_ids.add(vid)  # prevent double-insert within same scan
                 new_count += 1
             except Exception as e:
+                error_str = str(e)
                 logger.error(f"Error queuing video {vid} ({video['title'][:40]}): {e}")
-                # Remove from processed_videos so next scan retries it cleanly
-                try:
-                    db.get_client().table("processed_videos").delete().eq("video_id", vid).execute()
-                except Exception:
-                    pass
+                # If the error is a known constraint violation (duplicate key or
+                # missing unique constraint), mark the video as known so the scanner
+                # stops retrying it — deleting it would cause an infinite re-detect loop.
+                if (
+                    "23505" in error_str  # duplicate key
+                    or "42P10" in error_str  # no unique constraint (harmless — row already inserted)
+                    or "duplicate key" in error_str.lower()
+                ):
+                    known_video_ids.add(vid)
+                else:
+                    # Unexpected error — remove from processed_videos so the next
+                    # scan retries it cleanly.
+                    try:
+                        db.get_client().table("processed_videos").delete().eq("video_id", vid).execute()
+                    except Exception:
+                        pass
 
     logger.info(f"Scan complete: {new_count} new videos found")
     return new_count
