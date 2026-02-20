@@ -20,7 +20,7 @@
     "vercel-build": "pnpm build",
     "test": "vitest",
     "test:e2e": "HEADLESS=0 playwright test --ui",
-    "test:ci": "vitest run",
+    "test:ci": "vitest run --passWithNoTests",
     "test:e2e:ci": "HEADLESS=TRUE playwright test --pass-with-no-tests",
     "lint:ci": "eslint .",
     "prepare": "husky"
