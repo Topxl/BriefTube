@@ -5,9 +5,9 @@ export const SiteConfig = {
   defaultTtsVoice: "fr-FR-DeniseNeural",
   description:
     "YouTube videos, summarized as audio, delivered to your Telegram",
-  prodUrl: "https://brieftube.app",
+  prodUrl: "https://www.brief-tube.com",
   appId: "brieftube",
-  domain: "brieftube.app",
+  domain: "brief-tube.com",
   appIcon: "/images/icon.png",
   company: {
     name: "BriefTube",
