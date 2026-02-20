@@ -55,11 +55,6 @@ const nextConfig: NextConfig = {
         destination: "/login",
         permanent: true,
       },
-      {
-        source: "/admin/:path*",
-        destination: "/dashboard",
-        permanent: true,
-      },
     ];
   },
 };
