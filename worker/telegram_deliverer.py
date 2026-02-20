@@ -8,9 +8,15 @@ from config import TELEGRAM_BOT_TOKEN
 
 logger = logging.getLogger(__name__)
 
+_bot: Bot | None = None
+
 
 def get_bot() -> Bot:
-    return Bot(token=TELEGRAM_BOT_TOKEN)
+    """Return the shared Bot singleton — creates it on first call."""
+    global _bot
+    if _bot is None:
+        _bot = Bot(token=TELEGRAM_BOT_TOKEN)
+    return _bot
 
 
 def get_thumbnail_url(video_id: str) -> str:

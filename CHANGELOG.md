@@ -2,6 +2,14 @@
 
 ## 2026-02-20
 
+FIX: transcript_extractor.py missing `import re` at module level — _parse_vtt() silently failed (NameError swallowed by try/except), returning subtitle text with raw HTML tags to Gemini
+FIX: _get_api() called once per language attempt (up to 12x per video) — now called once per get_transcript() call, reused across language loop
+FIX: Bot() singleton in telegram_deliverer — was creating a new HTTPS connection pool on every delivery call
+FIX: fail_job() now syncs processed_videos to "failed" when job permanently fails after 3 attempts — prevents videos staying stuck as "pending" forever
+FIX: pick_next_job() now uses atomic PostgreSQL RPC with FOR UPDATE SKIP LOCKED — eliminates race condition between rapid restarts or concurrent workers
+FIX: import re and import aiohttp moved to module level in main.py (were inline in hot paths)
+CHORE: delete gemini_browser.py (dead code, replaced by gemini_api.py)
+
 FIX: RSS scanner loaded only 1000 of 4000+ known video IDs (PostgREST limit) — paginate get_all_known_video_ids() so the full set is always loaded; scanner no longer treats old videos as new
 FIX: insert_new_video and enqueue_video upserts without ignore_duplicates overwrote skipped/completed videos back to pending — added ignore_duplicates=True to both
 

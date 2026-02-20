@@ -10,8 +10,11 @@ Three concurrent loops:
 
 import asyncio
 import logging
+import re
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
+
+import aiohttp
 
 from config import RSS_CHECK_INTERVAL, TELEGRAM_BOT_TOKEN, SUPABASE_URL, ADMIN_TELEGRAM_CHAT_ID, MAX_CONCURRENT_VIDEOS
 from transcript_extractor import TranscriptExtractor
@@ -148,8 +151,7 @@ async def _process_video(
 
         # Alert on Groq rate-limit 429 (quota exhausted)
         if error and ("rate_limit_exceeded" in error or "429" in error):
-            import re as _re
-            m = _re.search(r"Used (\d+), Requested (\d+)", error)
+            m = re.search(r"Used (\d+), Requested (\d+)", error)
             quota_info = ""
             if m:
                 used, req = int(m.group(1)), int(m.group(2))
@@ -378,7 +380,6 @@ async def delivery_loop(alert_system: MonitoringAlert):
 
                     if not audio_path.exists() and audio_url and audio_url.startswith("http"):
                         # Download from Supabase Storage
-                        import aiohttp
                         async with aiohttp.ClientSession() as session:
                             async with session.get(audio_url) as resp:
                                 if resp.status == 200:

@@ -146,24 +146,16 @@ def enqueue_video(video_id: str, youtube_url: str, video_title: str, channel_id:
 
 
 def pick_next_job() -> dict | None:
-    """Pick the next queued job (oldest first). Returns dict or None."""
+    """Pick the next queued job (oldest first) atomically. Returns dict or None.
+
+    Uses a PostgreSQL function with FOR UPDATE SKIP LOCKED so concurrent
+    workers or rapid restarts never pick the same job twice.
+    """
     sb = get_client()
-    res = (
-        sb.table("processing_queue")
-        .select("*")
-        .eq("status", "queued")
-        .order("created_at")
-        .limit(1)
-        .execute()
-    )
+    res = sb.rpc("pick_next_processing_job").execute()
     if not res.data:
         return None
-    job = res.data[0]
-    # Mark as processing
-    sb.table("processing_queue").update({
-        "status": "processing",
-    }).eq("id", job["id"]).execute()
-    return job
+    return res.data[0]
 
 
 def complete_job(job_id: str):
@@ -174,7 +166,7 @@ def complete_job(job_id: str):
 def fail_job(job_id: str):
     sb = get_client()
     # Use execute() without .single() — avoids throwing if the job was deleted.
-    res = sb.table("processing_queue").select("attempts").eq("id", job_id).execute()
+    res = sb.table("processing_queue").select("attempts, video_id").eq("id", job_id).execute()
     if not res.data:
         return  # Job already gone — nothing to update
     attempts = (res.data[0].get("attempts") or 0) + 1
@@ -183,6 +175,12 @@ def fail_job(job_id: str):
         "status": status,
         "attempts": attempts,
     }).eq("id", job_id).execute()
+    # Keep processed_videos in sync: when the job permanently fails, mark the
+    # video as failed too so it doesn't stay stuck in "pending" forever.
+    if status == "failed":
+        video_id = res.data[0].get("video_id")
+        if video_id:
+            mark_video_failed(video_id)
 
 
 # ── Deliveries ─────────────────────────────────────────────────

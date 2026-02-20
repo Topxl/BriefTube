@@ -9,6 +9,7 @@ Strategy:
 
 import logging
 import os
+import re
 import threading
 from pathlib import Path
 from typing import Optional, Tuple
@@ -175,9 +176,12 @@ class TranscriptExtractor:
             detected_lang = None
             ip_blocked = False
 
+            # Create API instance once per call (not once per language attempt)
+            api = self._get_api()
+
             for lang in preferred_languages:
                 try:
-                    transcript_data = self._get_api().fetch(video_id, languages=[lang])
+                    transcript_data = api.fetch(video_id, languages=[lang])
                     detected_lang = lang
                     logger.info(f"Found transcript in preferred language: {lang}")
                     break
@@ -193,7 +197,7 @@ class TranscriptExtractor:
             # that have FR transcripts but no EN, without falling back to Whisper.
             if transcript_data is None:
                 try:
-                    transcript_data = self._get_api().fetch(video_id, languages=preferred_languages)
+                    transcript_data = api.fetch(video_id, languages=preferred_languages)
                     detected_lang = 'auto'
                     logger.info("Found transcript via multi-language fallback")
                 except Exception as e:
