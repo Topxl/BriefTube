@@ -160,12 +160,12 @@ def enqueue_video(video_id: str, youtube_url: str, video_title: str, channel_id:
         row["tts_voice"] = tts_voice
     # No unique constraint on (video_id, language) in processing_queue, so we
     # check manually: only insert if no queued/processing job exists for this pair.
+    # Check all statuses — the unique constraint is on video_id alone, so any
+    # existing row (queued, processing, completed, failed) blocks a new insert.
     existing = (
         sb.table("processing_queue")
         .select("id")
         .eq("video_id", video_id)
-        .eq("user_language", language)
-        .in_("status", ["queued", "processing"])
         .execute()
     )
     if not existing.data:
@@ -277,12 +277,24 @@ def create_deliveries_for_video(video_id: str, channel_id: str, language: str = 
         user_lang = profile.get("preferred_language") or "fr"
         if user_lang != language:
             continue
-        sb.table("deliveries").upsert({
-            "user_id": profile["id"],
-            "video_id": video_id,
-            "status": "pending",
-            "language": language,
-        }, on_conflict="user_id,video_id,language").execute()
+        # Use select+insert instead of upsert(on_conflict=...) because the
+        # deliveries table has no UNIQUE constraint on (user_id, video_id, language),
+        # which would cause a 42P10 "no unique constraint" error on every new video.
+        existing = (
+            sb.table("deliveries")
+            .select("id")
+            .eq("user_id", profile["id"])
+            .eq("video_id", video_id)
+            .eq("language", language)
+            .execute()
+        )
+        if not existing.data:
+            sb.table("deliveries").insert({
+                "user_id": profile["id"],
+                "video_id": video_id,
+                "status": "pending",
+                "language": language,
+            }).execute()
 
 
 def get_pending_deliveries(limit: int = 20) -> list[dict]:
