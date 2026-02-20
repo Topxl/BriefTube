@@ -85,32 +85,39 @@ def scan_all_channels():
     for channel_id in channel_ids:
         try:
             videos = fetch_channel_videos(channel_id)
-            for video in videos:
-                vid = video["video_id"]
-
-                # Skip if already known (local set lookup — no DB call)
-                if vid in known_video_ids:
-                    continue
-
-                # Skip YouTube Shorts
-                if is_youtube_short(video["url"]):
-                    continue
-
-                logger.info(f"New video: {video['title']} ({vid})")
-
-                # Insert into processed_videos as pending
-                db.insert_new_video(vid, channel_id, video["title"], video["url"])
-
-                # Add to processing queue
-                db.enqueue_video(vid, video["url"], video["title"], channel_id)
-
-                # Create delivery entries for all subscribers
-                db.create_deliveries_for_video(vid, channel_id)
-
-                new_count += 1
-
         except Exception as e:
-            logger.error(f"Error scanning channel {channel_id}: {e}")
+            logger.error(f"Error fetching RSS for channel {channel_id}: {e}")
+            continue
+
+        for video in videos:
+            vid = video["video_id"]
+
+            # Skip if already known (local set lookup — no DB call)
+            if vid in known_video_ids:
+                continue
+
+            # Skip YouTube Shorts
+            if is_youtube_short(video["url"]):
+                continue
+
+            logger.info(f"New video: {video['title']} ({vid})")
+
+            try:
+                # All 3 DB ops in a single try-except so a Supabase error on
+                # enqueue or delivery creation doesn't orphan the video in
+                # processed_videos without a matching queue job.
+                db.insert_new_video(vid, channel_id, video["title"], video["url"])
+                db.enqueue_video(vid, video["url"], video["title"], channel_id)
+                db.create_deliveries_for_video(vid, channel_id)
+                known_video_ids.add(vid)  # prevent double-insert within same scan
+                new_count += 1
+            except Exception as e:
+                logger.error(f"Error queuing video {vid} ({video['title'][:40]}): {e}")
+                # Remove from processed_videos so next scan retries it cleanly
+                try:
+                    db.get_client().table("processed_videos").delete().eq("video_id", vid).execute()
+                except Exception:
+                    pass
 
     logger.info(f"Scan complete: {new_count} new videos found")
     return new_count

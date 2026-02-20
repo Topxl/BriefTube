@@ -1,17 +1,6 @@
 #!/bin/bash
 #
-# BriefTube Worker Restart Script
+# BriefTube Worker — Restart via systemd
 #
-
-cd "$(dirname "$0")"
-
-echo "🔄 Restarting BriefTube worker..."
-
-# Stop
-./stop.sh
-
-# Wait a bit
-sleep 2
-
-# Start
-./start.sh
+sudo systemctl restart brieftube-worker
+sudo systemctl status brieftube-worker --no-pager

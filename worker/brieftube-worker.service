@@ -5,13 +5,13 @@ After=network.target
 [Service]
 Type=simple
 User=vj
-WorkingDirectory=/home/vj/Bureau/BriefTube/worker
-ExecStart=/home/vj/Bureau/BriefTube/worker/venv/bin/python main.py
-Restart=always
+WorkingDirectory=/home/vj/Bureau/Projets/BriefTube/worker
+ExecStart=/home/vj/Bureau/Projets/BriefTube/worker/venv/bin/python main.py
+Restart=on-failure
 RestartSec=10
 Environment=PYTHONUNBUFFERED=1
-StandardOutput=append:/home/vj/Bureau/BriefTube/worker/worker.log
-StandardError=append:/home/vj/Bureau/BriefTube/worker/worker.log
+StandardOutput=append:/home/vj/Bureau/Projets/BriefTube/worker/worker.log
+StandardError=append:/home/vj/Bureau/Projets/BriefTube/worker/worker.log
 
 [Install]
 WantedBy=multi-user.target

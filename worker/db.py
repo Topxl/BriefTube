@@ -2,7 +2,8 @@
 
 import logging
 from datetime import datetime, timezone
-from supabase import create_client, Client
+import httpx
+from supabase import create_client, Client, ClientOptions
 
 from config import SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 
@@ -11,18 +12,30 @@ logger = logging.getLogger(__name__)
 _client: Client = None
 
 
+def _make_client() -> Client:
+    """Create a Supabase client with HTTP/2 disabled.
+
+    Supabase/Cloudflare sends HTTP/2 GOAWAY frames aggressively, which breaks
+    persistent connections and causes 'ConnectionTerminated' / 'Server disconnected'
+    errors. Using HTTP/1.1 avoids this entirely.
+    """
+    http_client = httpx.Client(http2=False, timeout=30.0)
+    options = ClientOptions(httpx_client=http_client)
+    return create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, options=options)
+
+
 def get_client() -> Client:
     global _client
     if _client is None:
-        _client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+        _client = _make_client()
     return _client
 
 
 def reset_client() -> None:
     """Force-recreate the Supabase client on next get_client() call.
 
-    Call this after a 'Server disconnected' or connection error so the
-    stale HTTP connection is dropped and a fresh one is established.
+    Call this after a connection error so the stale HTTP connection is
+    dropped and a fresh one is established.
     """
     global _client
     _client = None
@@ -172,42 +185,67 @@ def create_deliveries_for_video(video_id: str, channel_id: str):
 
 
 def get_pending_deliveries(limit: int = 20) -> list[dict]:
-    """Get pending deliveries where the video is completed.
+    """Get pending deliveries for completed videos.
 
-    Fetches a larger batch than `limit` so that deliveries blocked by
-    still-pending/failed videos don't starve deliveries with completed videos.
+    Starts from completed videos (not from the delivery queue) so that a large
+    backlog of unprocessed-video deliveries cannot starve ready-to-send ones.
+    Paginates processed_videos to handle tables larger than PostgREST's 1000-row
+    default limit.
     """
     sb = get_client()
 
-    # Fetch 5x more than needed: non-completed videos in the queue would
-    # block delivery if we only fetched `limit` rows (oldest-first).
-    fetch_limit = max(limit * 5, 100)
+    # 1. Collect all completed video IDs (paginate past the 1000-row limit)
+    completed_ids: list[str] = []
+    offset = 0
+    while True:
+        res = (
+            sb.table("processed_videos")
+            .select("video_id, video_title, channel_id, summary, audio_url")
+            .eq("status", "completed")
+            .range(offset, offset + 999)
+            .execute()
+        )
+        if not res.data:
+            break
+        for row in res.data:
+            completed_ids.append(row["video_id"])
+        if len(res.data) < 1000:
+            break
+        offset += 1000
 
-    deliveries = (
-        sb.table("deliveries")
-        .select("id, user_id, video_id")
-        .eq("status", "pending")
-        .order("created_at")
-        .limit(fetch_limit)
-        .execute()
-    )
-    if not deliveries.data:
+    if not completed_ids:
         return []
 
-    video_ids = list({d["video_id"] for d in deliveries.data})
-    user_ids = list({d["user_id"] for d in deliveries.data})
+    # 2. Find pending deliveries for those videos (batch by 100 to stay within URL limits)
+    raw_deliveries: list[dict] = []
+    for i in range(0, len(completed_ids), 100):
+        batch = completed_ids[i : i + 100]
+        res = (
+            sb.table("deliveries")
+            .select("id, user_id, video_id")
+            .eq("status", "pending")
+            .in_("video_id", batch)
+            .order("created_at")
+            .limit(limit * 5)
+            .execute()
+        )
+        raw_deliveries.extend(res.data or [])
+        if len(raw_deliveries) >= limit * 5:
+            break
 
-    # Only completed videos
-    videos_res = (
-        sb.table("processed_videos")
-        .select("video_id, video_title, channel_id, summary, audio_url")
-        .in_("video_id", video_ids)
-        .eq("status", "completed")
-        .execute()
-    )
-    video_map = {v["video_id"]: v for v in (videos_res.data or [])}
+    if not raw_deliveries:
+        return []
 
-    # User profiles
+    # Build a fast lookup for video metadata
+    video_map = {v["video_id"]: v for v in
+                 (sb.table("processed_videos")
+                  .select("video_id, video_title, channel_id, summary, audio_url")
+                  .eq("status", "completed")
+                  .in_("video_id", list({d["video_id"] for d in raw_deliveries}))
+                  .execute().data or [])}
+
+    # 3. User profiles
+    user_ids = list({d["user_id"] for d in raw_deliveries})
     profiles_res = (
         sb.table("profiles")
         .select("id, telegram_chat_id, tts_voice, telegram_connected")
@@ -217,7 +255,7 @@ def get_pending_deliveries(limit: int = 20) -> list[dict]:
     profile_map = {p["id"]: p for p in (profiles_res.data or [])}
 
     results = []
-    for d in deliveries.data:
+    for d in raw_deliveries:
         v = video_map.get(d["video_id"])
         if not v:
             continue

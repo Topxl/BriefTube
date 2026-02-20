@@ -2,6 +2,10 @@
 
 ## 2026-02-20
 
+FIX: Worker Supabase HTTP/2 instability — disabled HTTP/2 in httpx client (h2 was installed, Supabase/Cloudflare sent GOAWAY frames causing constant ConnectionTerminated errors that blocked all deliveries since restart)
+FIX: Worker multiple instances — two worker instances were running simultaneously causing race conditions; switched start/stop/restart scripts to use systemctl exclusively
+CHORE: Worker systemd service — corrected path in brieftube-worker.service (Bureau/BriefTube → Bureau/Projets/BriefTube), changed Restart=always to Restart=on-failure, enabled and activated service
+
 FIX: Scheduled/upcoming videos (Premieres) — RSS scanner now checks entry.published_parsed and skips videos with a future publish date; they're picked up naturally on the next scan once live; video_unavailable added to should_retry() so edge cases are retried instead of permanently failed
 
 FIX: Video processing timeout — VIDEO_TIMEOUT (600s) was defined but never applied; wrap _process_video with asyncio.wait_for so a hung job can't block a semaphore slot forever
