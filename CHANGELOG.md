@@ -4,6 +4,7 @@
 
 FIX: Create src/lib/icons.tsx barrel wrapping all Lucide icons with suppressHydrationWarning — eliminates Dark Reader SVG hydration mismatches
 FIX: Add suppressHydrationWarning to all next/image <Image> components — eliminates Dark Reader inline-color hydration mismatches
+FIX: Wrap SectionErrorBoundary children in Suspense inside render() — fixes React 19 "uncached promise" error for RSC thenable children
 FIX: Remove async from SectionErrorBoundary.render() — fixes "uncached promise" React error
 FIX: Add color-scheme to CSS + enableColorScheme on ThemeProvider to prevent Dark Reader SVG hydration mismatch
 FIX: Add suppressHydrationWarning to all form and input elements to suppress Dashlane hydration mismatch

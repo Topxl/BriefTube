@@ -14,7 +14,17 @@ type State = {
   error: Error | null;
 };
 
-class SectionErrorBoundaryInner extends Component<Props, State> {
+/**
+ * Error boundary that wraps children in Suspense inside render().
+ *
+ * React 19 + RSC: children passed from a Server Component can be
+ * thenables (lazy RSC references). Returning them directly from a
+ * class component render() causes "uncached promise" errors.
+ * Wrapping in Suspense inside render() ensures render() always
+ * returns a synchronous React element — Suspense resolves the
+ * thenables, errors still bubble up to this boundary.
+ */
+export class SectionErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
     this.state = { hasError: false, error: null };
@@ -52,19 +62,6 @@ class SectionErrorBoundaryInner extends Component<Props, State> {
       );
     }
 
-    return this.props.children;
+    return <Suspense fallback={null}>{this.props.children}</Suspense>;
   }
-}
-
-/**
- * Error boundary wrapped in Suspense (React 19 + RSC pattern).
- * Suspense must be outside the Error Boundary to handle thenables
- * from RSC streaming before they reach the class component.
- */
-export function SectionErrorBoundary({ children }: Props) {
-  return (
-    <Suspense fallback={null}>
-      <SectionErrorBoundaryInner>{children}</SectionErrorBoundaryInner>
-    </Suspense>
-  );
 }
