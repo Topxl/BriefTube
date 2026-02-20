@@ -72,9 +72,12 @@ def mark_video_completed(video_id: str, summary: str, audio_url: str, metadata: 
 
 def mark_video_failed(video_id: str):
     sb = get_client()
-    # Increment failure_count
-    row = sb.table("processed_videos").select("failure_count").eq("video_id", video_id).single().execute()
-    count = (row.data.get("failure_count") or 0) + 1
+    # Increment failure_count — use execute() (not .single()) to avoid throwing
+    # if the row was deleted between job pick and failure handling.
+    res = sb.table("processed_videos").select("failure_count").eq("video_id", video_id).execute()
+    if not res.data:
+        return  # Row gone — nothing to update
+    count = (res.data[0].get("failure_count") or 0) + 1
     status = "failed" if count >= 3 else "pending"
     sb.table("processed_videos").update({
         "failure_count": count,
@@ -135,8 +138,11 @@ def complete_job(job_id: str):
 
 def fail_job(job_id: str):
     sb = get_client()
-    job = sb.table("processing_queue").select("attempts").eq("id", job_id).single().execute()
-    attempts = (job.data.get("attempts") or 0) + 1
+    # Use execute() without .single() — avoids throwing if the job was deleted.
+    res = sb.table("processing_queue").select("attempts").eq("id", job_id).execute()
+    if not res.data:
+        return  # Job already gone — nothing to update
+    attempts = (res.data[0].get("attempts") or 0) + 1
     status = "failed" if attempts >= 3 else "queued"
     sb.table("processing_queue").update({
         "status": status,

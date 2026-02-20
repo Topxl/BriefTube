@@ -398,8 +398,14 @@ class TranscriptExtractor:
             "no_transcript_available",  # Might be generated later
             "rate_limited",             # Temporary
         ]
+        if error_message in retry_errors:
+            return True
 
-        return error_message in retry_errors
+        # Groq 429 rate limit — retry after midnight UTC when quota resets
+        if "429" in error_message or "rate_limit_exceeded" in error_message:
+            return True
+
+        return False
 
 
 # Example usage

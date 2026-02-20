@@ -302,10 +302,21 @@ async def processor_loop(alert_system: MonitoringAlert):
                 await asyncio.sleep(10)
                 continue
 
-            # Dispatch to a background task; semaphore released when done
+            # Dispatch to a background task; semaphore released when done.
+            # VIDEO_TIMEOUT caps each job so a hung video never blocks a slot forever.
             async def _do(j: dict) -> None:
                 try:
-                    await _process_video(j, transcript_extractor, gemini_summarizer, alert_system)
+                    await asyncio.wait_for(
+                        _process_video(j, transcript_extractor, gemini_summarizer, alert_system),
+                        timeout=VIDEO_TIMEOUT,
+                    )
+                except asyncio.TimeoutError:
+                    logger.error(f"[{j['video_id']}] Timed out after {VIDEO_TIMEOUT}s — marking failed")
+                    try:
+                        db.fail_job(j["id"])
+                        db.mark_video_failed(j["video_id"])
+                    except Exception:
+                        pass
                 finally:
                     semaphore.release()
 
