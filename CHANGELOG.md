@@ -2,6 +2,8 @@
 
 ## 2026-02-20
 
+FIX: Scheduled/upcoming videos (Premieres) — RSS scanner now checks entry.published_parsed and skips videos with a future publish date; they're picked up naturally on the next scan once live; video_unavailable added to should_retry() so edge cases are retried instead of permanently failed
+
 FIX: Video processing timeout — VIDEO_TIMEOUT (600s) was defined but never applied; wrap _process_video with asyncio.wait_for so a hung job can't block a semaphore slot forever
 
 FIX: db.single() crash — mark_video_failed() and fail_job() used .single().execute() which throws if the row is missing (e.g. deleted between pick and fail); replaced with .execute() + explicit row check

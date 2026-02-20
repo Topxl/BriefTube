@@ -1,7 +1,9 @@
 """RSS Scanner — checks all subscribed channels for new videos."""
 
+import calendar
 import logging
 import re
+import time
 import feedparser
 
 import db
@@ -28,23 +30,38 @@ def is_youtube_short(url: str) -> bool:
 
 
 def fetch_channel_videos(channel_id: str) -> list[dict]:
-    """Fetch recent videos from a YouTube channel via RSS."""
+    """Fetch recent videos from a YouTube channel via RSS.
+
+    Videos whose publish date is in the future (Premieres, scheduled drops)
+    are skipped — they'll be picked up naturally on the next scan once live.
+    """
     rss_url = get_rss_url(channel_id)
     feed = feedparser.parse(rss_url)
+    now = time.time()
 
     videos = []
     for entry in feed.entries:
         video_id = entry.yt_videoid if hasattr(entry, "yt_videoid") else None
         if not video_id:
             video_id = extract_video_id(entry.link)
-        if video_id:
-            videos.append({
-                "video_id": video_id,
-                "title": entry.title,
-                "url": entry.link,
-                "channel_id": channel_id,
-                "channel_name": feed.feed.title if hasattr(feed.feed, "title") else "Unknown",
-            })
+        if not video_id:
+            continue
+
+        # Skip videos scheduled for future publication (Premieres, etc.)
+        published = getattr(entry, "published_parsed", None)
+        if published:
+            published_ts = calendar.timegm(published)  # UTC timestamp
+            if published_ts > now + 60:  # 1-min grace to handle clock skew
+                logger.debug(f"Skipping future video: {entry.title} (publishes in {int((published_ts - now) / 3600)}h)")
+                continue
+
+        videos.append({
+            "video_id": video_id,
+            "title": entry.title,
+            "url": entry.link,
+            "channel_id": channel_id,
+            "channel_name": feed.feed.title if hasattr(feed.feed, "title") else "Unknown",
+        })
     return videos
 
 

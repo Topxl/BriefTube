@@ -397,6 +397,7 @@ class TranscriptExtractor:
         retry_errors = [
             "no_transcript_available",  # Might be generated later
             "rate_limited",             # Temporary
+            "video_unavailable",        # Premiere / scheduled — retry when live
         ]
         if error_message in retry_errors:
             return True
