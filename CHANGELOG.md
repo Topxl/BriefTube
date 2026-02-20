@@ -2,6 +2,7 @@
 
 ## 2026-02-20
 
+FIX: Add suppressHydrationWarning to all form and input elements to suppress Dashlane hydration mismatch
 UX: Improve Input component visibility — bg-white/[0.06] background, border-white/[0.14], better focus ring
 FIX: Add data-form-type="other" to YouTube channel input to prevent Dashlane autofill
 UX: Limit sources list to 3 visible by default with search bar + "Show more" (+10) navigation

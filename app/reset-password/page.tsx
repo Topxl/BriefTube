@@ -136,6 +136,7 @@ export default function ResetPasswordPage() {
             onSubmit={handleReset}
             className="space-y-4"
             data-form-type="other"
+            suppressHydrationWarning
           >
             <div>
               <Label htmlFor="password">{tl.newPasswordLabel}</Label>

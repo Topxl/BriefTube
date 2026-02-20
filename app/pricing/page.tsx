@@ -105,6 +105,7 @@ export default async function PricingPage() {
                 action="/api/stripe/checkout"
                 method="POST"
                 data-form-type="other"
+                suppressHydrationWarning
               >
                 <Button type="submit" className="w-full">
                   Upgrade to Pro

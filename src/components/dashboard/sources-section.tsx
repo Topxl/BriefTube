@@ -280,6 +280,7 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
         onSubmit={(e) => void addSource(e)}
         className="relative flex gap-2"
         data-form-type="other"
+        suppressHydrationWarning
       >
         <div className="relative flex-1">
           {isAddMode ? (

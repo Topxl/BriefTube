@@ -140,6 +140,8 @@ export function ProfileContent({
                 action="/api/stripe/checkout"
                 method="POST"
                 className="mt-4"
+                data-form-type="other"
+                suppressHydrationWarning
               >
                 <Button
                   type="submit"
@@ -169,6 +171,7 @@ export function ProfileContent({
                 action="/api/stripe/portal"
                 method="POST"
                 data-form-type="other"
+                suppressHydrationWarning
               >
                 <button
                   type="submit"

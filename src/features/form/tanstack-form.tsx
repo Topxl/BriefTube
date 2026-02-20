@@ -337,6 +337,7 @@ export function Form({
           e.stopPropagation();
           void form.handleSubmit();
         }}
+        suppressHydrationWarning
         {...props}
       >
         {children}

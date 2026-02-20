@@ -249,6 +249,7 @@ export function EditListForm({
           onSubmit={(e) => void handleSave(e)}
           className="space-y-6"
           data-form-type="other"
+          suppressHydrationWarning
         >
           {/* Name */}
           <div className="space-y-1.5">

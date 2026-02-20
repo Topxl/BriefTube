@@ -52,6 +52,7 @@ const Form = <T extends FieldValues>({
     <FormProvider {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmit)}
+        suppressHydrationWarning
         onBlur={async () => {
           if (submitOnBlur) {
             debouncedBlurSubmit();

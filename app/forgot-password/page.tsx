@@ -114,6 +114,7 @@ export default function ForgotPasswordPage() {
             onSubmit={handleReset}
             className="space-y-4"
             data-form-type="other"
+            suppressHydrationWarning
           >
             <div>
               <Label htmlFor="email">{tl.emailLabel}</Label>
