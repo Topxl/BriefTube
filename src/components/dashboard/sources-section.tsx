@@ -123,6 +123,10 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
   const [sources, setSources] = useState<Subscription[]>(initialSources);
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
   const [collapsed, setCollapsed] = useState(false);
+  const [showFilter, setShowFilter] = useState(false);
+  const [filterStatus, setFilterStatus] = useState<"all" | "active" | "paused">(
+    "all",
+  );
   const [q] = useQueryState("q", { defaultValue: "", shallow: true });
   const supabase = createClient();
 
@@ -143,14 +147,21 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
     ...sources.filter((s) => !s.active),
   ];
 
+  const filteredByStatus =
+    filterStatus === "all"
+      ? sortedSources
+      : sortedSources.filter((s) =>
+          filterStatus === "active" ? s.active : !s.active,
+        );
+
   const displayedSources = searchNorm
-    ? sortedSources.filter((s) =>
+    ? filteredByStatus.filter((s) =>
         s.channel_name.toLowerCase().includes(searchNorm),
       )
-    : sortedSources.slice(0, visibleCount);
+    : filteredByStatus.slice(0, visibleCount);
 
-  const remainingCount = sources.length - visibleCount;
-  const hasMore = !searchNorm && visibleCount < sources.length;
+  const remainingCount = filteredByStatus.length - visibleCount;
+  const hasMore = !searchNorm && visibleCount < filteredByStatus.length;
 
   const toggleActive = async (source: Subscription) => {
     const newActive = !source.active;
@@ -222,18 +233,50 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
   return (
     <div className="space-y-3">
       {/* Header */}
-      <button
-        onClick={() => setCollapsed((c) => !c)}
-        className="flex items-center gap-2"
-      >
-        <h2 className="text-sm font-semibold">Sources</h2>
-        <span className="text-muted-foreground/50 text-xs tabular-nums">
-          {isPro ? sources.length : `${activeCount}/${maxChannels}`}
-        </span>
-        <ChevronDown
-          className={`text-muted-foreground/40 h-3.5 w-3.5 transition-transform duration-200 ${collapsed ? "-rotate-90" : ""}`}
-        />
-      </button>
+      <div className="flex items-center justify-between">
+        <button
+          onClick={() => setCollapsed((c) => !c)}
+          className="flex items-center gap-2"
+        >
+          <h2 className="text-sm font-semibold">Sources</h2>
+          <span className="text-muted-foreground/50 text-xs tabular-nums">
+            {isPro ? sources.length : `${activeCount}/${maxChannels}`}
+          </span>
+          <ChevronDown
+            className={`text-muted-foreground/40 h-3.5 w-3.5 transition-transform duration-200 ${collapsed ? "-rotate-90" : ""}`}
+          />
+        </button>
+        <button
+          onClick={() => setShowFilter((f) => !f)}
+          title="Filter"
+          className={`flex h-6 w-6 items-center justify-center rounded transition-colors ${
+            showFilter || filterStatus !== "all"
+              ? "text-foreground bg-white/[0.08]"
+              : "text-muted-foreground/40 hover:text-muted-foreground hover:bg-white/[0.04]"
+          }`}
+        >
+          <ListFilter className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      {/* Filter pills */}
+      {showFilter && !collapsed && (
+        <div className="flex items-center gap-1">
+          {(["all", "active", "paused"] as const).map((status) => (
+            <button
+              key={status}
+              onClick={() => setFilterStatus(status)}
+              className={`rounded-full px-2.5 py-0.5 text-xs font-medium capitalize transition-colors ${
+                filterStatus === status
+                  ? "text-foreground bg-white/[0.10]"
+                  : "text-muted-foreground/60 hover:text-foreground"
+              }`}
+            >
+              {status}
+            </button>
+          ))}
+        </div>
+      )}
 
       {!collapsed && (
         <>
