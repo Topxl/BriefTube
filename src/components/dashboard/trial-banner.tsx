@@ -47,32 +47,28 @@ export function TrialBanner({ daysLeft }: { daysLeft: number }) {
   if (daysLeft <= 0 || isDismissed) return null;
 
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-amber-500/[0.15] bg-amber-500/[0.04] py-2.5 pr-2 pl-3.5">
-      <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400" />
-      <p className="text-muted-foreground min-w-0 flex-1 text-xs">
+    <div className="flex items-center gap-2 rounded-lg border border-amber-500/[0.15] bg-amber-500/[0.04] py-1.5 pr-1 pl-3">
+      <p className="text-muted-foreground min-w-0 flex-1 truncate text-xs">
         <span className="font-medium text-amber-300/90">
           {daysLeft === 1 ? "Last day" : `${daysLeft} days`}
         </span>{" "}
-        left in your Pro trial &middot; Unlimited channels, TTS voices, priority
-        processing
+        left in your Pro trial
       </p>
-      <div className="flex shrink-0 items-center gap-0.5">
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-7 px-2.5 text-xs text-amber-400/80 hover:bg-amber-500/10 hover:text-amber-300"
-          asChild
-        >
-          <Link href="/dashboard/billing">Upgrade to Pro</Link>
-        </Button>
-        <button
-          onClick={dismiss}
-          className="text-muted-foreground/30 hover:text-muted-foreground flex h-7 w-7 items-center justify-center rounded-md transition-colors hover:bg-white/[0.06]"
-          title="Dismiss"
-        >
-          <X className="h-3.5 w-3.5" />
-        </button>
-      </div>
+      <Button
+        size="sm"
+        variant="ghost"
+        className="h-6 shrink-0 px-2 text-xs text-amber-400/80 hover:bg-amber-500/10 hover:text-amber-300"
+        asChild
+      >
+        <Link href="/dashboard/billing">Upgrade</Link>
+      </Button>
+      <button
+        onClick={dismiss}
+        className="text-muted-foreground/30 hover:text-muted-foreground flex h-6 w-6 shrink-0 items-center justify-center rounded transition-colors hover:bg-white/[0.06]"
+        title="Dismiss"
+      >
+        <X className="h-3 w-3" />
+      </button>
     </div>
   );
 }
