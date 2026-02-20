@@ -15,6 +15,17 @@ type Subscription = Tables<"subscriptions">;
 const INITIAL_VISIBLE = 3;
 const LOAD_MORE_STEP = 10;
 
+/** Returns true when the input looks like a YouTube URL or channel ID to add */
+function isYouTubeInput(val: string): boolean {
+  const v = val.trim();
+  return (
+    v.includes("youtube.com") ||
+    v.includes("youtu.be") ||
+    v.startsWith("@") ||
+    /^UC[\w-]{10,}$/.test(v)
+  );
+}
+
 type Props = {
   initialSources: Subscription[];
   maxChannels: number;
@@ -122,15 +133,19 @@ function SourceRow({
 
 export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
   const [sources, setSources] = useState<Subscription[]>(initialSources);
-  const [url, setUrl] = useState("");
+  const [input, setInput] = useState("");
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState("");
-  const [search, setSearch] = useState("");
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
   const supabase = createClient();
 
   const activeCount = sources.filter((s) => s.active).length;
   const atActiveLimit = !isPro && activeCount >= maxChannels;
+
+  const trimmed = input.trim();
+  const isAddMode = trimmed.length > 0 && isYouTubeInput(trimmed);
+  const searchNorm =
+    trimmed.length > 0 && !isAddMode ? trimmed.toLowerCase() : "";
 
   // Active first, then paused — preserving insertion order within each group
   const sortedSources = [
@@ -138,7 +153,6 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
     ...sources.filter((s) => !s.active),
   ];
 
-  const searchNorm = search.trim().toLowerCase();
   const displayedSources = searchNorm
     ? sortedSources.filter((s) =>
         s.channel_name.toLowerCase().includes(searchNorm),
@@ -150,14 +164,14 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
 
   const addSource = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!url.trim()) return;
+    if (!trimmed || !isAddMode) return;
     setAdding(true);
     setAddError("");
     try {
       const res = await fetch("/api/subscriptions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ url: trimmed }),
       });
       const data = (await res.json()) as Subscription & { error?: string };
       if (!res.ok) {
@@ -165,9 +179,8 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
         return;
       }
       setSources((prev) => [data, ...prev]);
-      setSearch("");
+      setInput("");
       setVisibleCount(INITIAL_VISIBLE);
-      setUrl("");
       toast.success(
         data.active
           ? "Source added and active"
@@ -245,7 +258,7 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
     atActiveLimit,
     onToggle: toggleActive,
     onRemove: removeSource,
-    searchQuery: search,
+    searchQuery: searchNorm,
   };
 
   return (
@@ -260,44 +273,72 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
               : `${activeCount} of ${maxChannels} active · ${sources.length} total`}
           </p>
         </div>
-        <Button variant="outline" size="sm" asChild>
-          <a href="/api/youtube/auth">
-            <Youtube className="h-3.5 w-3.5" />
-            Import
-          </a>
-        </Button>
       </div>
 
-      {/* Add form */}
-      <form onSubmit={(e) => void addSource(e)} className="flex gap-2">
-        <Input
-          type="text"
-          value={url}
-          onChange={(e) => {
-            setUrl(e.target.value);
-            setAddError("");
-          }}
-          placeholder="youtube.com/@channel or channel ID"
-          className="flex-1"
-          autoComplete="off"
-          data-1p-ignore
-          data-lpignore="true"
-          data-form-type="other"
-        />
-        <Button
-          type="submit"
-          disabled={adding || !url.trim()}
-          className="shrink-0 bg-red-600 shadow-[0_0_12px_rgba(239,68,68,0.15)] hover:bg-red-500"
-        >
-          {adding ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+      {/* Unified search / add bar */}
+      <form onSubmit={(e) => void addSource(e)} className="relative flex gap-2">
+        <div className="relative flex-1">
+          {isAddMode ? (
+            <Youtube className="text-muted-foreground absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2" />
           ) : (
-            <Plus className="h-4 w-4" />
+            <Search className="text-muted-foreground absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2" />
           )}
-        </Button>
+          <Input
+            type="text"
+            value={input}
+            onChange={(e) => {
+              setInput(e.target.value);
+              setAddError("");
+            }}
+            placeholder={
+              sources.length > 0
+                ? `Search ${sources.length} channels or paste a YouTube URL…`
+                : "Paste a YouTube URL or channel ID…"
+            }
+            className="pr-8 pl-8"
+            autoComplete="off"
+            data-1p-ignore
+            data-lpignore="true"
+            data-form-type="other"
+          />
+          {input && (
+            <button
+              type="button"
+              onClick={() => {
+                setInput("");
+                setAddError("");
+              }}
+              className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2 transition-colors"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+
+        {isAddMode && (
+          <Button
+            type="submit"
+            disabled={adding}
+            className="shrink-0 bg-red-600 shadow-[0_0_12px_rgba(239,68,68,0.15)] hover:bg-red-500"
+          >
+            {adding ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Plus className="h-4 w-4" />
+            )}
+          </Button>
+        )}
       </form>
 
       {addError && <p className="text-xs text-red-400">{addError}</p>}
+
+      {/* Import from YouTube */}
+      <Button variant="outline" className="w-full" asChild>
+        <a href="/api/youtube/auth">
+          <Youtube className="h-4 w-4" />
+          Import subscriptions from YouTube
+        </a>
+      </Button>
 
       {/* Active limit banner */}
       {atActiveLimit && (
@@ -346,28 +387,6 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
         </div>
       ) : (
         <div className="space-y-2">
-          {/* Search bar — visible when there are more channels than the initial limit */}
-          {sources.length > INITIAL_VISIBLE && (
-            <div className="relative">
-              <Search className="text-muted-foreground absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2" />
-              <Input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder={`Search ${sources.length} channels...`}
-                className="pr-8 pl-8 text-sm"
-              />
-              {search && (
-                <button
-                  onClick={() => setSearch("")}
-                  className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2 transition-colors"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </div>
-          )}
-
           {/* Channel list */}
           <div className="overflow-hidden rounded-xl border border-white/[0.06]">
             {displayedSources.length > 0 ? (
@@ -378,7 +397,7 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
               </div>
             ) : (
               <p className="text-muted-foreground px-4 py-6 text-center text-sm">
-                No channel matching &ldquo;{search}&rdquo;
+                No channel matching &ldquo;{input}&rdquo;
               </p>
             )}
           </div>
