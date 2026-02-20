@@ -359,10 +359,10 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
               {hasMore && (
                 <button
                   onClick={() => setVisibleCount((n) => n + LOAD_MORE_STEP)}
-                  className="text-muted-foreground/50 hover:text-muted-foreground w-full py-2 text-xs transition-colors"
+                  className="text-muted-foreground/30 hover:text-muted-foreground flex w-full items-center justify-center py-1.5 transition-colors"
+                  title={`Show ${Math.min(LOAD_MORE_STEP, remainingCount)} more`}
                 >
-                  Show {Math.min(LOAD_MORE_STEP, remainingCount)} more &middot;{" "}
-                  {remainingCount} remaining
+                  <ChevronDown className="h-4 w-4" />
                 </button>
               )}
             </div>
