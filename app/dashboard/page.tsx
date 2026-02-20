@@ -53,9 +53,6 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      {/* Trial banner */}
-      {trialDaysLeft > 0 && <TrialBanner daysLeft={trialDaysLeft} />}
-
       {/* Sources */}
       <SectionErrorBoundary>
         <SourcesSection
@@ -64,6 +61,9 @@ export default async function DashboardPage() {
           isPro={isPro}
         />
       </SectionErrorBoundary>
+
+      {/* Trial banner */}
+      {trialDaysLeft > 0 && <TrialBanner daysLeft={trialDaysLeft} />}
 
       {/* Recent summaries */}
       <div className="space-y-3">
