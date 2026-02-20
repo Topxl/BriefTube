@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { WorkerCard } from "@/components/admin/worker-card";
 import {
@@ -10,6 +11,8 @@ import {
   Loader2,
   Activity,
 } from "@/lib/icons";
+
+const ADMIN_USER_ID = "67320a39-948c-44d2-98e3-c0de49af1ec6";
 
 // ---------------------------------------------------------------
 // Types
@@ -87,6 +90,15 @@ type FailedVideo = {
 
 export default async function AdminPage() {
   const supabase = await createClient();
+
+  // Admin guard
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user?.id !== ADMIN_USER_ID) {
+    redirect("/dashboard");
+  }
 
   // Compute date without Date.now() (impure in RSC linting context)
   const oneDayAgo = new Date();
