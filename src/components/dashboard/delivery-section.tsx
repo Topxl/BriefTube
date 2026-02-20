@@ -4,38 +4,130 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Check, Loader2 } from "@/lib/icons";
+import { Check, Loader2, Play } from "@/lib/icons";
 import { dialogManager } from "@/features/dialog-manager/dialog-manager";
+import { languages } from "@/lib/languages";
+import type { Language } from "@/lib/languages";
 
-const voices = [
-  { value: "fr-FR-DeniseNeural", label: "Denise", lang: "French" },
-  { value: "fr-FR-HenriNeural", label: "Henri", lang: "French" },
-  { value: "en-US-JennyNeural", label: "Jenny", lang: "English" },
-  { value: "en-US-GuyNeural", label: "Guy", lang: "English" },
-  { value: "fr-CA-SylvieNeural", label: "Sylvie", lang: "Canadian French" },
-  { value: "es-ES-ElviraNeural", label: "Elvira", lang: "Spanish" },
-  { value: "de-DE-KatjaNeural", label: "Katja", lang: "German" },
-];
+// -----------------------------------------------------------------
+// Voice helpers
+// -----------------------------------------------------------------
 
-type Props = {
-  initialTelegramConnected: boolean;
-  initialVoice: string;
+type VoiceEntry = {
+  value: string;
+  label: string;
+  tone: string;
+  locale: string;
+  sample: string;
 };
+
+/**
+ * Languages that have several available voices.
+ * All other languages get a single voice derived from languages.ts.
+ */
+const MULTI_VOICES: Partial<Record<string, VoiceEntry[]>> = {
+  fr: [
+    {
+      value: "fr-FR-DeniseNeural",
+      label: "Denise",
+      tone: "Natural · Expressive",
+      locale: "fr-FR",
+      sample: "Bonjour, je suis votre assistante audio.",
+    },
+    {
+      value: "fr-FR-HenriNeural",
+      label: "Henri",
+      tone: "Natural · Calm",
+      locale: "fr-FR",
+      sample: "Bonjour, je suis votre assistant audio.",
+    },
+    {
+      value: "fr-CA-SylvieNeural",
+      label: "Sylvie",
+      tone: "Natural · Warm",
+      locale: "fr-CA",
+      sample: "Bonjour, je suis votre assistante audio.",
+    },
+  ],
+  en: [
+    {
+      value: "en-US-JennyNeural",
+      label: "Jenny",
+      tone: "Friendly · Conversational",
+      locale: "en-US",
+      sample: "Hello, I'm your audio assistant.",
+    },
+    {
+      value: "en-US-GuyNeural",
+      label: "Guy",
+      tone: "Confident · Warm",
+      locale: "en-US",
+      sample: "Hello, I'm your audio assistant.",
+    },
+  ],
+};
+
+/** Derive voice name and locale from an Azure Neural voice ID like `th-TH-PremwadeeNeural`. */
+function parseVoiceId(voiceId: string): { label: string; locale: string } {
+  const parts = voiceId.split("-"); // e.g. ["th", "TH", "PremwadeeNeural"]
+  return {
+    locale: `${parts[0]}-${parts[1]}`,
+    label: (parts[2] ?? "").replace("Neural", ""),
+  };
+}
+
+function getVoicesForLanguage(langCode: string): VoiceEntry[] {
+  if (MULTI_VOICES[langCode]) return MULTI_VOICES[langCode];
+  const lang = languages.find((l) => l.code === langCode);
+  if (!lang) return [];
+  const { label, locale } = parseVoiceId(lang.voice);
+  return [
+    {
+      value: lang.voice,
+      label,
+      tone: "Natural",
+      locale,
+      sample: lang.nativeName,
+    },
+  ];
+}
+
+// -----------------------------------------------------------------
+// Sub-components
+// -----------------------------------------------------------------
+
+function previewVoice(locale: string, sample: string, e: React.MouseEvent) {
+  e.stopPropagation();
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(sample);
+  utterance.lang = locale;
+  window.speechSynthesis.speak(utterance);
+}
 
 function VoicePicker({
   currentVoice,
+  voiceList,
   onSelect,
 }: {
   currentVoice: string;
+  voiceList: VoiceEntry[];
   onSelect: (v: string) => void;
 }) {
   return (
     <div className="grid gap-1.5 sm:grid-cols-2">
-      {voices.map((v) => (
-        <button
+      {voiceList.map((v) => (
+        <div
           key={v.value}
+          role="button"
+          tabIndex={0}
           onClick={() => onSelect(v.value)}
-          className={`flex items-center gap-2.5 rounded-lg border px-3 py-2 text-left transition-all duration-200 ${
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              onSelect(v.value);
+            }
+          }}
+          className={`flex cursor-pointer items-center gap-2.5 rounded-lg border px-3 py-2 text-left transition-all duration-200 ${
             currentVoice === v.value
               ? "text-foreground border-red-500/25 bg-red-500/[0.06]"
               : "text-muted-foreground hover:text-foreground border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]"
@@ -50,15 +142,78 @@ function VoicePicker({
           >
             {v.label.charAt(0)}
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="text-[12px] leading-none font-medium">{v.label}</p>
-            <p className="text-muted-foreground mt-0.5 text-[10px]">{v.lang}</p>
+            <p className="text-muted-foreground mt-0.5 text-[10px]">{v.tone}</p>
           </div>
+          <button
+            onClick={(e) => previewVoice(v.locale, v.sample, e)}
+            className="text-muted-foreground hover:text-foreground shrink-0 transition-colors"
+            aria-label={`Preview ${v.label}`}
+          >
+            <Play className="h-3 w-3" />
+          </button>
           {currentVoice === v.value && (
-            <Check className="ml-auto h-3 w-3 shrink-0 text-red-400" />
+            <Check className="h-3 w-3 shrink-0 text-red-400" />
           )}
-        </button>
+        </div>
       ))}
+    </div>
+  );
+}
+
+function LanguagePicker({
+  currentCode,
+  onSelect,
+}: {
+  currentCode: string;
+  onSelect: (lang: Language) => void;
+}) {
+  const [search, setSearch] = useState("");
+  const filtered = search.trim()
+    ? languages.filter(
+        (l) =>
+          l.name.toLowerCase().includes(search.toLowerCase()) ||
+          l.nativeName.toLowerCase().includes(search.toLowerCase()),
+      )
+    : languages;
+
+  return (
+    <div className="space-y-3">
+      <input
+        type="text"
+        placeholder="Search language..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="text-foreground placeholder:text-muted-foreground w-full rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-sm outline-none focus:border-white/20"
+      />
+      <div className="max-h-64 overflow-y-auto">
+        <div className="grid grid-cols-2 gap-1.5">
+          {filtered.map((l) => (
+            <button
+              key={l.code}
+              onClick={() => onSelect(l)}
+              className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-left transition-all duration-200 ${
+                currentCode === l.code
+                  ? "text-foreground border-red-500/25 bg-red-500/[0.06]"
+                  : "text-muted-foreground hover:text-foreground border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]"
+              }`}
+            >
+              <div className="min-w-0">
+                <p className="text-[12px] leading-none font-medium">
+                  {l.nativeName}
+                </p>
+                <p className="text-muted-foreground mt-0.5 text-[10px]">
+                  {l.name}
+                </p>
+              </div>
+              {currentCode === l.code && (
+                <Check className="ml-auto h-3 w-3 shrink-0 text-red-400" />
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -172,9 +327,20 @@ function TelegramConnectContent({ onConnected }: { onConnected: () => void }) {
   );
 }
 
+// -----------------------------------------------------------------
+// Main component
+// -----------------------------------------------------------------
+
+type Props = {
+  initialTelegramConnected: boolean;
+  initialVoice: string;
+  initialLanguage: string;
+};
+
 export function DeliverySection({
   initialTelegramConnected,
   initialVoice,
+  initialLanguage,
 }: Props) {
   const supabase = createClient();
   const [telegramConnected, setTelegramConnected] = useState(
@@ -182,8 +348,14 @@ export function DeliverySection({
   );
   const [voice, setVoice] = useState(initialVoice);
   const [savingVoice, setSavingVoice] = useState(false);
+  const [language, setLanguage] = useState(initialLanguage);
+  const [savingLanguage, setSavingLanguage] = useState(false);
 
-  const currentVoiceMeta = voices.find((v) => v.value === voice);
+  const currentLanguageMeta = languages.find((l) => l.code === language);
+  const voiceList = getVoicesForLanguage(language);
+  const currentVoiceEntry =
+    voiceList.find((v) => v.value === voice) ?? voiceList[0];
+  const hasMultipleVoices = voiceList.length > 1;
 
   const openTelegramModal = () => {
     dialogManager.custom({
@@ -216,9 +388,45 @@ export function DeliverySection({
       children: (
         <VoicePicker
           currentVoice={voice}
+          voiceList={voiceList}
           onSelect={(v) => {
             dialogManager.closeAll();
             void updateVoice(v);
+          }}
+        />
+      ),
+    });
+  };
+
+  const updateLanguage = async (lang: Language) => {
+    // Reset voice to the default for the new language
+    const newVoices = getVoicesForLanguage(lang.code);
+    const defaultVoice = newVoices[0]?.value ?? lang.voice;
+    setLanguage(lang.code);
+    setVoice(defaultVoice);
+    setSavingLanguage(true);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+    await supabase
+      .from("profiles")
+      .update({ preferred_language: lang.code, tts_voice: defaultVoice })
+      .eq("id", user.id);
+    setSavingLanguage(false);
+    toast.success("Language updated");
+  };
+
+  const openLanguagePicker = () => {
+    dialogManager.custom({
+      title: "Summary language",
+      size: "sm",
+      children: (
+        <LanguagePicker
+          currentCode={language}
+          onSelect={(lang) => {
+            dialogManager.closeAll();
+            void updateLanguage(lang);
           }}
         />
       ),
@@ -271,26 +479,64 @@ export function DeliverySection({
           )}
         </div>
 
-        {/* Voice row */}
+        {/* Language row */}
         <div className="flex items-center justify-between px-4 py-3">
           <div>
-            <p className="text-sm font-medium">Audio voice</p>
+            <p className="text-sm font-medium">Summary language</p>
             <p className="text-muted-foreground text-[11px]">
-              {currentVoiceMeta?.label ?? "Denise"} ·{" "}
-              {currentVoiceMeta?.lang ?? "French"}
+              {currentLanguageMeta?.nativeName ?? "English"} ·{" "}
+              {currentLanguageMeta?.name ?? "English"}
             </p>
           </div>
           <button
-            onClick={openVoicePicker}
-            disabled={savingVoice}
+            onClick={openLanguagePicker}
+            disabled={savingLanguage}
             className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-xs transition-colors disabled:opacity-50"
           >
-            {savingVoice ? (
+            {savingLanguage ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
             ) : (
               "Change"
             )}
           </button>
+        </div>
+
+        {/* Voice row */}
+        <div className="flex items-center justify-between px-4 py-3">
+          <div>
+            <p className="text-sm font-medium">Audio voice</p>
+            <p className="text-muted-foreground text-[11px]">
+              {currentVoiceEntry.label} · {currentVoiceEntry.tone}
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={(e) =>
+                previewVoice(
+                  currentVoiceEntry.locale,
+                  currentVoiceEntry.sample,
+                  e,
+                )
+              }
+              className="text-muted-foreground hover:text-foreground shrink-0 transition-colors"
+              aria-label="Preview voice"
+            >
+              <Play className="h-3.5 w-3.5" />
+            </button>
+            {hasMultipleVoices && (
+              <button
+                onClick={openVoicePicker}
+                disabled={savingVoice}
+                className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-xs transition-colors disabled:opacity-50"
+              >
+                {savingVoice ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  "Change"
+                )}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </section>
