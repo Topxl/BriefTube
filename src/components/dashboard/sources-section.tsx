@@ -12,6 +12,9 @@ import type { Tables } from "@/types/supabase";
 
 type Subscription = Tables<"subscriptions">;
 
+const INITIAL_VISIBLE = 3;
+const LOAD_MORE_STEP = 10;
+
 type Props = {
   initialSources: Subscription[];
   maxChannels: number;
@@ -31,7 +34,6 @@ function SourceRow({
   onRemove: (id: string, name: string) => void;
   searchQuery: string;
 }) {
-  // Highlight matching part of the name
   const name = source.channel_name;
   const q = searchQuery.trim().toLowerCase();
   let nameEl: React.ReactNode = name;
@@ -124,18 +126,27 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState("");
   const [search, setSearch] = useState("");
-  const [showAllPaused, setShowAllPaused] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
   const supabase = createClient();
 
   const activeCount = sources.filter((s) => s.active).length;
   const atActiveLimit = !isPro && activeCount >= maxChannels;
-  const activeSources = sources.filter((s) => s.active);
-  const pausedSources = sources.filter((s) => !s.active);
+
+  // Active first, then paused — preserving insertion order within each group
+  const sortedSources = [
+    ...sources.filter((s) => s.active),
+    ...sources.filter((s) => !s.active),
+  ];
 
   const searchNorm = search.trim().toLowerCase();
-  const searchResults = searchNorm
-    ? sources.filter((s) => s.channel_name.toLowerCase().includes(searchNorm))
-    : null;
+  const displayedSources = searchNorm
+    ? sortedSources.filter((s) =>
+        s.channel_name.toLowerCase().includes(searchNorm),
+      )
+    : sortedSources.slice(0, visibleCount);
+
+  const remainingCount = sources.length - visibleCount;
+  const hasMore = !searchNorm && visibleCount < sources.length;
 
   const addSource = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -154,6 +165,8 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
         return;
       }
       setSources((prev) => [data, ...prev]);
+      setSearch("");
+      setVisibleCount(INITIAL_VISIBLE);
       setUrl("");
       toast.success(
         data.active
@@ -333,29 +346,15 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
         </div>
       ) : (
         <div className="space-y-2">
-          {/* Active channels — always visible */}
-          {activeSources.length > 0 && !searchResults && (
-            <div className="overflow-hidden rounded-xl border border-white/[0.06]">
-              <div className="divide-y divide-white/[0.04]">
-                {activeSources.map((source) => (
-                  <SourceRow key={source.id} source={source} {...rowProps} />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Search bar — shown when there are paused channels */}
-          {pausedSources.length > 0 && (
+          {/* Search bar — visible when there are more channels than the initial limit */}
+          {sources.length > INITIAL_VISIBLE && (
             <div className="relative">
               <Search className="text-muted-foreground absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2" />
               <Input
                 type="text"
                 value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setShowAllPaused(false);
-                }}
-                placeholder={`Search ${pausedSources.length} paused channels...`}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={`Search ${sources.length} channels...`}
                 className="pr-8 pl-8 text-sm"
               />
               {search && (
@@ -369,48 +368,30 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
             </div>
           )}
 
-          {/* Search results */}
-          {searchResults && (
-            <div className="overflow-hidden rounded-xl border border-white/[0.06]">
-              {searchResults.length > 0 ? (
-                <div className="divide-y divide-white/[0.04]">
-                  {searchResults.map((source) => (
-                    <SourceRow key={source.id} source={source} {...rowProps} />
-                  ))}
-                </div>
-              ) : (
-                <p className="text-muted-foreground px-4 py-6 text-center text-sm">
-                  No channel matching &ldquo;{search}&rdquo;
-                </p>
-              )}
-            </div>
-          )}
+          {/* Channel list */}
+          <div className="overflow-hidden rounded-xl border border-white/[0.06]">
+            {displayedSources.length > 0 ? (
+              <div className="divide-y divide-white/[0.04]">
+                {displayedSources.map((source) => (
+                  <SourceRow key={source.id} source={source} {...rowProps} />
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground px-4 py-6 text-center text-sm">
+                No channel matching &ldquo;{search}&rdquo;
+              </p>
+            )}
+          </div>
 
-          {/* Paused channels — collapsed by default */}
-          {!searchResults && pausedSources.length > 0 && (
-            <>
-              {showAllPaused ? (
-                <div className="overflow-hidden rounded-xl border border-white/[0.06]">
-                  <div className="divide-y divide-white/[0.04]">
-                    {pausedSources.map((source) => (
-                      <SourceRow
-                        key={source.id}
-                        source={source}
-                        {...rowProps}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setShowAllPaused(true)}
-                  className="text-muted-foreground hover:text-foreground w-full rounded-xl border border-white/[0.06] bg-white/[0.01] py-2.5 text-xs transition-colors hover:bg-white/[0.03]"
-                >
-                  {pausedSources.length} paused channel
-                  {pausedSources.length !== 1 ? "s" : ""} — click to manage
-                </button>
-              )}
-            </>
+          {/* Show more */}
+          {hasMore && (
+            <button
+              onClick={() => setVisibleCount((n) => n + LOAD_MORE_STEP)}
+              className="text-muted-foreground hover:text-foreground w-full rounded-xl border border-white/[0.06] bg-white/[0.01] py-2.5 text-xs transition-colors hover:bg-white/[0.03]"
+            >
+              Show {Math.min(LOAD_MORE_STEP, remainingCount)} more ·{" "}
+              {remainingCount} remaining
+            </button>
           )}
         </div>
       )}
