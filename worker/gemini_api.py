@@ -95,50 +95,67 @@ class GeminiSummarizer:
 
         # Determine target summary length based on transcript length.
         # Never ask for MORE words than the original — that forces hallucination.
+        # Hard cap at AUDIO_MAX_WORDS: beyond this, Gemini would be truncated by
+        # max_output_tokens (4096 ≈ 3000 words) producing a cut mid-sentence.
+        AUDIO_MAX_WORDS = 800  # ~4-5 min at normal speech rate
         transcript_words = len(transcript.split())
 
         if transcript_words < 150:
             # Very short video — keep 60-80% of original, never exceed it
             min_words = max(30, int(transcript_words * 0.6))
             max_words = int(transcript_words * 0.9)
-            length_guidance = f"environ {min_words}-{max_words} mots"
         elif transcript_words < 500:
             min_words = int(transcript_words * 0.4)
             max_words = int(transcript_words * 0.7)
-            length_guidance = f"environ {min_words}-{max_words} mots"
         else:
             min_words = int(transcript_words * 0.25)
             max_words = int(transcript_words * 0.5)
-            length_guidance = f"environ {min_words}-{max_words} mots"
+
+        # Apply audio cap — prevent requesting more words than Gemini can output
+        min_words = min(min_words, AUDIO_MAX_WORDS)
+        max_words = min(max_words, AUDIO_MAX_WORDS)
+        length_guidance = f"about {min_words}-{max_words} words"
+
+        # Long-content flag: transcript > ~30 min (4500 words) → instruct Gemini
+        # to be selective rather than exhaustive
+        is_long_content = transcript_words > 4500
 
         # Build prompt — no video URL: providing it lets Gemini use its training
         # knowledge about the video instead of strictly following the transcript.
         if source_language and source_language != target_language:
             source_lang_name = self._get_language_name(source_language)
             intro = (
-                f"Tu es un assistant qui résume des vidéos YouTube.\n"
-                f"La transcription ci-dessous provient d'une vidéo en {source_lang_name}.\n"
-                f"Tu dois produire un résumé en {target_lang_name}.\n\n"
+                f"You are an assistant that summarizes YouTube videos.\n"
+                f"The transcript below comes from a video in {source_lang_name}.\n"
+                f"You must produce the summary in {target_lang_name}.\n\n"
             )
         else:
             intro = (
-                f"Tu es un assistant qui résume des vidéos YouTube.\n"
-                f"Produis un résumé en {target_lang_name} de la transcription ci-dessous.\n\n"
+                f"You are an assistant that summarizes YouTube videos.\n"
+                f"Produce a summary in {target_lang_name} of the transcript below.\n\n"
             )
+
+        selectivity_instruction = (
+            "2. This transcript is long: be highly selective. "
+            "Retain only the key insights, important decisions, and main conclusions. "
+            "Discard digressions, minor anecdotes, ads, and repetitions.\n"
+            if is_long_content
+            else "2. Capture the key points and main ideas from the transcript.\n"
+        )
 
         prompt_parts = [
             intro,
-            "RÈGLE ABSOLUE : base-toi UNIQUEMENT sur la transcription fournie. "
-            "N'utilise aucune connaissance externe sur cette vidéo ou ce sujet. "
-            "Si la transcription est ambiguë ou incomplète, résume ce qui est présent sans inventer.\n\n"
-            "Instructions :\n"
-            f"1. Résumé de {length_guidance} — ne dépasse pas cette limite\n"
-            "2. Capture les points clés et idées principales de la transcription\n"
-            "3. Évite les répétitions et le remplissage\n"
-            "4. Ton naturel et direct, adapté à une écoute audio\n"
-            f"5. Langue : {target_lang_name} obligatoire\n\n"
-            f"Transcription :\n{transcript}\n\n"
-            f"Résumé en {target_lang_name} ({length_guidance}) :"
+            "ABSOLUTE RULE: base yourself ONLY on the provided transcript. "
+            "Do not use any external knowledge about this video or topic. "
+            "If the transcript is ambiguous or incomplete, summarize what is present without inventing.\n\n"
+            "Instructions:\n"
+            f"1. Summary of {length_guidance} — NEVER exceed this limit\n"
+            + selectivity_instruction +
+            "3. Avoid repetitions and filler.\n"
+            "4. Natural and direct tone, suitable for audio listening.\n"
+            f"5. Output language: {target_lang_name} — mandatory\n\n"
+            f"Transcript:\n{transcript}\n\n"
+            f"Summary in {target_lang_name} ({length_guidance}):"
         ]
 
         prompt = "".join(prompt_parts)
