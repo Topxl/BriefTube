@@ -301,7 +301,7 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
                 ? `Search ${sources.length} channels or paste a YouTube URL…`
                 : "Paste a YouTube URL or channel ID…"
             }
-            className="pr-8 pl-8"
+            className="placeholder:text-muted-foreground/60 h-10 border-white/[0.22] bg-white/[0.08] pr-8 pl-8 hover:border-white/[0.3] hover:bg-white/[0.1]"
             autoComplete="off"
             data-1p-ignore
             data-lpignore="true"

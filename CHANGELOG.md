@@ -2,6 +2,8 @@
 
 ## 2026-02-20
 
+UX: Improve search/add bar visibility in Sources section — brighter border, background, and placeholder
+
 FIX: Create src/lib/icons.tsx barrel wrapping all Lucide icons with suppressHydrationWarning — eliminates Dark Reader SVG hydration mismatches
 FIX: Add suppressHydrationWarning to all next/image <Image> components — eliminates Dark Reader inline-color hydration mismatches
 FIX: Wrap SectionErrorBoundary children in Suspense inside render() — fixes React 19 "uncached promise" error for RSC thenable children
