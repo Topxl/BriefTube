@@ -32,7 +32,7 @@ export class SectionErrorBoundary extends Component<Props, State> {
     this.setState({ hasError: false, error: null });
   };
 
-  async render() {
+  render() {
     if (this.state.hasError) {
       return (
         <div className="flex flex-col items-center justify-center py-12 text-center">
