@@ -10,13 +10,15 @@ Three concurrent loops:
 
 import asyncio
 import logging
+import os
 import re
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 import aiohttp
+import psutil
 
-from config import RSS_CHECK_INTERVAL, TELEGRAM_BOT_TOKEN, SUPABASE_URL, ADMIN_TELEGRAM_CHAT_ID, MAX_CONCURRENT_VIDEOS
+from config import RSS_CHECK_INTERVAL, TELEGRAM_BOT_TOKEN, SUPABASE_URL, ADMIN_TELEGRAM_CHAT_ID, MAX_CONCURRENT_VIDEOS, MAX_CPU_PERCENT, CPU_CHECK_INTERVAL
 from transcript_extractor import TranscriptExtractor
 from gemini_api import GeminiSummarizer
 from text_cleaner import clean_for_tts
@@ -31,10 +33,9 @@ from datetime import datetime, time as datetime_time
 # ── Logging ────────────────────────────────────────────────────
 
 # Ensure deno (used by yt-dlp for YouTube JS extraction) is in PATH
-import os as _os
 _deno = Path.home() / ".deno" / "bin"
-if _deno.exists() and str(_deno) not in _os.environ.get("PATH", ""):
-    _os.environ["PATH"] = str(_deno) + ":" + _os.environ.get("PATH", "")
+if _deno.exists() and str(_deno) not in os.environ.get("PATH", ""):
+    os.environ["PATH"] = str(_deno) + ":" + os.environ.get("PATH", "")
 
 LOG_FILE = Path(__file__).parent / "worker.log"
 log_fmt = logging.Formatter("%(asctime)s [%(name)s] %(levelname)s %(message)s")
@@ -46,9 +47,13 @@ fh = RotatingFileHandler(LOG_FILE, maxBytes=5 * 1024 * 1024, backupCount=2, enco
 fh.setFormatter(log_fmt)
 root.addHandler(fh)
 
-ch = logging.StreamHandler()
-ch.setFormatter(log_fmt)
-root.addHandler(ch)
+# StreamHandler only when running manually (not under systemd).
+# Under systemd stdout/stderr are redirected to the same log file, causing
+# every line to be written twice. INVOCATION_ID is set by systemd.
+if not os.environ.get("INVOCATION_ID"):
+    ch = logging.StreamHandler()
+    ch.setFormatter(log_fmt)
+    root.addHandler(ch)
 
 logger = logging.getLogger("worker")
 
@@ -109,9 +114,12 @@ async def _process_video(
 
     logger.info(f"[{video_id}] Processing: {video_title}")
 
+    # Resolve language/voice early (before the try block) so the exception
+    # handlers can reference user_language when calling mark_video_failed.
+    user_language = job.get("user_language") or "fr"
+    tts_voice = job.get("tts_voice") or None
+
     try:
-        user_language = job.get("user_language", "fr")
-        tts_voice = job.get("tts_voice") or None
 
         # Step 1: Extract transcript
         logger.info(f"[{video_id}] Extracting transcript...")
@@ -200,12 +208,12 @@ async def _process_video(
             output_filename=f"video_{video_id}"
         )
 
-        # Step 4: Upload to Supabase Storage
+        # Step 4: Upload to Supabase Storage (one file per language)
         audio_url = ""
         try:
             sb = db.get_client()
             with open(audio_path, "rb") as f:
-                storage_path = f"audio/{video_id}.mp3"
+                storage_path = f"audio/{video_id}_{user_language}.mp3"
                 sb.storage.from_("audio").upload(
                     storage_path,
                     f.read(),
@@ -216,7 +224,7 @@ async def _process_video(
             logger.warning(f"[{video_id}] Storage upload failed (using local): {e}")
             audio_url = str(audio_path)
 
-        # Step 5: Mark done
+        # Step 5: Mark done (per language)
         db.mark_video_completed(
             video_id, summary, audio_url,
             metadata={
@@ -224,7 +232,8 @@ async def _process_video(
                 "transcript_length": len(transcript),
                 "source_language": source_lang,
                 "summary_length": len(summary),
-            }
+            },
+            language=user_language,
         )
         db.complete_job(job["id"])
 
@@ -246,7 +255,7 @@ async def _process_video(
     except asyncio.TimeoutError:
         logger.error(f"[{video_id}] Timeout")
         db.fail_job(job["id"])
-        db.mark_video_failed(video_id)
+        db.mark_video_failed(video_id, language=user_language)
         stats.record_video_failed("Timeout", f"Timeout: {video_title}")
         await alert_system.send_alert(f"⏱️ **Timeout**\n\n{video_title[:80]}", level="WARNING")
 
@@ -254,12 +263,32 @@ async def _process_video(
         error_msg = str(e)
         logger.error(f"[{video_id}] Error: {error_msg}")
         db.fail_job(job["id"])
-        db.mark_video_failed(video_id)
+        db.mark_video_failed(video_id, language=user_language)
         stats.record_video_failed(type(e).__name__, error_msg)
         await alert_system.send_alert(
             f"🔴 **Error**\n\nVideo: {video_title[:60]}\nError: {error_msg[:100]}",
             level="ERROR"
         )
+
+
+# ── CPU throttle helper ───────────────────────────────────────
+
+async def _wait_for_cpu_headroom() -> None:
+    """Pause before starting a new video job if CPU usage is above MAX_CPU_PERCENT.
+
+    Samples CPU every CPU_CHECK_INTERVAL seconds until it drops below the
+    threshold, then returns. This prevents the worker from saturating the machine
+    while other applications are running.
+    """
+    if MAX_CPU_PERCENT >= 100:
+        return  # Throttling disabled
+
+    while True:
+        cpu = psutil.cpu_percent(interval=1)
+        if cpu < MAX_CPU_PERCENT:
+            return
+        logger.info(f"CPU at {cpu:.0f}% (limit {MAX_CPU_PERCENT}%) — waiting {CPU_CHECK_INTERVAL:.0f}s before next job")
+        await asyncio.sleep(CPU_CHECK_INTERVAL)
 
 
 # ── Loop 2: Gemini Processor (concurrent) ─────────────────────
@@ -293,6 +322,9 @@ async def processor_loop(alert_system: MonitoringAlert):
         try:
             # Block here until a processing slot is free
             await semaphore.acquire()
+
+            # Throttle: wait until CPU drops below MAX_CPU_PERCENT before picking a job
+            await _wait_for_cpu_headroom()
 
             # Serialize job picking — prevents two concurrent tasks picking the same row
             async with _pick_lock:
@@ -373,9 +405,10 @@ async def delivery_loop(alert_system: MonitoringAlert):
                 try:
                     video_id = d["video_id"]
                     audio_url = d.get("audio_url", "")
+                    delivery_language = d.get("language", "fr")
 
-                    # Get or download audio file
-                    audio_path = Path(__file__).parent / "audio" / f"video_{video_id}.mp3"
+                    # Get or download audio file (one file per video+language)
+                    audio_path = Path(__file__).parent / "audio" / f"video_{video_id}_{delivery_language}.mp3"
 
                     if not audio_path.exists() and audio_url and audio_url.startswith("http"):
                         # Download from Supabase Storage
@@ -468,6 +501,17 @@ async def main():
     logger.info("=" * 50)
     logger.info("BriefTube SaaS Worker starting...")
     logger.info("=" * 50)
+
+    # Lower process priority so the worker never starves other applications.
+    # nice=10 means any normal-priority process (nice=0) will be preferred by
+    # the kernel scheduler. Has no effect on I/O-bound work (network, Supabase).
+    try:
+        os.nice(10)
+        logger.info("Process priority lowered (nice=10) — system stays responsive")
+    except OSError as e:
+        logger.warning(f"Could not set nice value: {e}")
+
+    logger.info(f"CPU throttle: pause before new jobs when CPU > {MAX_CPU_PERCENT}%")
 
     # Validate config
     if not SUPABASE_URL:

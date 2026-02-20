@@ -2,6 +2,7 @@
 
 ## 2026-02-21
 
+FIX: worker/main.py — double logging: StreamHandler now only added when running manually (no INVOCATION_ID), preventing duplicate lines when systemd redirects stdout/stderr to worker.log
 FEATURE: Add /admin dashboard — worker status (systemd + logs + start/stop/restart), user stats, 24h activity, processing queue and recent failures; protected by admin user ID; polls every 10s via TanStack Query
 
 ## 2026-02-20
