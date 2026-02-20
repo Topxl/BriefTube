@@ -6,7 +6,7 @@ import { useQueryState } from "nuqs";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Youtube, Pause, Play, Trash2 } from "@/lib/icons";
+import { Youtube, Pause, Play, Trash2, ChevronDown } from "@/lib/icons";
 import { dialogManager } from "@/features/dialog-manager/dialog-manager";
 import type { Tables } from "@/types/supabase";
 
@@ -115,6 +115,7 @@ function SourceRow({
 export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
   const [sources, setSources] = useState<Subscription[]>(initialSources);
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
+  const [collapsed, setCollapsed] = useState(false);
   const [q] = useQueryState("q", { defaultValue: "", shallow: true });
   const supabase = createClient();
 
@@ -214,95 +215,109 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
   return (
     <div className="space-y-3">
       {/* Header */}
-      <div className="flex items-center gap-2">
+      <button
+        onClick={() => setCollapsed((c) => !c)}
+        className="flex items-center gap-2"
+      >
         <h2 className="text-sm font-semibold">Sources</h2>
         <span className="text-muted-foreground/50 text-xs tabular-nums">
           {isPro ? sources.length : `${activeCount}/${maxChannels}`}
         </span>
-      </div>
+        <ChevronDown
+          className={`text-muted-foreground/40 h-3.5 w-3.5 transition-transform duration-200 ${collapsed ? "-rotate-90" : ""}`}
+        />
+      </button>
 
-      {/* Import from YouTube */}
-      <a
-        href="/api/youtube/auth"
-        className="text-muted-foreground/60 hover:text-muted-foreground flex w-fit items-center gap-1.5 text-xs transition-colors"
-      >
-        <Youtube className="h-3.5 w-3.5" />
-        Import subscriptions from YouTube
-      </a>
+      {!collapsed && (
+        <>
+          {/* Import from YouTube */}
+          <a
+            href="/api/youtube/auth"
+            className="text-muted-foreground/60 hover:text-muted-foreground flex w-fit items-center gap-1.5 text-xs transition-colors"
+          >
+            <Youtube className="h-3.5 w-3.5" />
+            Import subscriptions from YouTube
+          </a>
 
-      {/* Active limit banner */}
-      {atActiveLimit && (
-        <div className="rounded-xl border border-amber-500/15 bg-amber-500/[0.04] px-4 py-3">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-medium">
-                {maxChannels} active channels reached
-              </p>
+          {/* Active limit banner */}
+          {atActiveLimit && (
+            <div className="rounded-xl border border-amber-500/15 bg-amber-500/[0.04] px-4 py-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-medium">
+                    {maxChannels} active channels reached
+                  </p>
+                  <p className="text-muted-foreground mt-0.5 text-xs">
+                    Pause a channel to swap, or upgrade to Pro for unlimited.
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  className="shrink-0 bg-red-600 hover:bg-red-500"
+                  asChild
+                >
+                  <a href="/dashboard/billing">Upgrade to Pro</a>
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {sources.length === 0 ? (
+            <div className="py-10 text-center">
+              <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.06] bg-white/[0.03]">
+                <svg
+                  className="text-muted-foreground h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z"
+                  />
+                </svg>
+              </div>
+              <p className="text-sm font-medium">No sources yet</p>
               <p className="text-muted-foreground mt-0.5 text-xs">
-                Pause a channel to swap, or upgrade to Pro for unlimited.
+                Add a YouTube channel above to get started.
               </p>
             </div>
-            <Button
-              size="sm"
-              className="shrink-0 bg-red-600 hover:bg-red-500"
-              asChild
-            >
-              <a href="/dashboard/billing">Upgrade to Pro</a>
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {sources.length === 0 ? (
-        <div className="py-10 text-center">
-          <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.06] bg-white/[0.03]">
-            <svg
-              className="text-muted-foreground h-5 w-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z"
-              />
-            </svg>
-          </div>
-          <p className="text-sm font-medium">No sources yet</p>
-          <p className="text-muted-foreground mt-0.5 text-xs">
-            Add a YouTube channel above to get started.
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {/* Channel list */}
-          <div className="overflow-hidden rounded-xl border border-white/[0.06]">
-            {displayedSources.length > 0 ? (
-              <div className="divide-y divide-white/[0.04]">
-                {displayedSources.map((source) => (
-                  <SourceRow key={source.id} source={source} {...rowProps} />
-                ))}
+          ) : (
+            <div className="space-y-2">
+              {/* Channel list */}
+              <div className="overflow-hidden rounded-xl border border-white/[0.06]">
+                {displayedSources.length > 0 ? (
+                  <div className="divide-y divide-white/[0.04]">
+                    {displayedSources.map((source) => (
+                      <SourceRow
+                        key={source.id}
+                        source={source}
+                        {...rowProps}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground px-4 py-6 text-center text-sm">
+                    No channel matching &ldquo;{q}&rdquo;
+                  </p>
+                )}
               </div>
-            ) : (
-              <p className="text-muted-foreground px-4 py-6 text-center text-sm">
-                No channel matching &ldquo;{q}&rdquo;
-              </p>
-            )}
-          </div>
 
-          {/* Show more */}
-          {hasMore && (
-            <button
-              onClick={() => setVisibleCount((n) => n + LOAD_MORE_STEP)}
-              className="text-muted-foreground/50 hover:text-muted-foreground w-full py-2 text-xs transition-colors"
-            >
-              Show {Math.min(LOAD_MORE_STEP, remainingCount)} more &middot;{" "}
-              {remainingCount} remaining
-            </button>
+              {/* Show more */}
+              {hasMore && (
+                <button
+                  onClick={() => setVisibleCount((n) => n + LOAD_MORE_STEP)}
+                  className="text-muted-foreground/50 hover:text-muted-foreground w-full py-2 text-xs transition-colors"
+                >
+                  Show {Math.min(LOAD_MORE_STEP, remainingCount)} more &middot;{" "}
+                  {remainingCount} remaining
+                </button>
+              )}
+            </div>
           )}
-        </div>
+        </>
       )}
     </div>
   );
