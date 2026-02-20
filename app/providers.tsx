@@ -8,7 +8,6 @@ import {
   QueryClient,
   QueryClientProvider,
 } from "@tanstack/react-query";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { ThemeProvider } from "next-themes";
 import type { PropsWithChildren } from "react";
 
@@ -47,9 +46,6 @@ export const Providers = ({ children }: PropsWithChildren) => {
         <DialogManagerRenderer />
         <GlobalDialogLazy />
         {children}
-        {process.env.NODE_ENV === "development" && (
-          <ReactQueryDevtools initialIsOpen={false} />
-        )}
       </QueryClientProvider>
     </ThemeProvider>
   );
