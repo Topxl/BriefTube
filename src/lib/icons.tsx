@@ -35,6 +35,7 @@ import {
   ExternalLinkIcon as _ExternalLinkIcon,
   Headphones as _Headphones,
   LayoutDashboard as _LayoutDashboard,
+  ListFilter as _ListFilter,
   ListVideo as _ListVideo,
   Loader2 as _Loader2,
   LogOut as _LogOut,
@@ -89,6 +90,7 @@ export const CheckCircle2 = wrap(_CheckCircle2);
 export const CheckCircle2Icon = wrap(_CheckCircle2Icon);
 export const CheckIcon = wrap(_CheckIcon);
 export const ChevronDown = wrap(_ChevronDown);
+export const ListFilter = wrap(_ListFilter);
 export const ChevronDownIcon = wrap(_ChevronDownIcon);
 export const ChevronRight = wrap(_ChevronRight);
 export const ChevronRightIcon = wrap(_ChevronRightIcon);

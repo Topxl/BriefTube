@@ -22,14 +22,339 @@ type Subscription = Tables<"subscriptions">;
 
 type Step = 1 | 2 | 3;
 
-const voices = [
-  { value: "fr-FR-DeniseNeural", label: "Denise", lang: "French" },
-  { value: "fr-FR-HenriNeural", label: "Henri", lang: "French" },
-  { value: "en-US-JennyNeural", label: "Jenny", lang: "English" },
-  { value: "en-US-GuyNeural", label: "Guy", lang: "English" },
-  { value: "fr-CA-SylvieNeural", label: "Sylvie", lang: "Canadian French" },
-  { value: "es-ES-ElviraNeural", label: "Elvira", lang: "Spanish" },
-  { value: "de-DE-KatjaNeural", label: "Katja", lang: "German" },
+type Language = {
+  name: string;
+  nativeName: string;
+  code: string;
+  voice: string;
+};
+
+const languages: Language[] = [
+  {
+    name: "English",
+    nativeName: "English",
+    code: "en",
+    voice: "en-US-JennyNeural",
+  },
+  {
+    name: "Spanish",
+    nativeName: "Español",
+    code: "es",
+    voice: "es-ES-ElviraNeural",
+  },
+  {
+    name: "French",
+    nativeName: "Français",
+    code: "fr",
+    voice: "fr-FR-DeniseNeural",
+  },
+  {
+    name: "German",
+    nativeName: "Deutsch",
+    code: "de",
+    voice: "de-DE-KatjaNeural",
+  },
+  {
+    name: "Portuguese",
+    nativeName: "Português",
+    code: "pt",
+    voice: "pt-BR-FranciscaNeural",
+  },
+  {
+    name: "Chinese",
+    nativeName: "中文",
+    code: "zh",
+    voice: "zh-CN-XiaoxiaoNeural",
+  },
+  {
+    name: "Japanese",
+    nativeName: "日本語",
+    code: "ja",
+    voice: "ja-JP-NanamiNeural",
+  },
+  {
+    name: "Korean",
+    nativeName: "한국어",
+    code: "ko",
+    voice: "ko-KR-SunHiNeural",
+  },
+  {
+    name: "Arabic",
+    nativeName: "العربية",
+    code: "ar",
+    voice: "ar-SA-ZariyahNeural",
+  },
+  {
+    name: "Hindi",
+    nativeName: "हिन्दी",
+    code: "hi",
+    voice: "hi-IN-SwaraNeural",
+  },
+  {
+    name: "Russian",
+    nativeName: "Русский",
+    code: "ru",
+    voice: "ru-RU-SvetlanaNeural",
+  },
+  {
+    name: "Italian",
+    nativeName: "Italiano",
+    code: "it",
+    voice: "it-IT-ElsaNeural",
+  },
+  {
+    name: "Dutch",
+    nativeName: "Nederlands",
+    code: "nl",
+    voice: "nl-NL-ColetteNeural",
+  },
+  {
+    name: "Turkish",
+    nativeName: "Türkçe",
+    code: "tr",
+    voice: "tr-TR-EmelNeural",
+  },
+  {
+    name: "Polish",
+    nativeName: "Polski",
+    code: "pl",
+    voice: "pl-PL-ZofiaNeural",
+  },
+  {
+    name: "Swedish",
+    nativeName: "Svenska",
+    code: "sv",
+    voice: "sv-SE-SofieNeural",
+  },
+  {
+    name: "Norwegian",
+    nativeName: "Norsk",
+    code: "nb",
+    voice: "nb-NO-PernilleNeural",
+  },
+  {
+    name: "Danish",
+    nativeName: "Dansk",
+    code: "da",
+    voice: "da-DK-ChristelNeural",
+  },
+  {
+    name: "Finnish",
+    nativeName: "Suomi",
+    code: "fi",
+    voice: "fi-FI-SelmaNeural",
+  },
+  {
+    name: "Indonesian",
+    nativeName: "Indonesia",
+    code: "id",
+    voice: "id-ID-GadisNeural",
+  },
+  {
+    name: "Malay",
+    nativeName: "Melayu",
+    code: "ms",
+    voice: "ms-MY-YasminNeural",
+  },
+  {
+    name: "Vietnamese",
+    nativeName: "Tiếng Việt",
+    code: "vi",
+    voice: "vi-VN-HoaiMyNeural",
+  },
+  {
+    name: "Thai",
+    nativeName: "ภาษาไทย",
+    code: "th",
+    voice: "th-TH-PremwadeeNeural",
+  },
+  {
+    name: "Ukrainian",
+    nativeName: "Українська",
+    code: "uk",
+    voice: "uk-UA-PolinaNeural",
+  },
+  {
+    name: "Czech",
+    nativeName: "Čeština",
+    code: "cs",
+    voice: "cs-CZ-VlastaNeural",
+  },
+  {
+    name: "Romanian",
+    nativeName: "Română",
+    code: "ro",
+    voice: "ro-RO-AlinaNeural",
+  },
+  {
+    name: "Hungarian",
+    nativeName: "Magyar",
+    code: "hu",
+    voice: "hu-HU-NoemiNeural",
+  },
+  {
+    name: "Greek",
+    nativeName: "Ελληνικά",
+    code: "el",
+    voice: "el-GR-AthinaNeural",
+  },
+  {
+    name: "Hebrew",
+    nativeName: "עברית",
+    code: "he",
+    voice: "he-IL-HilaNeural",
+  },
+  {
+    name: "Bengali",
+    nativeName: "বাংলা",
+    code: "bn",
+    voice: "bn-IN-TanishaaNeural",
+  },
+  { name: "Urdu", nativeName: "اردو", code: "ur", voice: "ur-PK-UzmaNeural" },
+  {
+    name: "Persian",
+    nativeName: "فارسی",
+    code: "fa",
+    voice: "fa-IR-DilaraNeural",
+  },
+  {
+    name: "Filipino",
+    nativeName: "Filipino",
+    code: "fil",
+    voice: "fil-PH-BlessicaNeural",
+  },
+  {
+    name: "Tamil",
+    nativeName: "தமிழ்",
+    code: "ta",
+    voice: "ta-IN-PallaviNeural",
+  },
+  {
+    name: "Telugu",
+    nativeName: "తెలుగు",
+    code: "te",
+    voice: "te-IN-ShrutiNeural",
+  },
+  {
+    name: "Kannada",
+    nativeName: "ಕನ್ನಡ",
+    code: "kn",
+    voice: "kn-IN-SapnaNeural",
+  },
+  {
+    name: "Malayalam",
+    nativeName: "മലയാളം",
+    code: "ml",
+    voice: "ml-IN-SobhanaNeural",
+  },
+  {
+    name: "Gujarati",
+    nativeName: "ગુજરાતી",
+    code: "gu",
+    voice: "gu-IN-DhwaniNeural",
+  },
+  {
+    name: "Marathi",
+    nativeName: "मराठी",
+    code: "mr",
+    voice: "mr-IN-AarohiNeural",
+  },
+  {
+    name: "Punjabi",
+    nativeName: "ਪੰਜਾਬੀ",
+    code: "pa",
+    voice: "pa-IN-VaaniNeural",
+  },
+  {
+    name: "Swahili",
+    nativeName: "Kiswahili",
+    code: "sw",
+    voice: "sw-KE-ZuriNeural",
+  },
+  {
+    name: "Bulgarian",
+    nativeName: "Български",
+    code: "bg",
+    voice: "bg-BG-KalinaNeural",
+  },
+  {
+    name: "Croatian",
+    nativeName: "Hrvatski",
+    code: "hr",
+    voice: "hr-HR-GabrijelaNeural",
+  },
+  {
+    name: "Slovak",
+    nativeName: "Slovenčina",
+    code: "sk",
+    voice: "sk-SK-ViktoriaNeural",
+  },
+  {
+    name: "Lithuanian",
+    nativeName: "Lietuvių",
+    code: "lt",
+    voice: "lt-LT-OnaNeural",
+  },
+  {
+    name: "Latvian",
+    nativeName: "Latviešu",
+    code: "lv",
+    voice: "lv-LV-EveritaNeural",
+  },
+  {
+    name: "Estonian",
+    nativeName: "Eesti",
+    code: "et",
+    voice: "et-EE-AnuNeural",
+  },
+  {
+    name: "Catalan",
+    nativeName: "Català",
+    code: "ca",
+    voice: "ca-ES-JoanaNeural",
+  },
+  {
+    name: "Serbian",
+    nativeName: "Српски",
+    code: "sr",
+    voice: "sr-RS-SophieNeural",
+  },
+  {
+    name: "Slovenian",
+    nativeName: "Slovenščina",
+    code: "sl",
+    voice: "sl-SI-PetraNeural",
+  },
+  {
+    name: "Nepali",
+    nativeName: "नेपाली",
+    code: "ne",
+    voice: "ne-NP-HemkalaNeural",
+  },
+  {
+    name: "Amharic",
+    nativeName: "አማርኛ",
+    code: "am",
+    voice: "am-ET-MekdesNeural",
+  },
+  {
+    name: "Azerbaijani",
+    nativeName: "Azərbaycan",
+    code: "az",
+    voice: "az-AZ-BanuNeural",
+  },
+  {
+    name: "Georgian",
+    nativeName: "ქართული",
+    code: "ka",
+    voice: "ka-GE-EkaNeural",
+  },
+  {
+    name: "Kazakh",
+    nativeName: "Қазақ",
+    code: "kk",
+    voice: "kk-KZ-AigulNeural",
+  },
 ];
 
 type Props = {
@@ -49,6 +374,7 @@ export function OnboardingWizard({ initialVoice }: Props) {
   const [showManualAdd, setShowManualAdd] = useState(false);
   const [voice, setVoice] = useState(initialVoice);
   const [savingVoice, setSavingVoice] = useState(false);
+  const [langSearch, setLangSearch] = useState("");
   const [connectToken, setConnectToken] = useState("");
   const [telegramConnected, setTelegramConnected] = useState(false);
   const [completing, setCompleting] = useState(false);
@@ -168,14 +494,17 @@ export function OnboardingWizard({ initialVoice }: Props) {
     }
   };
 
-  const saveVoice = async (v: string) => {
-    setVoice(v);
+  const saveLang = async (lang: Language) => {
+    setVoice(lang.voice);
     setSavingVoice(true);
     const {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) return;
-    await supabase.from("profiles").update({ tts_voice: v }).eq("id", user.id);
+    await supabase
+      .from("profiles")
+      .update({ tts_voice: lang.voice, preferred_language: lang.code })
+      .eq("id", user.id);
     setSavingVoice(false);
   };
 
@@ -322,7 +651,14 @@ export function OnboardingWizard({ initialVoice }: Props) {
             </div>
           )}
 
-          <div className="flex justify-end pt-2">
+          <div className="flex items-center justify-between pt-2">
+            <button
+              type="button"
+              onClick={() => setStep(2)}
+              className="text-muted-foreground hover:text-foreground text-xs transition-colors"
+            >
+              Later
+            </button>
             <Button
               onClick={() => setStep(2)}
               disabled={sources.length === 0}
@@ -335,7 +671,7 @@ export function OnboardingWizard({ initialVoice }: Props) {
         </div>
       )}
 
-      {/* Step 2: Choose voice */}
+      {/* Step 2: Choose language */}
       {step === 2 && (
         <div className="space-y-6">
           <div className="space-y-4">
@@ -346,47 +682,51 @@ export function OnboardingWizard({ initialVoice }: Props) {
               <p className="text-muted-foreground mb-1 text-sm font-medium">
                 Step 2 of 3
               </p>
-              <h1 className="text-2xl font-bold">Which voice do you prefer?</h1>
+              <h1 className="text-2xl font-bold">Select your language</h1>
               <p className="text-muted-foreground mt-1.5 text-sm">
-                Your summaries will be read aloud in this voice.
+                Your audio summaries will be delivered in this language.
               </p>
             </div>
           </div>
 
-          <div className="grid gap-1.5 sm:grid-cols-2">
-            {voices.map((v) => (
-              <button
-                key={v.value}
-                onClick={() => void saveVoice(v.value)}
-                disabled={savingVoice}
-                className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 text-left text-sm transition-all duration-200 ${
-                  voice === v.value
-                    ? "text-foreground border-red-500/25 bg-red-500/[0.06]"
-                    : "text-muted-foreground hover:text-foreground border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]"
-                }`}
-              >
-                <div
-                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
-                    voice === v.value
-                      ? "bg-red-500/20 text-red-400"
-                      : "text-muted-foreground bg-white/[0.06]"
-                  }`}
-                >
-                  {v.label.charAt(0)}
-                </div>
-                <div>
-                  <p className="text-[13px] leading-none font-medium">
-                    {v.label}
-                  </p>
-                  <p className="text-muted-foreground mt-0.5 text-[11px]">
-                    {v.lang}
-                  </p>
-                </div>
-                {voice === v.value && (
-                  <Check className="ml-auto h-3.5 w-3.5 shrink-0 text-red-400" />
-                )}
-              </button>
-            ))}
+          <Input
+            type="text"
+            value={langSearch}
+            onChange={(e) => setLangSearch(e.target.value)}
+            placeholder="Search a language..."
+            className="w-full"
+            suppressHydrationWarning
+          />
+
+          <div className="grid max-h-72 grid-cols-2 gap-1.5 overflow-y-auto sm:grid-cols-3">
+            {languages
+              .filter(
+                (l) =>
+                  l.name.toLowerCase().includes(langSearch.toLowerCase()) ||
+                  l.nativeName.toLowerCase().includes(langSearch.toLowerCase()),
+              )
+              .map((l) => {
+                const isSelected = voice === l.voice;
+                return (
+                  <button
+                    key={l.code}
+                    onClick={() => void saveLang(l)}
+                    disabled={savingVoice}
+                    className={`flex flex-col rounded-lg border px-3 py-2.5 text-left text-sm transition-all duration-150 ${
+                      isSelected
+                        ? "text-foreground border-red-500/25 bg-red-500/[0.06]"
+                        : "text-muted-foreground hover:text-foreground border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]"
+                    }`}
+                  >
+                    <span className="truncate text-[13px] leading-none font-medium">
+                      {l.name}
+                    </span>
+                    <span className="text-muted-foreground mt-0.5 truncate text-[11px]">
+                      {l.nativeName}
+                    </span>
+                  </button>
+                );
+              })}
           </div>
 
           <div className="flex items-center justify-between pt-2">

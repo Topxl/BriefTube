@@ -2,6 +2,7 @@
 
 ## 2026-02-20
 
+REFACTOR: Move default voice/language to SiteConfig — onboarding/page.tsx now uses SiteConfig.defaultTtsVoice instead of hardcoded string, DB default kept in sync
 FIX: Change default tts_voice to en-US-JennyNeural and preferred_language to en in DB — new users now get English pre-selected in onboarding
 UX: Add "Later" button on onboarding step 1 — allows skipping channel import and continuing to step 2
 UX: Replace voice selection with comprehensive language selection in onboarding step 2 — 56 languages with native names, searchable grid, saves both tts_voice and preferred_language to profile

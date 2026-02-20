@@ -6,7 +6,14 @@ import { useQueryState } from "nuqs";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Youtube, Pause, Play, Trash2, ChevronDown } from "@/lib/icons";
+import {
+  Youtube,
+  Pause,
+  Play,
+  Trash2,
+  ChevronDown,
+  ListFilter,
+} from "@/lib/icons";
 import { dialogManager } from "@/features/dialog-manager/dialog-manager";
 import type { Tables } from "@/types/supabase";
 

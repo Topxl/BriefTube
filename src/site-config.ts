@@ -2,7 +2,8 @@ export const SiteConfig = {
   title: "BriefTube",
   freeChannelsLimit: 3,
   trialDays: 7,
-  defaultTtsVoice: "fr-FR-DeniseNeural",
+  defaultTtsVoice: "en-US-JennyNeural",
+  defaultLanguage: "en",
   description:
     "YouTube videos, summarized as audio, delivered to your Telegram",
   prodUrl: "https://www.brief-tube.com",
