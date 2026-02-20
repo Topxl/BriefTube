@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { NextResponse } from "next/server";
@@ -13,29 +12,9 @@ export async function GET(request: Request) {
   const next = searchParams.get("next") ?? "/dashboard";
   const forwardedHost = request.headers.get("x-forwarded-host");
 
-  console.log(
-    "[auth/callback] START",
-    JSON.stringify({
-      hasCode: !!code,
-      origin,
-      forwardedHost,
-      next,
-      url: request.url,
-    }),
-  );
-
   if (code) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
-
-    console.log(
-      "[auth/callback] exchangeCodeForSession",
-      JSON.stringify({
-        success: !error,
-        errorMessage: error?.message,
-        errorStatus: error?.status,
-      }),
-    );
 
     if (!error) {
       // Set trial for new users (profile.trial_ends_at is null on first login)
@@ -106,8 +85,6 @@ export async function GET(request: Request) {
         redirectUrl = `${origin}${next}`;
       }
 
-      console.log("[auth/callback] redirecting to", redirectUrl);
-
       const response = NextResponse.redirect(redirectUrl);
       // Clear the referral cookie after processing
       response.cookies.delete(REFERRAL_COOKIE);
@@ -116,12 +93,5 @@ export async function GET(request: Request) {
   }
 
   // Return to login if something went wrong
-  console.log(
-    "[auth/callback] FALLBACK /login",
-    JSON.stringify({
-      hasCode: !!code,
-      origin,
-    }),
-  );
   return NextResponse.redirect(`${origin}/login`);
 }

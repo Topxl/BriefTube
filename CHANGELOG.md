@@ -9,7 +9,9 @@ CHORE: Add 6 missing FK indexes (channel_lists, list_follows, list_stars, profil
 CHORE: Drop 2 unused indexes (idx_processed_videos_retry, idx_processed_videos_cost)
 CHORE: Split list_channels "list owner write" ALL policy into INSERT/UPDATE/DELETE to eliminate multiple permissive SELECT policies
 CHORE: Run code-quality CI on push to main (was pull_request only)
-DEBUG: Add detailed logging to auth/callback route to diagnose production redirect issue
+CHORE: Remove debug console.log from auth/callback route (production issue resolved)
+FIX: Use NEXT_PUBLIC_SITE_URL in OAuth redirectTo to avoid www vs non-www mismatch
+FIX: Update prodUrl in site-config to https://www.brief-tube.com
 
 CHORE: Delete apply_migration.py (one-off script that admitted it couldn't execute DDL)
 REFACTOR: Remove summarize_with_retry() from gemini_api.py — dead code never called by main.py
