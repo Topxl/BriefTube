@@ -10,10 +10,25 @@ export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
   const next = searchParams.get("next") ?? "/dashboard";
+  const forwardedHost = request.headers.get("x-forwarded-host");
+
+  logger.info("[auth/callback] START", {
+    hasCode: !!code,
+    origin,
+    forwardedHost,
+    next,
+    url: request.url,
+  });
 
   if (code) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
+
+    logger.info("[auth/callback] exchangeCodeForSession", {
+      success: !error,
+      errorMessage: error?.message,
+      errorStatus: error?.status,
+    });
 
     if (!error) {
       // Set trial for new users (profile.trial_ends_at is null on first login)
@@ -73,7 +88,6 @@ export async function GET(request: Request) {
         }
       }
 
-      const forwardedHost = request.headers.get("x-forwarded-host");
       const isLocalEnv = process.env.NODE_ENV === "development";
 
       let redirectUrl: string;
@@ -85,6 +99,8 @@ export async function GET(request: Request) {
         redirectUrl = `${origin}${next}`;
       }
 
+      logger.info("[auth/callback] redirecting to", { redirectUrl });
+
       const response = NextResponse.redirect(redirectUrl);
       // Clear the referral cookie after processing
       response.cookies.delete(REFERRAL_COOKIE);
@@ -93,5 +109,9 @@ export async function GET(request: Request) {
   }
 
   // Return to login if something went wrong
+  logger.warn("[auth/callback] fallback redirect to /login", {
+    hasCode: !!code,
+    origin,
+  });
   return NextResponse.redirect(`${origin}/login`);
 }
