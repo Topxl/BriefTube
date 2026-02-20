@@ -2,6 +2,8 @@
 
 ## 2026-02-20
 
+FIX: gemini_api — cap résumé à 800 mots max (AUDIO_MAX_WORDS) pour éviter troncature mid-sentence sur vidéos longues ; ajout instruction "sois sélectif" pour transcriptions > 4500 mots (~30 min) ; prompt migré en anglais pour meilleure fiabilité du modèle
+
 FIX: VoicePicker — replace nested `<button>` inside `<button>` with `<div role="button">` to fix hydration error (invalid HTML)
 
 
