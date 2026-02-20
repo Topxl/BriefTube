@@ -7,6 +7,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { dialogManager } from "@/features/dialog-manager/dialog-manager";
 
@@ -268,12 +269,11 @@ export function EditListForm({
                 (optional)
               </span>
             </label>
-            <textarea
+            <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               maxLength={500}
               rows={3}
-              className="placeholder:text-muted-foreground/50 w-full rounded-xl border border-white/[0.14] bg-white/[0.06] px-3 py-2 text-sm transition-all duration-300 outline-none focus-visible:border-white/[0.3] focus-visible:bg-white/[0.08] focus-visible:shadow-[0_0_16px_rgba(255,255,255,0.06)] focus-visible:ring-[3px] focus-visible:ring-white/[0.08]"
             />
           </div>
 
