@@ -34,10 +34,6 @@ MAX_CONCURRENT_VIDEOS = int(os.getenv("MAX_CONCURRENT_VIDEOS", "3"))
 # App
 APP_URL = os.getenv("APP_URL", "https://brief-tube.com")
 
-# Gemini
-COOKIES_FILE = COOKIES_DIR / "gemini_session.json"
-BROWSER_PROFILE_DIR = COOKIES_DIR / "browser_profile"
-
 # YouTube cookies (Netscape format) — helps with age-restricted / login-required
 # videos, but does NOT bypass cloud IP blocks on the transcript API.
 # Export via "Get cookies.txt LOCALLY" browser extension → worker/cookies/youtube.txt
@@ -48,4 +44,3 @@ YOUTUBE_COOKIES_FILE = COOKIES_DIR / "youtube.txt"
 # Recommended: Webshare.io (~$3/month) or any HTTP proxy.
 # Format: "http://user:pass@host:port" or "http://host:port"
 YOUTUBE_PROXY_HTTP = os.getenv("YOUTUBE_PROXY_HTTP", "")
-YOUTUBE_PROXY_HTTPS = os.getenv("YOUTUBE_PROXY_HTTPS", "")

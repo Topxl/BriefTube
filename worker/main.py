@@ -184,7 +184,6 @@ async def _process_video(
             transcript=transcript,
             source_language=source_lang,
             target_language=user_language,
-            video_url=youtube_url
         )
 
         if not summary:

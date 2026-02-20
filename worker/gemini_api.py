@@ -69,23 +69,23 @@ class GeminiSummarizer:
         transcript: str,
         source_language: Optional[str] = None,
         target_language: str = 'fr',
-        video_url: Optional[str] = None,
         model: Optional[str] = None
     ) -> Tuple[Optional[str], Optional[str]]:
         """
-        Summarize a video transcript and translate to target language
+        Summarize a video transcript and translate to target language.
+
+        The video URL is intentionally NOT passed to Gemini: providing it lets
+        the model use its training knowledge about the video instead of strictly
+        following the transcript, which causes hallucinations.
 
         Args:
             transcript: Full video transcript text
             source_language: Language code of the transcript (e.g., 'en', 'fr')
             target_language: Desired language for the summary (default: 'fr')
-            video_url: Optional YouTube URL for context
             model: Optional specific model to use (default: tries models in order)
 
         Returns:
             Tuple of (summary_text, error_message)
-            - summary_text: Summarized and translated text (None if failed)
-            - error_message: Error description (None if successful)
         """
         if not transcript or len(transcript.strip()) < 50:
             return None, "transcript_too_short"
@@ -179,79 +179,3 @@ class GeminiSummarizer:
 
         # All models failed
         return None, "all_models_failed"
-
-    def summarize_with_retry(
-        self,
-        transcript: str,
-        source_language: Optional[str] = None,
-        target_language: str = 'fr',
-        video_url: Optional[str] = None,
-        max_retries: int = 2
-    ) -> Tuple[Optional[str], Optional[str]]:
-        """
-        Summarize with automatic retry on failure
-
-        Args:
-            transcript: Full video transcript text
-            source_language: Language code of the transcript
-            target_language: Desired language for the summary
-            video_url: Optional YouTube URL for context
-            max_retries: Maximum number of retry attempts
-
-        Returns:
-            Tuple of (summary_text, error_message)
-        """
-        for attempt in range(max_retries + 1):
-            if attempt > 0:
-                logger.info(f"Retry attempt {attempt}/{max_retries}")
-
-            summary, error = self.summarize(
-                transcript=transcript,
-                source_language=source_language,
-                target_language=target_language,
-                video_url=video_url
-            )
-
-            if summary:
-                return summary, None
-
-            # If this was the last attempt, return the error
-            if attempt == max_retries:
-                return None, error
-
-        return None, "max_retries_exceeded"
-
-
-# Example usage and testing
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-
-    api_key = os.environ.get("GEMINI_API_KEY")
-    if not api_key:
-        print("❌ Set GEMINI_API_KEY environment variable")
-        exit(1)
-
-    # Test with a sample English transcript
-    test_transcript = """
-    Hello everyone, welcome to this tutorial about Python programming.
-    Today we're going to learn about functions and how to use them effectively.
-    Functions are reusable blocks of code that perform specific tasks.
-    They help us organize our code and make it more maintainable.
-    Let's start with a simple example of a function that adds two numbers.
-    """
-
-    summarizer = GeminiSummarizer(api_key=api_key)
-
-    print("Testing English → French translation and summary...")
-    summary, error = summarizer.summarize(
-        transcript=test_transcript,
-        source_language='en',
-        target_language='fr',
-        video_url="https://www.youtube.com/watch?v=example"
-    )
-
-    if summary:
-        print(f"✅ Summary generated ({len(summary)} chars)")
-        print(f"\n{summary}")
-    else:
-        print(f"❌ Failed: {error}")

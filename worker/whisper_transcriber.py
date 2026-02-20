@@ -12,6 +12,7 @@ Groq advantages:
 import math
 import os
 import logging
+import shutil
 import subprocess
 import tempfile
 from pathlib import Path
@@ -219,32 +220,7 @@ class WhisperTranscriber:
         finally:
             # Cleanup temp files (audio + all chunks)
             if temp_dir:
-                import shutil
                 try:
                     shutil.rmtree(temp_dir, ignore_errors=True)
                 except Exception:
                     pass
-
-
-# Example usage
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-
-    api_key = os.environ.get("GROQ_API_KEY") or os.environ.get("OPENAI_API_KEY")
-    if not api_key:
-        print("❌ Set GROQ_API_KEY environment variable")
-        exit(1)
-
-    # Test with a YouTube video
-    test_url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-
-    transcriber = WhisperTranscriber(api_key=api_key)
-    transcript, lang, error, cost = transcriber.transcribe(test_url)
-
-    if transcript:
-        print(f"✅ Transcript: {len(transcript)} chars")
-        print(f"Language: {lang}")
-        print(f"Cost: ${cost:.4f}")
-        print(f"Preview: {transcript[:200]}...")
-    else:
-        print(f"❌ Failed: {error}")

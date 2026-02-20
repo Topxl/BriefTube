@@ -2,6 +2,14 @@
 
 ## 2026-02-20
 
+CHORE: Delete apply_migration.py (one-off script that admitted it couldn't execute DDL)
+REFACTOR: Remove summarize_with_retry() from gemini_api.py — dead code never called by main.py
+REFACTOR: Remove video_url param from GeminiSummarizer.summarize() — was accepted but deliberately ignored; intent now documented in docstring
+REFACTOR: Compile 14 regex patterns at module level in text_cleaner.py instead of per call
+REFACTOR: Remove __main__ blocks from gemini_api.py, text_cleaner.py, whisper_transcriber.py
+FIX: Move import time / import shutil to module level (were inline in hot paths / finally blocks)
+FIX: Replace deprecated datetime.utcnow() with datetime.now(timezone.utc) in monitoring.py (×2)
+FIX: Remove 3 dead config vars (COOKIES_FILE, BROWSER_PROFILE_DIR, YOUTUBE_PROXY_HTTPS) left over from deleted gemini_browser.py
 REFACTOR: Consolidate Telegram alert logic — move MonitoringAlert and send_daily_report from monitoring.py to bot_handler.py; monitoring.py is now a pure data/stats module with zero Telegram dependencies
 CHORE: Move 6 test_*.py scripts from worker root to worker/tests/ — add sys.path fix so they still run from the subdirectory
 FIX: transcript_extractor.py missing `import re` at module level — _parse_vtt() silently failed (NameError swallowed by try/except), returning subtitle text with raw HTML tags to Gemini

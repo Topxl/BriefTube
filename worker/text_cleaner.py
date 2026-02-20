@@ -5,6 +5,27 @@ Removes Markdown formatting and special characters before text-to-speech convers
 
 import re
 
+# Compiled patterns — evaluated once at import time, not per call
+_H_RE = re.compile(r'^#{1,6}\s+', re.MULTILINE)
+_BOLD_ITALIC_RE = re.compile(r'\*\*\*(.+?)\*\*\*')
+_BOLD_RE = re.compile(r'\*\*(.+?)\*\*')
+_ITALIC_STAR_RE = re.compile(r'\*(.+?)\*')
+_BOLD_UNDER_RE = re.compile(r'__(.+?)__')
+_ITALIC_UNDER_RE = re.compile(r'_(.+?)_')
+_LINK_RE = re.compile(r'\[([^\]]+)\]\([^\)]+\)')
+_CODE_INLINE_RE = re.compile(r'`([^`]+)`')
+_CODE_BLOCK_RE = re.compile(r'```[\s\S]*?```', re.DOTALL)
+_HR_RE = re.compile(r'^[\-\*_]{3,}\s*$', re.MULTILINE)
+_BLOCKQUOTE_RE = re.compile(r'^>\s+', re.MULTILINE)
+_LIST_BULLET_RE = re.compile(r'^[\-\*\+]\s+', re.MULTILINE)
+_LIST_NUM_RE = re.compile(r'^\d+\.\s+', re.MULTILINE)
+_HTML_TAGS_RE = re.compile(r'<[^>]+>')
+_ELLIPSIS_RE = re.compile(r'\.{2,}')
+_EXCLAIM_RE = re.compile(r'!{2,}')
+_QUESTION_RE = re.compile(r'\?{2,}')
+_SPACES_RE = re.compile(r' {2,}')
+_NEWLINES_RE = re.compile(r'\n{3,}')
+
 
 def clean_for_tts(text: str) -> str:
     """
@@ -16,90 +37,24 @@ def clean_for_tts(text: str) -> str:
     Returns:
         Clean text ready for TTS
     """
-    # Remove Markdown headers (## Title, ### Title, etc.)
-    text = re.sub(r'^#{1,6}\s+', '', text, flags=re.MULTILINE)
-
-    # Remove bold and italic markers (**, *, _)
-    text = re.sub(r'\*\*\*(.+?)\*\*\*', r'\1', text)  # ***bold italic***
-    text = re.sub(r'\*\*(.+?)\*\*', r'\1', text)      # **bold**
-    text = re.sub(r'\*(.+?)\*', r'\1', text)          # *italic*
-    text = re.sub(r'__(.+?)__', r'\1', text)          # __bold__
-    text = re.sub(r'_(.+?)_', r'\1', text)            # _italic_
-
-    # Remove links [text](url) -> keep only text
-    text = re.sub(r'\[([^\]]+)\]\([^\)]+\)', r'\1', text)
-
-    # Remove inline code `code`
-    text = re.sub(r'`([^`]+)`', r'\1', text)
-
-    # Remove code blocks ```code``` (multiline)
-    text = re.sub(r'```[\s\S]*?```', '', text, flags=re.DOTALL)
-    # Remove remaining backticks
-    text = text.replace('```', '')
-    text = text.replace('``', '')
-
-    # Remove horizontal rules (---, ***, ___)
-    text = re.sub(r'^[\-\*_]{3,}\s*$', '', text, flags=re.MULTILINE)
-
-    # Remove blockquotes (> text)
-    text = re.sub(r'^>\s+', '', text, flags=re.MULTILINE)
-
-    # Remove list markers (- item, * item, + item, 1. item)
-    text = re.sub(r'^[\-\*\+]\s+', '', text, flags=re.MULTILINE)
-    text = re.sub(r'^\d+\.\s+', '', text, flags=re.MULTILINE)
-
-    # Remove HTML tags
-    text = re.sub(r'<[^>]+>', '', text)
-
-    # Remove excessive punctuation
-    text = re.sub(r'\.{2,}', '.', text)  # ... -> .
-    text = re.sub(r'!{2,}', '!', text)   # !!! -> !
-    text = re.sub(r'\?{2,}', '?', text)  # ??? -> ?
-
-    # Remove multiple spaces
-    text = re.sub(r' {2,}', ' ', text)
-
-    # Remove multiple newlines (keep max 2 for paragraphs)
-    text = re.sub(r'\n{3,}', '\n\n', text)
-
-    # Clean up whitespace
-    text = text.strip()
-
-    return text
-
-
-# Test examples
-if __name__ == "__main__":
-    test_text = """
-# Grand Titre
-
-Voici un **texte en gras** et *en italique*.
-
-## Sous-titre
-
-- Premier point
-- Deuxième point
-
-> Citation importante
-
-Du texte avec `du code` et des liens [cliquez ici](https://example.com).
-
----
-
-### Section finale
-
-Du texte normal avec des symboles... et des *** astérisques *** partout!!!
-
-```python
-# Code à supprimer
-print("hello")
-```
-
-Texte final.
-    """
-
-    print("AVANT:")
-    print(test_text)
-    print("\n" + "="*70 + "\n")
-    print("APRÈS:")
-    print(clean_for_tts(test_text))
+    text = _H_RE.sub('', text)                      # ## Title → ''
+    text = _BOLD_ITALIC_RE.sub(r'\1', text)         # ***x*** → x
+    text = _BOLD_RE.sub(r'\1', text)                # **x** → x
+    text = _ITALIC_STAR_RE.sub(r'\1', text)         # *x* → x
+    text = _BOLD_UNDER_RE.sub(r'\1', text)          # __x__ → x
+    text = _ITALIC_UNDER_RE.sub(r'\1', text)        # _x_ → x
+    text = _LINK_RE.sub(r'\1', text)                # [text](url) → text
+    text = _CODE_INLINE_RE.sub(r'\1', text)         # `code` → code
+    text = _CODE_BLOCK_RE.sub('', text)             # ```block``` → ''
+    text = text.replace('```', '').replace('``', '')
+    text = _HR_RE.sub('', text)                     # --- → ''
+    text = _BLOCKQUOTE_RE.sub('', text)             # > text → text
+    text = _LIST_BULLET_RE.sub('', text)            # - item → item
+    text = _LIST_NUM_RE.sub('', text)               # 1. item → item
+    text = _HTML_TAGS_RE.sub('', text)              # <tag> → ''
+    text = _ELLIPSIS_RE.sub('.', text)              # ... → .
+    text = _EXCLAIM_RE.sub('!', text)               # !!! → !
+    text = _QUESTION_RE.sub('?', text)              # ??? → ?
+    text = _SPACES_RE.sub(' ', text)                # multiple spaces → single
+    text = _NEWLINES_RE.sub('\n\n', text)           # 3+ newlines → 2
+    return text.strip()

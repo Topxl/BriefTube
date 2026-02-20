@@ -8,7 +8,7 @@ Alert delivery (MonitoringAlert) lives in bot_handler.py.
 import html as _html
 import logging
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 import psutil
 
@@ -123,7 +123,7 @@ class WorkerStats:
         # Groq / Whisper usage (resets at midnight UTC each day)
         self.groq_seconds_today: float = 0.0
         self.groq_cost_today: float = 0.0
-        self._groq_day = datetime.utcnow().date()
+        self._groq_day = datetime.now(timezone.utc).date()
         # Alert thresholds already sent today (avoid spam)
         self.groq_alert_80_sent = False
         self.ip_block_alert_sent = False
@@ -160,7 +160,7 @@ class WorkerStats:
 
     def record_groq_usage(self, audio_seconds: float, cost_usd: float) -> None:
         """Track Groq Whisper usage, auto-resetting daily at midnight UTC."""
-        today = datetime.utcnow().date()
+        today = datetime.now(timezone.utc).date()
         if today != self._groq_day:
             self.groq_seconds_today = 0.0
             self.groq_cost_today = 0.0

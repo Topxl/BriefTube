@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import time
 import uuid
 from pathlib import Path
 import edge_tts
@@ -37,7 +38,6 @@ async def text_to_audio(text: str, voice: str = None, output_filename: str = Non
 
 def cleanup_audio_files(max_age_hours: int = 1) -> int:
     """Delete audio files older than max_age_hours."""
-    import time
     count = 0
     now = time.time()
     for f in AUDIO_DIR.glob("*.mp3"):
