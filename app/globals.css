@@ -90,6 +90,7 @@
 
 :root,
 .force-light-theme {
+  color-scheme: light;
   --background: oklch(1 0 0);
   --foreground: oklch(0.3211 0 0);
   --card: oklch(1 0 0);
@@ -157,6 +158,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   --background: oklch(0.2046 0 0);
   --foreground: oklch(0.9219 0 0);
   --card: oklch(0.2686 0 0);
