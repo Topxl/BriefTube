@@ -2,6 +2,39 @@
 
 ## 2026-02-20
 
+FIX: VoicePicker — replace nested `<button>` inside `<button>` with `<div role="button">` to fix hydration error (invalid HTML)
+
+
+CHORE: worker — os.nice(10) au démarrage + throttle CPU actif (pause si CPU > MAX_CPU_PERCENT, défaut 65%) avant chaque nouveau job ; MAX_CONCURRENT_VIDEOS réduit à 2 par défaut ; tout configurable via .env
+FIX: Import YouTube — pre-marking videos as skipped now uses correct `onConflict: "video_id,language"` and includes the `language` sentinel field to prevent silent upsert failures that caused all historical videos to be treated as new and delivered to the user
+FIX: subscriptions/route.ts — "aha moment" upserts now include `language` (preferred_language du profil) et correct `onConflict: "video_id,language"` pour processed_videos ; processing_queue utilise check+insert sans fausse contrainte unique ; deliveries incluent language
+FIX: lists/follow/route.ts — erreurs Supabase des DELETE (unfollow) et INSERT (follow) désormais vérifiées et retournées au lieu d'être ignorées silencieusement
+
+CHORE: dialog — softer border (border-white/[0.06]) and rounded-xl to match app style
+FIX: dialog-component — custom dialogs now close on outside click (missing onOpenChange handler)
+FIX: dialog-component — add AlertDialogTitle and aria-describedby={undefined} to custom dialogs to fix Radix UI accessibility warnings
+FEATURE: Voice picker — add play preview button (Web Speech API) and replace language labels with tone descriptors
+FEATURE: Add language picker in account settings — users can switch summary language (+ TTS voice) directly from the Delivery section
+REFACTOR: Extract 56-language list to shared `src/lib/languages.ts`, imported by onboarding wizard and delivery settings
+REFACTOR: Redesign profile page — single-row account card with avatar, voice picker in dialog, compact subscription CTA, uniform section headers
+FIX: Worker multi-langue — les résumés sont désormais générés dans la langue préférée de chaque abonné (était toujours 'fr' à cause du DEFAULT DB)
+FIX: DB migration — ajout colonne language sur processed_videos (unique sur video_id+language) et deliveries
+FIX: rss_scanner — enqueue un job par langue unique parmi les abonnés (plus de langue partagée entre tous)
+FIX: db.py — enqueue_video/insert_new_video/mark_video_completed/mark_video_failed/create_deliveries_for_video/get_pending_deliveries supportent maintenant la langue
+FIX: bot_handler — on-demand via Telegram utilise la preferred_language du profil utilisateur
+
+FEATURE: SEO — fix sitemap URLs to use SiteConfig.prodUrl, add robots.ts, enrich layout with OG/Twitter metadata
+FEATURE: SEO — add opengraph-image.tsx dynamic OG image (1200×630) via next/og
+FEATURE: SEO — add canonical + JSON-LD SoftwareApplication schema on landing page
+FEATURE: Referral — add Web Share/X/Telegram share buttons in referral section (dashboard settings)
+FEATURE: Referral — show share CTA with X/Telegram buttons after Telegram connect in onboarding (delay 2s→4s)
+FEATURE: Referral — fetch referral_code in onboarding page and pass to wizard
+FEATURE: Referral — notify referrer via Telegram when someone signs up with their link (auth/callback)
+FEATURE: Worker — include referral link in Telegram bot welcome message on /start connect
+
+FIX: Batch channel POST in chunks of 50 in edit-list-form — fixes 400 error when importing 226+ subscriptions into a list (API has .max(50) Zod limit)
+UX: Move Save button to sticky top bar in edit-list-form — no longer requires scrolling past 200+ channels to save
+
 REFACTOR: Move default voice/language to SiteConfig — onboarding/page.tsx now uses SiteConfig.defaultTtsVoice instead of hardcoded string, DB default kept in sync
 FIX: Change default tts_voice to en-US-JennyNeural and preferred_language to en in DB — new users now get English pre-selected in onboarding
 UX: Add "Later" button on onboarding step 1 — allows skipping channel import and continuing to step 2
