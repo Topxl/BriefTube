@@ -2,6 +2,7 @@
 
 ## 2026-02-20
 
+REFACTOR: Consolidate Telegram alert logic — move MonitoringAlert and send_daily_report from monitoring.py to bot_handler.py; monitoring.py is now a pure data/stats module with zero Telegram dependencies
 CHORE: Move 6 test_*.py scripts from worker root to worker/tests/ — add sys.path fix so they still run from the subdirectory
 FIX: transcript_extractor.py missing `import re` at module level — _parse_vtt() silently failed (NameError swallowed by try/except), returning subtitle text with raw HTML tags to Gemini
 FIX: _get_api() called once per language attempt (up to 12x per video) — now called once per get_transcript() call, reused across language loop

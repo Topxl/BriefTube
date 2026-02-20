@@ -22,8 +22,8 @@ from gemini_api import GeminiSummarizer
 from text_cleaner import clean_for_tts
 from tts_processor import text_to_audio, cleanup_audio_files
 from telegram_deliverer import send_audio_to_user
-from bot_handler import create_bot_application
-from monitoring import stats, MonitoringAlert, send_daily_report
+from bot_handler import create_bot_application, MonitoringAlert, send_daily_report
+from monitoring import stats
 import rss_scanner
 import db
 from datetime import datetime, time as datetime_time

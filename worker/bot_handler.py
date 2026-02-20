@@ -1,10 +1,12 @@
-"""Telegram bot command handlers for @brief_tube_bot."""
+"""Telegram bot command handlers and alert system for @brief_tube_bot."""
 
+import asyncio
 import html as _html
 import re
 import logging
 import aiohttp
 import feedparser
+from typing import Optional
 from telegram import Update
 from telegram.error import Conflict
 from telegram.ext import (
@@ -17,9 +19,97 @@ from telegram.ext import (
 
 from config import TELEGRAM_BOT_TOKEN, ADMIN_TELEGRAM_CHAT_ID, APP_URL
 import db
-from monitoring import stats, get_system_info, get_log_tail, format_log
+from monitoring import stats, get_system_info, get_log_tail, format_log, _md_to_html
 
 logger = logging.getLogger(__name__)
+
+
+# ── Alert System ──────────────────────────────────────────────────
+
+class MonitoringAlert:
+    """Sends alerts to admin Telegram chat."""
+
+    def __init__(self, bot_app, admin_chat_id: Optional[str] = None):
+        self.bot_app = bot_app
+        self.admin_chat_id = admin_chat_id
+        self.alert_queue = asyncio.Queue()
+        self.is_running = False
+
+    async def send_alert(self, message: str, level: str = "INFO"):
+        """Queue an alert to be sent to admin."""
+        if not self.admin_chat_id:
+            return
+
+        emoji = {
+            "INFO": "ℹ️",
+            "SUCCESS": "✅",
+            "WARNING": "⚠️",
+            "ERROR": "🔴",
+            "CRITICAL": "🚨",
+        }.get(level, "📢")
+
+        safe_msg = _md_to_html(message)
+        formatted = f"{emoji} <b>{level}</b>\n\n{safe_msg}"
+        await self.alert_queue.put(formatted)
+
+    async def process_alerts(self):
+        """Background task to send queued alerts."""
+        self.is_running = True
+        logger.info("Monitoring alerts started")
+
+        while self.is_running:
+            try:
+                try:
+                    message = await asyncio.wait_for(self.alert_queue.get(), timeout=5.0)
+                except asyncio.TimeoutError:
+                    continue
+
+                try:
+                    await self.bot_app.bot.send_message(
+                        chat_id=self.admin_chat_id,
+                        text=message,
+                        parse_mode="HTML",
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to send alert: {e}")
+
+                await asyncio.sleep(1)
+
+            except Exception as e:
+                logger.error(f"Alert processing error: {e}")
+                await asyncio.sleep(5)
+
+    async def stop(self):
+        """Stop the alert processor."""
+        self.is_running = False
+
+
+async def send_daily_report(alert_system: MonitoringAlert):
+    """Send daily statistics report to admin."""
+    summary = stats.get_summary()
+    system = get_system_info()
+
+    report = (
+        f"📊 <b>Daily Worker Report</b>\n\n"
+        f"<b>Uptime:</b> {summary['uptime']}\n\n"
+        f"<b>Videos:</b>\n"
+        f"• Processed: {summary['videos_processed']}\n"
+        f"• Failed: {summary['videos_failed']}\n"
+        f"• Avg time: {summary['avg_processing_time']}s\n\n"
+        f"<b>RSS Scans:</b> {summary['rss_scans']}\n"
+        f"<b>New videos found:</b> {summary['new_videos_found']}\n\n"
+        f"<b>Deliveries:</b>\n"
+        f"• Sent: {summary['deliveries_sent']}\n"
+        f"• Failed: {summary['deliveries_failed']}\n\n"
+        f"<b>System:</b>\n"
+        f"• CPU: {system.get('cpu_percent', 'N/A')}%\n"
+        f"• Memory: {system.get('memory_percent', 'N/A')}%\n"
+        f"• Disk: {system.get('disk_free_gb', 'N/A')} GB free\n\n"
+        f"<b>Recent Errors:</b> {len(summary['recent_errors'])}\n"
+    )
+
+    await alert_system.send_alert(report, level="INFO")
+
 
 # ── URL detection patterns ────────────────────────────────────
 VIDEO_RE = re.compile(

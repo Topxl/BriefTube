@@ -1,16 +1,15 @@
 """
 BriefTube Worker Monitoring System
 
-Tracks worker statistics and sends alerts to admin via Telegram.
+Tracks worker statistics, formats logs, and exposes system info.
+Alert delivery (MonitoringAlert) lives in bot_handler.py.
 """
 
-import asyncio
 import html as _html
 import logging
 import re
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
-from typing import Optional
 import psutil
 
 logger = logging.getLogger(__name__)
@@ -66,7 +65,7 @@ def format_log(raw: str) -> str:
     return "\n".join(lines) or "(log empty)"
 
 
-def _md_to_html(text: str) -> str:
+def _md_to_html(text: str) -> str:  # exported for bot_handler
     """Convert **bold** Markdown to HTML <b> tags and escape HTML special chars.
 
     Splits on '**', alternates plain/bold segments, HTML-escapes each part.
@@ -218,70 +217,6 @@ class WorkerStats:
 stats = WorkerStats()
 
 
-# ── Alert System ──────────────────────────────────────────────────
-
-class MonitoringAlert:
-    """Sends alerts to admin Telegram chat."""
-
-    def __init__(self, bot_app, admin_chat_id: Optional[str] = None):
-        self.bot_app = bot_app
-        self.admin_chat_id = admin_chat_id
-        self.alert_queue = asyncio.Queue()
-        self.is_running = False
-
-    async def send_alert(self, message: str, level: str = "INFO"):
-        """Queue an alert to be sent to admin."""
-        if not self.admin_chat_id:
-            return
-
-        emoji = {
-            "INFO": "ℹ️",
-            "SUCCESS": "✅",
-            "WARNING": "⚠️",
-            "ERROR": "🔴",
-            "CRITICAL": "🚨",
-        }.get(level, "📢")
-
-        # Convert **bold** Markdown in message to HTML and escape special chars
-        safe_msg = _md_to_html(message)
-        formatted = f"{emoji} <b>{level}</b>\n\n{safe_msg}"
-        await self.alert_queue.put(formatted)
-
-    async def process_alerts(self):
-        """Background task to send queued alerts."""
-        self.is_running = True
-        logger.info("Monitoring alerts started")
-
-        while self.is_running:
-            try:
-                # Get alert from queue (with timeout)
-                try:
-                    message = await asyncio.wait_for(self.alert_queue.get(), timeout=5.0)
-                except asyncio.TimeoutError:
-                    continue
-
-                # Send to admin
-                try:
-                    await self.bot_app.bot.send_message(
-                        chat_id=self.admin_chat_id,
-                        text=message,
-                        parse_mode="HTML",
-                    )
-                except Exception as e:
-                    logger.error(f"Failed to send alert: {e}")
-
-                # Rate limit
-                await asyncio.sleep(1)
-
-            except Exception as e:
-                logger.error(f"Alert processing error: {e}")
-                await asyncio.sleep(5)
-
-    async def stop(self):
-        """Stop the alert processor."""
-        self.is_running = False
-
-
 # ── System Information ────────────────────────────────────────────
 
 def get_system_info() -> dict:
@@ -316,30 +251,3 @@ def get_log_tail(lines: int = 50) -> str:
         return f"Error reading logs: {e}"
 
 
-# ── Daily Report ──────────────────────────────────────────────────
-
-async def send_daily_report(alert_system: MonitoringAlert):
-    """Send daily statistics report to admin."""
-    summary = stats.get_summary()
-    system = get_system_info()
-
-    report = (
-        f"📊 <b>Daily Worker Report</b>\n\n"
-        f"<b>Uptime:</b> {summary['uptime']}\n\n"
-        f"<b>Videos:</b>\n"
-        f"• Processed: {summary['videos_processed']}\n"
-        f"• Failed: {summary['videos_failed']}\n"
-        f"• Avg time: {summary['avg_processing_time']}s\n\n"
-        f"<b>RSS Scans:</b> {summary['rss_scans']}\n"
-        f"<b>New videos found:</b> {summary['new_videos_found']}\n\n"
-        f"<b>Deliveries:</b>\n"
-        f"• Sent: {summary['deliveries_sent']}\n"
-        f"• Failed: {summary['deliveries_failed']}\n\n"
-        f"<b>System:</b>\n"
-        f"• CPU: {system.get('cpu_percent', 'N/A')}%\n"
-        f"• Memory: {system.get('memory_percent', 'N/A')}%\n"
-        f"• Disk: {system.get('disk_free_gb', 'N/A')} GB free\n\n"
-        f"<b>Recent Errors:</b> {len(summary['recent_errors'])}\n"
-    )
-
-    await alert_system.send_alert(report, level="INFO")
