@@ -269,6 +269,7 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
           autoComplete="off"
           data-1p-ignore
           data-lpignore="true"
+          data-form-type="other"
         />
         <Button
           type="submit"
