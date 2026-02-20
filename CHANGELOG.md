@@ -2,6 +2,7 @@
 
 ## 2026-02-20
 
+UX: Move search/add channel bar to nav header — desktop center, mobile second row, synced via nuqs URL param
 UX: Dashboard design pass — compact trial banner, text-link import, dot status indicator, text-only show-more, clean header
 UX: Improve search/add bar visibility in Sources section — brighter border, background, and placeholder
 

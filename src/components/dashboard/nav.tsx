@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, ListVideo, User } from "@/lib/icons";
+import { ChannelSearchBar } from "@/components/dashboard/channel-search-bar";
 
 const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -37,6 +38,7 @@ function PlanBadge({ plan }: { plan: string }) {
 export function DashboardNav({ email, plan }: { email: string; plan: string }) {
   const pathname = usePathname();
   const initial = email.charAt(0).toUpperCase();
+  const onDashboard = pathname === "/dashboard";
 
   return (
     <>
@@ -44,7 +46,7 @@ export function DashboardNav({ email, plan }: { email: string; plan: string }) {
       <nav className="sticky top-0 z-40 border-b border-white/[0.06] bg-white/[0.03] backdrop-blur-2xl">
         <div className="mx-auto flex h-14 max-w-[1080px] items-center justify-between px-4 md:px-6">
           {/* Left: logo + nav links */}
-          <div className="flex items-center gap-6">
+          <div className="flex shrink-0 items-center gap-6">
             <Link href="/dashboard" className="flex items-center gap-2">
               <Image
                 src="/logo.svg"
@@ -82,8 +84,15 @@ export function DashboardNav({ email, plan }: { email: string; plan: string }) {
             </div>
           </div>
 
+          {/* Center: search bar — desktop only, dashboard only */}
+          {onDashboard && (
+            <div className="mx-6 hidden w-full max-w-sm flex-1 md:block">
+              <ChannelSearchBar />
+            </div>
+          )}
+
           {/* Right: plan badge + avatar */}
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-3">
             <PlanBadge plan={plan} />
             <Link
               href="/dashboard/profile"
@@ -97,6 +106,13 @@ export function DashboardNav({ email, plan }: { email: string; plan: string }) {
             </Link>
           </div>
         </div>
+
+        {/* Mobile search row — dashboard only */}
+        {onDashboard && (
+          <div className="border-t border-white/[0.04] px-4 pt-2 pb-3 md:hidden">
+            <ChannelSearchBar />
+          </div>
+        )}
       </nav>
 
       {/* Mobile bottom nav */}

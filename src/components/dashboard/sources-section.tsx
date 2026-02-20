@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { useQueryState } from "nuqs";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Plus, Loader2, Youtube, Search, X } from "@/lib/icons";
+import { Youtube } from "@/lib/icons";
 import { dialogManager } from "@/features/dialog-manager/dialog-manager";
 import type { Tables } from "@/types/supabase";
 
@@ -14,17 +14,6 @@ type Subscription = Tables<"subscriptions">;
 
 const INITIAL_VISIBLE = 3;
 const LOAD_MORE_STEP = 10;
-
-/** Returns true when the input looks like a YouTube URL or channel ID to add */
-function isYouTubeInput(val: string): boolean {
-  const v = val.trim();
-  return (
-    v.includes("youtube.com") ||
-    v.includes("youtu.be") ||
-    v.startsWith("@") ||
-    /^UC[\w-]{10,}$/.test(v)
-  );
-}
 
 type Props = {
   initialSources: Subscription[];
@@ -129,19 +118,20 @@ function SourceRow({
 
 export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
   const [sources, setSources] = useState<Subscription[]>(initialSources);
-  const [input, setInput] = useState("");
-  const [adding, setAdding] = useState(false);
-  const [addError, setAddError] = useState("");
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
+  const [q] = useQueryState("q", { defaultValue: "", shallow: true });
   const supabase = createClient();
 
   const activeCount = sources.filter((s) => s.active).length;
   const atActiveLimit = !isPro && activeCount >= maxChannels;
 
-  const trimmed = input.trim();
-  const isAddMode = trimmed.length > 0 && isYouTubeInput(trimmed);
-  const searchNorm =
-    trimmed.length > 0 && !isAddMode ? trimmed.toLowerCase() : "";
+  // Ignore YouTube URLs in the search filter (they're handled by ChannelSearchBar)
+  const isYouTubeQ =
+    q.includes("youtube.com") ||
+    q.includes("youtu.be") ||
+    q.startsWith("@") ||
+    /^UC[\w-]{10,}$/.test(q);
+  const searchNorm = q.trim().length > 0 && !isYouTubeQ ? q.toLowerCase() : "";
 
   // Active first, then paused — preserving insertion order within each group
   const sortedSources = [
@@ -157,37 +147,6 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
 
   const remainingCount = sources.length - visibleCount;
   const hasMore = !searchNorm && visibleCount < sources.length;
-
-  const addSource = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!trimmed || !isAddMode) return;
-    setAdding(true);
-    setAddError("");
-    try {
-      const res = await fetch("/api/subscriptions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: trimmed }),
-      });
-      const data = (await res.json()) as Subscription & { error?: string };
-      if (!res.ok) {
-        setAddError(data.error ?? "Failed to add channel");
-        return;
-      }
-      setSources((prev) => [data, ...prev]);
-      setInput("");
-      setVisibleCount(INITIAL_VISIBLE);
-      toast.success(
-        data.active
-          ? "Source added and active"
-          : "Source added (paused — active limit reached)",
-      );
-    } catch {
-      setAddError("Something went wrong");
-    } finally {
-      setAdding(false);
-    }
-  };
 
   const toggleActive = async (source: Subscription) => {
     const newActive = !source.active;
@@ -267,68 +226,6 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
         </span>
       </div>
 
-      {/* Unified search / add bar */}
-      <form
-        onSubmit={(e) => void addSource(e)}
-        className="relative flex gap-2"
-        data-form-type="other"
-        suppressHydrationWarning
-      >
-        <div className="relative flex-1">
-          {isAddMode ? (
-            <Youtube className="text-muted-foreground absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2" />
-          ) : (
-            <Search className="text-muted-foreground absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2" />
-          )}
-          <Input
-            type="text"
-            value={input}
-            onChange={(e) => {
-              setInput(e.target.value);
-              setAddError("");
-            }}
-            placeholder={
-              sources.length > 0
-                ? `Search ${sources.length} channels or paste a YouTube URL…`
-                : "Paste a YouTube URL or channel ID…"
-            }
-            className="placeholder:text-muted-foreground/60 h-10 border-white/[0.22] bg-white/[0.08] pr-8 pl-8 hover:border-white/[0.3] hover:bg-white/[0.1]"
-            autoComplete="off"
-            data-1p-ignore
-            data-lpignore="true"
-            data-form-type="other"
-          />
-          {input && (
-            <button
-              type="button"
-              onClick={() => {
-                setInput("");
-                setAddError("");
-              }}
-              className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2 transition-colors"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
-
-        {isAddMode && (
-          <Button
-            type="submit"
-            disabled={adding}
-            className="shrink-0 bg-red-600 shadow-[0_0_12px_rgba(239,68,68,0.15)] hover:bg-red-500"
-          >
-            {adding ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Plus className="h-4 w-4" />
-            )}
-          </Button>
-        )}
-      </form>
-
-      {addError && <p className="text-xs text-red-400">{addError}</p>}
-
       {/* Import from YouTube */}
       <a
         href="/api/youtube/auth"
@@ -395,7 +292,7 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
               </div>
             ) : (
               <p className="text-muted-foreground px-4 py-6 text-center text-sm">
-                No channel matching &ldquo;{input}&rdquo;
+                No channel matching &ldquo;{q}&rdquo;
               </p>
             )}
           </div>
