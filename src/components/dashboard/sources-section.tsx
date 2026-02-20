@@ -59,7 +59,7 @@ function SourceRow({
 
   return (
     <div
-      className={`group flex items-center justify-between px-4 py-3 transition-colors hover:bg-white/[0.03] ${
+      className={`group flex items-center justify-between px-4 py-2.5 transition-colors hover:bg-white/[0.03] ${
         !source.active ? "opacity-40" : ""
       }`}
     >
@@ -231,7 +231,7 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {/* Header */}
       <div className="flex items-center justify-between">
         <button

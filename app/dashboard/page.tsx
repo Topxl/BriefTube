@@ -52,7 +52,7 @@ export default async function DashboardPage() {
     : 0;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-5">
       {/* Sources */}
       <SectionErrorBoundary>
         <SourcesSection
