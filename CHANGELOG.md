@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-02-21
+
+FEATURE: Add /admin dashboard — worker status (systemd + logs + start/stop/restart), user stats, 24h activity, processing queue and recent failures; protected by admin user ID; polls every 10s via TanStack Query
+
 ## 2026-02-20
 
 REFACTOR: delivery-section — simplify voice selection to one female + one male voice per language (37 languages covered); languages without a known male counterpart keep a single default voice

@@ -63,6 +63,14 @@ import {
   XCircleIcon as _XCircleIcon,
   XIcon as _XIcon,
   Youtube as _Youtube,
+  Activity as _Activity,
+  AlertCircle as _AlertCircle,
+  RefreshCw as _RefreshCw,
+  Terminal as _Terminal,
+  Power as _Power,
+  Cpu as _Cpu,
+  MessageCircle as _MessageCircle,
+  Zap as _Zap,
 } from "lucide-react";
 
 export type { LucideIcon, LucideProps } from "lucide-react";
@@ -130,3 +138,11 @@ export const X = wrap(_X);
 export const XCircleIcon = wrap(_XCircleIcon);
 export const XIcon = wrap(_XIcon);
 export const Youtube = wrap(_Youtube);
+export const Activity = wrap(_Activity);
+export const AlertCircle = wrap(_AlertCircle);
+export const RefreshCw = wrap(_RefreshCw);
+export const Terminal = wrap(_Terminal);
+export const Power = wrap(_Power);
+export const Cpu = wrap(_Cpu);
+export const MessageCircle = wrap(_MessageCircle);
+export const Zap = wrap(_Zap);
