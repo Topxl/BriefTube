@@ -64,10 +64,9 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 }
 
 // ---------------------------------------------------------------
-// Page
+// Explicit types for columns not in generated Supabase types
 // ---------------------------------------------------------------
 
-// Explicit types for columns not in generated Supabase types
 type PendingVideo = {
   video_id: string;
   channel_id: string;
@@ -81,6 +80,10 @@ type FailedVideo = {
   language: string;
   created_at: string;
 };
+
+// ---------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------
 
 export default async function AdminPage() {
   const supabase = await createClient();
@@ -139,8 +142,7 @@ export default async function AdminPage() {
     .limit(5);
   const recentFailed = recentFailedRaw as unknown as FailedVideo[] | null;
 
-  // Compute stats from fetched data
-  // Use Partial<Record> so values are number | undefined → ?? 0 is valid
+  // Compute stats — Partial<Record> so values are number | undefined → ?? 0 is valid
   const videosByStatus = (videosToday ?? []).reduce<
     Partial<Record<string, number>>
   >((acc, v) => {
