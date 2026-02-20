@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Loader2, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Download, Loader2, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -56,6 +56,7 @@ export function EditListForm({
   const [channelError, setChannelError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   const addChannel = async () => {
     if (!channelUrl.trim()) return;
@@ -98,6 +99,40 @@ export function EditListForm({
       setChannelError("Something went wrong");
     } finally {
       setAddingChannel(false);
+    }
+  };
+
+  const importFromSubscriptions = async () => {
+    setImporting(true);
+    try {
+      const res = await fetch("/api/subscriptions");
+      if (!res.ok) throw new Error();
+      const subs = (await res.json()) as {
+        channel_id: string;
+        channel_name: string;
+        channel_avatar_url: string | null;
+      }[];
+
+      const existing = new Set(channels.map((c) => c.channel_id));
+      const toAdd = subs
+        .filter((s) => !existing.has(s.channel_id))
+        .map((s) => ({
+          channel_id: s.channel_id,
+          channel_name: s.channel_name,
+          channel_avatar_url: s.channel_avatar_url,
+        }));
+
+      if (toAdd.length === 0) {
+        toast.info("All your subscriptions are already in this list");
+        return;
+      }
+
+      setChannels((prev) => [...prev, ...toAdd]);
+      toast.success(`${toAdd.length} channels imported`);
+    } catch {
+      toast.error("Failed to import subscriptions");
+    } finally {
+      setImporting(false);
     }
   };
 
@@ -266,12 +301,27 @@ export function EditListForm({
 
           {/* Channels */}
           <div className="space-y-3">
-            <label className="text-sm font-medium">
-              Channels{" "}
-              <span className="text-muted-foreground font-normal">
-                ({channels.length})
-              </span>
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium">
+                Channels{" "}
+                <span className="text-muted-foreground font-normal">
+                  ({channels.length})
+                </span>
+              </label>
+              <button
+                type="button"
+                onClick={() => void importFromSubscriptions()}
+                disabled={importing}
+                className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-xs transition-colors disabled:opacity-50"
+              >
+                {importing ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Download className="h-3 w-3" />
+                )}
+                Import my subscriptions
+              </button>
+            </div>
 
             <div className="flex gap-2">
               <Input
