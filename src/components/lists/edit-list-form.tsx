@@ -273,7 +273,7 @@ export function EditListForm({
               onChange={(e) => setDescription(e.target.value)}
               maxLength={500}
               rows={3}
-              className="border-input bg-background placeholder:text-muted-foreground focus-visible:ring-ring w-full rounded-md border px-3 py-2 text-sm shadow-sm focus-visible:ring-1 focus-visible:outline-none"
+              className="placeholder:text-muted-foreground/50 w-full rounded-xl border border-white/[0.14] bg-white/[0.06] px-3 py-2 text-sm transition-all duration-300 outline-none focus-visible:border-white/[0.3] focus-visible:bg-white/[0.08] focus-visible:shadow-[0_0_16px_rgba(255,255,255,0.06)] focus-visible:ring-[3px] focus-visible:ring-white/[0.08]"
             />
           </div>
 
