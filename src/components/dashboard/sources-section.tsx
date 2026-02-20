@@ -6,7 +6,7 @@ import { useQueryState } from "nuqs";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Youtube } from "@/lib/icons";
+import { Youtube, Pause, Play, Trash2 } from "@/lib/icons";
 import { dialogManager } from "@/features/dialog-manager/dialog-manager";
 import type { Tables } from "@/types/supabase";
 
@@ -23,13 +23,11 @@ type Props = {
 
 function SourceRow({
   source,
-  atActiveLimit,
   onToggle,
   onRemove,
   searchQuery,
 }: {
   source: Subscription;
-  atActiveLimit: boolean;
   onToggle: (source: Subscription) => void;
   onRemove: (id: string, name: string) => void;
   searchQuery: string;
@@ -86,30 +84,28 @@ function SourceRow({
         </div>
       </div>
 
-      <div className="ml-2 flex shrink-0 items-center gap-3">
+      <div className="ml-2 flex shrink-0 items-center gap-1">
         <button
           onClick={() => onToggle(source)}
-          className="flex items-center gap-1.5 py-1 transition-colors"
+          className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
+            source.active
+              ? "text-muted-foreground/50 hover:text-muted-foreground hover:bg-white/[0.06]"
+              : "text-muted-foreground/25 hover:text-muted-foreground/60 hover:bg-white/[0.06]"
+          }`}
           title={source.active ? "Pause summaries" : "Activate summaries"}
         >
-          <div
-            className={`h-1.5 w-1.5 rounded-full transition-colors ${
-              source.active
-                ? "bg-emerald-400"
-                : atActiveLimit
-                  ? "bg-amber-400/50"
-                  : "bg-white/20"
-            }`}
-          />
-          <span className="text-muted-foreground/70 text-[11px]">
-            {source.active ? "Active" : "Paused"}
-          </span>
+          {source.active ? (
+            <Pause className="h-3.5 w-3.5" />
+          ) : (
+            <Play className="h-3.5 w-3.5" />
+          )}
         </button>
         <button
-          className="text-muted-foreground/30 shrink-0 py-1 text-[11px] opacity-0 transition-all group-hover:opacity-100 hover:text-red-400"
+          className="text-muted-foreground/25 flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-red-500/10 hover:text-red-400"
           onClick={() => onRemove(source.id, source.channel_name)}
+          title="Remove channel"
         >
-          Remove
+          <Trash2 className="h-3.5 w-3.5" />
         </button>
       </div>
     </div>
@@ -210,7 +206,6 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
   };
 
   const rowProps = {
-    atActiveLimit,
     onToggle: toggleActive,
     onRemove: removeSource,
     searchQuery: searchNorm,

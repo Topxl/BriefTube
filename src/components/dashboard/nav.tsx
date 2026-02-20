@@ -18,27 +18,8 @@ function isActive(href: string, pathname: string) {
   return pathname.startsWith(href);
 }
 
-function PlanBadge({ plan }: { plan: string }) {
-  const isPro = plan === "active";
-  const isTrial = plan === "trial";
-  return (
-    <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold tracking-wide uppercase ${
-        isPro
-          ? "bg-red-600 text-white"
-          : isTrial
-            ? "border border-amber-500/30 bg-amber-500/10 text-amber-400"
-            : "text-muted-foreground border border-white/[0.08] bg-white/[0.06]"
-      }`}
-    >
-      {isPro ? "Pro" : isTrial ? "Trial" : "Free"}
-    </span>
-  );
-}
-
-export function DashboardNav({ email, plan }: { email: string; plan: string }) {
+export function DashboardNav() {
   const pathname = usePathname();
-  const initial = email.charAt(0).toUpperCase();
   const onDashboard = pathname === "/dashboard";
 
   return (
@@ -85,39 +66,15 @@ export function DashboardNav({ email, plan }: { email: string; plan: string }) {
             </div>
           </div>
 
-          {/* Center: search bar — desktop only, dashboard only */}
+          {/* Center: search bar — all screen sizes on dashboard */}
           {onDashboard && (
-            <div className="mx-6 hidden w-full max-w-sm flex-1 md:block">
+            <div className="mx-3 w-full flex-1 md:mx-6 md:max-w-sm">
               <Suspense fallback={null}>
                 <ChannelSearchBar />
               </Suspense>
             </div>
           )}
-
-          {/* Right: plan badge + avatar */}
-          <div className="flex shrink-0 items-center gap-3">
-            <PlanBadge plan={plan} />
-            <Link
-              href="/dashboard/profile"
-              className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold transition-colors ${
-                isActive("/dashboard/profile", pathname)
-                  ? "bg-red-500/20 text-red-400"
-                  : "bg-white/[0.08] hover:bg-white/[0.12]"
-              }`}
-            >
-              {initial}
-            </Link>
-          </div>
         </div>
-
-        {/* Mobile search row — dashboard only */}
-        {onDashboard && (
-          <div className="border-t border-white/[0.04] px-4 pt-2 pb-3 md:hidden">
-            <Suspense fallback={null}>
-              <ChannelSearchBar />
-            </Suspense>
-          </div>
-        )}
       </nav>
 
       {/* Mobile bottom nav */}

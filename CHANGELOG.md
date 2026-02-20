@@ -2,6 +2,14 @@
 
 ## 2026-02-20
 
+FIX: Change default tts_voice to en-US-JennyNeural and preferred_language to en in DB — new users now get English pre-selected in onboarding
+UX: Add "Later" button on onboarding step 1 — allows skipping channel import and continuing to step 2
+UX: Replace voice selection with comprehensive language selection in onboarding step 2 — 56 languages with native names, searchable grid, saves both tts_voice and preferred_language to profile
+UX: Remove profile icon and plan badge from top-right nav — profile accessible via bottom tab bar and desktop nav links
+UX: Rewrite trial-banner with useSyncExternalStore — dismissable via localStorage, re-appears after 7 days, always shows in last 3 days
+UX: Move search bar inline on mobile — same row as logo, remove second row below nav
+UX: Channel list — Pause/Play icon for toggle, always-visible Trash icon for remove
+
 UX: Move search/add channel bar to nav header — desktop center, mobile second row, synced via nuqs URL param
 UX: Dashboard design pass — compact trial banner, text-link import, dot status indicator, text-only show-more, clean header
 UX: Improve search/add bar visibility in Sources section — brighter border, background, and placeholder
