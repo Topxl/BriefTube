@@ -69,17 +69,16 @@ export function ListPicker({ lists, selectedIds, onToggle }: Props) {
                   <p className="text-sm leading-snug font-medium">
                     {list.name.replace("Best of ", "")}
                   </p>
-                  {isSelected && (
-                    <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-red-400" />
-                  )}
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <span className="text-muted-foreground/50 text-[10px]">
+                      {list.followerCount} subs
+                    </span>
+                    {isSelected && <Check className="h-3 w-3 text-red-400" />}
+                  </div>
                 </div>
                 <p className="text-muted-foreground text-[10px]">
                   {list.channelCount} channels
                   {list.category ? ` · ${list.category}` : ""}
-                </p>
-                <p className="text-muted-foreground/60 text-[10px]">
-                  {list.followerCount} subscriber
-                  {list.followerCount !== 1 ? "s" : ""}
                 </p>
               </button>
             );
