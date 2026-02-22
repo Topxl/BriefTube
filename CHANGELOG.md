@@ -2,6 +2,10 @@
 
 ## 2026-02-22
 
+FEATURE: Emails transactionnels — email de bienvenue au premier login (auth/callback), email de confirmation upgrade Pro (webhook checkout.session.completed), email de paiement échoué (webhook invoice.payment_failed)
+FEATURE: Notification Telegram sur échec définitif de vidéo — fail_job() retourne bool, _notify_video_failure() notifie tous les users concernés via Telegram après 3 tentatives
+FEATURE: Suppression de compte RGPD — route DELETE /api/account/delete (annule Stripe, supprime toutes les données, supprime l'auth user via service role); bouton "Delete account" dans profile-content.tsx avec confirmation dialog
+
 FEATURE: Netflix-style onboarding — step 1 replaced by curated list picker (Tech, Science, Finance, Education, Gaming, Business); user picks a playlist, channels are subscribed via /api/onboarding/follow-list (no Pro check, handles resolved to real channel IDs); YouTube import and manual add kept as secondary options
 
 ## 2026-02-21
