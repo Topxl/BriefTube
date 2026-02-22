@@ -71,6 +71,7 @@ import {
   Cpu as _Cpu,
   MessageCircle as _MessageCircle,
   Zap as _Zap,
+  Layers as _Layers,
 } from "lucide-react";
 
 export type { LucideIcon, LucideProps } from "lucide-react";
@@ -146,3 +147,4 @@ export const Power = wrap(_Power);
 export const Cpu = wrap(_Cpu);
 export const MessageCircle = wrap(_MessageCircle);
 export const Zap = wrap(_Zap);
+export const Layers = wrap(_Layers);

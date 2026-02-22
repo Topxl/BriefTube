@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-02-22
+
+FEATURE: Netflix-style onboarding — step 1 replaced by curated list picker (Tech, Science, Finance, Education, Gaming, Business); user picks a playlist, channels are subscribed via /api/onboarding/follow-list (no Pro check, handles resolved to real channel IDs); YouTube import and manual add kept as secondary options
+
 ## 2026-02-21
 
 FIX: SummariesFeed — memoize supabase client with useMemo to stop infinite re-render loop (createClient() was returning a new instance each render, invalidating useCallback/useEffect chain)
