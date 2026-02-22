@@ -16,10 +16,15 @@ Setup:
 """
 
 import asyncio
+import atexit
+import fcntl
 import html as _html
 import logging
 import os
 import re
+import signal
+import sys
+import time
 from collections import deque
 from datetime import datetime, timezone
 from pathlib import Path
@@ -33,6 +38,85 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Cont
 from monitoring import format_log_line
 
 load_dotenv(override=True)
+
+# ── Single-instance enforcement ─────────────────────────────────────
+
+_PID_FILE = Path(__file__).parent / "log_bot.pid"
+_LOCK_FILE = Path(__file__).parent / "log_bot.lock"
+_lock_fd = None  # keep fd open for the lifetime of the process (flock is held by the fd)
+
+
+def _cleanup_pid_file() -> None:
+    """Remove PID file and release flock on clean exit."""
+    global _lock_fd
+    try:
+        if _PID_FILE.exists() and _PID_FILE.read_text().strip() == str(os.getpid()):
+            _PID_FILE.unlink()
+    except Exception:
+        pass
+    if _lock_fd is not None:
+        try:
+            fcntl.flock(_lock_fd, fcntl.LOCK_UN)
+            _lock_fd.close()
+        except Exception:
+            pass
+
+
+def _enforce_single_instance() -> None:
+    """Guarantee that only one log_bot process runs at a time.
+
+    Two-layer protection:
+    1. fcntl exclusive flock — OS-level, released automatically by the kernel
+       even if the process crashes (no stale lock possible).
+    2. PID file — human-readable, lets systemd/scripts know the current PID.
+
+    On conflict the new process exits immediately with code 1 so systemd
+    does NOT retry (Restart=on-failure only triggers on non-zero exit from crash,
+    not from a deliberate sys.exit(1) guard… but we also SIGTERM the old instance
+    before trying, so in practice this path is only hit on race conditions).
+    """
+    global _lock_fd
+
+    # ── Layer 1: OS-level exclusive flock ──────────────────────────
+    fd = open(_LOCK_FILE, "w")
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        logger.error(
+            "Another log_bot instance already holds the lock — exiting. "
+            "Run 'sudo systemctl status brieftube-log-bot' to inspect."
+        )
+        fd.close()
+        sys.exit(1)
+    _lock_fd = fd  # keep open — flock is tied to the file descriptor lifetime
+
+    # ── Layer 2: PID file (with graceful takeover of stale instances) ──
+    if _PID_FILE.exists():
+        try:
+            old_pid = int(_PID_FILE.read_text().strip())
+            os.kill(old_pid, 0)  # raises ProcessLookupError if dead
+            logger.warning(f"Stale log_bot instance found (PID {old_pid}) — sending SIGTERM")
+            os.kill(old_pid, signal.SIGTERM)
+            for _ in range(20):  # wait up to 10 s
+                time.sleep(0.5)
+                try:
+                    os.kill(old_pid, 0)
+                except ProcessLookupError:
+                    logger.info(f"Previous log_bot (PID {old_pid}) terminated cleanly")
+                    break
+            else:
+                logger.warning(f"PID {old_pid} did not exit after SIGTERM — sending SIGKILL")
+                try:
+                    os.kill(old_pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+        except (ProcessLookupError, ValueError):
+            pass  # already dead or corrupt PID file — fine
+
+    _PID_FILE.write_text(str(os.getpid()))
+    atexit.register(_cleanup_pid_file)
+    logger.info(f"Log bot single-instance lock acquired (PID {os.getpid()}, lock: {_LOCK_FILE})")
+
 
 # ── Config ─────────────────────────────────────────────────────────
 
@@ -521,6 +605,8 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 # ── Entry point ────────────────────────────────────────────────────
 
 def main() -> None:
+    _enforce_single_instance()
+
     if not LOG_BOT_TOKEN:
         logger.error("LOG_BOT_TOKEN non défini — crée un bot via @BotFather")
         return
