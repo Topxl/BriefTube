@@ -2,7 +2,9 @@
 
 ## 2026-02-22
 
+FIX: bot — livraison en 2 messages liés : texte + preview YouTube inline (send_message + LinkPreviewOptions), puis voice OGG/OPUS en reply (waveform + vitesse 1×/1.5×/2× + bouton Options) ; anti-doublons : pas de retry sur send_voice
 FIX: logo — logo.svg et avatar Telegram mockup (hero.tsx) mis à jour avec le vrai logo (double flèches accélérées) au lieu de l'ancien "B>" ; avatar rounded-xl pour matcher le favicon
+UX: bot — livraison en message unique (send_audio) au lieu de photo + voice reply ; miniature YouTube, titre et bouton Options dans le même message
 FIX: worker — résilience complète aux redémarrages : reset des jobs processing bloqués (started_at + timeout), claim isolé du send dans le delivery loop (erreur DB sur claim = retry, pas failed), erreur d'envoi transiente laisse 'sending' pour recovery au prochain démarrage
 FIX: DB — contrainte deliveries_status_check étendue à 'sending' (manquait) → les livraisons Telegram étaient bloquées depuis l'ajout du claim atomique
 UX: bot — confirmation immédiate dès réception d'une URL YouTube (avant l'appel oEmbed), plus de délai apparent pour l'utilisateur

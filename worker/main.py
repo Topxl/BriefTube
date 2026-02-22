@@ -484,14 +484,24 @@ async def delivery_loop(alert_system: MonitoringAlert):
                         raise
 
             for d in deliveries:
+                # ── Step 1: Claim (pending → sending) ──────────────────
+                # Isolated try/except: if the claim fails (DB error, network),
+                # the delivery stays at 'pending' and will be retried next cycle.
+                # We must NOT mark it as 'failed' here — it was never attempted.
                 try:
-                    # Atomically claim the delivery (pending → sending).
-                    # If another instance already claimed it, skip silently.
                     claimed = await asyncio.to_thread(db.claim_delivery, d["delivery_id"])
                     if not claimed:
-                        logger.debug(f"Delivery {d['delivery_id']} already claimed by another instance — skipping")
+                        logger.debug(f"Delivery {d['delivery_id']} already claimed — skipping")
                         continue
+                except Exception as e:
+                    logger.warning(f"Could not claim delivery {d['delivery_id']} (will retry): {e}")
+                    continue  # Delivery stays 'pending' — retried next cycle
 
+                # ── Step 2: Send ────────────────────────────────────────
+                # Delivery is now 'sending'. Any unhandled exception leaves it
+                # at 'sending'; reset_sending_deliveries() at next startup will
+                # bring it back to 'pending' for a retry.
+                try:
                     video_id = d["video_id"]
                     audio_url = d.get("audio_url", "")
                     delivery_language = d.get("language", "fr")
@@ -500,7 +510,6 @@ async def delivery_loop(alert_system: MonitoringAlert):
                     audio_path = Path(__file__).parent / "audio" / f"video_{video_id}_{delivery_language}.mp3"
 
                     if not audio_path.exists() and audio_url and audio_url.startswith("http"):
-                        # Download from Supabase Storage
                         async with aiohttp.ClientSession() as session:
                             async with session.get(audio_url) as resp:
                                 if resp.status == 200:
@@ -509,18 +518,16 @@ async def delivery_loop(alert_system: MonitoringAlert):
                                         f.write(await resp.read())
 
                     if not audio_path.exists():
-                        # Regenerate audio from summary
                         if d.get("summary"):
                             voice = d.get("tts_voice") or None
                             audio_path = await text_to_audio(
                                 d["summary"], voice=voice, output_filename=f"video_{video_id}"
                             )
                         else:
-                            logger.warning(f"No audio for {video_id}")
+                            logger.warning(f"No audio for {video_id} — marking failed")
                             db.mark_delivery_failed(d["delivery_id"])
                             continue
 
-                    # Send to user
                     success = await send_audio_to_user(
                         chat_id=d["chat_id"],
                         audio_path=audio_path,
@@ -531,9 +538,7 @@ async def delivery_loop(alert_system: MonitoringAlert):
                     )
 
                     if success:
-                        # Retry marking as sent to survive transient Supabase
-                        # errors — a failure here would leave the delivery
-                        # "pending" and cause a re-send on the next cycle.
+                        # Retry marking as sent to survive transient Supabase errors.
                         for _attempt in range(3):
                             try:
                                 db.mark_delivery_sent(d["delivery_id"])
@@ -552,15 +557,18 @@ async def delivery_loop(alert_system: MonitoringAlert):
                                         f"after 3 attempts — audio was already sent to user"
                                     )
                     else:
+                        # send_audio_to_user returned False: Telegram permanently
+                        # rejected the send (user blocked bot, invalid chat, etc.).
                         db.mark_delivery_failed(d["delivery_id"])
                         stats.record_delivery_failed()
 
-                    # Rate limit: 1 message per second
                     await asyncio.sleep(1)
 
                 except Exception as e:
-                    logger.error(f"Delivery error: {e}")
-                    db.mark_delivery_failed(d["delivery_id"])
+                    # Unexpected error during send (network, audio file issue...).
+                    # Delivery stays at 'sending' — it will be reset to 'pending'
+                    # by reset_sending_deliveries() on next worker startup.
+                    logger.error(f"Delivery error for {d['delivery_id']} ({d.get('video_id', '?')}): {e}")
 
             if not deliveries:
                 await asyncio.sleep(15)
@@ -596,14 +604,22 @@ async def main():
     # Must run before any loops start so orphan processes can't race.
     _enforce_single_instance()
 
-    # Reset deliveries stuck in 'sending' from a previous crashed instance.
-    # Without this, any delivery that was claimed but not sent would be stuck forever.
+    # ── Crash recovery ─────────────────────────────────────────────
+    # Reset deliveries stuck in 'sending' — claimed but never completed.
     try:
-        reset_count = db.reset_sending_deliveries()
-        if reset_count:
-            logger.warning(f"Reset {reset_count} stuck 'sending' deliveries → 'pending' (previous crash recovery)")
+        n = db.reset_sending_deliveries()
+        if n:
+            logger.warning(f"Crash recovery: reset {n} stuck 'sending' deliveries → 'pending'")
     except Exception as e:
         logger.warning(f"Could not reset sending deliveries: {e}")
+
+    # Reset processing_queue jobs stuck in 'processing' — worker crashed mid-job.
+    try:
+        n = db.reset_stuck_processing_jobs(timeout_seconds=VIDEO_TIMEOUT + 100)
+        if n:
+            logger.warning(f"Crash recovery: reset {n} stuck 'processing' jobs → 'queued'")
+    except Exception as e:
+        logger.warning(f"Could not reset stuck processing jobs: {e}")
 
     # Lower process priority so the worker never starves other applications.
     # nice=10 means any normal-priority process (nice=0) will be preferred by

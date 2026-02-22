@@ -519,6 +519,45 @@ def claim_delivery(delivery_id: str) -> bool:
     return len(res.data or []) > 0
 
 
+def reset_stuck_processing_jobs(timeout_seconds: int = 700) -> int:
+    """Reset processing_queue jobs stuck in 'processing' back to 'queued'.
+
+    Called at startup to recover jobs that were being processed when the
+    previous worker instance crashed. Uses started_at to detect genuine stalls
+    (a job running < timeout_seconds may still be active on another instance).
+
+    Each reset increments attempts so that a permanently broken video eventually
+    reaches max_attempts and is marked 'failed' instead of looping forever.
+    Returns the number of rows reset.
+    """
+    from datetime import timedelta
+
+    sb = get_client()
+    cutoff = (datetime.now(timezone.utc) - timedelta(seconds=timeout_seconds)).isoformat()
+
+    stuck = (
+        sb.table("processing_queue")
+        .select("id, attempts")
+        .eq("status", "processing")
+        .lt("started_at", cutoff)
+        .execute()
+    )
+    if not stuck.data:
+        return 0
+
+    count = 0
+    for row in stuck.data:
+        new_attempts = (row.get("attempts") or 0) + 1
+        new_status = "failed" if new_attempts >= 3 else "queued"
+        sb.table("processing_queue").update({
+            "status": new_status,
+            "attempts": new_attempts,
+        }).eq("id", row["id"]).execute()
+        count += 1
+
+    return count
+
+
 def reset_sending_deliveries() -> int:
     """Reset deliveries stuck in 'sending' back to 'pending'.
 

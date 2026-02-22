@@ -7,7 +7,7 @@ import logging
 import aiohttp
 import feedparser
 from typing import Optional
-from telegram import Update
+from telegram import Bot, Update
 from telegram.error import Conflict
 from telegram.ext import (
     Application,
@@ -18,7 +18,7 @@ from telegram.ext import (
     filters,
 )
 
-from config import TELEGRAM_BOT_TOKEN, ADMIN_TELEGRAM_CHAT_ID, APP_URL
+from config import TELEGRAM_BOT_TOKEN, ADMIN_TELEGRAM_CHAT_ID, APP_URL, LOG_BOT_TOKEN, LOG_BOT_ADMIN_CHAT_ID
 import db
 from monitoring import stats, get_system_info, get_log_tail, format_log, _md_to_html
 
@@ -28,17 +28,20 @@ logger = logging.getLogger(__name__)
 # ── Alert System ──────────────────────────────────────────────────
 
 class MonitoringAlert:
-    """Sends alerts to admin Telegram chat."""
+    """Sends alerts to admin via the log bot (separate from the public user-facing bot)."""
 
     def __init__(self, bot_app, admin_chat_id: Optional[str] = None):
-        self.bot_app = bot_app
+        self.bot_app = bot_app  # kept for user-facing notifications (e.g. video failure)
         self.admin_chat_id = admin_chat_id
         self.alert_queue = asyncio.Queue()
         self.is_running = False
+        # Use the dedicated log bot for admin alerts so they don't appear in the public bot
+        self._log_bot: Optional[Bot] = Bot(LOG_BOT_TOKEN) if LOG_BOT_TOKEN else None
+        self._log_chat_id: str = LOG_BOT_ADMIN_CHAT_ID or admin_chat_id or ""
 
     async def send_alert(self, message: str, level: str = "INFO"):
-        """Queue an alert to be sent to admin."""
-        if not self.admin_chat_id:
+        """Queue an alert to be sent to admin via the log bot."""
+        if not self._log_chat_id or not self._log_bot:
             return
 
         emoji = {
@@ -66,8 +69,8 @@ class MonitoringAlert:
                     continue
 
                 try:
-                    await self.bot_app.bot.send_message(
-                        chat_id=self.admin_chat_id,
+                    await self._log_bot.send_message(
+                        chat_id=self._log_chat_id,
                         text=message,
                         parse_mode="HTML",
                     )
@@ -446,11 +449,12 @@ async def handle_video_request(update: Update, profile: dict, video_id: str) -> 
     """Handle a YouTube video URL — queue an on-demand summary."""
     user_id = profile["id"]
     is_pro = profile["subscription_status"] == "active"
+    used_this_month = 0
 
     # Check monthly limit for free users
     if not is_pro:
-        used = db.count_on_demand_this_month(user_id)
-        if used >= ON_DEMAND_MONTHLY_LIMIT:
+        used_this_month = db.count_on_demand_this_month(user_id)
+        if used_this_month >= ON_DEMAND_MONTHLY_LIMIT:
             await update.message.reply_text(
                 f"You've reached your monthly limit of {ON_DEMAND_MONTHLY_LIMIT} on-demand summaries.\n\n"
                 f"Upgrade to Pro for unlimited summaries at {APP_URL}"
@@ -474,7 +478,6 @@ async def handle_video_request(update: Update, profile: dict, video_id: str) -> 
     if existing.data:
         video_row = existing.data[0]
         if video_row["status"] == "completed":
-            # Already done — just create a delivery
             sb.table("deliveries").upsert({
                 "user_id": user_id,
                 "video_id": video_id,
@@ -487,7 +490,6 @@ async def handle_video_request(update: Update, profile: dict, video_id: str) -> 
             )
             return
         elif video_row["status"] in ("pending", "processing"):
-            # In progress — create delivery, it'll be sent when done
             sb.table("deliveries").upsert({
                 "user_id": user_id,
                 "video_id": video_id,
@@ -500,7 +502,21 @@ async def handle_video_request(update: Update, profile: dict, video_id: str) -> 
             )
             return
 
-    # New video — get title from oEmbed API
+    # New video — send IMMEDIATE acknowledgment before the slow oEmbed network call
+    if not is_pro:
+        remaining = ON_DEMAND_MONTHLY_LIMIT - used_this_month - 1
+        await update.message.reply_text(
+            "Your video has been received and is queued for processing.\n"
+            "You'll receive the audio summary soon.\n\n"
+            f"({remaining} on-demand summaries left this month)"
+        )
+    else:
+        await update.message.reply_text(
+            "Your video has been received and is queued for processing.\n"
+            "You'll receive the audio summary soon."
+        )
+
+    # Fetch title from oEmbed (slow — user already has acknowledgment above)
     video_title = video_id
     try:
         async with aiohttp.ClientSession() as session:
@@ -523,19 +539,6 @@ async def handle_video_request(update: Update, profile: dict, video_id: str) -> 
         "source": "on_demand",
         "language": user_language,
     }, on_conflict="user_id,video_id").execute()
-
-    if not is_pro:
-        used = db.count_on_demand_this_month(user_id)
-        remaining = ON_DEMAND_MONTHLY_LIMIT - used
-        await update.message.reply_text(
-            f"Processing: {video_title}\n\n"
-            f"You'll receive the audio summary soon. ({remaining} on-demand left this month)"
-        )
-    else:
-        await update.message.reply_text(
-            f"Processing: {video_title}\n\n"
-            "You'll receive the audio summary soon."
-        )
 
 
 # ── Handler: subscribe to channel from Telegram ──────────────

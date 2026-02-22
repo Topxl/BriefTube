@@ -1,14 +1,23 @@
 """Telegram Deliverer — sends audio summaries to users."""
 
+import asyncio
+import html as _html
 import logging
+import shutil
+import subprocess
+import tempfile
 from pathlib import Path
-from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
+
+from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup, LinkPreviewOptions
 
 from config import TELEGRAM_BOT_TOKEN
 
 logger = logging.getLogger(__name__)
 
 _bot: Bot | None = None
+
+# ffmpeg binary — prefer system PATH, fall back to Linuxbrew location
+_FFMPEG = shutil.which("ffmpeg") or "/home/linuxbrew/.linuxbrew/bin/ffmpeg"
 
 
 def get_bot() -> Bot:
@@ -23,11 +32,34 @@ def get_thumbnail_url(video_id: str) -> str:
     return f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg"
 
 
-def escape_markdown(text: str) -> str:
-    special_chars = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']
-    for char in special_chars:
-        text = text.replace(char, f'\\{char}')
-    return text
+async def _convert_to_ogg(mp3_path: Path) -> Path:
+    """Convert an MP3 to OGG/OPUS so Telegram shows a voice waveform with speed control.
+
+    Telegram's send_voice requires OGG encoded with OPUS for the waveform player
+    (1×/1.5×/2× speed control).  MP3 sent via send_voice is accepted but rendered
+    as a plain audio document without the speed slider.
+
+    Returns the path to the temporary OGG file; caller is responsible for deleting it.
+    Raises RuntimeError if ffmpeg exits with a non-zero status.
+    """
+    ogg_path = Path(tempfile.mktemp(suffix=".ogg"))
+    cmd = [
+        _FFMPEG,
+        "-y",
+        "-i", str(mp3_path),
+        "-c:a", "libopus",
+        "-b:a", "48k",
+        "-ar", "48000",
+        "-ac", "1",
+        "-vn",
+        str(ogg_path),
+    ]
+    proc = await asyncio.to_thread(
+        subprocess.run, cmd, capture_output=True, timeout=120
+    )
+    if proc.returncode != 0:
+        raise RuntimeError(f"ffmpeg exited {proc.returncode}: {proc.stderr.decode()[:200]}")
+    return ogg_path
 
 
 async def send_audio_to_user(
@@ -38,9 +70,20 @@ async def send_audio_to_user(
     channel_id: str,
     language: str = "fr",
 ) -> bool:
-    """Send thumbnail + audio to a Telegram user.
+    """Deliver an audio summary to a Telegram user as two visually linked messages.
 
-    Returns True if successful.
+    Message 1 — text with YouTube URL
+        Telegram renders YouTube URLs as expandable inline previews with a play
+        button.  This only works in plain text messages — link previews are NOT
+        shown in media captions (Telegram platform limitation).
+
+    Message 2 — voice reply (OGG/OPUS)
+        Displayed with a waveform and speed-control buttons (1×/1.5×/2×).
+        Appears as a reply to message 1 so both are visually grouped.
+        Carries the ⋯ Options inline button.
+
+    Returns True if the audio was delivered (or at least the preview link was sent).
+    Returns False only if nothing reached the user at all.
     """
     try:
         chat_id_int = int(chat_id)
@@ -50,71 +93,62 @@ async def send_audio_to_user(
 
     bot = get_bot()
     video_url = f"https://youtu.be/{video_id}"
-    thumbnail_url = get_thumbnail_url(video_id)
-
-    safe_title = escape_markdown(video_title)
-    safe_url = escape_markdown(video_url)
-    caption = f"*{safe_title}*\n\n{safe_url}"
 
     keyboard = InlineKeyboardMarkup([[
         InlineKeyboardButton("⋯ Options", callback_data=f"options_{video_id}_{language}")
     ]])
 
-    photo_msg = None
+    # ── Step 1: Convert MP3 → OGG/OPUS ─────────────────────────────────────
+    ogg_path: Path | None = None
     try:
-        # Send thumbnail
-        photo_msg = await bot.send_photo(
-            chat_id=chat_id_int,
-            photo=thumbnail_url,
-            caption=caption,
-            parse_mode="MarkdownV2",
-            reply_markup=keyboard,
-        )
+        ogg_path = await _convert_to_ogg(audio_path)
+    except Exception as e:
+        logger.warning(f"OGG conversion failed for {video_id} — will try MP3 via send_voice: {e}")
 
-        # Send voice as reply
-        with open(audio_path, "rb") as f:
+    # ── Step 2: Send text message with YouTube URL (inline preview) ─────────
+    title_escaped = _html.escape(video_title)
+    preview_msg = None
+    try:
+        preview_msg = await bot.send_message(
+            chat_id=chat_id_int,
+            text=f"<b>{title_escaped}</b>\n{video_url}",
+            parse_mode="HTML",
+            link_preview_options=LinkPreviewOptions(prefer_large_media=True),
+        )
+    except Exception as e:
+        logger.warning(f"Preview message failed for chat {chat_id}: {e}")
+
+    # ── Step 3: Send voice as a reply to the preview message ────────────────
+    # Use OGG if available, otherwise fall back to the original MP3.
+    # We do NOT retry after a failure to avoid sending duplicates
+    # (a Telegram API error does not guarantee the message wasn't delivered).
+    reply_to = preview_msg.message_id if preview_msg else None
+    voice_file = ogg_path if (ogg_path and ogg_path.exists()) else audio_path
+
+    try:
+        with open(voice_file, "rb") as f:
             await bot.send_voice(
                 chat_id=chat_id_int,
                 voice=f,
-                reply_to_message_id=photo_msg.message_id,
+                reply_to_message_id=reply_to,
+                reply_markup=keyboard,
             )
-
-        logger.info(f"Delivered to chat {chat_id}: {video_title[:40]}")
+        logger.info(f"Delivered to chat {chat_id}: {video_title[:60]}")
         return True
 
     except Exception as e:
-        logger.error(f"Failed to deliver to chat {chat_id}: {e}")
+        logger.error(f"send_voice failed for chat {chat_id}: {e}")
 
-        if photo_msg is not None:
-            # Thumbnail already sent — only the voice failed.
-            # Retry the voice as a reply to the existing photo instead of
-            # sending a new standalone message (which would create a duplicate).
+    finally:
+        if ogg_path:
             try:
-                with open(audio_path, "rb") as f:
-                    await bot.send_voice(
-                        chat_id=chat_id_int,
-                        voice=f,
-                        reply_to_message_id=photo_msg.message_id,
-                    )
-                logger.info(f"Voice retry succeeded for chat {chat_id}: {video_title[:40]}")
-                return True
-            except Exception as e2:
-                logger.error(f"Voice retry after photo also failed: {e2}")
-                # Return True to prevent re-sending the thumbnail on the next
-                # cycle; the user at least got the photo with the title.
-                return True
-        else:
-            # Nothing sent yet — try voice-only fallback (no thumbnail)
-            try:
-                with open(audio_path, "rb") as f:
-                    await bot.send_voice(
-                        chat_id=chat_id_int,
-                        voice=f,
-                        caption=caption,
-                        parse_mode="MarkdownV2",
-                    )
-                logger.info(f"Voice-only fallback succeeded for chat {chat_id}: {video_title[:40]}")
-                return True
-            except Exception as e2:
-                logger.error(f"Fallback delivery also failed: {e2}")
-                return False
+                ogg_path.unlink(missing_ok=True)
+            except Exception:
+                pass
+
+    # Voice failed — if the preview went through, the user at least has the link
+    if preview_msg:
+        logger.warning(f"Audio failed but YouTube preview sent to chat {chat_id}: {video_title[:40]}")
+        return True
+
+    return False
