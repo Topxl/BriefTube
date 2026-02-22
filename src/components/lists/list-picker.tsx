@@ -10,6 +10,7 @@ export type ListPickerItem = {
   description: string | null;
   category: string | null;
   channelCount: number;
+  followerCount: number;
 };
 
 type Props = {
@@ -21,14 +22,16 @@ type Props = {
 export function ListPicker({ lists, selectedIds, onToggle }: Props) {
   const [search, setSearch] = useState("");
 
-  const filtered = lists.filter((l) => {
-    const q = search.toLowerCase();
-    return (
-      l.name.toLowerCase().includes(q) ||
-      (l.category ?? "").toLowerCase().includes(q) ||
-      (l.description ?? "").toLowerCase().includes(q)
-    );
-  });
+  const filtered = lists
+    .filter((l) => {
+      const q = search.toLowerCase();
+      return (
+        l.name.toLowerCase().includes(q) ||
+        (l.category ?? "").toLowerCase().includes(q) ||
+        (l.description ?? "").toLowerCase().includes(q)
+      );
+    })
+    .sort((a, b) => b.followerCount - a.followerCount);
 
   return (
     <div className="flex flex-col gap-3">
@@ -73,6 +76,10 @@ export function ListPicker({ lists, selectedIds, onToggle }: Props) {
                 <p className="text-muted-foreground text-[10px]">
                   {list.channelCount} channels
                   {list.category ? ` · ${list.category}` : ""}
+                </p>
+                <p className="text-muted-foreground/60 text-[10px]">
+                  {list.followerCount} subscriber
+                  {list.followerCount !== 1 ? "s" : ""}
                 </p>
               </button>
             );

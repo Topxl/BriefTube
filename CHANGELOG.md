@@ -2,6 +2,8 @@
 
 ## 2026-02-22
 
+FIX: onboarding-wizard — "Waiting for connection..." masqué jusqu'au clic sur "Open BriefTube Bot" (hasClickedBot state)
+FEATURE: subscriptions/route.ts — support des URLs de vidéos YouTube (watch?v= et youtu.be/) via oEmbed : détecte la chaîne automatiquement et résume la vidéo spécifique au lieu de la dernière
 FEATURE: Emails transactionnels — email de bienvenue au premier login (auth/callback), email de confirmation upgrade Pro (webhook checkout.session.completed), email de paiement échoué (webhook invoice.payment_failed)
 FEATURE: Notification Telegram sur échec définitif de vidéo — fail_job() retourne bool, _notify_video_failure() notifie tous les users concernés via Telegram après 3 tentatives
 FEATURE: Suppression de compte RGPD — route DELETE /api/account/delete (annule Stripe, supprime toutes les données, supprime l'auth user via service role); bouton "Delete account" dans profile-content.tsx avec confirmation dialog
