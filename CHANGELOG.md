@@ -2,6 +2,8 @@
 
 ## 2026-02-23
 
+FEATURE: worker — add 6 new database functions for channel/subscription management (get_video_channel, get_available_languages_for_video, is_subscribed_to_channel, unsubscribe_channel, subscribe_to_channel, get_subscription_count)
+UX: share — bouton de vitesse x1/x1.5/x2/x3/x4 sur le lecteur audio de la page de partage
 UX: share — audio avant le résumé texte sur la page de partage
 
 ## 2026-02-22

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ExternalLink } from "lucide-react";
 import { Typography } from "@/components/nowts/typography";
 import { Button } from "@/components/ui/button";
+import { ShareAudioPlayer } from "@/components/share/share-audio-player";
 
 type SharedSummaryViewProps = {
   videoId: string;
@@ -85,7 +86,7 @@ export function SharedSummaryView({
         <p className="text-muted-foreground/50 mb-3 text-xs font-medium tracking-wide uppercase">
           Audio
         </p>
-        <audio controls src={audioUrl} className="w-full" />
+        <ShareAudioPlayer src={audioUrl} />
       </div>
 
       {/* Summary text */}
