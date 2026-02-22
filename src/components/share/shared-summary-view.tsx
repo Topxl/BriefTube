@@ -80,6 +80,14 @@ export function SharedSummaryView({
         )}
       </div>
 
+      {/* Audio player */}
+      <div className="nm-raised overflow-hidden rounded-2xl px-5 py-4">
+        <p className="text-muted-foreground/50 mb-3 text-xs font-medium tracking-wide uppercase">
+          Audio
+        </p>
+        <audio controls src={audioUrl} className="w-full" />
+      </div>
+
       {/* Summary text */}
       <div className="nm-raised overflow-hidden rounded-2xl px-5 py-4">
         <p className="text-muted-foreground/50 mb-3 text-xs font-medium tracking-wide uppercase">
@@ -88,14 +96,6 @@ export function SharedSummaryView({
         <div className="leading-7 whitespace-pre-line">
           <Typography variant="p">{summary}</Typography>
         </div>
-      </div>
-
-      {/* Audio player */}
-      <div className="nm-raised overflow-hidden rounded-2xl px-5 py-4">
-        <p className="text-muted-foreground/50 mb-3 text-xs font-medium tracking-wide uppercase">
-          Audio
-        </p>
-        <audio controls src={audioUrl} className="w-full" />
       </div>
 
       {/* CTA */}
