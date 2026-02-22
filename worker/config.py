@@ -29,7 +29,15 @@ DEFAULT_TTS_VOICE = os.getenv("TTS_VOICE", "fr-FR-DeniseNeural")
 RSS_CHECK_INTERVAL = int(os.getenv("RSS_CHECK_INTERVAL", "300"))  # 5 minutes
 
 # Concurrent video processing (how many videos to process simultaneously)
-MAX_CONCURRENT_VIDEOS = int(os.getenv("MAX_CONCURRENT_VIDEOS", "3"))
+MAX_CONCURRENT_VIDEOS = int(os.getenv("MAX_CONCURRENT_VIDEOS", "2"))
+
+# CPU throttling — worker pauses before starting a new video job when system
+# CPU usage (all cores, 1-second sample) is above this threshold.
+# Set to 100 to disable. Recommended: 60-75 on a personal machine.
+MAX_CPU_PERCENT = int(os.getenv("MAX_CPU_PERCENT", "65"))
+
+# How long (seconds) to wait between CPU checks when throttling
+CPU_CHECK_INTERVAL = float(os.getenv("CPU_CHECK_INTERVAL", "5.0"))
 
 # App
 APP_URL = os.getenv("APP_URL", "https://brief-tube.com")

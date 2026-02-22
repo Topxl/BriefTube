@@ -2,12 +2,33 @@
 
 ## 2026-02-22
 
+UX: Nav — favicon.svg recentré (triangles centrés dans le carré rouge) ; search bar rounded-full + bg-white/[0.07] + border-white/[0.12] pour meilleure visibilité
+UX: Nav — logo remplacé par favicon.svg (double play triangle / accéléré) à 30px ; search bar plus visible (placeholder /60, bg-white/[0.03], border subtile)
+UX: Profile page — avatar nm-inset-sm, boutons Delete/Sign out/Change/Connect/Upgrade → rounded-full + nm-raised-sm, boutons de partage rounded-full, suppression des border en doublon sur VoicePicker et LanguagePicker
+UX: Mobile bottom nav — island nm-raised (fond solide oklch(0.24) + shadow forte), onglet actif nm-inset rouge, style Telegram-inspired neumorphique : fond semi-transparent + backdrop-blur-2xl, coins arrondis, marges latérales, actif = pill rouge subtil
+UX: Lists — scrollbar des catégories cachée par défaut, visible seulement au survol (classe .scrollbar-fade-x cross-browser webkit + Firefox)
+FEATURE: Dark neumorphic style — apply reinforced nm- classes to remaining components: lists-section (empty state + list rows), onboarding-stepper (wrapper, step cards, progress track, badges), admin page (StatCard, Live badge, queue and failures containers)
+FEATURE: Dark neumorphic style — apply .nm-raised/.nm-inset utility classes to onboarding-wizard (step icons, buttons, inputs, language grid, connected card, share buttons, instructions card, badges)
+FEATURE: Partage viral de résumés — bouton "⋯ Options" sur chaque livraison Telegram génère un lien public /s/{short_id} ; page publique avec résumé, audio et CTA d'inscription ; limite 3 partages/jour (free) et 100 vues/lien
+CHORE: Migration DB — table shared_summaries (short_id, video_id, language, shared_by, view_count, max_views, expires_at)
+FIX: supabase.ts — ajout colonne language dans processed_videos et table shared_summaries
+
+FEATURE: Dark neumorphic style — classes utilitaires .nm-raised/.nm-inset dans globals.css, appliquées sur nav (top bar + bottom tabs + search input), Lists, dashboard principal et profil
+UX: Lists page — supprime le titre "Lists" redondant, déplace "New list" en lien texte inline à côté de la section "Mine"
 FIX: onboarding-wizard — "Waiting for connection..." masqué jusqu'au clic sur "Open BriefTube Bot" (hasClickedBot state)
 FEATURE: subscriptions/route.ts — support des URLs de vidéos YouTube (watch?v= et youtu.be/) via oEmbed : détecte la chaîne automatiquement et résume la vidéo spécifique au lieu de la dernière
 FEATURE: Emails transactionnels — email de bienvenue au premier login (auth/callback), email de confirmation upgrade Pro (webhook checkout.session.completed), email de paiement échoué (webhook invoice.payment_failed)
 FEATURE: Notification Telegram sur échec définitif de vidéo — fail_job() retourne bool, _notify_video_failure() notifie tous les users concernés via Telegram après 3 tentatives
 FEATURE: Suppression de compte RGPD — route DELETE /api/account/delete (annule Stripe, supprime toutes les données, supprime l'auth user via service role); bouton "Delete account" dans profile-content.tsx avec confirmation dialog
 
+REFACTOR: Lists page — remove redundant Following section, compact categories to single horizontal scroll row, add All/Following/Not following filter chips
+UX: Lists page — replace star/favorite count with follower count (Users icon) on public discovery lists, sorted by most followed
+FIX: onboarding/follow-list — skip channels that don't resolve to a valid UC ID (startsWith "UC", length 24) to prevent inserting invalid channel handles
+FIX: DB — fix invalid handles in curated lists: verge→TheVerge, thedankoe→AlexHormozi
+FIX: onboarding/follow-list + completeOnboarding — use createAdminClient() for DB ops after user verification; fixes 500 caused by session/cookie not properly attached to anon client in API route/server action context
+FIX: onboarding-wizard — complete() uses server action (completeOnboarding) to reliably update onboarding_completed; browser client was failing silently causing redirect loop
+UX: Onboarding step 3 — rename "Connect Telegram" to "Link Telegram" (less intimidating), clearer explanation + reassurance note
+UX: Onboarding step 2 — custom styled scrollbar on language grid (thin 4px, transparent track, rounded white thumb)
 FEATURE: Netflix-style onboarding — step 1 replaced by curated list picker (Tech, Science, Finance, Education, Gaming, Business); user picks a playlist, channels are subscribed via /api/onboarding/follow-list (no Pro check, handles resolved to real channel IDs); YouTube import and manual add kept as secondary options
 
 ## 2026-02-21

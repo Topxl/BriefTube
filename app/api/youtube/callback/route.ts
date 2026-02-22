@@ -156,7 +156,8 @@ export async function GET(request: NextRequest) {
     profile?.subscription_status === "active" ||
     (profile?.trial_ends_at != null &&
       new Date(profile.trial_ends_at) > new Date());
-  const maxActiveChannels = profile?.max_channels ?? SiteConfig.freeChannelsLimit;
+  const maxActiveChannels =
+    profile?.max_channels ?? SiteConfig.freeChannelsLimit;
   const existingActiveCount = (existingSubsRes.data ?? []).filter(
     (s) => s.active,
   ).length;
@@ -230,19 +231,26 @@ export async function GET(request: NextRequest) {
     if (allVideos.length > 0) {
       // Single upsert — RSS feeds contain at most ~15 videos each so the total
       // is well within Supabase's row limit even for 100+ channels.
-      await supabase.from("processed_videos").upsert(
-        allVideos.map((v) => ({
-          video_id: v.video_id,
-          channel_id: v.channel_id,
-          video_title: "[pre-subscription-import]",
-          video_url: `https://www.youtube.com/watch?v=${v.video_id}`,
-          status: "skipped",
-        })),
-        { onConflict: "video_id", ignoreDuplicates: true },
-      );
-      logger.info(
-        `Pre-marked ${allVideos.length} videos as skipped across ${toImport.length} channels`,
-      );
+      const { error: upsertError } = await supabase
+        .from("processed_videos")
+        .upsert(
+          allVideos.map((v) => ({
+            video_id: v.video_id,
+            channel_id: v.channel_id,
+            video_title: "[pre-subscription-import]",
+            video_url: `https://www.youtube.com/watch?v=${v.video_id}`,
+            status: "skipped",
+            language: "fr", // sentinel — video_id presence in the set is enough for the scanner
+          })),
+          { onConflict: "video_id,language", ignoreDuplicates: true },
+        );
+      if (upsertError) {
+        logger.error("Failed to pre-mark videos as skipped:", upsertError);
+      } else {
+        logger.info(
+          `Pre-marked ${allVideos.length} videos as skipped across ${toImport.length} channels`,
+        );
+      }
     }
   }
 

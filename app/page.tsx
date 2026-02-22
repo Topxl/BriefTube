@@ -8,10 +8,36 @@ import { FAQ } from "@/components/landing/faq";
 import { FinalCTA } from "@/components/landing/final-cta";
 import { Footer } from "@/components/landing/footer";
 import { Navbar } from "@/components/landing/navbar";
+import type { Metadata } from "next";
+import { SiteConfig } from "@/site-config";
+
+export const metadata: Metadata = {
+  alternates: {
+    canonical: SiteConfig.prodUrl,
+  },
+};
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: SiteConfig.title,
+  applicationCategory: "UtilitiesApplication",
+  description: SiteConfig.description,
+  url: SiteConfig.prodUrl,
+  offers: {
+    "@type": "Offer",
+    price: "0",
+    priceCurrency: "USD",
+  },
+};
 
 export default function Home() {
   return (
     <main className="bg-background min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <Navbar />
       <Hero />
       <div className="section-divider" />

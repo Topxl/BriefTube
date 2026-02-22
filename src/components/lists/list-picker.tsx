@@ -34,14 +34,14 @@ export function ListPicker({ lists, selectedIds, onToggle }: Props) {
     .sort((a, b) => b.followerCount - a.followerCount);
 
   return (
-    <div className="flex flex-col gap-3">
+    <div suppressHydrationWarning className="flex flex-col gap-3">
       <div className="relative">
         <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search playlists..."
-          className="pl-9"
+          className="nm-inset border-transparent bg-transparent pl-9 focus-visible:ring-0"
           suppressHydrationWarning
         />
       </div>
@@ -59,10 +59,9 @@ export function ListPicker({ lists, selectedIds, onToggle }: Props) {
                 key={list.id}
                 type="button"
                 onClick={() => onToggle(list.id)}
-                className={`flex flex-col gap-1 rounded-xl border p-3 text-left transition-all ${
-                  isSelected
-                    ? "border-red-500/30 bg-red-500/[0.06] ring-1 ring-red-500/20"
-                    : "border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]"
+                suppressHydrationWarning
+                className={`flex flex-col gap-1 rounded-xl p-3 text-left transition-all ${
+                  isSelected ? "nm-inset" : "nm-raised-sm hover:text-foreground"
                 }`}
               >
                 <div className="flex items-start justify-between gap-2">

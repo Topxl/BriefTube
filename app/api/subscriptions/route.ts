@@ -29,33 +29,69 @@ export async function GET() {
   return NextResponse.json(data);
 }
 
-// Helper to extract channel info from URL
-function extractChannelInfo(url: string) {
-  // Extract channel ID or handle from various YouTube URL formats
-  // https://www.youtube.com/@channelhandle
-  // https://www.youtube.com/channel/UCxxxxxx
-  // https://www.youtube.com/c/channelname
+type ChannelInfo = {
+  channelId: string;
+  channelName: string;
+  /** Set when the input URL is a video link — this specific video will be used as the aha-moment delivery */
+  videoId?: string;
+  videoTitle?: string;
+};
 
-  const handleMatch = url.match(/@([a-zA-Z0-9_-]+)/);
-  if (handleMatch) {
-    return { channelId: handleMatch[1], channelName: handleMatch[1] };
+// Helper to extract channel info from URL (supports video links via YouTube oEmbed)
+async function extractChannelInfo(url: string): Promise<ChannelInfo> {
+  // Video URL: youtube.com/watch?v=ID  or  youtu.be/ID
+  const videoMatch = url.match(
+    /(?:watch\?(?:[^&]*&)*v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
+  );
+  if (videoMatch) {
+    const videoId = videoMatch[1];
+    try {
+      // oEmbed is the official, free, no-key-required YouTube metadata API
+      const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
+      const res = await fetch(oembedUrl);
+      if (res.ok) {
+        const data = (await res.json()) as {
+          title: string;
+          author_name: string;
+          author_url: string;
+        };
+        // author_url is like "https://www.youtube.com/@ChannelHandle"
+        const handleMatch = data.author_url.match(/\/@([a-zA-Z0-9_-]+)/);
+        const channelId = handleMatch ? `@${handleMatch[1]}` : data.author_name;
+        return {
+          channelId,
+          channelName: data.author_name,
+          videoId,
+          videoTitle: data.title,
+        };
+      }
+    } catch {
+      // fall through to generic fallback
+    }
+    return { channelId: videoId, channelName: videoId, videoId };
   }
 
+  // @handle
+  const handleMatch = url.match(/@([a-zA-Z0-9_-]+)/);
+  if (handleMatch) {
+    return { channelId: `@${handleMatch[1]}`, channelName: handleMatch[1] };
+  }
+
+  // /channel/UCxxxxxx
   const channelMatch = url.match(/channel\/([a-zA-Z0-9_-]+)/);
   if (channelMatch) {
     return { channelId: channelMatch[1], channelName: channelMatch[1] };
   }
 
+  // /c/name
   const cMatch = url.match(/\/c\/([a-zA-Z0-9_-]+)/);
   if (cMatch) {
     return { channelId: cMatch[1], channelName: cMatch[1] };
   }
 
-  // If it's just a handle or ID
-  return {
-    channelId: url.replace(/[@/]/g, ""),
-    channelName: url.replace(/[@/]/g, ""),
-  };
+  // Bare handle or ID
+  const bare = url.replace(/[@/]/g, "");
+  return { channelId: bare, channelName: bare };
 }
 
 // POST /api/subscriptions - Add new YouTube channel subscription
@@ -74,12 +110,16 @@ export async function POST(request: NextRequest) {
   // Support both { url } and { channelId, channelName } formats
   let channelId: string;
   let channelName: string;
+  let specificVideoId: string | undefined;
+  let specificVideoTitle: string | undefined;
 
   if (body.url) {
-    // Extract from URL
-    const extracted = extractChannelInfo(body.url);
+    // Extract from URL (async — handles video links via oEmbed)
+    const extracted = await extractChannelInfo(body.url);
     channelId = extracted.channelId;
     channelName = extracted.channelName;
+    specificVideoId = extracted.videoId;
+    specificVideoTitle = extracted.videoTitle;
   } else {
     // Direct channelId/channelName
     channelId = body.channelId;
@@ -124,7 +164,9 @@ export async function POST(request: NextRequest) {
   // Check user's profile for max active channels limit
   const { data: profile } = await supabase
     .from("profiles")
-    .select("max_channels, subscription_status, trial_ends_at")
+    .select(
+      "max_channels, subscription_status, trial_ends_at, preferred_language",
+    )
     .eq("id", user.id)
     .single();
 
@@ -135,7 +177,8 @@ export async function POST(request: NextRequest) {
     .eq("user_id", user.id)
     .eq("active", true);
 
-  const maxActiveChannels = profile?.max_channels ?? SiteConfig.freeChannelsLimit;
+  const maxActiveChannels =
+    profile?.max_channels ?? SiteConfig.freeChannelsLimit;
   const isPro =
     profile?.subscription_status === "active" ||
     (profile?.trial_ends_at != null &&
@@ -189,7 +232,7 @@ export async function POST(request: NextRequest) {
     } else {
       // Mark ALL videos as skipped first — this blocks the scanner from picking
       // them up while we insert the subscription below.
-      await Promise.all(
+      const skipResults = await Promise.all(
         videos.map((v) =>
           supabase.from("processed_videos").upsert(
             {
@@ -198,11 +241,19 @@ export async function POST(request: NextRequest) {
               video_title: "[pre-subscription]",
               video_url: `https://www.youtube.com/watch?v=${v.videoId}`,
               status: "skipped",
+              language: "fr", // sentinel — video_id presence in the set is enough for the scanner
             },
-            { onConflict: "video_id", ignoreDuplicates: true },
+            { onConflict: "video_id,language", ignoreDuplicates: true },
           ),
         ),
       );
+      const skipErrors = skipResults.filter((r) => r.error);
+      if (skipErrors.length > 0) {
+        logger.error(
+          `Failed to pre-mark ${skipErrors.length} videos as skipped:`,
+          skipErrors[0].error,
+        );
+      }
 
       // Remember the latest video so we can queue it after the subscription is saved.
       latestVideo = videos[0];
@@ -232,20 +283,31 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Aha moment: deliver the latest video — reuse if already processed, queue if not
-  if (latestVideo) {
+  // Aha moment: deliver a video immediately after subscribing.
+  // - If user added via a video URL → deliver that specific video.
+  // - Otherwise → deliver the most recent video from the channel's RSS feed.
+  const ahaVideo = specificVideoId
+    ? { videoId: specificVideoId, title: specificVideoTitle ?? specificVideoId }
+    : latestVideo
+      ? {
+          videoId: latestVideo.videoId,
+          title: latestVideo.title ?? latestVideo.videoId,
+        }
+      : null;
+
+  if (ahaVideo) {
     try {
-      const latestTitle = latestVideo.title ?? latestVideo.videoId;
-      const latestUrl = `https://www.youtube.com/watch?v=${latestVideo.videoId}`;
+      const ahaUrl = `https://www.youtube.com/watch?v=${ahaVideo.videoId}`;
+      const userLang = profile?.preferred_language ?? "fr";
 
       // Check current status — never downgrade a completed/in-progress video back to "pending"
-      const { data: existingLatest } = await supabase
+      const { data: existingAha } = await supabase
         .from("processed_videos")
         .select("status")
-        .eq("video_id", latestVideo.videoId)
+        .eq("video_id", ahaVideo.videoId)
         .maybeSingle();
 
-      const existingStatus = existingLatest?.status;
+      const existingStatus = existingAha?.status;
 
       if (
         existingStatus === "completed" ||
@@ -253,56 +315,60 @@ export async function POST(request: NextRequest) {
         existingStatus === "processing"
       ) {
         // Already processed or in progress — just create the delivery, no reprocessing
-        await supabase.from("deliveries").upsert(
-          {
-            user_id: user.id,
-            video_id: latestVideo.videoId,
-            status: "pending",
-          },
-          { onConflict: "user_id,video_id" },
-        );
+        await supabase.from("deliveries").insert({
+          user_id: user.id,
+          video_id: ahaVideo.videoId,
+          status: "pending",
+          language: userLang,
+        });
         logger.info(
-          `Latest video already ${existingStatus}, delivery created directly: ${latestVideo.videoId}`,
+          `Aha video already ${existingStatus}, delivery created directly: ${ahaVideo.videoId}`,
         );
       } else {
         // "skipped" or absent — upgrade to pending and queue
         await supabase.from("processed_videos").upsert(
           {
-            video_id: latestVideo.videoId,
+            video_id: ahaVideo.videoId,
             channel_id: finalChannelId,
-            video_title: latestTitle,
-            video_url: latestUrl,
+            video_title: ahaVideo.title,
+            video_url: ahaUrl,
             status: "pending",
+            language: userLang,
           },
-          { onConflict: "video_id" },
+          { onConflict: "video_id,language" },
         );
 
-        await supabase.from("processing_queue").upsert(
-          {
-            video_id: latestVideo.videoId,
-            youtube_url: latestUrl,
-            video_title: latestTitle,
+        // Insert into processing_queue only if no existing job for this video
+        const { data: existingJob } = await supabase
+          .from("processing_queue")
+          .select("id")
+          .eq("video_id", ahaVideo.videoId)
+          .maybeSingle();
+
+        if (!existingJob) {
+          await supabase.from("processing_queue").insert({
+            video_id: ahaVideo.videoId,
+            youtube_url: ahaUrl,
+            video_title: ahaVideo.title,
             channel_id: finalChannelId,
             status: "queued",
-          },
-          { onConflict: "video_id", ignoreDuplicates: true },
-        );
+            user_language: userLang,
+          });
+        }
 
-        await supabase.from("deliveries").upsert(
-          {
-            user_id: user.id,
-            video_id: latestVideo.videoId,
-            status: "pending",
-          },
-          { onConflict: "user_id,video_id" },
-        );
+        await supabase.from("deliveries").insert({
+          user_id: user.id,
+          video_id: ahaVideo.videoId,
+          status: "pending",
+          language: userLang,
+        });
 
         logger.info(
-          `Queued latest video for immediate delivery: ${latestTitle} (${latestVideo.videoId})`,
+          `Aha video queued for immediate delivery: ${ahaVideo.title} (${ahaVideo.videoId})`,
         );
       }
     } catch (e) {
-      logger.error("Failed to deliver latest video:", e);
+      logger.error("Failed to deliver aha video:", e);
     }
   }
 
@@ -342,7 +408,8 @@ export async function PATCH(request: NextRequest) {
       profile?.subscription_status === "active" ||
       (profile?.trial_ends_at != null &&
         new Date(profile.trial_ends_at) > new Date());
-    const maxActiveChannels = profile?.max_channels ?? SiteConfig.freeChannelsLimit;
+    const maxActiveChannels =
+      profile?.max_channels ?? SiteConfig.freeChannelsLimit;
 
     if (!isPro) {
       const { count } = await supabase

@@ -28,11 +28,18 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   if (existing) {
     // Unfollow: remove list_follows row + ghost subscriptions
-    await supabase
+    const { error: unfollowError } = await supabase
       .from("list_follows")
       .delete()
       .eq("user_id", user.id)
       .eq("list_id", id);
+
+    if (unfollowError) {
+      return NextResponse.json(
+        { error: unfollowError.message },
+        { status: 500 },
+      );
+    }
 
     await supabase
       .from("subscriptions")
@@ -74,9 +81,15 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   if (!listChannels || listChannels.length === 0) {
     // Still allow following an empty list
-    await supabase
+    const { error: emptyFollowError } = await supabase
       .from("list_follows")
       .insert({ user_id: user.id, list_id: id });
+    if (emptyFollowError) {
+      return NextResponse.json(
+        { error: emptyFollowError.message },
+        { status: 500 },
+      );
+    }
     return NextResponse.json({ following: true });
   }
 
@@ -95,7 +108,12 @@ export async function POST(req: NextRequest, { params }: Params) {
   );
 
   // Insert follow record first
-  await supabase.from("list_follows").insert({ user_id: user.id, list_id: id });
+  const { error: followError } = await supabase
+    .from("list_follows")
+    .insert({ user_id: user.id, list_id: id });
+  if (followError) {
+    return NextResponse.json({ error: followError.message }, { status: 500 });
+  }
 
   // Insert ghost subscriptions for channels not already personally subscribed
   const ghostSubs = listChannels

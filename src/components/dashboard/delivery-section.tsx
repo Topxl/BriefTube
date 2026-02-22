@@ -136,17 +136,17 @@ function VoicePicker({
               onSelect(v.value);
             }
           }}
-          className={`flex cursor-pointer items-center gap-2.5 rounded-lg border px-3 py-2 text-left transition-all duration-200 ${
+          className={`flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-left transition-all duration-200 ${
             currentVoice === v.value
-              ? "text-foreground border-red-500/25 bg-red-500/[0.06]"
-              : "text-muted-foreground hover:text-foreground border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]"
+              ? "nm-inset text-foreground"
+              : "nm-raised-sm text-muted-foreground hover:text-foreground"
           }`}
         >
           <div
             className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
               currentVoice === v.value
-                ? "bg-red-500/20 text-red-400"
-                : "text-muted-foreground bg-white/[0.06]"
+                ? "nm-inset-sm bg-red-500/[0.15] text-red-400"
+                : "nm-raised-sm text-muted-foreground"
             }`}
           >
             {v.label.charAt(0)}
@@ -194,7 +194,7 @@ function LanguagePicker({
         placeholder="Search language..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        className="text-foreground placeholder:text-muted-foreground w-full rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-sm outline-none focus:border-white/20"
+        className="nm-inset text-foreground placeholder:text-muted-foreground w-full rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-white/20"
       />
       <div className="max-h-64 overflow-y-auto">
         <div className="grid grid-cols-2 gap-1.5">
@@ -202,10 +202,10 @@ function LanguagePicker({
             <button
               key={l.code}
               onClick={() => onSelect(l)}
-              className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-left transition-all duration-200 ${
+              className={`flex items-center gap-2 rounded-xl px-3 py-2 text-left transition-all duration-200 ${
                 currentCode === l.code
-                  ? "text-foreground border-red-500/25 bg-red-500/[0.06]"
-                  : "text-muted-foreground hover:text-foreground border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]"
+                  ? "nm-inset text-foreground"
+                  : "nm-raised-sm text-muted-foreground hover:text-foreground"
               }`}
             >
               <div className="min-w-0">
@@ -448,15 +448,15 @@ export function DeliverySection({
         Delivery
       </h2>
 
-      <div className="divide-y divide-white/[0.04] overflow-hidden rounded-xl border border-white/[0.06]">
+      <div className="nm-raised divide-y divide-white/[0.05] overflow-hidden rounded-2xl">
         {/* Telegram row */}
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2.5">
             <div
-              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border ${
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
                 telegramConnected
-                  ? "border-emerald-500/10 bg-emerald-500/10"
-                  : "border-white/[0.06] bg-white/[0.04]"
+                  ? "nm-inset-sm bg-emerald-500/[0.08]"
+                  : "nm-inset-sm"
               }`}
             >
               <svg
@@ -481,7 +481,7 @@ export function DeliverySection({
               size="sm"
               variant="outline"
               onClick={openTelegramModal}
-              className="text-xs"
+              className="rounded-full text-xs"
             >
               Connect
             </Button>
@@ -500,7 +500,7 @@ export function DeliverySection({
           <button
             onClick={openLanguagePicker}
             disabled={savingLanguage}
-            className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-xs transition-colors disabled:opacity-50"
+            className="nm-raised-sm text-muted-foreground hover:text-foreground flex items-center gap-1.5 rounded-full px-3 py-1 text-xs transition-all disabled:opacity-50"
           >
             {savingLanguage ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -536,7 +536,7 @@ export function DeliverySection({
               <button
                 onClick={openVoicePicker}
                 disabled={savingVoice}
-                className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-xs transition-colors disabled:opacity-50"
+                className="nm-raised-sm text-muted-foreground hover:text-foreground flex items-center gap-1.5 rounded-full px-3 py-1 text-xs transition-all disabled:opacity-50"
               >
                 {savingVoice ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />

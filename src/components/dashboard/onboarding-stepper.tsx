@@ -46,12 +46,12 @@ export function OnboardingStepper({
   if (allDone) return null;
 
   return (
-    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 sm:p-4">
+    <div className="nm-raised rounded-xl p-3 sm:p-4">
       <div className="mb-3 flex items-center justify-between">
         <p className="text-muted-foreground text-xs font-medium">
           {tl.progressLabel(completedCount)}
         </p>
-        <div className="h-1 w-20 rounded-full bg-white/[0.06] sm:w-24">
+        <div className="nm-inset-sm h-1 w-20 rounded-full sm:w-24">
           <div
             className="h-full rounded-full bg-gradient-to-r from-red-500 to-orange-500 transition-all duration-500"
             style={{ width: `${(completedCount / 3) * 100}%` }}
@@ -65,18 +65,16 @@ export function OnboardingStepper({
           return (
             <div
               key={step.title}
-              className={`flex-1 rounded-lg border p-3 transition-colors ${
-                done
-                  ? "border-emerald-500/15 bg-emerald-500/[0.04]"
-                  : "border-white/[0.06] bg-white/[0.02]"
+              className={`flex-1 rounded-lg p-3 transition-colors ${
+                done ? "nm-inset bg-emerald-500/[0.04]" : "nm-raised-sm"
               }`}
             >
               <div className="flex items-center gap-2">
                 <div
                   className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] ${
                     done
-                      ? "bg-emerald-500/20 text-emerald-400"
-                      : "text-muted-foreground bg-white/[0.06]"
+                      ? "nm-inset-sm bg-emerald-500/[0.15] text-emerald-400"
+                      : "nm-raised-sm text-muted-foreground"
                   }`}
                 >
                   {done ? <Check className="h-3 w-3" /> : i + 1}

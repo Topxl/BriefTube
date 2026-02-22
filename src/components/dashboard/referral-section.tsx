@@ -20,7 +20,7 @@ function ShareButtons({ url }: { url: string }) {
       {canNativeShare && (
         <button
           onClick={handleNativeShare}
-          className="text-muted-foreground hover:text-foreground rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-1.5 text-xs transition-colors"
+          className="nm-raised-sm text-muted-foreground hover:text-foreground rounded-full px-3 py-1.5 text-xs transition-all"
         >
           Share
         </button>
@@ -29,7 +29,7 @@ function ShareButtons({ url }: { url: string }) {
         href={tweetUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-1.5 text-xs transition-colors"
+        className="nm-raised-sm text-muted-foreground hover:text-foreground flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs transition-all"
         aria-label="Share on X"
       >
         <svg className="h-3 w-3" viewBox="0 0 24 24" fill="currentColor">
@@ -41,7 +41,7 @@ function ShareButtons({ url }: { url: string }) {
         href={tgUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-1.5 text-xs transition-colors"
+        className="nm-raised-sm text-muted-foreground hover:text-foreground flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs transition-all"
         aria-label="Share on Telegram"
       >
         <svg className="h-3 w-3" viewBox="0 0 24 24" fill="currentColor">
@@ -85,7 +85,7 @@ export function ReferralSection({ referralCode, referrals }: Props) {
       <h2 className="text-muted-foreground/50 px-1 text-xs font-medium tracking-wide uppercase">
         Referral
       </h2>
-      <div className="overflow-hidden rounded-xl border border-white/[0.06]">
+      <div className="nm-raised overflow-hidden rounded-2xl">
         {/* Referral link */}
         <div className="flex items-center justify-between gap-3 px-4 py-3">
           <p className="text-muted-foreground min-w-0 truncate text-xs">
@@ -140,8 +140,8 @@ export function ReferralSection({ referralCode, referrals }: Props) {
                   <span
                     className={`rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase ${
                       r.status === "rewarded"
-                        ? "bg-emerald-500/10 text-emerald-400"
-                        : "text-muted-foreground border border-white/[0.08] bg-white/[0.04]"
+                        ? "nm-inset-sm text-emerald-400"
+                        : "nm-raised-sm text-muted-foreground"
                     }`}
                   >
                     {r.status === "rewarded" ? "Rewarded" : "Pending"}

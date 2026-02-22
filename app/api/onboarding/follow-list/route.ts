@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { getYouTubeChannelInfo } from "@/lib/youtube";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
@@ -22,8 +22,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "listIds required" }, { status: 400 });
   }
 
+  // Use admin client for DB operations to avoid session/RLS issues
+  const admin = createAdminClient();
+
   // Fetch channels from all selected lists
-  const { data: listChannels, error: listError } = await supabase
+  const { data: listChannels, error: listError } = await admin
     .from("list_channels")
     .select("channel_id, channel_name")
     .in("list_id", body.listIds);
@@ -44,7 +47,7 @@ export async function POST(req: NextRequest) {
   });
 
   // Fetch user's existing subscriptions to skip duplicates
-  const { data: existingSubs } = await supabase
+  const { data: existingSubs } = await admin
     .from("subscriptions")
     .select("channel_id")
     .eq("user_id", user.id);
@@ -67,14 +70,21 @@ export async function POST(req: NextRequest) {
     }),
   );
 
+  // Filter out channels that failed to resolve to a real YouTube channel ID
+  // (real IDs start with "UC" and are 24 chars — fallback returns the raw handle)
+  const validResolved = resolved.filter(
+    (ch) => ch.channelId.startsWith("UC") && ch.channelId.length === 24,
+  );
+
   // Filter out already-subscribed channels
-  const toInsert = resolved.filter((ch) => !existingIds.has(ch.channelId));
+  const toInsert = validResolved.filter((ch) => !existingIds.has(ch.channelId));
 
   if (toInsert.length === 0) {
     return NextResponse.json({ subscribed: 0 });
   }
 
   // Insert subscriptions — all active (onboarding users are Pro/trial)
+  // upsert + onConflict to safely handle repeated attempts
   const rows = toInsert.map((ch) => ({
     user_id: user.id,
     channel_id: ch.channelId,
@@ -83,9 +93,9 @@ export async function POST(req: NextRequest) {
     active: true,
   }));
 
-  const { error: insertError } = await supabase
+  const { error: insertError } = await admin
     .from("subscriptions")
-    .insert(rows);
+    .upsert(rows, { onConflict: "user_id,channel_id", ignoreDuplicates: true });
 
   if (insertError) {
     return NextResponse.json({ error: insertError.message }, { status: 500 });

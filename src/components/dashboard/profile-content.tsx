@@ -5,7 +5,9 @@ import { createClient } from "@/lib/supabase/client";
 import { DeliverySection } from "@/components/dashboard/delivery-section";
 import { ReferralSection } from "@/components/dashboard/referral-section";
 import { Button } from "@/components/ui/button";
-import { LogOut } from "@/lib/icons";
+import { LogOut, Trash2 } from "@/lib/icons";
+import { dialogManager } from "@/features/dialog-manager/dialog-manager";
+import { toast } from "sonner";
 
 type ReferralRow = {
   maskedEmail: string;
@@ -23,6 +25,7 @@ type Props = {
   hasStripeCustomer: boolean;
   initialTelegramConnected: boolean;
   initialVoice: string;
+  initialLanguage: string;
   maxChannels: number;
   referralCode?: string;
   referrals?: ReferralRow[];
@@ -36,6 +39,7 @@ export function ProfileContent({
   hasStripeCustomer,
   initialTelegramConnected,
   initialVoice,
+  initialLanguage,
   maxChannels,
   referralCode,
   referrals,
@@ -48,6 +52,26 @@ export function ProfileContent({
     router.push("/");
   };
 
+  const handleDeleteAccount = () => {
+    dialogManager.confirm({
+      title: "Delete your account?",
+      description:
+        "All your data will be permanently deleted. This action cannot be undone.",
+      variant: "destructive",
+      action: {
+        label: "Delete my account",
+        onClick: async () => {
+          const res = await fetch("/api/account/delete", { method: "DELETE" });
+          if (!res.ok) {
+            toast.error("Failed to delete account. Please try again.");
+            return;
+          }
+          window.location.href = "/";
+        },
+      },
+    });
+  };
+
   return (
     <div className="space-y-6">
       {/* Account */}
@@ -55,9 +79,9 @@ export function ProfileContent({
         <h2 className="text-muted-foreground/50 px-1 text-xs font-medium tracking-wide uppercase">
           Account
         </h2>
-        <div className="overflow-hidden rounded-xl border border-white/[0.06]">
+        <div className="nm-raised overflow-hidden rounded-2xl">
           <div className="flex items-center gap-3 px-4 py-3.5">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-500/[0.12] text-sm font-bold text-red-400">
+            <div className="nm-inset-sm flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-500/[0.12] text-sm font-bold text-red-400">
               {email.charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
@@ -75,17 +99,24 @@ export function ProfileContent({
                 isActivePro
                   ? "bg-red-600 text-white"
                   : isTrial
-                    ? "border border-amber-500/30 bg-amber-500/10 text-amber-400"
-                    : "text-muted-foreground border border-white/[0.08] bg-white/[0.06]"
+                    ? "nm-inset-sm text-amber-400"
+                    : "nm-raised-sm text-muted-foreground"
               }`}
             >
               {isActivePro ? "Pro" : isTrial ? "Trial" : "Free"}
             </span>
           </div>
-          <div className="flex justify-end border-t border-white/[0.04] px-4 py-2.5">
+          <div className="flex items-center justify-between border-t border-white/[0.04] px-4 py-2.5">
+            <button
+              onClick={handleDeleteAccount}
+              className="nm-raised-sm text-muted-foreground hover:text-destructive flex items-center gap-1.5 rounded-full px-3 py-1 text-xs transition-all"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Delete account
+            </button>
             <button
               onClick={() => void handleLogout()}
-              className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-xs transition-colors"
+              className="nm-raised-sm text-muted-foreground hover:text-foreground flex items-center gap-1.5 rounded-full px-3 py-1 text-xs transition-all"
             >
               <LogOut className="h-3.5 w-3.5" />
               Sign out
@@ -98,6 +129,7 @@ export function ProfileContent({
       <DeliverySection
         initialTelegramConnected={initialTelegramConnected}
         initialVoice={initialVoice}
+        initialLanguage={initialLanguage}
       />
 
       {/* Subscription */}
@@ -105,7 +137,7 @@ export function ProfileContent({
         <h2 className="text-muted-foreground/50 px-1 text-xs font-medium tracking-wide uppercase">
           Subscription
         </h2>
-        <div className="overflow-hidden rounded-xl border border-white/[0.06]">
+        <div className="nm-raised overflow-hidden rounded-2xl">
           {isActivePro ? (
             <div className="flex items-center justify-between px-4 py-3">
               <div>
@@ -140,7 +172,7 @@ export function ProfileContent({
                 <Button
                   type="submit"
                   size="sm"
-                  className="bg-red-600 hover:bg-red-500"
+                  className="rounded-full bg-red-600 hover:bg-red-500"
                 >
                   Upgrade
                 </Button>

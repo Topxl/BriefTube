@@ -47,7 +47,7 @@ export function TrialBanner({ daysLeft }: { daysLeft: number }) {
   if (daysLeft <= 0 || isDismissed) return null;
 
   return (
-    <div className="flex items-center gap-2 rounded-lg border border-amber-500/[0.15] bg-amber-500/[0.04] py-1.5 pr-1 pl-3">
+    <div className="nm-raised flex items-center gap-2 rounded-2xl bg-amber-500/[0.05] py-1.5 pr-1 pl-3">
       <p className="text-muted-foreground min-w-0 flex-1 truncate text-xs">
         <span className="font-medium text-amber-300/90">
           {daysLeft === 1 ? "Last day" : `${daysLeft} days`}

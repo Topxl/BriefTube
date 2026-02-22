@@ -59,7 +59,7 @@ function SourceRow({
 
   return (
     <div
-      className={`group flex items-center justify-between px-4 py-2.5 transition-colors hover:bg-white/[0.03] ${
+      className={`group flex items-center justify-between px-4 py-2.5 transition-colors hover:bg-white/[0.02] ${
         !source.active ? "opacity-40" : ""
       }`}
     >
@@ -251,7 +251,7 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
           title="Filter"
           className={`flex h-6 w-6 items-center justify-center rounded transition-colors ${
             showFilter || filterStatus !== "all"
-              ? "text-foreground bg-white/[0.08]"
+              ? "nm-inset-sm text-foreground"
               : "text-muted-foreground/40 hover:text-muted-foreground hover:bg-white/[0.04]"
           }`}
         >
@@ -266,10 +266,10 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
             <button
               key={status}
               onClick={() => setFilterStatus(status)}
-              className={`rounded-full px-2.5 py-0.5 text-xs font-medium capitalize transition-colors ${
+              className={`rounded-full px-2.5 py-1 text-xs font-medium capitalize transition-colors ${
                 filterStatus === status
-                  ? "text-foreground bg-white/[0.10]"
-                  : "text-muted-foreground/60 hover:text-foreground"
+                  ? "nm-inset text-foreground"
+                  : "nm-raised-sm text-muted-foreground/60 hover:text-foreground"
               }`}
             >
               {status}
@@ -291,7 +291,7 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
 
           {/* Active limit banner */}
           {atActiveLimit && (
-            <div className="rounded-xl border border-amber-500/15 bg-amber-500/[0.04] px-4 py-3">
+            <div className="nm-raised rounded-2xl bg-amber-500/[0.05] px-4 py-3">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm font-medium">
@@ -314,7 +314,7 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
 
           {sources.length === 0 ? (
             <div className="py-10 text-center">
-              <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.06] bg-white/[0.03]">
+              <div className="nm-inset mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl">
                 <svg
                   className="text-muted-foreground h-5 w-5"
                   fill="none"
@@ -337,7 +337,7 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
           ) : (
             <div className="space-y-2">
               {/* Channel list */}
-              <div className="overflow-hidden rounded-xl border border-white/[0.06]">
+              <div className="nm-raised overflow-hidden rounded-2xl">
                 {displayedSources.length > 0 ? (
                   <div className="divide-y divide-white/[0.04]">
                     {displayedSources.map((source) => (

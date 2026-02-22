@@ -1,21 +1,22 @@
 import type { MetadataRoute } from "next";
+import { SiteConfig } from "@/site-config";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     {
-      url: "https://brieftube.com",
+      url: `${SiteConfig.prodUrl}`,
       lastModified: new Date(),
       changeFrequency: "weekly",
       priority: 1,
     },
     {
-      url: "https://brieftube.com/login",
+      url: `${SiteConfig.prodUrl}/login`,
       lastModified: new Date(),
       changeFrequency: "monthly",
       priority: 0.8,
     },
     {
-      url: "https://brieftube.com/pricing",
+      url: `${SiteConfig.prodUrl}/pricing`,
       lastModified: new Date(),
       changeFrequency: "monthly",
       priority: 0.9,

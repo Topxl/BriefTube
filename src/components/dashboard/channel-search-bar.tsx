@@ -73,7 +73,7 @@ export function ChannelSearchBar() {
           value={q}
           onChange={(e) => void setQ(e.target.value || null)}
           placeholder="Search channels or paste a YouTube URL…"
-          className="placeholder:text-muted-foreground/40 h-9 border-white/[0.16] bg-white/[0.06] pr-8 pl-8 text-sm hover:border-white/[0.24] hover:bg-white/[0.08] focus-visible:border-white/[0.28]"
+          className="scrollbar-fade-x placeholder:text-muted-foreground/60 h-9 rounded-full border-white/[0.07] bg-[oklch(0.18_0_0)]/50 pr-8 pl-8 text-sm shadow-[0_4px_16px_rgba(0,0,0,0.3)] backdrop-blur-xl focus-visible:border-white/[0.12] focus-visible:ring-0"
           autoComplete="off"
           data-1p-ignore
           data-lpignore="true"

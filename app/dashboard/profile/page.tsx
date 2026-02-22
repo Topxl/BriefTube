@@ -14,7 +14,7 @@ export default async function ProfilePage() {
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "subscription_status, trial_ends_at, stripe_customer_id, telegram_connected, tts_voice, max_channels, referral_code",
+      "subscription_status, trial_ends_at, stripe_customer_id, telegram_connected, tts_voice, preferred_language, max_channels, referral_code",
     )
     .eq("id", user.id)
     .single();
@@ -77,6 +77,9 @@ export default async function ProfilePage() {
       hasStripeCustomer={!!profile?.stripe_customer_id}
       initialTelegramConnected={profile?.telegram_connected ?? false}
       initialVoice={profile?.tts_voice ?? SiteConfig.defaultTtsVoice}
+      initialLanguage={
+        profile?.preferred_language ?? SiteConfig.defaultLanguage
+      }
       maxChannels={profile?.max_channels ?? SiteConfig.freeChannelsLimit}
       referralCode={profile?.referral_code ?? ""}
       referrals={referrals}
