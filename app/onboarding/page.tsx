@@ -16,7 +16,9 @@ export default async function OnboardingPage() {
       .single(),
     supabase
       .from("channel_lists")
-      .select("id, name, description, category, list_channels(count)")
+      .select(
+        "id, name, description, category, list_channels(count), list_follows(count)",
+      )
       .eq("is_public", true)
       .order("name"),
   ]);
@@ -31,6 +33,8 @@ export default async function OnboardingPage() {
     category: l.category ?? null,
     channelCount:
       (l.list_channels as unknown as { count: number }[])[0]?.count ?? 0,
+    followerCount:
+      (l.list_follows as unknown as { count: number }[])[0]?.count ?? 0,
   }));
 
   return (
