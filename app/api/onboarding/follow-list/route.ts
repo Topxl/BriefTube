@@ -1,11 +1,11 @@
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { getYouTubeChannelInfo } from "@/lib/youtube";
+import { SiteConfig } from "@/site-config";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 // POST /api/onboarding/follow-list
 // Subscribe the current user to all channels in one or more curated lists.
-// No Pro check — called only during onboarding.
 // Resolves YouTube handles to real channel IDs via page scraping.
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
@@ -46,13 +46,30 @@ export async function POST(req: NextRequest) {
     return true;
   });
 
-  // Fetch user's existing subscriptions to skip duplicates
+  // Fetch user profile to determine plan + active channel limit
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("subscription_status, trial_ends_at, max_channels")
+    .eq("id", user.id)
+    .single();
+
+  const isPro =
+    profile?.subscription_status === "active" ||
+    (profile?.trial_ends_at != null &&
+      new Date(profile.trial_ends_at) > new Date());
+  const maxActiveChannels =
+    profile?.max_channels ?? SiteConfig.freeChannelsLimit;
+
+  // Fetch user's existing subscriptions to skip duplicates and count active ones
   const { data: existingSubs } = await admin
     .from("subscriptions")
-    .select("channel_id")
+    .select("channel_id, active")
     .eq("user_id", user.id);
 
   const existingIds = new Set((existingSubs ?? []).map((s) => s.channel_id));
+  const currentActiveCount = (existingSubs ?? []).filter(
+    (s) => s.active,
+  ).length;
 
   // Resolve all handles in parallel
   const resolved = await Promise.all(
@@ -83,15 +100,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ subscribed: 0 });
   }
 
-  // Insert subscriptions — all active (onboarding users are Pro/trial)
-  // upsert + onConflict to safely handle repeated attempts
-  const rows = toInsert.map((ch) => ({
-    user_id: user.id,
-    channel_id: ch.channelId,
-    channel_name: ch.channelName,
-    channel_avatar_url: ch.channelAvatarUrl ?? null,
-    active: true,
-  }));
+  // Determine active status per channel:
+  // Pro/trial users → all active; free users → active only up to maxActiveChannels
+  let activeSlots = isPro
+    ? Infinity
+    : Math.max(0, maxActiveChannels - currentActiveCount);
+  const rows = toInsert.map((ch) => {
+    const active = activeSlots > 0;
+    if (active) activeSlots--;
+    return {
+      user_id: user.id,
+      channel_id: ch.channelId,
+      channel_name: ch.channelName,
+      channel_avatar_url: ch.channelAvatarUrl ?? null,
+      active,
+    };
+  });
 
   const { error: insertError } = await admin
     .from("subscriptions")

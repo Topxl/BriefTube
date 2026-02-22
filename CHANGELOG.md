@@ -2,6 +2,10 @@
 
 ## 2026-02-22
 
+FIX: follow-list/route.ts — faille sécurité : free users pouvaient obtenir un nombre illimité d'abonnements actifs via l'onboarding ; désormais limités à max_channels
+CHORE: DB — désactivation des 224 abonnements abusifs de a power user's account (226 → 2 actifs) + suppression de 1715 jobs zombies dans processing_queue (attempts=0, status=failed)
+
+UX: Nav — top bar transparent glass (bg-[oklch(0.18)]/60 + backdrop-blur-2xl + border-b subtile), même style que la bottom nav
 UX: Nav — favicon.svg recentré (triangles centrés dans le carré rouge) ; search bar rounded-full + bg-white/[0.07] + border-white/[0.12] pour meilleure visibilité
 UX: Nav — logo remplacé par favicon.svg (double play triangle / accéléré) à 30px ; search bar plus visible (placeholder /60, bg-white/[0.03], border subtile)
 UX: Profile page — avatar nm-inset-sm, boutons Delete/Sign out/Change/Connect/Upgrade → rounded-full + nm-raised-sm, boutons de partage rounded-full, suppression des border en doublon sur VoicePicker et LanguagePicker
