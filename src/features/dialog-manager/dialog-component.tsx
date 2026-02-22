@@ -109,6 +109,7 @@ export function DialogComponent(props: { dialog: Dialog }) {
                   }
                 }
               }}
+              className="nm-inset rounded-xl border-transparent bg-transparent focus-visible:ring-0"
             />
           </div>
         )}
@@ -131,6 +132,7 @@ export function DialogComponent(props: { dialog: Dialog }) {
                   }
                 }
               }}
+              className="nm-inset rounded-xl border-transparent bg-transparent focus-visible:ring-0"
             />
           </div>
         )}
@@ -143,7 +145,7 @@ export function DialogComponent(props: { dialog: Dialog }) {
             onClick={handleAction}
             variant={dialog.action.variant ?? "default"}
             className={cn(
-              "w-full sm:w-auto",
+              "w-full rounded-full sm:w-auto",
               (!dialog.action.variant || dialog.action.variant === "default") &&
                 "border-transparent bg-red-600 text-white shadow-[0_0_16px_rgba(239,68,68,0.2)] hover:bg-red-500",
             )}
@@ -155,7 +157,7 @@ export function DialogComponent(props: { dialog: Dialog }) {
             variant="outline"
             disabled={dialog.loading}
             onClick={handleCancel}
-            className="w-full sm:w-auto"
+            className="w-full rounded-full sm:w-auto"
           >
             {dialog.cancel?.label ?? "Cancel"}
           </Button>

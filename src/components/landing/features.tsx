@@ -117,7 +117,7 @@ export function Features() {
                 key={feature.title}
                 className="group flex gap-4 rounded-2xl p-4 transition-all duration-300 hover:bg-white/[0.03]"
               >
-                <div className="text-foreground flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.06] backdrop-blur-sm transition-all duration-300 group-hover:border-red-500/15 group-hover:bg-red-500/[0.06] group-hover:text-red-400 group-hover:shadow-[0_0_16px_rgba(239,68,68,0.08)]">
+                <div className="nm-raised text-foreground flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all duration-300 group-hover:text-red-400">
                   {featureIcons[i]}
                 </div>
                 <div>

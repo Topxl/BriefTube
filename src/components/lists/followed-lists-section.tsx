@@ -21,8 +21,10 @@ export function FollowedListsSection({
 
   return (
     <section className="space-y-2">
-      <p className="text-muted-foreground text-xs font-medium">Following</p>
-      <div className="overflow-hidden rounded-xl border border-white/[0.06]">
+      <p className="text-muted-foreground/50 px-1 text-xs font-medium tracking-wide uppercase">
+        Following
+      </p>
+      <div className="nm-raised overflow-hidden rounded-2xl">
         <div className="divide-y divide-white/[0.04]">
           {items.map((item) => (
             <div

@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollReveal } from "@/components/ui/scroll-reveal";
 import { formatCurrency } from "@/lib/format";
 import { logger } from "@/lib/logger";
@@ -75,24 +74,26 @@ export function Pricing() {
                   : tl.perMonth;
 
               return (
-                <Card
+                <div
                   key={plan.key}
-                  className={`relative transition-all duration-300 hover:-translate-y-1 ${
-                    plan.highlighted
-                      ? "border-red-500/20 shadow-[0_8px_32px_rgba(239,68,68,0.1)] hover:shadow-[0_12px_48px_rgba(239,68,68,0.15)]"
-                      : "hover:border-white/[0.12]"
+                  className={`nm-raised relative overflow-hidden rounded-2xl transition-all duration-300 hover:-translate-y-1 ${
+                    plan.highlighted ? "border border-red-500/[0.15]" : ""
                   }`}
                 >
                   {plan.highlighted && (
                     <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                      <span className="inline-flex items-center rounded-full bg-gradient-to-r from-red-600 to-orange-500 px-3 py-1 text-xs font-medium text-white shadow-[0_0_16px_rgba(239,68,68,0.3)]">
+                      <span className="nm-raised-sm inline-flex items-center rounded-full bg-red-600 px-3 py-0.5 text-xs font-medium text-white shadow-[0_0_12px_rgba(239,68,68,0.3)]">
                         {tl.mostPopular}
                       </span>
                     </div>
                   )}
-                  <CardHeader>
-                    <CardTitle className="text-lg">{planData.name}</CardTitle>
-                    <div className="flex items-baseline gap-1">
+                  <div
+                    className={`border-b border-white/[0.04] px-5 pb-5 ${plan.highlighted ? "pt-7" : "pt-5"}`}
+                  >
+                    <p className="text-sm font-semibold tracking-wide uppercase">
+                      {planData.name}
+                    </p>
+                    <div className="mt-3 flex items-baseline gap-1">
                       {displayPrice.symbol === "$" ? (
                         <>
                           <span className="text-4xl font-bold">
@@ -115,11 +116,11 @@ export function Pricing() {
                         </>
                       )}
                     </div>
-                    <p className="text-muted-foreground text-sm">
+                    <p className="text-muted-foreground mt-1 text-sm">
                       {planData.description}
                     </p>
-                  </CardHeader>
-                  <CardContent>
+                  </div>
+                  <div className="px-5 py-4">
                     <ul className="mb-6 space-y-3">
                       {planData.features.map((feature) => (
                         <li
@@ -144,7 +145,7 @@ export function Pricing() {
                       ))}
                     </ul>
                     <Button
-                      className={`w-full ${
+                      className={`w-full rounded-full ${
                         plan.highlighted
                           ? "bg-red-600 shadow-[0_0_20px_rgba(239,68,68,0.25)] hover:bg-red-500"
                           : ""
@@ -154,8 +155,8 @@ export function Pricing() {
                     >
                       <Link href={plan.href}>{planData.cta}</Link>
                     </Button>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               );
             })}
           </div>

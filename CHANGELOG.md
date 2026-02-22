@@ -2,9 +2,24 @@
 
 ## 2026-02-22
 
+FIX: logo — logo.svg et avatar Telegram mockup (hero.tsx) mis à jour avec le vrai logo (double flèches accélérées) au lieu de l'ancien "B>" ; avatar rounded-xl pour matcher le favicon
+FIX: worker — résilience complète aux redémarrages : reset des jobs processing bloqués (started_at + timeout), claim isolé du send dans le delivery loop (erreur DB sur claim = retry, pas failed), erreur d'envoi transiente laisse 'sending' pour recovery au prochain démarrage
+FIX: DB — contrainte deliveries_status_check étendue à 'sending' (manquait) → les livraisons Telegram étaient bloquées depuis l'ajout du claim atomique
+UX: bot — confirmation immédiate dès réception d'une URL YouTube (avant l'appel oEmbed), plus de délai apparent pour l'utilisateur
+CHORE: log bot sous systemd (brieftube-log-bot.service) — protection instance unique exhaustive : fcntl flock OS-level + PID file avec takeover SIGTERM/SIGKILL
+FIX: worker/bot_handler.py — les alertes admin (startup, erreurs, stats) passent désormais par le log bot (LOG_BOT_TOKEN) au lieu du bot public principal
 FIX: follow-list/route.ts — faille sécurité : free users pouvaient obtenir un nombre illimité d'abonnements actifs via l'onboarding ; désormais limités à max_channels
 CHORE: DB — désactivation des 224 abonnements abusifs de topxl6363@gmail.com (226 → 2 actifs) + suppression de 1715 jobs zombies dans processing_queue (attempts=0, status=failed)
 
+UX: Landing — nm-raised sur mockup Telegram hero, cartes features, cartes pricing, FAQ accordéons et icônes how-it-works ; boutons CTA rounded-full
+UX: Login — Card remplacée par nm-raised rounded-2xl ; logo favicon SVG centré à la place du "B"
+UX: Pricing page — cartes plans nm-raised rounded-2xl avec badge "Most popular" nm-raised-sm ; boutons rounded-full
+UX: Shared summary — sections nm-raised rounded-2xl pour header/summary/audio/CTA ; language picker nm-inset/nm-raised-sm rounded-full
+UX: Lists [id] — top bar sticky transparent glass ; badge catégorie nm-raised-sm ; container chaînes nm-raised rounded-2xl ; avatars fallback nm-inset-sm
+UX: Followed lists — container nm-raised rounded-2xl ; en-tête section uppercase
+UX: Worker card (admin) — status nm-raised rounded-2xl ; boutons rounded-full ; logs nm-raised rounded-2xl
+UX: Edit list form — restructure en sections nm-raised rounded-2xl avec en-têtes uppercase (pattern profil) : Details (Name + Description + Category) + Channels ; supression du h1 redondant
+UX: Dialogs — nm-raised sur AlertDialogContent + DialogContent (rounded-2xl), inputs nm-inset, boutons action/cancel rounded-full
 UX: Nav — top bar transparent glass (bg-[oklch(0.18)]/60 + backdrop-blur-2xl + border-b subtile), même style que la bottom nav
 UX: Nav — favicon.svg recentré (triangles centrés dans le carré rouge) ; search bar rounded-full + bg-white/[0.07] + border-white/[0.12] pour meilleure visibilité
 UX: Nav — logo remplacé par favicon.svg (double play triangle / accéléré) à 30px ; search bar plus visible (placeholder /60, bg-white/[0.03], border subtile)
