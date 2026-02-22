@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-02-23
+
+UX: share — audio avant le résumé texte sur la page de partage
+
 ## 2026-02-22
 
 CHORE: worker — supprime save_cookies.py, cookies/gemini_session.json, cookies/browser_profile/ et playwright de requirements.txt (browser automation Gemini obsolète, remplacé par API directe)
