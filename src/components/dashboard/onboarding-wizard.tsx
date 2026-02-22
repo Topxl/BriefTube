@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import {
-  Check,
   Loader2,
   ArrowRight,
   ArrowLeft,
@@ -15,21 +14,18 @@ import {
   Headphones,
   Send,
   Layers,
+  Check,
 } from "@/lib/icons";
 import type { Tables } from "@/types/supabase";
 import { SiteConfig } from "@/site-config";
 import { languages } from "@/lib/languages";
 import type { Language } from "@/lib/languages";
+import { ListPicker } from "@/components/lists/list-picker";
+import type { ListPickerItem } from "@/components/lists/list-picker";
 
 type Subscription = Tables<"subscriptions">;
 
-type CuratedList = {
-  id: string;
-  name: string;
-  description: string | null;
-  category: string | null;
-  channelCount: number;
-};
+type CuratedList = ListPickerItem;
 
 type Step = 1 | 2 | 3;
 
@@ -49,7 +45,7 @@ export function OnboardingWizard({
   const supabase = createClient();
 
   const [step, setStep] = useState<Step>(1);
-  const [selectedListId, setSelectedListId] = useState<string | null>(null);
+  const [selectedListIds, setSelectedListIds] = useState<string[]>([]);
   const [followingList, setFollowingList] = useState(false);
 
   // Step 1 — manual add (secondary)
@@ -159,7 +155,7 @@ export function OnboardingWizard({
   }, [telegramConnected]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const followListAndAdvance = async () => {
-    if (!selectedListId) {
+    if (selectedListIds.length === 0) {
       setStep(2);
       return;
     }
@@ -168,7 +164,7 @@ export function OnboardingWizard({
       const res = await fetch("/api/onboarding/follow-list", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ listId: selectedListId }),
+        body: JSON.stringify({ listIds: selectedListIds }),
       });
       if (res.ok) {
         const data = (await res.json()) as { subscribed: number };
@@ -272,35 +268,17 @@ export function OnboardingWizard({
             </div>
           </div>
 
-          {/* Curated list cards */}
-          <div className="grid grid-cols-2 gap-2">
-            {curatedLists.map((list) => (
-              <button
-                key={list.id}
-                type="button"
-                onClick={() =>
-                  setSelectedListId(list.id === selectedListId ? null : list.id)
-                }
-                className={`flex flex-col gap-1 rounded-xl border p-3 text-left transition-all ${
-                  selectedListId === list.id
-                    ? "border-red-500/30 bg-red-500/[0.06] ring-1 ring-red-500/20"
-                    : "border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]"
-                }`}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-sm leading-snug font-medium">
-                    {list.name.replace("Best of ", "")}
-                  </p>
-                  {selectedListId === list.id && (
-                    <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-red-400" />
-                  )}
-                </div>
-                <p className="text-muted-foreground text-[10px]">
-                  {list.channelCount} channels
-                </p>
-              </button>
-            ))}
-          </div>
+          <ListPicker
+            lists={curatedLists}
+            selectedIds={selectedListIds}
+            onToggle={(id) =>
+              setSelectedListIds((prev) =>
+                prev.includes(id)
+                  ? prev.filter((x) => x !== id)
+                  : [...prev, id],
+              )
+            }
+          />
 
           {/* Secondary options */}
           <div className="space-y-3">
