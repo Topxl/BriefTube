@@ -2,6 +2,15 @@
 
 ## 2026-02-22
 
+CHORE: worker — supprime save_cookies.py, cookies/gemini_session.json, cookies/browser_profile/ et playwright de requirements.txt (browser automation Gemini obsolète, remplacé par API directe)
+
+FIX: bot — /status affiche Trial · Xd left au lieu de Free (utilisait sa propre logique au lieu de _get_plan_label)
+FIX: bot — ajout de logs dans handle_message et handle_video_request pour tracer les messages reçus et le cheminement des demandes on-demand
+FIX: bot — bouton ⚙️ fonctionnel : query.answer() expirée ignorée gracieusement (share link envoyé quand même), log au démarrage du handler, error handler avec traceback complet
+UX: bot — menu commandes Telegram enregistré (bouton "/" à gauche) : /start, /status, /help
+FIX: bot — /start affiche Trial · Xd left au lieu de Free quand l'utilisateur est en période d'essai (vérifie trial_ends_at)
+FIX: bot — bouton ⚙️ : allowed_updates forcé à inclure callback_query au démarrage, fix parsing callback_data avec rpartition pour video IDs avec underscore, /start reconnait les utilisateurs déjà connectés, message "non connecté" avec lien direct vers profil
+UX: profil — bouton "Reconnect" Telegram toujours visible même quand déjà connecté (permet de régénérer le lien magic) (getUpdates explicite avant polling), fix parsing callback_data avec rpartition pour video IDs avec underscore, /start reconnait les utilisateurs déjà connectés
 FIX: bot — livraison en 2 messages liés : texte + preview YouTube inline (send_message + LinkPreviewOptions), puis voice OGG/OPUS en reply (waveform + vitesse 1×/1.5×/2× + bouton Options) ; anti-doublons : pas de retry sur send_voice
 FIX: logo — logo.svg et avatar Telegram mockup (hero.tsx) mis à jour avec le vrai logo (double flèches accélérées) au lieu de l'ancien "B>" ; avatar rounded-xl pour matcher le favicon
 UX: bot — livraison en message unique (send_audio) au lieu de photo + voice reply ; miniature YouTube, titre et bouton Options dans le même message
