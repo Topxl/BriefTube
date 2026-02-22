@@ -4,10 +4,11 @@ import asyncio
 import html as _html
 import re
 import logging
+import traceback
 import aiohttp
 import feedparser
 from typing import Optional
-from telegram import Bot, Update
+from telegram import Bot, BotCommand, Update
 from telegram.error import Conflict
 from telegram.ext import (
     Application,
@@ -175,16 +176,25 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
                 "Go to your BriefTube dashboard (Settings) to generate a new connection link."
             )
     else:
-        # No token, show welcome message
-        await update.message.reply_text(
-            "Welcome to BriefTube!\n\n"
-            "To connect your account:\n"
-            f"1. Sign up at {APP_URL}\n"
-            "2. Go to Dashboard > Settings\n"
-            "3. Click 'Generate link' and open it\n\n"
-            "Once connected, you'll receive audio summaries of new YouTube videos "
-            "from your subscribed channels."
-        )
+        # No token — check if already connected
+        logger.info(f"/start (no token) from chat_id={chat_id}")
+        profile = _get_profile_by_chat_id(chat_id)
+        if profile:
+            plan = _get_plan_label(profile)
+            await update.message.reply_text(
+                f"You're connected as {profile['email']} ({plan}).\n\n"
+                f"Manage your channels at {APP_URL}/dashboard"
+            )
+        else:
+            await update.message.reply_text(
+                "Your Telegram is not linked to a BriefTube account.\n\n"
+                "If you already have an account:\n"
+                f"→ {APP_URL}/dashboard/profile\n"
+                "Go to <b>Delivery</b> and tap <b>Reconnect</b> to generate a new link.\n\n"
+                "If you don't have an account yet:\n"
+                f"→ {APP_URL}",
+                parse_mode="HTML",
+            )
 
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -206,19 +216,10 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle /status command."""
     chat_id = str(update.effective_chat.id)
-    sb = db.get_client()
+    profile = _get_profile_by_chat_id(chat_id)
 
-    res = (
-        sb.table("profiles")
-        .select("email, subscription_status")
-        .eq("telegram_chat_id", chat_id)
-        .eq("telegram_connected", True)
-        .execute()
-    )
-
-    if res.data:
-        profile = res.data[0]
-        plan = "Pro" if profile["subscription_status"] == "active" else "Free"
+    if profile:
+        plan = _get_plan_label(profile)
         await update.message.reply_text(
             f"Connected as: {profile['email']}\n"
             f"Plan: {plan}\n\n"
@@ -349,12 +350,30 @@ def _get_profile_by_chat_id(chat_id: str) -> dict | None:
     sb = db.get_client()
     res = (
         sb.table("profiles")
-        .select("id, email, subscription_status, max_channels, preferred_language, tts_voice")
+        .select("id, email, subscription_status, trial_ends_at, max_channels, preferred_language, tts_voice")
         .eq("telegram_chat_id", chat_id)
         .eq("telegram_connected", True)
         .execute()
     )
     return res.data[0] if res.data else None
+
+
+def _get_plan_label(profile: dict) -> str:
+    """Return a human-readable plan label: Pro / Trial (Xd left) / Free."""
+    if profile.get("subscription_status") == "active":
+        return "Pro"
+    trial_ends_at = profile.get("trial_ends_at")
+    if trial_ends_at:
+        from datetime import datetime, timezone
+        try:
+            ends = datetime.fromisoformat(trial_ends_at.replace("Z", "+00:00"))
+            now = datetime.now(timezone.utc)
+            days_left = (ends - now).days
+            if days_left >= 0:
+                return f"Trial · {days_left}d left"
+        except Exception:
+            pass
+    return "Free"
 
 
 # ── Helper: resolve YouTube channel ──────────────────────────
@@ -478,6 +497,7 @@ async def handle_video_request(update: Update, profile: dict, video_id: str) -> 
     if existing.data:
         video_row = existing.data[0]
         if video_row["status"] == "completed":
+            logger.info(f"[{video_id}] Already completed — queuing delivery for user={user_id}")
             sb.table("deliveries").upsert({
                 "user_id": user_id,
                 "video_id": video_id,
@@ -490,6 +510,7 @@ async def handle_video_request(update: Update, profile: dict, video_id: str) -> 
             )
             return
         elif video_row["status"] in ("pending", "processing"):
+            logger.info(f"[{video_id}] Already in queue (status={video_row['status']}) — adding delivery for user={user_id}")
             sb.table("deliveries").upsert({
                 "user_id": user_id,
                 "video_id": video_id,
@@ -530,6 +551,7 @@ async def handle_video_request(update: Update, profile: dict, video_id: str) -> 
 
     # Insert into processed_videos + processing_queue + delivery (with user's language)
     channel_id = ""  # Unknown for on-demand, not tied to a channel subscription
+    logger.info(f"[{video_id}] New on-demand video: title={video_title!r}, lang={user_language}, user={user_id}")
     db.insert_new_video(video_id, channel_id, video_title, video_url, language=user_language)
     db.enqueue_video(video_id, video_url, video_title, channel_id, language=user_language, tts_voice=user_tts_voice)
     sb.table("deliveries").upsert({
@@ -539,6 +561,7 @@ async def handle_video_request(update: Update, profile: dict, video_id: str) -> 
         "source": "on_demand",
         "language": user_language,
     }, on_conflict="user_id,video_id").execute()
+    logger.info(f"[{video_id}] On-demand queued — delivery will be sent when processing completes")
 
 
 # ── Handler: subscribe to channel from Telegram ──────────────
@@ -618,10 +641,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     chat_id = str(update.effective_chat.id)
     text = update.message.text.strip()
+    logger.info(f"Message from chat_id={chat_id}: {text[:100]!r}")
 
     # Check if user is connected
     profile = _get_profile_by_chat_id(chat_id)
     if not profile:
+        logger.warning(f"Message from unconnected chat_id={chat_id}")
         await update.message.reply_text(
             "Your Telegram is not connected to a BriefTube account.\n\n"
             f"1. Sign up at {APP_URL}\n"
@@ -633,6 +658,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     video_match = VIDEO_RE.search(text)
     if video_match:
         video_id = video_match.group(1)
+        logger.info(f"Video request: video_id={video_id} from user={profile['id']}")
         await handle_video_request(update, profile, video_id)
         return
 
@@ -650,15 +676,23 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 
 async def handle_options_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle the '⋯ Options' inline button — generate and send a share link."""
+    """Handle the ⚙️ inline button — generate and send a share link."""
     query = update.callback_query
-    await query.answer()  # Remove the spinner
+    logger.info(f"⚙️ Options callback: data={query.data!r} from user={query.from_user.id}")
+    try:
+        await query.answer()  # Remove the spinner
+    except Exception:
+        # Query may have expired (>30s) — still generate the share link
+        pass
 
     # callback_data format: "options_{video_id}_{language}"
-    parts = query.data.split("_", 2)
-    if len(parts) < 3:
+    # Use rpartition to split at the LAST underscore — video IDs can contain underscores
+    # e.g. "options_PJTviWt_59U_fr" → rest="PJTviWt_59U_fr" → video_id="PJTviWt_59U", language="fr"
+    data = query.data  # e.g. "options_dQw4w9WgXcQ_fr"
+    _, _, rest = data.partition("_")  # rest = "dQw4w9WgXcQ_fr"
+    video_id, _, language = rest.rpartition("_")  # split at LAST "_"
+    if not video_id or not language:
         return
-    video_id, language = parts[1], parts[2]
 
     profile = db.get_profile_by_telegram(str(query.from_user.id))
     if not profile:
@@ -697,7 +731,24 @@ async def _error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> 
     if isinstance(context.error, Conflict):
         logger.debug("Bot polling conflict — another instance may be running (deliveries unaffected)")
         return
-    logger.error(f"Bot error: {context.error}")
+    tb = "".join(traceback.format_exception(type(context.error), context.error, context.error.__traceback__))
+    logger.error(f"Bot error: {context.error}\n{tb}")
+
+
+_BOT_COMMANDS = [
+    BotCommand("start", "Connect your account"),
+    BotCommand("status", "Check connection status"),
+    BotCommand("help", "Show all commands"),
+]
+
+
+async def setup_bot_commands(app: Application) -> None:
+    """Register the slash-command menu shown at the left of the Telegram input bar."""
+    try:
+        await app.bot.set_my_commands(_BOT_COMMANDS)
+        logger.info("Bot command menu registered")
+    except Exception as e:
+        logger.warning(f"Could not set bot commands: {e}")
 
 
 def create_bot_application() -> Application:

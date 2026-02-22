@@ -476,7 +476,14 @@ export function DeliverySection({
               </p>
             </div>
           </div>
-          {!telegramConnected && (
+          {telegramConnected ? (
+            <button
+              onClick={openTelegramModal}
+              className="nm-raised-sm text-muted-foreground hover:text-foreground rounded-full px-3 py-1 text-xs transition-all"
+            >
+              Reconnect
+            </button>
+          ) : (
             <Button
               size="sm"
               variant="outline"

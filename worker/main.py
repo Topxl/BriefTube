@@ -27,7 +27,7 @@ from gemini_api import GeminiSummarizer
 from text_cleaner import clean_for_tts
 from tts_processor import text_to_audio, cleanup_audio_files
 from telegram_deliverer import send_audio_to_user
-from bot_handler import create_bot_application, MonitoringAlert, send_daily_report
+from bot_handler import create_bot_application, setup_bot_commands, MonitoringAlert, send_daily_report
 from monitoring import stats
 import rss_scanner
 import db
@@ -653,6 +653,23 @@ async def main():
     bot_app = create_bot_application()
     await bot_app.initialize()
     await bot_app.start()
+
+    # Register the slash-command menu (left of the Telegram input bar)
+    await setup_bot_commands(bot_app)
+
+    # Force Telegram to deliver callback_query updates.
+    # Telegram caches allowed_updates server-side from the last getUpdates/setWebhook call.
+    # If a previous session only requested ["message"], callbacks are silently dropped.
+    # One explicit getUpdates call with the full list fixes the cache before polling starts.
+    try:
+        await bot_app.bot.get_updates(
+            allowed_updates=["message", "callback_query"],
+            timeout=0,
+        )
+        logger.info("Telegram allowed_updates registered: message, callback_query")
+    except Exception as e:
+        logger.warning(f"Could not pre-register allowed_updates: {e}")
+
     try:
         await bot_app.updater.start_polling(allowed_updates=["message", "callback_query"], drop_pending_updates=True)
         logger.info("Telegram bot polling started")
