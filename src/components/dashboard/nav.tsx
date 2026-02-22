@@ -24,7 +24,7 @@ export function DashboardNav() {
   return (
     <>
       {/* Top bar */}
-      <nav className="sticky top-0 z-40 bg-[oklch(0.24_0_0)] shadow-[0_8px_32px_rgba(0,0,0,0.75),inset_0_1px_0_rgba(255,255,255,0.08)]">
+      <nav className="sticky top-0 z-40 border-b border-white/[0.06] bg-transparent backdrop-blur-2xl">
         <div className="mx-auto flex h-14 max-w-[1080px] items-center justify-between px-4 md:px-6">
           {/* Left: logo + nav links */}
           <div className="flex shrink-0 items-center gap-6">

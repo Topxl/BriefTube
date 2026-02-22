@@ -103,7 +103,7 @@ export function WorkerCard() {
   return (
     <div className="flex flex-col gap-3">
       {/* Status header */}
-      <div className="flex items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3">
+      <div className="nm-raised flex items-center justify-between rounded-2xl px-4 py-3">
         <div className="flex items-center gap-3">
           <div
             className={`h-2.5 w-2.5 rounded-full ${
@@ -159,7 +159,7 @@ export function WorkerCard() {
         <Button
           size="sm"
           variant="outline"
-          className="gap-1.5 text-xs"
+          className="gap-1.5 rounded-full text-xs"
           disabled={isBusy || isActive}
           onClick={() => actionMutation.mutate("start")}
         >
@@ -169,7 +169,7 @@ export function WorkerCard() {
         <Button
           size="sm"
           variant="outline"
-          className="gap-1.5 text-xs"
+          className="gap-1.5 rounded-full text-xs"
           disabled={isBusy || !isActive}
           onClick={() => actionMutation.mutate("stop")}
         >
@@ -179,7 +179,7 @@ export function WorkerCard() {
         <Button
           size="sm"
           variant="outline"
-          className="gap-1.5 text-xs"
+          className="gap-1.5 rounded-full text-xs"
           disabled={isBusy}
           onClick={() => actionMutation.mutate("restart")}
         >
@@ -199,7 +199,7 @@ export function WorkerCard() {
 
       {/* Recent errors */}
       {(data?.recentErrors.length ?? 0) > 0 && (
-        <div className="rounded-xl border border-red-500/20 bg-red-500/[0.04] px-4 py-3">
+        <div className="nm-raised rounded-2xl border border-red-500/[0.12] bg-red-500/[0.04] px-4 py-3">
           <div className="mb-2 flex items-center gap-1.5">
             <AlertCircle className="h-3.5 w-3.5 text-red-400" />
             <p className="text-xs font-medium text-red-400">
@@ -217,8 +217,8 @@ export function WorkerCard() {
       )}
 
       {/* Live logs */}
-      <div className="rounded-xl border border-white/[0.06] bg-black/20">
-        <div className="flex items-center gap-1.5 border-b border-white/[0.06] px-4 py-2">
+      <div className="nm-raised overflow-hidden rounded-2xl">
+        <div className="flex items-center gap-1.5 border-b border-white/[0.04] px-4 py-2">
           <Terminal className="text-muted-foreground h-3.5 w-3.5" />
           <p className="text-muted-foreground text-xs font-medium">
             Logs (60 dernières lignes)

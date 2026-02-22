@@ -232,7 +232,7 @@ export function EditListForm({
   return (
     <div className="bg-background min-h-screen">
       {/* Top bar */}
-      <div className="sticky top-0 z-10 border-b border-white/[0.06] bg-black/80 backdrop-blur-xl">
+      <div className="sticky top-0 z-10 border-b border-white/[0.06] bg-transparent backdrop-blur-2xl">
         <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
           <Link
             href={`/lists/${listId}`}
@@ -246,7 +246,7 @@ export function EditListForm({
               type="button"
               onClick={handleDelete}
               disabled={deleting}
-              className="text-muted-foreground text-xs transition-colors hover:text-red-400 disabled:opacity-50"
+              className="nm-raised-sm text-muted-foreground rounded-full px-3 py-1 text-xs transition-all hover:text-red-400 disabled:opacity-50"
             >
               {deleting ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -259,7 +259,7 @@ export function EditListForm({
               form="edit-list-form"
               disabled={submitting || !name.trim()}
               size="sm"
-              className="bg-red-600 hover:bg-red-500"
+              className="rounded-full bg-red-600 hover:bg-red-500"
             >
               {submitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
               Save changes
@@ -268,11 +268,7 @@ export function EditListForm({
         </div>
       </div>
 
-      <div className="mx-auto max-w-2xl px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold">Edit list</h1>
-        </div>
-
+      <div className="mx-auto max-w-2xl px-4 py-6">
         <form
           id="edit-list-form"
           onSubmit={(e) => void handleSave(e)}
@@ -280,129 +276,140 @@ export function EditListForm({
           data-form-type="other"
           suppressHydrationWarning
         >
-          {/* Name */}
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium">Name</label>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              maxLength={100}
-            />
-          </div>
+          {/* Details */}
+          <section className="space-y-2">
+            <h2 className="text-muted-foreground/50 px-1 text-xs font-medium tracking-wide uppercase">
+              Details
+            </h2>
+            <div className="nm-raised overflow-hidden rounded-2xl">
+              {/* Name */}
+              <div className="px-4 py-3.5">
+                <label className="text-muted-foreground mb-2 block text-xs font-medium">
+                  Name
+                </label>
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  maxLength={100}
+                  className="nm-inset rounded-xl border-transparent bg-transparent focus-visible:ring-0"
+                />
+              </div>
 
-          {/* Description */}
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium">
-              Description{" "}
-              <span className="text-muted-foreground font-normal">
-                (optional)
-              </span>
-            </label>
-            <Textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              maxLength={500}
-              rows={3}
-            />
-          </div>
+              {/* Description */}
+              <div className="border-t border-white/[0.04] px-4 py-3.5">
+                <label className="text-muted-foreground mb-2 block text-xs font-medium">
+                  Description{" "}
+                  <span className="text-muted-foreground/40 font-normal">
+                    (optional)
+                  </span>
+                </label>
+                <Textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  maxLength={500}
+                  rows={3}
+                  className="nm-inset rounded-xl border-transparent bg-transparent focus-visible:ring-0"
+                />
+              </div>
 
-          {/* Category */}
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium">
-              Category{" "}
-              <span className="text-muted-foreground font-normal">
-                (optional)
-              </span>
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {CATEGORIES.map((cat) => (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => setCategory(category === cat ? "" : cat)}
-                  className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                    category === cat
-                      ? "border-red-500/30 bg-red-500/[0.08] text-red-400"
-                      : "text-muted-foreground hover:text-foreground border-white/[0.08] hover:border-white/20"
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
+              {/* Category */}
+              <div className="border-t border-white/[0.04] px-4 py-3.5">
+                <label className="text-muted-foreground mb-2.5 block text-xs font-medium">
+                  Category{" "}
+                  <span className="text-muted-foreground/40 font-normal">
+                    (optional)
+                  </span>
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {CATEGORIES.map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setCategory(category === cat ? "" : cat)}
+                      className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${
+                        category === cat
+                          ? "nm-inset text-red-400"
+                          : "nm-raised-sm text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
-          </div>
+          </section>
 
           {/* Channels */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium">
+          <section className="space-y-2">
+            <div className="flex items-center justify-between px-1">
+              <h2 className="text-muted-foreground/50 text-xs font-medium tracking-wide uppercase">
                 Channels{" "}
-                <span className="text-muted-foreground font-normal">
-                  ({channels.length})
-                </span>
-              </label>
+                <span className="normal-case">({channels.length})</span>
+              </h2>
               <button
                 type="button"
                 onClick={() => void importFromSubscriptions()}
                 disabled={importing}
-                className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-xs transition-colors disabled:opacity-50"
+                className="nm-raised-sm text-muted-foreground hover:text-foreground flex items-center gap-1.5 rounded-full px-3 py-1 text-xs transition-all disabled:opacity-50"
               >
                 {importing ? (
                   <Loader2 className="h-3 w-3 animate-spin" />
                 ) : (
                   <Download className="h-3 w-3" />
                 )}
-                Import my subscriptions
+                Import subscriptions
               </button>
             </div>
 
-            <div className="flex gap-2">
-              <Input
-                type="text"
-                value={channelUrl}
-                onChange={(e) => {
-                  setChannelUrl(e.target.value);
-                  setChannelError("");
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    void addChannel();
-                  }
-                }}
-                placeholder="youtube.com/@channel or channel ID"
-                className="flex-1"
-                autoComplete="off"
-                data-1p-ignore
-                data-lpignore="true"
-              />
-              <Button
-                type="button"
-                onClick={() => void addChannel()}
-                disabled={addingChannel || !channelUrl.trim()}
-                variant="outline"
-                className="shrink-0"
-              >
-                {addingChannel ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Plus className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
+            <div className="nm-raised overflow-hidden rounded-2xl">
+              {/* URL input row */}
+              <div className="flex items-center gap-2 px-4 py-3">
+                <Input
+                  type="text"
+                  value={channelUrl}
+                  onChange={(e) => {
+                    setChannelUrl(e.target.value);
+                    setChannelError("");
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      void addChannel();
+                    }
+                  }}
+                  placeholder="youtube.com/@channel or channel ID"
+                  className="nm-inset flex-1 rounded-xl border-transparent bg-transparent focus-visible:ring-0"
+                  autoComplete="off"
+                  data-1p-ignore
+                  data-lpignore="true"
+                />
+                <Button
+                  type="button"
+                  onClick={() => void addChannel()}
+                  disabled={addingChannel || !channelUrl.trim()}
+                  variant="outline"
+                  className="shrink-0 rounded-full"
+                >
+                  {addingChannel ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Plus className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
 
-            {channelError && (
-              <p className="text-xs text-red-400">{channelError}</p>
-            )}
+              {channelError && (
+                <p className="px-4 pb-3 text-xs text-red-400">{channelError}</p>
+              )}
 
-            {channels.length > 0 && (
-              <div className="overflow-hidden rounded-xl border border-white/[0.06]">
-                <div className="divide-y divide-white/[0.04]">
+              {channels.length > 0 && (
+                <div className="divide-y divide-white/[0.04] border-t border-white/[0.04]">
                   {channels.map((ch) => (
                     <div
                       key={ch.channel_id}
-                      className="flex items-center gap-3 px-4 py-3"
+                      className="flex items-center gap-3 px-4 py-2.5"
                     >
                       {ch.channel_avatar_url ? (
                         <Image
@@ -414,7 +421,7 @@ export function EditListForm({
                           className="h-7 w-7 shrink-0 rounded-full"
                         />
                       ) : (
-                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-red-500/15 text-xs font-bold text-red-400">
+                        <div className="nm-inset-sm flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-red-500/15 text-xs font-bold text-red-400">
                           {ch.channel_name.charAt(0).toUpperCase()}
                         </div>
                       )}
@@ -431,9 +438,9 @@ export function EditListForm({
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          </section>
         </form>
       </div>
     </div>

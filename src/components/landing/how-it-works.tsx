@@ -70,7 +70,7 @@ export function HowItWorks() {
                 {i < tl.steps.length - 1 && (
                   <div className="absolute top-8 left-[calc(50%+40px)] hidden h-px w-[calc(100%-80px)] bg-gradient-to-r from-white/[0.1] to-white/[0.04] md:block" />
                 )}
-                <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/[0.1] bg-white/[0.06] text-red-500 shadow-[0_4px_16px_rgba(0,0,0,0.2)] backdrop-blur-sm">
+                <div className="nm-raised mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl text-red-400">
                   {stepIcons[i]}
                 </div>
                 <div className="mb-2 bg-gradient-to-r from-red-500 to-orange-400 bg-clip-text text-sm font-semibold text-transparent">

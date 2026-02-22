@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2 } from "@/lib/icons";
 
@@ -23,81 +22,86 @@ export default async function PricingPage() {
   const isPro = profile?.subscription_status === "active";
 
   return (
-    <div className="container max-w-4xl py-12">
-      <div className="mb-12 text-center">
-        <h1 className="text-4xl font-bold">Choose Your Plan</h1>
-        <p className="text-muted-foreground mt-4">
+    <div className="mx-auto max-w-2xl px-4 py-12">
+      <div className="mb-10 text-center">
+        <h1 className="text-3xl font-bold">Choose Your Plan</h1>
+        <p className="text-muted-foreground mt-2 text-sm">
           Simple pricing. Upgrade or cancel anytime.
         </p>
       </div>
 
-      <div className="grid gap-8 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2">
         {/* Free Plan */}
-        <Card className={!isPro ? "border-primary" : ""}>
-          <CardHeader>
-            <CardTitle>Free</CardTitle>
-            <div className="mt-4">
+        <div className="nm-raised overflow-hidden rounded-2xl">
+          <div className="border-b border-white/[0.04] px-5 py-5">
+            <p className="text-sm font-semibold tracking-wide uppercase">
+              Free
+            </p>
+            <div className="mt-3 flex items-baseline gap-1">
               <span className="text-4xl font-bold">$0</span>
-              <span className="text-muted-foreground">/month</span>
+              <span className="text-muted-foreground text-sm">/month</span>
             </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <ul className="space-y-2">
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="text-primary size-4" />
-                <span className="text-sm">5 YouTube channels</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="text-primary size-4" />
-                <span className="text-sm">AI audio summaries</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="text-primary size-4" />
-                <span className="text-sm">Telegram delivery</span>
-              </li>
+          </div>
+          <div className="px-5 py-4">
+            <ul className="space-y-2.5">
+              {[
+                "5 YouTube channels",
+                "AI audio summaries",
+                "Telegram delivery",
+              ].map((f) => (
+                <li key={f} className="flex items-center gap-2 text-sm">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+                  {f}
+                </li>
+              ))}
             </ul>
             {!isPro && (
-              <Button disabled className="w-full">
+              <Button
+                disabled
+                className="mt-5 w-full rounded-full"
+                variant="outline"
+              >
                 Current Plan
               </Button>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Pro Plan */}
-        <Card className={isPro ? "border-primary shadow-lg" : ""}>
-          <CardHeader>
-            <CardTitle>Pro</CardTitle>
-            <div className="mt-4">
+        <div className="nm-raised relative overflow-hidden rounded-2xl border border-red-500/[0.12]">
+          <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+            <span className="nm-raised-sm inline-flex items-center rounded-full bg-red-600 px-3 py-0.5 text-xs font-medium text-white shadow-[0_0_12px_rgba(239,68,68,0.3)]">
+              Most popular
+            </span>
+          </div>
+          <div className="border-b border-white/[0.04] px-5 pt-7 pb-5">
+            <p className="text-sm font-semibold tracking-wide uppercase">Pro</p>
+            <div className="mt-3 flex items-baseline gap-1">
               <span className="text-4xl font-bold">$9</span>
-              <span className="text-muted-foreground">/month</span>
+              <span className="text-muted-foreground text-sm">/month</span>
             </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <ul className="space-y-2">
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="text-primary size-4" />
-                <span className="text-sm">Unlimited channels</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="text-primary size-4" />
-                <span className="text-sm">Priority processing</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="text-primary size-4" />
-                <span className="text-sm">Choose your TTS voice</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="text-primary size-4" />
-                <span className="text-sm">No branding</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="text-primary size-4" />
-                <span className="text-sm">Early access to features</span>
-              </li>
+          </div>
+          <div className="px-5 py-4">
+            <ul className="space-y-2.5">
+              {[
+                "Unlimited channels",
+                "Priority processing",
+                "Choose your TTS voice",
+                "No branding",
+                "Early access to features",
+              ].map((f) => (
+                <li key={f} className="flex items-center gap-2 text-sm">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+                  {f}
+                </li>
+              ))}
             </ul>
             {isPro ? (
-              <Button disabled className="w-full">
+              <Button
+                disabled
+                className="mt-5 w-full rounded-full"
+                variant="outline"
+              >
                 Current Plan
               </Button>
             ) : (
@@ -107,13 +111,16 @@ export default async function PricingPage() {
                 data-form-type="other"
                 suppressHydrationWarning
               >
-                <Button type="submit" className="w-full">
+                <Button
+                  type="submit"
+                  className="mt-5 w-full rounded-full bg-red-600 hover:bg-red-500"
+                >
                   Upgrade to Pro
                 </Button>
               </form>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     </div>
   );

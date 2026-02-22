@@ -77,8 +77,8 @@ export default async function ListDetailPage({ params }: Props) {
   return (
     <div className="bg-background min-h-screen">
       {/* Top bar */}
-      <div className="border-b border-white/[0.06]">
-        <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
+      <div className="sticky top-0 z-10 border-b border-white/[0.06] bg-transparent backdrop-blur-2xl">
+        <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
           <Link
             href="/lists"
             className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-sm transition-colors"
@@ -109,7 +109,7 @@ export default async function ListDetailPage({ params }: Props) {
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold">{list.name}</h1>
               {list.category && (
-                <span className="text-muted-foreground rounded-full border border-white/[0.06] px-2 py-0.5 text-[10px]">
+                <span className="nm-raised-sm text-muted-foreground rounded-full px-2 py-0.5 text-[10px]">
                   {list.category}
                 </span>
               )}
@@ -132,24 +132,24 @@ export default async function ListDetailPage({ params }: Props) {
         </div>
 
         {/* Channels grid */}
-        <div className="space-y-2">
-          <h2 className="text-sm font-semibold">
+        <section className="space-y-2">
+          <h2 className="text-muted-foreground/50 px-1 text-xs font-medium tracking-wide uppercase">
             {channels.length} channel{channels.length !== 1 ? "s" : ""}
           </h2>
 
           {channels.length === 0 ? (
-            <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] py-10 text-center">
+            <div className="nm-raised rounded-2xl py-10 text-center">
               <p className="text-muted-foreground text-sm">
                 No channels in this list yet.
               </p>
             </div>
           ) : (
-            <div className="overflow-hidden rounded-xl border border-white/[0.06]">
+            <div className="nm-raised overflow-hidden rounded-2xl">
               <div className="divide-y divide-white/[0.04]">
                 {channels.map((ch) => (
                   <div
                     key={ch.id}
-                    className="flex items-center gap-3 px-4 py-3"
+                    className="flex items-center gap-3 px-4 py-2.5"
                   >
                     {ch.channel_avatar_url ? (
                       <Image
@@ -161,7 +161,7 @@ export default async function ListDetailPage({ params }: Props) {
                         className="h-8 w-8 shrink-0 rounded-full"
                       />
                     ) : (
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-500/15 text-xs font-bold text-red-400">
+                      <div className="nm-inset-sm flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-500/15 text-xs font-bold text-red-400">
                         {ch.channel_name.charAt(0).toUpperCase()}
                       </div>
                     )}
@@ -184,7 +184,7 @@ export default async function ListDetailPage({ params }: Props) {
               </div>
             </div>
           )}
-        </div>
+        </section>
       </div>
     </div>
   );

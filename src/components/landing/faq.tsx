@@ -45,7 +45,7 @@ export function FAQ() {
             {tl.items.map((faq, i) => (
               <div
                 key={i}
-                className="rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-white/[0.05]"
+                className="nm-raised rounded-2xl transition-all duration-300 hover:-translate-y-0.5"
               >
                 <button
                   onClick={() => setOpen(open === i ? null : i)}

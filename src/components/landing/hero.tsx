@@ -68,10 +68,19 @@ export function Hero() {
           className="mx-auto mt-16 max-w-sm"
           style={{ animation: "float 6s ease-in-out infinite" }}
         >
-          <div className="rounded-2xl border border-white/[0.08] border-t-white/[0.15] bg-white/[0.04] p-4 shadow-[0_12px_48px_rgba(0,0,0,0.35)] backdrop-blur-xl">
+          <div className="nm-raised rounded-2xl p-4">
             <div className="mb-3 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-600 text-sm font-bold text-white shadow-[0_0_16px_rgba(239,68,68,0.3)]">
-                BT
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-600 shadow-[0_0_16px_rgba(239,68,68,0.3)]">
+                <svg
+                  width="22"
+                  height="18"
+                  viewBox="0 0 20 16"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path d="M0 0L9 8L0 16V0Z" fill="white" />
+                  <path d="M11 0L20 8L11 16V0Z" fill="white" opacity="0.85" />
+                </svg>
               </div>
               <div className="text-left">
                 <p className="text-sm font-medium">BriefTube</p>
@@ -81,13 +90,13 @@ export function Hero() {
               </div>
             </div>
             <div className="space-y-3">
-              <div className="rounded-xl border border-white/[0.06] bg-white/[0.04] p-3">
+              <div className="nm-inset rounded-xl p-3">
                 <p className="text-muted-foreground text-xs font-medium">
                   {tl.mockupVideo1Channel}
                 </p>
                 <p className="text-sm font-medium">{tl.mockupVideo1Title}</p>
                 <div className="mt-2 flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-600/20 text-red-500">
+                  <div className="nm-raised-sm flex h-8 w-8 items-center justify-center rounded-full bg-red-600/[0.15] text-red-400">
                     <svg
                       className="h-4 w-4"
                       fill="currentColor"
@@ -104,13 +113,13 @@ export function Hero() {
                   </span>
                 </div>
               </div>
-              <div className="rounded-xl border border-white/[0.06] bg-white/[0.04] p-3">
+              <div className="nm-inset rounded-xl p-3">
                 <p className="text-muted-foreground text-xs font-medium">
                   {tl.mockupVideo2Channel}
                 </p>
                 <p className="text-sm font-medium">{tl.mockupVideo2Title}</p>
                 <div className="mt-2 flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-600/20 text-red-500">
+                  <div className="nm-raised-sm flex h-8 w-8 items-center justify-center rounded-full bg-red-600/[0.15] text-red-400">
                     <svg
                       className="h-4 w-4"
                       fill="currentColor"
