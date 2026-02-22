@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,366 +14,57 @@ import {
   Youtube,
   Headphones,
   Send,
+  Layers,
 } from "@/lib/icons";
 import type { Tables } from "@/types/supabase";
+import { SiteConfig } from "@/site-config";
+import { languages } from "@/lib/languages";
+import type { Language } from "@/lib/languages";
 
 type Subscription = Tables<"subscriptions">;
 
-type Step = 1 | 2 | 3;
-
-type Language = {
+type CuratedList = {
+  id: string;
   name: string;
-  nativeName: string;
-  code: string;
-  voice: string;
+  description: string | null;
+  category: string | null;
+  channelCount: number;
 };
 
-const languages: Language[] = [
-  {
-    name: "English",
-    nativeName: "English",
-    code: "en",
-    voice: "en-US-JennyNeural",
-  },
-  {
-    name: "Spanish",
-    nativeName: "Español",
-    code: "es",
-    voice: "es-ES-ElviraNeural",
-  },
-  {
-    name: "French",
-    nativeName: "Français",
-    code: "fr",
-    voice: "fr-FR-DeniseNeural",
-  },
-  {
-    name: "German",
-    nativeName: "Deutsch",
-    code: "de",
-    voice: "de-DE-KatjaNeural",
-  },
-  {
-    name: "Portuguese",
-    nativeName: "Português",
-    code: "pt",
-    voice: "pt-BR-FranciscaNeural",
-  },
-  {
-    name: "Chinese",
-    nativeName: "中文",
-    code: "zh",
-    voice: "zh-CN-XiaoxiaoNeural",
-  },
-  {
-    name: "Japanese",
-    nativeName: "日本語",
-    code: "ja",
-    voice: "ja-JP-NanamiNeural",
-  },
-  {
-    name: "Korean",
-    nativeName: "한국어",
-    code: "ko",
-    voice: "ko-KR-SunHiNeural",
-  },
-  {
-    name: "Arabic",
-    nativeName: "العربية",
-    code: "ar",
-    voice: "ar-SA-ZariyahNeural",
-  },
-  {
-    name: "Hindi",
-    nativeName: "हिन्दी",
-    code: "hi",
-    voice: "hi-IN-SwaraNeural",
-  },
-  {
-    name: "Russian",
-    nativeName: "Русский",
-    code: "ru",
-    voice: "ru-RU-SvetlanaNeural",
-  },
-  {
-    name: "Italian",
-    nativeName: "Italiano",
-    code: "it",
-    voice: "it-IT-ElsaNeural",
-  },
-  {
-    name: "Dutch",
-    nativeName: "Nederlands",
-    code: "nl",
-    voice: "nl-NL-ColetteNeural",
-  },
-  {
-    name: "Turkish",
-    nativeName: "Türkçe",
-    code: "tr",
-    voice: "tr-TR-EmelNeural",
-  },
-  {
-    name: "Polish",
-    nativeName: "Polski",
-    code: "pl",
-    voice: "pl-PL-ZofiaNeural",
-  },
-  {
-    name: "Swedish",
-    nativeName: "Svenska",
-    code: "sv",
-    voice: "sv-SE-SofieNeural",
-  },
-  {
-    name: "Norwegian",
-    nativeName: "Norsk",
-    code: "nb",
-    voice: "nb-NO-PernilleNeural",
-  },
-  {
-    name: "Danish",
-    nativeName: "Dansk",
-    code: "da",
-    voice: "da-DK-ChristelNeural",
-  },
-  {
-    name: "Finnish",
-    nativeName: "Suomi",
-    code: "fi",
-    voice: "fi-FI-SelmaNeural",
-  },
-  {
-    name: "Indonesian",
-    nativeName: "Indonesia",
-    code: "id",
-    voice: "id-ID-GadisNeural",
-  },
-  {
-    name: "Malay",
-    nativeName: "Melayu",
-    code: "ms",
-    voice: "ms-MY-YasminNeural",
-  },
-  {
-    name: "Vietnamese",
-    nativeName: "Tiếng Việt",
-    code: "vi",
-    voice: "vi-VN-HoaiMyNeural",
-  },
-  {
-    name: "Thai",
-    nativeName: "ภาษาไทย",
-    code: "th",
-    voice: "th-TH-PremwadeeNeural",
-  },
-  {
-    name: "Ukrainian",
-    nativeName: "Українська",
-    code: "uk",
-    voice: "uk-UA-PolinaNeural",
-  },
-  {
-    name: "Czech",
-    nativeName: "Čeština",
-    code: "cs",
-    voice: "cs-CZ-VlastaNeural",
-  },
-  {
-    name: "Romanian",
-    nativeName: "Română",
-    code: "ro",
-    voice: "ro-RO-AlinaNeural",
-  },
-  {
-    name: "Hungarian",
-    nativeName: "Magyar",
-    code: "hu",
-    voice: "hu-HU-NoemiNeural",
-  },
-  {
-    name: "Greek",
-    nativeName: "Ελληνικά",
-    code: "el",
-    voice: "el-GR-AthinaNeural",
-  },
-  {
-    name: "Hebrew",
-    nativeName: "עברית",
-    code: "he",
-    voice: "he-IL-HilaNeural",
-  },
-  {
-    name: "Bengali",
-    nativeName: "বাংলা",
-    code: "bn",
-    voice: "bn-IN-TanishaaNeural",
-  },
-  { name: "Urdu", nativeName: "اردو", code: "ur", voice: "ur-PK-UzmaNeural" },
-  {
-    name: "Persian",
-    nativeName: "فارسی",
-    code: "fa",
-    voice: "fa-IR-DilaraNeural",
-  },
-  {
-    name: "Filipino",
-    nativeName: "Filipino",
-    code: "fil",
-    voice: "fil-PH-BlessicaNeural",
-  },
-  {
-    name: "Tamil",
-    nativeName: "தமிழ்",
-    code: "ta",
-    voice: "ta-IN-PallaviNeural",
-  },
-  {
-    name: "Telugu",
-    nativeName: "తెలుగు",
-    code: "te",
-    voice: "te-IN-ShrutiNeural",
-  },
-  {
-    name: "Kannada",
-    nativeName: "ಕನ್ನಡ",
-    code: "kn",
-    voice: "kn-IN-SapnaNeural",
-  },
-  {
-    name: "Malayalam",
-    nativeName: "മലയാളം",
-    code: "ml",
-    voice: "ml-IN-SobhanaNeural",
-  },
-  {
-    name: "Gujarati",
-    nativeName: "ગુજરાતી",
-    code: "gu",
-    voice: "gu-IN-DhwaniNeural",
-  },
-  {
-    name: "Marathi",
-    nativeName: "मराठी",
-    code: "mr",
-    voice: "mr-IN-AarohiNeural",
-  },
-  {
-    name: "Punjabi",
-    nativeName: "ਪੰਜਾਬੀ",
-    code: "pa",
-    voice: "pa-IN-VaaniNeural",
-  },
-  {
-    name: "Swahili",
-    nativeName: "Kiswahili",
-    code: "sw",
-    voice: "sw-KE-ZuriNeural",
-  },
-  {
-    name: "Bulgarian",
-    nativeName: "Български",
-    code: "bg",
-    voice: "bg-BG-KalinaNeural",
-  },
-  {
-    name: "Croatian",
-    nativeName: "Hrvatski",
-    code: "hr",
-    voice: "hr-HR-GabrijelaNeural",
-  },
-  {
-    name: "Slovak",
-    nativeName: "Slovenčina",
-    code: "sk",
-    voice: "sk-SK-ViktoriaNeural",
-  },
-  {
-    name: "Lithuanian",
-    nativeName: "Lietuvių",
-    code: "lt",
-    voice: "lt-LT-OnaNeural",
-  },
-  {
-    name: "Latvian",
-    nativeName: "Latviešu",
-    code: "lv",
-    voice: "lv-LV-EveritaNeural",
-  },
-  {
-    name: "Estonian",
-    nativeName: "Eesti",
-    code: "et",
-    voice: "et-EE-AnuNeural",
-  },
-  {
-    name: "Catalan",
-    nativeName: "Català",
-    code: "ca",
-    voice: "ca-ES-JoanaNeural",
-  },
-  {
-    name: "Serbian",
-    nativeName: "Српски",
-    code: "sr",
-    voice: "sr-RS-SophieNeural",
-  },
-  {
-    name: "Slovenian",
-    nativeName: "Slovenščina",
-    code: "sl",
-    voice: "sl-SI-PetraNeural",
-  },
-  {
-    name: "Nepali",
-    nativeName: "नेपाली",
-    code: "ne",
-    voice: "ne-NP-HemkalaNeural",
-  },
-  {
-    name: "Amharic",
-    nativeName: "አማርኛ",
-    code: "am",
-    voice: "am-ET-MekdesNeural",
-  },
-  {
-    name: "Azerbaijani",
-    nativeName: "Azərbaycan",
-    code: "az",
-    voice: "az-AZ-BanuNeural",
-  },
-  {
-    name: "Georgian",
-    nativeName: "ქართული",
-    code: "ka",
-    voice: "ka-GE-EkaNeural",
-  },
-  {
-    name: "Kazakh",
-    nativeName: "Қазақ",
-    code: "kk",
-    voice: "kk-KZ-AigulNeural",
-  },
-];
+type Step = 1 | 2 | 3;
 
 type Props = {
   initialVoice: string;
+  referralCode?: string;
+  curatedLists: CuratedList[];
 };
 
-export function OnboardingWizard({ initialVoice }: Props) {
+export function OnboardingWizard({
+  initialVoice,
+  referralCode,
+  curatedLists,
+}: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createClient();
 
   const [step, setStep] = useState<Step>(1);
+  const [selectedListId, setSelectedListId] = useState<string | null>(null);
+  const [followingList, setFollowingList] = useState(false);
+
+  // Step 1 — manual add (secondary)
   const [sources, setSources] = useState<Subscription[]>([]);
   const [url, setUrl] = useState("");
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState("");
   const [showManualAdd, setShowManualAdd] = useState(false);
+
+  // Step 2 — language
   const [voice, setVoice] = useState(initialVoice);
   const [savingVoice, setSavingVoice] = useState(false);
   const [langSearch, setLangSearch] = useState("");
+
+  // Step 3 — Telegram
   const [connectToken, setConnectToken] = useState("");
   const [telegramConnected, setTelegramConnected] = useState(false);
   const [completing, setCompleting] = useState(false);
@@ -402,7 +92,6 @@ export function OnboardingWizard({ initialVoice }: Props) {
       toast.success(
         `${count} channel${count !== 1 ? "s" : ""} imported from YouTube!`,
       );
-      // Load the imported sources and advance to step 2
       void (async () => {
         const {
           data: { user },
@@ -464,10 +153,37 @@ export function OnboardingWizard({ initialVoice }: Props) {
   useEffect(() => {
     if (telegramConnected) {
       toast.success("Telegram connected!");
-      const timer = setTimeout(() => void complete(), 2000);
+      const timer = setTimeout(() => void complete(), 4000);
       return () => clearTimeout(timer);
     }
   }, [telegramConnected]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const followListAndAdvance = async () => {
+    if (!selectedListId) {
+      setStep(2);
+      return;
+    }
+    setFollowingList(true);
+    try {
+      const res = await fetch("/api/onboarding/follow-list", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ listId: selectedListId }),
+      });
+      if (res.ok) {
+        const data = (await res.json()) as { subscribed: number };
+        if (data.subscribed > 0) {
+          toast.success(`${data.subscribed} channels added!`);
+        }
+      }
+    } catch {
+      toast.error("Failed to subscribe. Please try again.");
+      setFollowingList(false);
+      return;
+    }
+    setFollowingList(false);
+    setStep(2);
+  };
 
   const addSource = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -535,42 +251,79 @@ export function OnboardingWizard({ initialVoice }: Props) {
         ))}
       </div>
 
-      {/* Step 1: Add a source */}
+      {/* Step 1: Pick a curated playlist */}
       {step === 1 && (
         <div className="space-y-6">
           <div className="space-y-4">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-red-500/20 bg-red-500/[0.08]">
-              <Youtube className="h-7 w-7 text-red-400" />
+              <Layers className="h-7 w-7 text-red-400" />
             </div>
             <div>
               <p className="text-muted-foreground mb-1 text-sm font-medium">
                 Step 1 of 3
               </p>
-              <h1 className="text-2xl font-bold">Import your subscriptions</h1>
+              <h1 className="text-2xl font-bold">
+                What do you want to listen to?
+              </h1>
               <p className="text-muted-foreground mt-1.5 text-sm">
-                Connect your YouTube account to import all your channels in one
-                click.
+                Pick a playlist and get audio summaries delivered automatically
+                to your Telegram.
               </p>
             </div>
           </div>
 
-          {/* PRIMARY: YouTube import */}
-          <a
-            href="/api/youtube/auth"
-            className="flex w-full items-center justify-center gap-3 rounded-xl bg-red-600 px-4 py-3.5 text-sm font-semibold text-white shadow-[0_0_24px_rgba(239,68,68,0.2)] transition-all hover:bg-red-500 hover:shadow-[0_0_32px_rgba(239,68,68,0.3)]"
-          >
-            <Youtube className="h-5 w-5" />
-            Import from YouTube
-          </a>
+          {/* Curated list cards */}
+          <div className="grid grid-cols-2 gap-2">
+            {curatedLists.map((list) => (
+              <button
+                key={list.id}
+                type="button"
+                onClick={() =>
+                  setSelectedListId(list.id === selectedListId ? null : list.id)
+                }
+                className={`flex flex-col gap-1 rounded-xl border p-3 text-left transition-all ${
+                  selectedListId === list.id
+                    ? "border-red-500/30 bg-red-500/[0.06] ring-1 ring-red-500/20"
+                    : "border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]"
+                }`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-sm leading-snug font-medium">
+                    {list.name.replace("Best of ", "")}
+                  </p>
+                  {selectedListId === list.id && (
+                    <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-red-400" />
+                  )}
+                </div>
+                <p className="text-muted-foreground text-[10px]">
+                  {list.channelCount} channels
+                </p>
+              </button>
+            ))}
+          </div>
 
-          {/* SECONDARY: manual add toggle */}
+          {/* Secondary options */}
           <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="h-px flex-1 bg-white/[0.06]" />
+              <span className="text-muted-foreground text-[11px]">or</span>
+              <div className="h-px flex-1 bg-white/[0.06]" />
+            </div>
+
+            <a
+              href="/api/youtube/auth"
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/[0.06] px-4 py-2.5 text-sm font-medium text-white/60 transition-all hover:bg-white/[0.04] hover:text-white/90"
+            >
+              <Youtube className="h-4 w-4 text-red-400" />
+              Import from YouTube
+            </a>
+
             <button
               type="button"
               onClick={() => setShowManualAdd((v) => !v)}
               className="text-muted-foreground hover:text-foreground w-full text-center text-xs transition-colors"
             >
-              {showManualAdd ? "Hide manual add" : "Or add a channel manually"}
+              {showManualAdd ? "Hide manual add" : "Add a channel manually"}
             </button>
 
             {showManualAdd && (
@@ -607,49 +360,14 @@ export function OnboardingWizard({ initialVoice }: Props) {
                 </Button>
               </form>
             )}
+            {addError && <p className="text-xs text-red-400">{addError}</p>}
+            {sources.length > 0 && (
+              <p className="text-muted-foreground text-xs">
+                {sources.length} channel{sources.length > 1 ? "s" : ""} added
+                manually.
+              </p>
+            )}
           </div>
-
-          {addError && <p className="text-xs text-red-400">{addError}</p>}
-
-          {sources.length > 0 && (
-            <div className="space-y-2">
-              {sources.map((source) => (
-                <div
-                  key={source.id}
-                  className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 ${
-                    source.active
-                      ? "border-emerald-500/15 bg-emerald-500/[0.04]"
-                      : "border-white/[0.06] bg-white/[0.02] opacity-60"
-                  }`}
-                >
-                  {source.channel_avatar_url ? (
-                    <Image
-                      src={source.channel_avatar_url}
-                      alt={source.channel_name}
-                      width={28}
-                      height={28}
-                      className="h-7 w-7 shrink-0 rounded-full"
-                      suppressHydrationWarning
-                    />
-                  ) : (
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-red-500/15 text-xs font-bold text-red-400">
-                      {source.channel_name.charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                  <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                    {source.channel_name}
-                  </span>
-                  {source.active ? (
-                    <Check className="h-4 w-4 shrink-0 text-emerald-400" />
-                  ) : (
-                    <span className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
-                      Paused
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
 
           <div className="flex items-center justify-between pt-2">
             <button
@@ -657,15 +375,24 @@ export function OnboardingWizard({ initialVoice }: Props) {
               onClick={() => setStep(2)}
               className="text-muted-foreground hover:text-foreground text-xs transition-colors"
             >
-              Later
+              Skip for now
             </button>
             <Button
-              onClick={() => setStep(2)}
-              disabled={sources.length === 0}
+              onClick={() => void followListAndAdvance()}
+              disabled={followingList}
               className="bg-red-600 hover:bg-red-500"
             >
-              Continue
-              <ArrowRight className="ml-1.5 h-4 w-4" />
+              {followingList ? (
+                <>
+                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                  Subscribing…
+                </>
+              ) : (
+                <>
+                  Continue
+                  <ArrowRight className="ml-1.5 h-4 w-4" />
+                </>
+              )}
             </Button>
           </div>
         </div>
@@ -767,13 +494,55 @@ export function OnboardingWizard({ initialVoice }: Props) {
           </div>
 
           {telegramConnected ? (
-            <div className="flex flex-col items-center gap-3 rounded-xl border border-emerald-500/15 bg-emerald-500/[0.04] py-8 text-center">
+            <div className="flex flex-col items-center gap-3 rounded-xl border border-emerald-500/15 bg-emerald-500/[0.04] px-6 py-8 text-center">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/20">
                 <Check className="h-6 w-6 text-emerald-400" />
               </div>
-              <div>
+              <div className="w-full space-y-4">
                 <p className="font-semibold text-emerald-400">Connected!</p>
-                <p className="text-muted-foreground mt-0.5 text-sm">
+                {referralCode && (
+                  <div className="space-y-2 rounded-lg border border-white/[0.06] bg-white/[0.02] p-3 text-left">
+                    <p className="text-xs font-medium">
+                      Share BriefTube with friends
+                    </p>
+                    <p className="text-muted-foreground truncate text-[11px]">
+                      {`${SiteConfig.prodUrl}/?ref=${referralCode}`}
+                    </p>
+                    <div className="flex gap-2">
+                      <a
+                        href={`https://twitter.com/intent/tweet?text=${encodeURIComponent("I use BriefTube to get AI audio summaries of YouTube videos on Telegram — try it:")}&url=${encodeURIComponent(`${SiteConfig.prodUrl}/?ref=${referralCode}`)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 rounded-lg border border-white/[0.06] bg-white/[0.04] px-3 py-1.5 text-xs transition-colors"
+                      >
+                        <svg
+                          className="h-3 w-3"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                        >
+                          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622 5.91-5.622Zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                        </svg>
+                        X
+                      </a>
+                      <a
+                        href={`https://t.me/share/url?url=${encodeURIComponent(`${SiteConfig.prodUrl}/?ref=${referralCode}`)}&text=${encodeURIComponent("I use BriefTube to get AI audio summaries of YouTube videos on Telegram — try it:")}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 rounded-lg border border-white/[0.06] bg-white/[0.04] px-3 py-1.5 text-xs transition-colors"
+                      >
+                        <svg
+                          className="h-3 w-3"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                        >
+                          <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
+                        </svg>
+                        Telegram
+                      </a>
+                    </div>
+                  </div>
+                )}
+                <p className="text-muted-foreground text-sm">
                   Taking you to your dashboard...
                 </p>
               </div>
@@ -794,7 +563,7 @@ export function OnboardingWizard({ initialVoice }: Props) {
                     2
                   </span>
                   <p className="pt-0.5 text-sm">
-                    Tap <strong>Start</strong> — that's it
+                    Tap <strong>Start</strong> — that&apos;s it
                   </p>
                 </div>
               </div>
