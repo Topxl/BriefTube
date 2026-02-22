@@ -10,6 +10,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog as DialogRoot,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -26,10 +32,21 @@ export function DialogComponent(props: { dialog: Dialog }) {
   );
 
   if (dialog.type === "custom") {
+    const handleClose = () => useDialogStore.getState().removeDialog(dialog.id);
     return (
-      <AlertDialog open={true}>
-        <AlertDialogContent>{dialog.children}</AlertDialogContent>
-      </AlertDialog>
+      <DialogRoot
+        open={true}
+        onOpenChange={(open) => {
+          if (!open) handleClose();
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{dialog.title ?? ""}</DialogTitle>
+          </DialogHeader>
+          {dialog.children}
+        </DialogContent>
+      </DialogRoot>
     );
   }
 

@@ -24,16 +24,16 @@ export function DashboardNav() {
   return (
     <>
       {/* Top bar */}
-      <nav className="sticky top-0 z-40 border-b border-white/[0.06] bg-white/[0.03] backdrop-blur-2xl">
+      <nav className="sticky top-0 z-40 bg-[oklch(0.24_0_0)] shadow-[0_8px_32px_rgba(0,0,0,0.75),inset_0_1px_0_rgba(255,255,255,0.08)]">
         <div className="mx-auto flex h-14 max-w-[1080px] items-center justify-between px-4 md:px-6">
           {/* Left: logo + nav links */}
           <div className="flex shrink-0 items-center gap-6">
             <Link href="/dashboard" className="flex items-center gap-2">
               <Image
-                src="/logo.svg"
+                src="/favicon.svg"
                 alt="BriefTube"
-                width={26}
-                height={26}
+                width={30}
+                height={30}
                 suppressHydrationWarning
               />
               <span className="hidden text-sm font-semibold sm:inline">
@@ -42,23 +42,20 @@ export function DashboardNav() {
             </Link>
 
             {/* Desktop nav links */}
-            <div className="hidden items-center md:flex">
+            <div className="hidden items-center gap-1 md:flex">
               {navItems.map((item) => {
                 const active = isActive(item.href, pathname);
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`relative px-3 py-1.5 text-[13px] transition-colors duration-200 ${
+                    className={`rounded-full px-3 py-1.5 text-[13px] transition-all duration-200 ${
                       active
-                        ? "text-foreground font-medium"
+                        ? "text-foreground font-medium shadow-[inset_3px_3px_8px_rgba(0,0,0,0.7),inset_-2px_-2px_5px_rgba(255,255,255,0.07)]"
                         : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
                     {item.label}
-                    {active && (
-                      <span className="absolute inset-x-3 -bottom-[17px] h-[2px] rounded-full bg-red-500" />
-                    )}
                   </Link>
                 );
               })}
@@ -75,8 +72,8 @@ export function DashboardNav() {
       </nav>
 
       {/* Mobile bottom nav */}
-      <nav className="fixed right-0 bottom-0 left-0 z-40 border-t border-white/[0.06] bg-black/80 pb-[env(safe-area-inset-bottom)] backdrop-blur-2xl md:hidden">
-        <div className="flex h-16 items-stretch">
+      <nav className="fixed right-0 bottom-0 left-0 z-40 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:hidden">
+        <div className="flex items-center rounded-full border border-white/[0.08] bg-[oklch(0.24_0_0)]/40 shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-2xl">
           {navItems.map((item) => {
             const active = isActive(item.href, pathname);
             const Icon = item.icon;
@@ -84,12 +81,16 @@ export function DashboardNav() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex flex-1 flex-col items-center justify-center gap-1 transition-colors ${
-                  active ? "text-red-400" : "text-muted-foreground"
-                }`}
+                className="flex flex-1 flex-col items-center py-1.5"
               >
-                <Icon className="h-5 w-5" strokeWidth={active ? 2 : 1.5} />
-                <span className="text-[10px] font-medium">{item.label}</span>
+                <div
+                  className={`flex flex-col items-center gap-0.5 rounded-full px-5 py-1 transition-all duration-200 ${
+                    active ? "nm-inset text-red-400" : "text-white/35"
+                  }`}
+                >
+                  <Icon className="h-5 w-5" strokeWidth={active ? 2 : 1.5} />
+                  <span className="text-[10px] font-medium">{item.label}</span>
+                </div>
               </Link>
             );
           })}

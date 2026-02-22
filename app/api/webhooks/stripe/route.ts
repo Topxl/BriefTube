@@ -7,6 +7,9 @@ import { headers } from "next/headers";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
+import { sendEmail } from "@/lib/mail/send-email";
+import { UpgradeEmail } from "@/components/emails/upgrade-email";
+import { PaymentFailedEmail } from "@/components/emails/payment-failed-email";
 
 export const maxDuration = 300;
 
@@ -56,6 +59,9 @@ export const POST = async (req: NextRequest) => {
         break;
       case "customer.subscription.deleted":
         await customerSubscriptionDeleted(event.data.object);
+        break;
+      case "invoice.payment_failed":
+        await invoicePaymentFailed(event.data.object);
         break;
       default:
         logger.info(`Unhandled event type: ${event.type}`);
@@ -128,6 +134,15 @@ const checkoutSessionCompleted = async (
     .eq("id", profile.id);
 
   logger.info(`Subscription activated for user: ${profile.id}`);
+
+  // Send upgrade confirmation email
+  if (profile.email) {
+    await sendEmail({
+      to: profile.email,
+      subject: "Your BriefTube Pro subscription is active",
+      html: UpgradeEmail(),
+    });
+  }
 
   // Reward referrer if applicable
   const { data: subscriberProfile } = await supabase
@@ -279,4 +294,37 @@ const customerSubscriptionDeleted = async (
   logger.info(
     `Subscription canceled and reverted to free plan: ${subscription.id}`,
   );
+};
+
+const invoicePaymentFailed = async (invoiceData: Stripe.Invoice) => {
+  const customerId =
+    typeof invoiceData.customer === "string"
+      ? invoiceData.customer
+      : invoiceData.customer?.id;
+
+  if (!customerId) {
+    logger.warn("Missing customer in invoice.payment_failed event");
+    return;
+  }
+
+  const supabase = await createClient();
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("id, email")
+    .eq("stripe_customer_id", customerId)
+    .single();
+
+  if (!profile?.email) {
+    logger.error(`User not found for customer ID: ${customerId}`);
+    return;
+  }
+
+  logger.info(`Payment failed for user: ${profile.id}`);
+
+  await sendEmail({
+    to: profile.email,
+    subject: "Your BriefTube payment failed",
+    html: PaymentFailedEmail(),
+  });
 };

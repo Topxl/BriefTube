@@ -22,6 +22,7 @@ import { languages } from "@/lib/languages";
 import type { Language } from "@/lib/languages";
 import { ListPicker } from "@/components/lists/list-picker";
 import type { ListPickerItem } from "@/components/lists/list-picker";
+import { completeOnboarding } from "@app/onboarding/actions";
 
 type Subscription = Tables<"subscriptions">;
 
@@ -64,6 +65,7 @@ export function OnboardingWizard({
   const [connectToken, setConnectToken] = useState("");
   const [telegramConnected, setTelegramConnected] = useState(false);
   const [completing, setCompleting] = useState(false);
+  const [hasClickedBot, setHasClickedBot] = useState(false);
 
   // Handle return from YouTube OAuth import
   useEffect(() => {
@@ -137,7 +139,7 @@ export function OnboardingWizard({
         .from("profiles")
         .select("telegram_connected")
         .eq("id", user.id)
-        .single();
+        .maybeSingle();
       if (data?.telegram_connected) {
         setTelegramConnected(true);
       }
@@ -148,7 +150,7 @@ export function OnboardingWizard({
 
   useEffect(() => {
     if (telegramConnected) {
-      toast.success("Telegram connected!");
+      toast.success("Telegram linked!");
       const timer = setTimeout(() => void complete(), 4000);
       return () => clearTimeout(timer);
     }
@@ -222,15 +224,11 @@ export function OnboardingWizard({
 
   const complete = async () => {
     setCompleting(true);
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return;
-    await supabase
-      .from("profiles")
-      .update({ onboarding_completed: true })
-      .eq("id", user.id);
-    router.push("/dashboard");
+    try {
+      await completeOnboarding();
+    } finally {
+      router.push("/dashboard");
+    }
   };
 
   return (
@@ -241,7 +239,7 @@ export function OnboardingWizard({
           <div
             key={s}
             className={`h-1.5 rounded-full transition-all duration-500 ${
-              s <= step ? "w-10 bg-red-500" : "w-3 bg-white/[0.12]"
+              s <= step ? "w-10 bg-red-500" : "nm-inset-sm w-3 bg-transparent"
             }`}
           />
         ))}
@@ -251,7 +249,7 @@ export function OnboardingWizard({
       {step === 1 && (
         <div className="space-y-6">
           <div className="space-y-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-red-500/20 bg-red-500/[0.08]">
+            <div className="nm-raised flex h-14 w-14 items-center justify-center rounded-2xl bg-red-500/[0.08]">
               <Layers className="h-7 w-7 text-red-400" />
             </div>
             <div>
@@ -290,7 +288,7 @@ export function OnboardingWizard({
 
             <a
               href="/api/youtube/auth"
-              className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/[0.06] px-4 py-2.5 text-sm font-medium text-white/60 transition-all hover:bg-white/[0.04] hover:text-white/90"
+              className="nm-raised-sm flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium text-white/60 transition-all hover:text-white/90"
             >
               <Youtube className="h-4 w-4 text-red-400" />
               Import from YouTube
@@ -299,6 +297,7 @@ export function OnboardingWizard({
             <button
               type="button"
               onClick={() => setShowManualAdd((v) => !v)}
+              suppressHydrationWarning
               className="text-muted-foreground hover:text-foreground w-full text-center text-xs transition-colors"
             >
               {showManualAdd ? "Hide manual add" : "Add a channel manually"}
@@ -308,6 +307,7 @@ export function OnboardingWizard({
               <form
                 onSubmit={(e) => void addSource(e)}
                 className="flex gap-2"
+                data-form-type="other"
                 suppressHydrationWarning
               >
                 <Input
@@ -318,7 +318,7 @@ export function OnboardingWizard({
                     setAddError("");
                   }}
                   placeholder="youtube.com/@mkbhd"
-                  className="flex-1"
+                  className="nm-inset flex-1 border-transparent bg-transparent focus-visible:ring-0"
                   autoComplete="off"
                   data-1p-ignore
                   data-lpignore="true"
@@ -351,6 +351,7 @@ export function OnboardingWizard({
             <button
               type="button"
               onClick={() => setStep(2)}
+              suppressHydrationWarning
               className="text-muted-foreground hover:text-foreground text-xs transition-colors"
             >
               Skip for now
@@ -380,7 +381,7 @@ export function OnboardingWizard({
       {step === 2 && (
         <div className="space-y-6">
           <div className="space-y-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-violet-500/20 bg-violet-500/[0.08]">
+            <div className="nm-raised flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-500/[0.08]">
               <Headphones className="h-7 w-7 text-violet-400" />
             </div>
             <div>
@@ -399,11 +400,11 @@ export function OnboardingWizard({
             value={langSearch}
             onChange={(e) => setLangSearch(e.target.value)}
             placeholder="Search a language..."
-            className="w-full"
+            className="nm-inset w-full border-transparent bg-transparent focus-visible:ring-0"
             suppressHydrationWarning
           />
 
-          <div className="grid max-h-72 grid-cols-2 gap-1.5 overflow-y-auto sm:grid-cols-3">
+          <div className="grid max-h-72 grid-cols-2 gap-1.5 overflow-y-auto sm:grid-cols-3 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/15 hover:[&::-webkit-scrollbar-thumb]:bg-white/25 [&::-webkit-scrollbar-track]:bg-transparent">
             {languages
               .filter(
                 (l) =>
@@ -417,10 +418,10 @@ export function OnboardingWizard({
                     key={l.code}
                     onClick={() => void saveLang(l)}
                     disabled={savingVoice}
-                    className={`flex flex-col rounded-lg border px-3 py-2.5 text-left text-sm transition-all duration-150 ${
+                    className={`flex flex-col rounded-lg px-3 py-2.5 text-left text-sm transition-all duration-150 ${
                       isSelected
-                        ? "text-foreground border-red-500/25 bg-red-500/[0.06]"
-                        : "text-muted-foreground hover:text-foreground border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]"
+                        ? "nm-inset text-foreground"
+                        : "nm-raised-sm text-muted-foreground hover:text-foreground"
                     }`}
                   >
                     <span className="truncate text-[13px] leading-none font-medium">
@@ -453,33 +454,35 @@ export function OnboardingWizard({
         </div>
       )}
 
-      {/* Step 3: Connect Telegram */}
+      {/* Step 3: Link Telegram */}
       {step === 3 && (
         <div className="space-y-6">
           <div className="space-y-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-sky-500/20 bg-sky-500/[0.08]">
+            <div className="nm-raised flex h-14 w-14 items-center justify-center rounded-2xl bg-sky-500/[0.08]">
               <Send className="h-7 w-7 text-sky-400" />
             </div>
             <div>
               <p className="text-muted-foreground mb-1 text-sm font-medium">
                 Step 3 of 3
               </p>
-              <h1 className="text-2xl font-bold">Connect Telegram</h1>
+              <h1 className="text-2xl font-bold">Link Telegram</h1>
               <p className="text-muted-foreground mt-1.5 text-sm">
-                Your audio summaries will be delivered automatically.
+                BriefTube delivers your audio summaries directly to your
+                Telegram chat — no app to check, everything arrives
+                automatically.
               </p>
             </div>
           </div>
 
           {telegramConnected ? (
-            <div className="flex flex-col items-center gap-3 rounded-xl border border-emerald-500/15 bg-emerald-500/[0.04] px-6 py-8 text-center">
+            <div className="nm-raised flex flex-col items-center gap-3 rounded-2xl bg-emerald-500/[0.04] px-6 py-8 text-center">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/20">
                 <Check className="h-6 w-6 text-emerald-400" />
               </div>
               <div className="w-full space-y-4">
                 <p className="font-semibold text-emerald-400">Connected!</p>
                 {referralCode && (
-                  <div className="space-y-2 rounded-lg border border-white/[0.06] bg-white/[0.02] p-3 text-left">
+                  <div className="nm-inset space-y-2 rounded-xl p-3 text-left">
                     <p className="text-xs font-medium">
                       Share BriefTube with friends
                     </p>
@@ -491,7 +494,7 @@ export function OnboardingWizard({
                         href={`https://twitter.com/intent/tweet?text=${encodeURIComponent("I use BriefTube to get AI audio summaries of YouTube videos on Telegram — try it:")}&url=${encodeURIComponent(`${SiteConfig.prodUrl}/?ref=${referralCode}`)}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 rounded-lg border border-white/[0.06] bg-white/[0.04] px-3 py-1.5 text-xs transition-colors"
+                        className="nm-raised-sm text-muted-foreground hover:text-foreground flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs transition-all"
                       >
                         <svg
                           className="h-3 w-3"
@@ -506,7 +509,7 @@ export function OnboardingWizard({
                         href={`https://t.me/share/url?url=${encodeURIComponent(`${SiteConfig.prodUrl}/?ref=${referralCode}`)}&text=${encodeURIComponent("I use BriefTube to get AI audio summaries of YouTube videos on Telegram — try it:")}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 rounded-lg border border-white/[0.06] bg-white/[0.04] px-3 py-1.5 text-xs transition-colors"
+                        className="nm-raised-sm text-muted-foreground hover:text-foreground flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs transition-all"
                       >
                         <svg
                           className="h-3 w-3"
@@ -527,9 +530,9 @@ export function OnboardingWizard({
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="space-y-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+              <div className="nm-raised space-y-3 rounded-2xl p-4">
                 <div className="flex items-start gap-3">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/[0.08] text-xs font-semibold">
+                  <span className="nm-raised-sm flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
                     1
                   </span>
                   <p className="pt-0.5 text-sm">
@@ -537,7 +540,7 @@ export function OnboardingWizard({
                   </p>
                 </div>
                 <div className="flex items-start gap-3">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/[0.08] text-xs font-semibold">
+                  <span className="nm-raised-sm flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
                     2
                   </span>
                   <p className="pt-0.5 text-sm">
@@ -546,11 +549,17 @@ export function OnboardingWizard({
                 </div>
               </div>
 
+              <p className="text-muted-foreground/60 text-[11px]">
+                The bot only sends you audio files. It cannot read your messages
+                or access your Telegram account.
+              </p>
+
               {connectToken ? (
                 <a
                   href={`https://t.me/brief_tube_bot?start=${connectToken}`}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={() => setHasClickedBot(true)}
                   className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#2AABEE] px-4 py-3 text-sm font-semibold text-white transition-all hover:brightness-110"
                 >
                   <svg
@@ -569,10 +578,12 @@ export function OnboardingWizard({
                 </div>
               )}
 
-              <div className="text-muted-foreground flex items-center justify-center gap-2 text-xs">
-                <Loader2 className="h-3 w-3 animate-spin" />
-                Waiting for connection...
-              </div>
+              {hasClickedBot && (
+                <div className="text-muted-foreground flex items-center justify-center gap-2 text-xs">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Waiting for connection...
+                </div>
+              )}
             </div>
           )}
 

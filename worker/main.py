@@ -116,6 +116,31 @@ logging.getLogger("telegram.ext.Updater").setLevel(logging.CRITICAL)
 VIDEO_TIMEOUT = 600  # 10 minutes max per video
 
 
+# ── Video failure notification ────────────────────────────────
+
+async def _notify_video_failure(video_id: str, alert_system: MonitoringAlert) -> None:
+    """Notify all affected Telegram users that a video permanently failed."""
+    try:
+        chat_ids = await asyncio.to_thread(db.get_telegram_chat_ids_for_video, video_id)
+    except Exception as e:
+        logger.warning(f"[{video_id}] Could not fetch chat_ids for failure notification: {e}")
+        return
+    if not chat_ids:
+        return
+    msg = (
+        "A video from one of your channels couldn't be processed "
+        "after multiple attempts and has been skipped.\n\n"
+        f'<a href="https://youtu.be/{video_id}">Watch on YouTube</a>'
+    )
+    for chat_id in chat_ids:
+        try:
+            await alert_system.bot_app.bot.send_message(
+                chat_id=int(chat_id), text=msg, parse_mode="HTML"
+            )
+        except Exception as e:
+            logger.warning(f"[{video_id}] Failed to notify user {chat_id} of failure: {e}")
+
+
 # ── Loop 1: RSS Scanner ───────────────────────────────────────
 
 async def rss_loop(alert_system: MonitoringAlert):
@@ -224,7 +249,9 @@ async def _process_video(
             logger.error(f"[{video_id}] Transcript extraction failed: {error}")
             if TranscriptExtractor.should_retry(error):
                 logger.info(f"[{video_id}] Will retry later")
-                db.fail_job(job["id"])
+                permanent = db.fail_job(job["id"])
+                if permanent:
+                    await _notify_video_failure(video_id, alert_system)
             else:
                 raise Exception(f"Transcript extraction failed: {error}")
             return
@@ -303,16 +330,20 @@ async def _process_video(
 
     except asyncio.TimeoutError:
         logger.error(f"[{video_id}] Timeout")
-        db.fail_job(job["id"])
+        permanent = db.fail_job(job["id"])
         db.mark_video_failed(video_id, language=user_language)
+        if permanent:
+            await _notify_video_failure(video_id, alert_system)
         stats.record_video_failed("Timeout", f"Timeout: {video_title}")
         await alert_system.send_alert(f"⏱️ **Timeout**\n\n{video_title[:80]}", level="WARNING")
 
     except Exception as e:
         error_msg = str(e)
         logger.error(f"[{video_id}] Error: {error_msg}")
-        db.fail_job(job["id"])
+        permanent = db.fail_job(job["id"])
         db.mark_video_failed(video_id, language=user_language)
+        if permanent:
+            await _notify_video_failure(video_id, alert_system)
         stats.record_video_failed(type(e).__name__, error_msg)
         await alert_system.send_alert(
             f"🔴 **Error**\n\nVideo: {video_title[:60]}\nError: {error_msg[:100]}",
@@ -395,8 +426,10 @@ async def processor_loop(alert_system: MonitoringAlert):
                 except asyncio.TimeoutError:
                     logger.error(f"[{j['video_id']}] Timed out after {VIDEO_TIMEOUT}s — marking failed")
                     try:
-                        db.fail_job(j["id"])
+                        permanent = db.fail_job(j["id"])
                         db.mark_video_failed(j["video_id"])
+                        if permanent:
+                            await _notify_video_failure(j["video_id"], alert_system)
                     except Exception:
                         pass
                 finally:
@@ -494,6 +527,7 @@ async def delivery_loop(alert_system: MonitoringAlert):
                         video_title=d["video_title"],
                         video_id=video_id,
                         channel_id=d["channel_id"],
+                        language=delivery_language,
                     )
 
                     if success:
@@ -604,7 +638,7 @@ async def main():
     await bot_app.initialize()
     await bot_app.start()
     try:
-        await bot_app.updater.start_polling(allowed_updates=["message"], drop_pending_updates=True)
+        await bot_app.updater.start_polling(allowed_updates=["message", "callback_query"], drop_pending_updates=True)
         logger.info("Telegram bot polling started")
     except Exception as e:
         logger.warning(f"Bot polling failed to start (another instance may be running): {e}")

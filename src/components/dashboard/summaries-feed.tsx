@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { SummaryRow } from "@/components/dashboard/summary-row";
@@ -20,7 +20,7 @@ export function SummariesFeed() {
   const [hasMore, setHasMore] = useState(false);
   const [page, setPage] = useState(0);
   const [titles, setTitles] = useState<Record<string, string>>({});
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const loadDeliveries = useCallback(
     async (pageNum: number) => {

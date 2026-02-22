@@ -3,6 +3,8 @@ import { logger } from "@/lib/logger";
 import { NextResponse } from "next/server";
 import { SiteConfig } from "@/site-config";
 import { cookies } from "next/headers";
+import { sendEmail } from "@/lib/mail/send-email";
+import { WelcomeEmail } from "@/components/emails/welcome-email";
 
 const REFERRAL_COOKIE = SiteConfig.referral.cookieName;
 
@@ -36,6 +38,15 @@ export async function GET(request: Request) {
             .from("profiles")
             .update({ trial_ends_at: trialEnd.toISOString() })
             .eq("id", user.id);
+
+          // Send welcome email to new users (fire-and-forget)
+          if (user.email) {
+            void sendEmail({
+              to: user.email,
+              subject: "Welcome to BriefTube",
+              html: WelcomeEmail({ trialDays: SiteConfig.trialDays }),
+            });
+          }
         }
 
         // Record referral if not already set
@@ -46,7 +57,7 @@ export async function GET(request: Request) {
           if (refCode) {
             const { data: referrer } = await supabase
               .from("profiles")
-              .select("id")
+              .select("id, telegram_chat_id")
               .eq("referral_code", refCode)
               .single();
 
@@ -68,6 +79,21 @@ export async function GET(request: Request) {
                   referrerId: referrer.id,
                   refereeId: user.id,
                 });
+              }
+
+              // Notify referrer via Telegram (fire-and-forget)
+              if (referrer.telegram_chat_id && process.env.TELEGRAM_BOT_TOKEN) {
+                void fetch(
+                  `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`,
+                  {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      chat_id: referrer.telegram_chat_id,
+                      text: "Someone just signed up using your BriefTube referral link!",
+                    }),
+                  },
+                ).catch(() => undefined);
               }
             }
           }

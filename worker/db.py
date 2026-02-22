@@ -190,12 +190,13 @@ def complete_job(job_id: str):
     sb.table("processing_queue").update({"status": "completed"}).eq("id", job_id).execute()
 
 
-def fail_job(job_id: str):
+def fail_job(job_id: str) -> bool:
+    """Mark a job as failed. Returns True if this was a permanent failure (3rd attempt)."""
     sb = get_client()
     # Use execute() without .single() — avoids throwing if the job was deleted.
     res = sb.table("processing_queue").select("attempts, video_id, user_language").eq("id", job_id).execute()
     if not res.data:
-        return  # Job already gone — nothing to update
+        return False  # Job already gone — nothing to update
     attempts = (res.data[0].get("attempts") or 0) + 1
     user_language = res.data[0].get("user_language") or "fr"
     status = "failed" if attempts >= 3 else "queued"
@@ -209,6 +210,32 @@ def fail_job(job_id: str):
         video_id = res.data[0].get("video_id")
         if video_id:
             mark_video_failed(video_id, language=user_language)
+        return True
+    return False
+
+
+def get_telegram_chat_ids_for_video(video_id: str) -> list[str]:
+    """Return telegram_chat_id of all connected users with a pending delivery for this video."""
+    sb = get_client()
+    deliveries = (
+        sb.table("deliveries")
+        .select("user_id")
+        .eq("video_id", video_id)
+        .eq("status", "pending")
+        .execute()
+    )
+    if not deliveries.data:
+        return []
+    user_ids = [d["user_id"] for d in deliveries.data]
+    profiles = (
+        sb.table("profiles")
+        .select("telegram_chat_id")
+        .in_("id", user_ids)
+        .eq("telegram_connected", True)
+        .not_.is_("telegram_chat_id", "null")
+        .execute()
+    )
+    return [p["telegram_chat_id"] for p in (profiles.data or []) if p.get("telegram_chat_id")]
 
 
 # ── Deliveries ─────────────────────────────────────────────────
@@ -524,6 +551,95 @@ def count_on_demand_this_month(user_id: str) -> int:
         .execute()
     )
     return res.count or 0
+
+
+# ── Shared Summaries ───────────────────────────────────────────
+
+def get_profile_by_telegram(telegram_chat_id: str) -> dict | None:
+    """Fetch id + subscription_status for a connected Telegram user."""
+    sb = get_client()
+    res = (
+        sb.table("profiles")
+        .select("id, subscription_status")
+        .eq("telegram_chat_id", telegram_chat_id)
+        .eq("telegram_connected", True)
+        .execute()
+    )
+    return res.data[0] if res.data else None
+
+
+def count_shares_today(user_id: str) -> int:
+    """Count shares created today (UTC) by this user."""
+    from datetime import date
+    today_midnight = datetime.combine(date.today(), datetime.min.time()).replace(
+        tzinfo=timezone.utc
+    ).isoformat()
+    sb = get_client()
+    res = (
+        sb.table("shared_summaries")
+        .select("id", count="exact")
+        .eq("shared_by", user_id)
+        .gte("created_at", today_midnight)
+        .execute()
+    )
+    return res.count or 0
+
+
+def get_or_create_share(
+    video_id: str,
+    language: str,
+    user_id: str,
+    is_pro: bool,
+    video_title: str,
+) -> dict | None:
+    """Return or create a shared_summaries row for (video_id, language, user_id).
+
+    Returns None if the free daily limit (3 shares/day) has been reached.
+    """
+    import secrets
+
+    # Free limit check
+    if not is_pro and count_shares_today(user_id) >= 3:
+        return None
+
+    sb = get_client()
+    now = datetime.now(timezone.utc).isoformat()
+
+    # Re-use existing non-expired share for the same (video_id, language, user)
+    existing = (
+        sb.table("shared_summaries")
+        .select("short_id")
+        .eq("video_id", video_id)
+        .eq("language", language)
+        .eq("shared_by", user_id)
+        .gt("expires_at", now)
+        .execute()
+    )
+    if existing.data:
+        return {"short_id": existing.data[0]["short_id"], "video_title": video_title}
+
+    # Create new share
+    short_id = secrets.token_urlsafe(6)
+    sb.table("shared_summaries").insert({
+        "short_id": short_id,
+        "video_id": video_id,
+        "language": language,
+        "shared_by": user_id,
+    }).execute()
+    return {"short_id": short_id, "video_title": video_title}
+
+
+def get_processed_video(video_id: str, language: str) -> dict | None:
+    """Fetch a single processed_videos row by (video_id, language)."""
+    sb = get_client()
+    res = (
+        sb.table("processed_videos")
+        .select("video_id, video_title, channel_id, summary, audio_url, language")
+        .eq("video_id", video_id)
+        .eq("language", language)
+        .execute()
+    )
+    return res.data[0] if res.data else None
 
 
 def mark_existing_videos_as_skipped(channel_id: str):

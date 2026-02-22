@@ -634,6 +634,56 @@ html.dark .shiki span {
 
 /* BriefTube Landing Page Styles */
 
+/* Dark Neumorphic Utilities */
+@layer utils {
+  /* Card / container — raised */
+  .nm-raised {
+    box-shadow:
+      6px 6px 16px rgba(0, 0, 0, 0.65),
+      -3px -3px 9px rgba(255, 255, 255, 0.06);
+  }
+  /* Chip / small element — raised */
+  .nm-raised-sm {
+    box-shadow:
+      3px 3px 8px rgba(0, 0, 0, 0.55),
+      -2px -2px 5px rgba(255, 255, 255, 0.05);
+  }
+  /* Active / pressed state */
+  .nm-inset {
+    box-shadow:
+      inset 4px 4px 10px rgba(0, 0, 0, 0.7),
+      inset -2px -2px 6px rgba(255, 255, 255, 0.06);
+  }
+  /* Active / pressed — small */
+  .nm-inset-sm {
+    box-shadow:
+      inset 3px 3px 7px rgba(0, 0, 0, 0.65),
+      inset -2px -2px 4px rgba(255, 255, 255, 0.05);
+  }
+
+  /* Scrollbar hidden by default, shown on hover */
+  .scrollbar-fade-x {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+    &:hover {
+      scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+    }
+    &::-webkit-scrollbar {
+      height: 3px;
+    }
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    &::-webkit-scrollbar-thumb {
+      background-color: transparent;
+      border-radius: 999px;
+    }
+    &:hover::-webkit-scrollbar-thumb {
+      background-color: rgba(255, 255, 255, 0.15);
+    }
+  }
+}
+
 /* Liquid Glass Variables */
 :root {
   --glass: rgba(255, 255, 255, 0.6);

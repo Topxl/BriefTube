@@ -43,7 +43,7 @@ function StatCard({
           : "text-foreground";
 
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3">
+    <div className="nm-raised flex flex-col gap-3 rounded-xl px-4 py-3">
       <div className="flex items-center justify-between">
         <p className="text-muted-foreground text-xs font-medium">{label}</p>
         <div className="text-muted-foreground/40">{icon}</div>
@@ -192,7 +192,7 @@ export default async function AdminPage() {
             Monitoring & pilotage du worker
           </p>
         </div>
-        <div className="flex items-center gap-1.5 rounded-lg border border-white/[0.06] px-3 py-1.5">
+        <div className="nm-raised-sm flex items-center gap-1.5 rounded-lg px-3 py-1.5">
           <Activity className="h-3.5 w-3.5 text-emerald-400" />
           <span className="text-xs font-medium text-emerald-400">Live</span>
           <span className="text-muted-foreground text-xs">· 10s</span>
@@ -281,7 +281,7 @@ export default async function AdminPage() {
           {/* Queue */}
           <div className="flex flex-col gap-2">
             <SectionTitle>File de traitement</SectionTitle>
-            <div className="rounded-xl border border-white/[0.06]">
+            <div className="nm-raised rounded-xl">
               {!pendingQueue || pendingQueue.length === 0 ? (
                 <div className="flex items-center gap-2 px-4 py-4">
                   <CheckCircle className="h-4 w-4 text-emerald-400" />
@@ -328,7 +328,7 @@ export default async function AdminPage() {
           {/* Recent failures */}
           <div className="flex flex-col gap-2">
             <SectionTitle>Derniers échecs</SectionTitle>
-            <div className="rounded-xl border border-white/[0.06]">
+            <div className="nm-raised rounded-xl">
               {!recentFailed || recentFailed.length === 0 ? (
                 <div className="flex items-center gap-2 px-4 py-4">
                   <CheckCircle className="h-4 w-4 text-emerald-400" />

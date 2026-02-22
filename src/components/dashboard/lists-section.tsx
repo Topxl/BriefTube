@@ -70,8 +70,8 @@ export function ListsSection({ initialFollowedLists, isPro }: Props) {
       </div>
 
       {followedLists.length === 0 ? (
-        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] py-8 text-center">
-          <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.06] bg-white/[0.03]">
+        <div className="nm-raised rounded-xl py-8 text-center">
+          <div className="nm-inset mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl">
             <Users className="text-muted-foreground h-5 w-5" />
           </div>
           <p className="text-sm font-medium">No lists followed yet</p>
@@ -98,7 +98,7 @@ export function ListsSection({ initialFollowedLists, isPro }: Props) {
           </Button>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-white/[0.06]">
+        <div className="nm-raised overflow-hidden rounded-xl">
           <div className="divide-y divide-white/[0.04]">
             {followedLists.map((item) => (
               <div

@@ -198,6 +198,7 @@ export type Database = {
           created_at: string | null;
           failure_count: number | null;
           id: string;
+          language: string | null;
           metadata: Json | null;
           processed_at: string | null;
           retry_at: string | null;
@@ -220,6 +221,7 @@ export type Database = {
           created_at?: string | null;
           failure_count?: number | null;
           id?: string;
+          language?: string | null;
           metadata?: Json | null;
           processed_at?: string | null;
           retry_at?: string | null;
@@ -242,6 +244,7 @@ export type Database = {
           created_at?: string | null;
           failure_count?: number | null;
           id?: string;
+          language?: string | null;
           metadata?: Json | null;
           processed_at?: string | null;
           retry_at?: string | null;
@@ -259,6 +262,50 @@ export type Database = {
           video_url?: string | null;
         };
         Relationships: [];
+      };
+      shared_summaries: {
+        Row: {
+          id: string;
+          short_id: string;
+          video_id: string;
+          language: string;
+          shared_by: string | null;
+          view_count: number;
+          max_views: number;
+          expires_at: string;
+          created_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          short_id: string;
+          video_id: string;
+          language?: string;
+          shared_by?: string | null;
+          view_count?: number;
+          max_views?: number;
+          expires_at?: string;
+          created_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          short_id?: string;
+          video_id?: string;
+          language?: string;
+          shared_by?: string | null;
+          view_count?: number;
+          max_views?: number;
+          expires_at?: string;
+          created_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "shared_summaries_shared_by_fkey";
+            columns: ["shared_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       processing_queue: {
         Row: {

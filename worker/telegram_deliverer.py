@@ -2,7 +2,7 @@
 
 import logging
 from pathlib import Path
-from telegram import Bot
+from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
 
 from config import TELEGRAM_BOT_TOKEN
 
@@ -36,6 +36,7 @@ async def send_audio_to_user(
     video_title: str,
     video_id: str,
     channel_id: str,
+    language: str = "fr",
 ) -> bool:
     """Send thumbnail + audio to a Telegram user.
 
@@ -55,6 +56,10 @@ async def send_audio_to_user(
     safe_url = escape_markdown(video_url)
     caption = f"*{safe_title}*\n\n{safe_url}"
 
+    keyboard = InlineKeyboardMarkup([[
+        InlineKeyboardButton("⋯ Options", callback_data=f"options_{video_id}_{language}")
+    ]])
+
     photo_msg = None
     try:
         # Send thumbnail
@@ -63,6 +68,7 @@ async def send_audio_to_user(
             photo=thumbnail_url,
             caption=caption,
             parse_mode="MarkdownV2",
+            reply_markup=keyboard,
         )
 
         # Send voice as reply

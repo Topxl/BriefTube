@@ -11,6 +11,7 @@ from telegram import Update
 from telegram.error import Conflict
 from telegram.ext import (
     Application,
+    CallbackQueryHandler,
     CommandHandler,
     MessageHandler,
     ContextTypes,
@@ -154,10 +155,15 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
         if res.data:
             email = res.data[0].get("email", "")
+            ref_code = res.data[0].get("referral_code", "")
+            ref_text = (
+                f"\n\nShare BriefTube with friends: {APP_URL}/?ref={ref_code}"
+                if ref_code else ""
+            )
             await update.message.reply_text(
                 f"Connected! Your Telegram is now linked to {email}.\n\n"
                 "You'll receive audio summaries here whenever new videos are published "
-                "on your subscribed channels."
+                f"on your subscribed channels.{ref_text}"
             )
             logger.info(f"Telegram connected: chat_id={chat_id}, email={email}")
         else:
@@ -340,7 +346,7 @@ def _get_profile_by_chat_id(chat_id: str) -> dict | None:
     sb = db.get_client()
     res = (
         sb.table("profiles")
-        .select("id, email, subscription_status, max_channels")
+        .select("id, email, subscription_status, max_channels, preferred_language, tts_voice")
         .eq("telegram_chat_id", chat_id)
         .eq("telegram_connected", True)
         .execute()
@@ -453,9 +459,17 @@ async def handle_video_request(update: Update, profile: dict, video_id: str) -> 
 
     sb = db.get_client()
     video_url = f"https://www.youtube.com/watch?v={video_id}"
+    user_language = profile.get("preferred_language") or "fr"
+    user_tts_voice = profile.get("tts_voice") or None
 
-    # Check if video already exists
-    existing = sb.table("processed_videos").select("status, channel_id").eq("video_id", video_id).execute()
+    # Check if video already exists in the user's language
+    existing = (
+        sb.table("processed_videos")
+        .select("status, channel_id")
+        .eq("video_id", video_id)
+        .eq("language", user_language)
+        .execute()
+    )
 
     if existing.data:
         video_row = existing.data[0]
@@ -466,6 +480,7 @@ async def handle_video_request(update: Update, profile: dict, video_id: str) -> 
                 "video_id": video_id,
                 "status": "pending",
                 "source": "on_demand",
+                "language": user_language,
             }, on_conflict="user_id,video_id").execute()
             await update.message.reply_text(
                 "This video was already summarized. Sending you the audio now..."
@@ -478,6 +493,7 @@ async def handle_video_request(update: Update, profile: dict, video_id: str) -> 
                 "video_id": video_id,
                 "status": "pending",
                 "source": "on_demand",
+                "language": user_language,
             }, on_conflict="user_id,video_id").execute()
             await update.message.reply_text(
                 "This video is being processed. You'll receive the audio summary shortly."
@@ -496,15 +512,16 @@ async def handle_video_request(update: Update, profile: dict, video_id: str) -> 
     except Exception:
         pass
 
-    # Insert into processed_videos + processing_queue + delivery
+    # Insert into processed_videos + processing_queue + delivery (with user's language)
     channel_id = ""  # Unknown for on-demand, not tied to a channel subscription
-    db.insert_new_video(video_id, channel_id, video_title, video_url)
-    db.enqueue_video(video_id, video_url, video_title, channel_id)
+    db.insert_new_video(video_id, channel_id, video_title, video_url, language=user_language)
+    db.enqueue_video(video_id, video_url, video_title, channel_id, language=user_language, tts_voice=user_tts_voice)
     sb.table("deliveries").upsert({
         "user_id": user_id,
         "video_id": video_id,
         "status": "pending",
         "source": "on_demand",
+        "language": user_language,
     }, on_conflict="user_id,video_id").execute()
 
     if not is_pro:
@@ -629,6 +646,49 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     )
 
 
+async def handle_options_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle the '⋯ Options' inline button — generate and send a share link."""
+    query = update.callback_query
+    await query.answer()  # Remove the spinner
+
+    # callback_data format: "options_{video_id}_{language}"
+    parts = query.data.split("_", 2)
+    if len(parts) < 3:
+        return
+    video_id, language = parts[1], parts[2]
+
+    profile = db.get_profile_by_telegram(str(query.from_user.id))
+    if not profile:
+        await query.message.reply_text(
+            "Connect your BriefTube account first (/start)."
+        )
+        return
+
+    is_pro = profile.get("subscription_status") in ("active",)
+
+    pv = db.get_processed_video(video_id, language)
+    video_title = pv.get("video_title", "this summary") if pv else "this summary"
+
+    share = db.get_or_create_share(video_id, language, profile["id"], is_pro, video_title)
+
+    if share is None:
+        await query.message.reply_text(
+            "You've reached the free share limit (3/day).\n\n"
+            f"Upgrade to Pro for unlimited sharing: {APP_URL}/dashboard/profile",
+            parse_mode="HTML",
+        )
+        return
+
+    url = f"{APP_URL}/s/{share['short_id']}"
+    msg = (
+        f"🔗 <b>Share this summary</b>\n\n"
+        f"<code>{url}</code>\n\n"
+        f"Suggested text:\n"
+        f'"I listened to an AI summary of <i>{_html.escape(share["video_title"])}</i> — read it here 👆"'
+    )
+    await query.message.reply_text(msg, parse_mode="HTML")
+
+
 async def _error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Suppress Conflict errors (another bot instance polling); log everything else."""
     if isinstance(context.error, Conflict):
@@ -653,6 +713,9 @@ def create_bot_application() -> Application:
     app.add_handler(CommandHandler("monitor_status", monitor_status_command))
     app.add_handler(CommandHandler("monitor_stats", monitor_stats_command))
     app.add_handler(CommandHandler("monitor_logs", monitor_logs_command))
+
+    # Inline keyboard callbacks
+    app.add_handler(CallbackQueryHandler(handle_options_callback, pattern=r"^options_"))
 
     # Message handler LAST — catches non-command text messages
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))

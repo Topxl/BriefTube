@@ -1,7 +1,7 @@
 <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
   <rect width="32" height="32" rx="6" fill="#dc2626"/>
-  <g transform="translate(6, 6)">
-    <path d="M2 2L9 8L2 14V2Z" fill="white"/>
-    <path d="M10 2L17 8L10 14V2Z" fill="white"/>
+  <g transform="translate(8, 10)">
+    <path d="M0 0L7 6L0 12V0Z" fill="white"/>
+    <path d="M9 0L16 6L9 12V0Z" fill="white" opacity="0.85"/>
   </g>
 </svg>

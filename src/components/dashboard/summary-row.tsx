@@ -104,7 +104,7 @@ export function SummaryRow({
   }, []);
 
   return (
-    <div className="overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.02]">
+    <div className="nm-raised overflow-hidden rounded-2xl">
       {/* Main row: thumbnail + title + controls */}
       <div className="flex items-center gap-3 p-3">
         {/* Thumbnail with play overlay */}
@@ -173,7 +173,7 @@ export function SummaryRow({
         <div className="flex shrink-0 items-center gap-1.5">
           <button
             onClick={cycleSpeed}
-            className="text-muted-foreground hover:text-foreground rounded-md border border-white/[0.08] bg-white/[0.06] px-1.5 py-0.5 text-[10px] font-semibold tabular-nums transition-colors hover:bg-white/[0.1]"
+            className="nm-raised-sm text-muted-foreground hover:text-foreground rounded-md px-1.5 py-0.5 text-[10px] font-semibold tabular-nums transition-all"
           >
             x{speed}
           </button>
@@ -204,7 +204,7 @@ export function SummaryRow({
 
           {/* Progress bar */}
           <div
-            className="group/bar h-1 w-full cursor-pointer rounded-full bg-white/[0.06]"
+            className="nm-inset-sm group/bar h-1.5 w-full cursor-pointer rounded-full"
             onClick={handleSeek}
           >
             <div
