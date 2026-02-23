@@ -2,6 +2,9 @@
 
 ## 2026-02-24
 
+UX: Landing — reduce section padding on mobile (py-20 → py-14 md:py-20) for consistent vertical spacing; fix HowItWorks mt-16 → mt-12 md:mt-16; standardize Demo section
+FEATURE: Landing hero — replace Fireship video with Simon Sinek TED talk, add YouTube thumbnail as semi-transparent card background
+FEATURE: Telegram bot — add "Summary" button in Options menu to display the full text summary
 CHORE: SEO — sitemap étendu avec /blog, /blog/[slug], /vs, /vs/[slug] (statiques) et /channels/[channel_id] dynamiques (unique channel_ids depuis subscriptions)
 FEATURE: Admin panel — add 6 new metric sections (MRR, active users 7d, signups 14d, growth chart, referral conversion, top channels, language distribution)
 FEATURE: SEO — generateMetadata for /lists/[id] with OG images, canonical URLs, and dynamic descriptions from list metadata

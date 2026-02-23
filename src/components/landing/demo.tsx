@@ -46,7 +46,7 @@ export function Demo() {
   };
 
   return (
-    <section id="demo" className="py-20 md:py-28">
+    <section id="demo" className="py-14 md:py-20">
       <div className="mx-auto max-w-2xl px-6 text-center">
         <p className="text-muted-foreground mb-2 text-sm font-medium tracking-wider uppercase">
           {tl.label}

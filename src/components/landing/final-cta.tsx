@@ -9,7 +9,7 @@ const tl = t.landing.finalCta;
 
 export function FinalCTA() {
   return (
-    <section className="relative overflow-hidden py-20">
+    <section className="relative overflow-hidden py-14 md:py-20">
       <div className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute top-1/2 left-1/2 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-red-600/8 blur-[150px]" />
       </div>

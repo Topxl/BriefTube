@@ -53,7 +53,7 @@ const painIcons = [
 
 export function Problem() {
   return (
-    <section className="py-20">
+    <section className="py-14 md:py-20">
       <div className="mx-auto max-w-6xl px-6">
         <ScrollReveal>
           <h2 className="font-display text-center text-2xl font-bold md:text-3xl">

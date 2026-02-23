@@ -48,7 +48,7 @@ export function Pricing() {
   }, []);
 
   return (
-    <section id="pricing" className="py-20">
+    <section id="pricing" className="py-14 md:py-20">
       <div className="mx-auto max-w-4xl px-6">
         <ScrollReveal>
           <h2 className="font-display text-center text-2xl font-bold md:text-3xl">
@@ -76,7 +76,7 @@ export function Pricing() {
               return (
                 <div
                   key={plan.key}
-                  className={`nm-raised relative overflow-hidden rounded-2xl transition-all duration-300 hover:-translate-y-1 ${
+                  className={`nm-raised relative rounded-2xl transition-all duration-300 hover:-translate-y-1 ${
                     plan.highlighted ? "border border-red-500/[0.15]" : ""
                   }`}
                 >
