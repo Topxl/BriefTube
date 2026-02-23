@@ -442,6 +442,112 @@ export async function PATCH(request: NextRequest) {
   return NextResponse.json(data);
 }
 
+// PUT /api/subscriptions - Bulk activate or pause all subscriptions
+export async function PUT(request: NextRequest) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body = (await request.json()) as { action: string };
+  const { action } = body;
+
+  if (action !== "activate_all" && action !== "pause_all") {
+    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+  }
+
+  if (action === "pause_all") {
+    const { error } = await supabase
+      .from("subscriptions")
+      .update({ active: false })
+      .eq("user_id", user.id);
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ updated: true });
+  }
+
+  // activate_all — respect the active channel limit for free users
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("max_channels, subscription_status, trial_ends_at")
+    .eq("id", user.id)
+    .single();
+
+  const isPro =
+    profile?.subscription_status === "active" ||
+    (profile?.trial_ends_at != null &&
+      new Date(profile.trial_ends_at) > new Date());
+
+  if (isPro) {
+    const { error } = await supabase
+      .from("subscriptions")
+      .update({ active: true })
+      .eq("user_id", user.id);
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ updated: true });
+  }
+
+  // Free user: only activate up to (maxActiveChannels - currentActiveCount) paused channels
+  const maxActiveChannels =
+    profile?.max_channels ?? SiteConfig.freeChannelsLimit;
+
+  const { count: activeCount } = await supabase
+    .from("subscriptions")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", user.id)
+    .eq("active", true);
+
+  const slotsLeft = maxActiveChannels - (activeCount ?? 0);
+
+  if (slotsLeft <= 0) {
+    return NextResponse.json({
+      updated: false,
+      limitReached: true,
+      maxActiveChannels,
+    });
+  }
+
+  // Get paused subscriptions ordered by created_at, take only what fits
+  const { data: paused } = await supabase
+    .from("subscriptions")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("active", false)
+    .order("created_at", { ascending: true })
+    .limit(slotsLeft);
+
+  if (!paused || paused.length === 0) {
+    return NextResponse.json({ updated: false });
+  }
+
+  const idsToActivate = paused.map((s) => s.id);
+  const { error } = await supabase
+    .from("subscriptions")
+    .update({ active: true })
+    .in("id", idsToActivate)
+    .eq("user_id", user.id);
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({
+    updated: true,
+    activatedCount: idsToActivate.length,
+  });
+}
+
 // DELETE /api/subscriptions - Remove YouTube channel subscription
 export async function DELETE(request: NextRequest) {
   const supabase = await createClient();

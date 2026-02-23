@@ -108,12 +108,67 @@ def _enforce_single_instance() -> None:
     atexit.register(_cleanup_pid_file)
     logger.info(f"Single-instance lock acquired (PID {os.getpid()}, file: {PID_FILE})")
 logging.getLogger("httpcore").setLevel(logging.WARNING)
-# Suppress verbose Conflict errors from Updater polling (another instance may hold the session)
-logging.getLogger("telegram.ext.Updater").setLevel(logging.CRITICAL)
 
 # ── Constants ──────────────────────────────────────────────────
 
 VIDEO_TIMEOUT = 600  # 10 minutes max per video
+
+# Default TTS voice per language code — mirrors src/lib/languages.ts
+_DEFAULT_VOICES: dict[str, str] = {
+    "en": "en-US-JennyNeural",
+    "es": "es-ES-ElviraNeural",
+    "fr": "fr-FR-DeniseNeural",
+    "de": "de-DE-KatjaNeural",
+    "pt": "pt-BR-FranciscaNeural",
+    "zh": "zh-CN-XiaoxiaoNeural",
+    "ja": "ja-JP-NanamiNeural",
+    "ko": "ko-KR-SunHiNeural",
+    "ar": "ar-SA-ZariyahNeural",
+    "hi": "hi-IN-SwaraNeural",
+    "ru": "ru-RU-SvetlanaNeural",
+    "it": "it-IT-ElsaNeural",
+    "nl": "nl-NL-ColetteNeural",
+    "tr": "tr-TR-EmelNeural",
+    "pl": "pl-PL-ZofiaNeural",
+    "sv": "sv-SE-SofieNeural",
+    "nb": "nb-NO-PernilleNeural",
+    "da": "da-DK-ChristelNeural",
+    "fi": "fi-FI-SelmaNeural",
+    "id": "id-ID-GadisNeural",
+    "ms": "ms-MY-YasminNeural",
+    "vi": "vi-VN-HoaiMyNeural",
+    "th": "th-TH-PremwadeeNeural",
+    "uk": "uk-UA-PolinaNeural",
+    "cs": "cs-CZ-VlastaNeural",
+    "ro": "ro-RO-AlinaNeural",
+    "hu": "hu-HU-NoemiNeural",
+    "el": "el-GR-AthinaNeural",
+    "he": "he-IL-HilaNeural",
+    "bn": "bn-IN-TanishaaNeural",
+    "ur": "ur-PK-UzmaNeural",
+    "fa": "fa-IR-DilaraNeural",
+    "fil": "fil-PH-BlessicaNeural",
+    "ta": "ta-IN-PallaviNeural",
+    "sw": "sw-KE-ZuriNeural",
+}
+
+
+def _resolve_tts_voice(voice: str | None, language: str) -> str | None:
+    """Return a TTS voice that is intelligible for the target language.
+
+    If the configured voice prefix doesn't match the target language (e.g.
+    a French voice for an Arabic summary), fall back to the canonical default
+    voice for that language so the audio is actually listenable.
+    """
+    default = _DEFAULT_VOICES.get(language)
+    if not voice:
+        return default
+    # Voice IDs are formatted as "{lang}-{region}-{Name}Neural"
+    voice_lang = voice.split("-")[0]
+    if voice_lang == language:
+        return voice  # Voice already matches target language
+    # Mismatch — override with language-appropriate default
+    return default or voice
 
 
 # ── Video failure notification ────────────────────────────────
@@ -191,7 +246,9 @@ async def _process_video(
     # Resolve language/voice early (before the try block) so the exception
     # handlers can reference user_language when calling mark_video_failed.
     user_language = job.get("user_language") or "fr"
-    tts_voice = job.get("tts_voice") or None
+    tts_voice = _resolve_tts_voice(job.get("tts_voice"), user_language)
+    if tts_voice != (job.get("tts_voice") or None):
+        logger.info(f"[{video_id}] Voice overridden: '{job.get('tts_voice')}' → '{tts_voice}' (language: {user_language})")
 
     try:
 
@@ -200,7 +257,8 @@ async def _process_video(
         transcript, source_lang, error, transcript_cost = await asyncio.to_thread(
             transcript_extractor.get_transcript,
             youtube_url,
-            preferred_languages=[user_language, 'fr', 'en']
+            preferred_languages=[user_language, 'fr', 'en'],
+            video_title=video_title,
         )
 
         # ── Post-transcript alerts ──────────────────────────────────────
@@ -246,6 +304,16 @@ async def _process_video(
             )
 
         if not transcript:
+            # Music/ambient videos — silently discard, no alert
+            _MUSIC_SKIP_ERRORS = ("likely_music_no_speech", "audio_too_large_for_speech")
+            if error in _MUSIC_SKIP_ERRORS:
+                logger.info(
+                    f"[{video_id}] Skipping permanently ({error}): {video_title[:80]}"
+                )
+                db.fail_job(job["id"])
+                db.mark_video_failed(video_id, language=user_language)
+                return
+
             logger.error(f"[{video_id}] Transcript extraction failed: {error}")
             if TranscriptExtractor.should_retry(error):
                 logger.info(f"[{video_id}] Will retry later")
@@ -364,7 +432,9 @@ async def _wait_for_cpu_headroom() -> None:
         return  # Throttling disabled
 
     while True:
-        cpu = psutil.cpu_percent(interval=1)
+        # Run the blocking 1-second CPU measurement in a thread so the event
+        # loop stays free to handle bot callbacks during the measurement.
+        cpu = await asyncio.to_thread(psutil.cpu_percent, 1)
         if cpu < MAX_CPU_PERCENT:
             return
         logger.info(f"CPU at {cpu:.0f}% (limit {MAX_CPU_PERCENT}%) — waiting {CPU_CHECK_INTERVAL:.0f}s before next job")
@@ -453,6 +523,7 @@ async def delivery_loop(alert_system: MonitoringAlert):
     logger.info("Telegram Deliverer started")
 
     _cleanup_counter = 0  # Run cleanup every N cycles
+    _recover_counter = 0  # Run recovery every N cycles
 
     while True:
         try:
@@ -468,12 +539,22 @@ async def delivery_loop(alert_system: MonitoringAlert):
                 except Exception as e:
                     logger.warning(f"Cleanup error (non-fatal): {e}")
 
+            # Periodically recover failed deliveries whose video is now completed.
+            # Handles re-processed videos and transient send failures.
+            _recover_counter += 1
+            if _recover_counter >= 40:  # every ~10 min (40 × 15s sleep)
+                _recover_counter = 0
+                try:
+                    await asyncio.to_thread(db.recover_failed_deliveries)
+                except Exception as e:
+                    logger.warning(f"Recovery error (non-fatal): {e}")
+
             # Get pending deliveries with retry on connection errors
             deliveries = []
             max_retries = 3
             for attempt in range(max_retries):
                 try:
-                    deliveries = db.get_pending_deliveries(limit=10)
+                    deliveries = await asyncio.to_thread(db.get_pending_deliveries, 10)
                     break
                 except Exception as e:
                     if attempt < max_retries - 1:
@@ -525,7 +606,7 @@ async def delivery_loop(alert_system: MonitoringAlert):
                             )
                         else:
                             logger.warning(f"No audio for {video_id} — marking failed")
-                            db.mark_delivery_failed(d["delivery_id"])
+                            await asyncio.to_thread(db.mark_delivery_failed, d["delivery_id"])
                             continue
 
                     success = await send_audio_to_user(
@@ -541,7 +622,7 @@ async def delivery_loop(alert_system: MonitoringAlert):
                         # Retry marking as sent to survive transient Supabase errors.
                         for _attempt in range(3):
                             try:
-                                db.mark_delivery_sent(d["delivery_id"])
+                                await asyncio.to_thread(db.mark_delivery_sent, d["delivery_id"])
                                 stats.record_delivery_sent()
                                 break
                             except Exception as mark_err:
@@ -559,7 +640,7 @@ async def delivery_loop(alert_system: MonitoringAlert):
                     else:
                         # send_audio_to_user returned False: Telegram permanently
                         # rejected the send (user blocked bot, invalid chat, etc.).
-                        db.mark_delivery_failed(d["delivery_id"])
+                        await asyncio.to_thread(db.mark_delivery_failed, d["delivery_id"])
                         stats.record_delivery_failed()
 
                     await asyncio.sleep(1)
@@ -591,6 +672,93 @@ async def delivery_loop(alert_system: MonitoringAlert):
                     level="ERROR"
                 )
                 await asyncio.sleep(15)
+
+
+# ── Loop 4: Telegram Bot Polling ──────────────────────────────
+
+async def _bot_poll_loop(bot_app) -> None:
+    """Custom long-polling loop for the Telegram bot.
+
+    PTB's built-in Updater calls deleteWebhook on every startup which resets
+    Telegram's server-side allowed_updates to ["message"], silently dropping
+    callback_query events.  This custom loop uses aiohttp directly so that
+    allowed_updates=["message","callback_query"] is sent on every request and
+    is never overwritten by a bootstrap deleteWebhook call.
+    """
+    from telegram import Update as TGUpdate
+
+    ALLOWED = ["message", "callback_query"]
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getUpdates"
+    offset = 0
+
+    async def _make_session() -> aiohttp.ClientSession:
+        connector = aiohttp.TCPConnector(
+            enable_cleanup_closed=True,
+            keepalive_timeout=60,   # Reuse SSL connections for 60s (avoids 6s handshake per request)
+            limit=5,
+        )
+        return aiohttp.ClientSession(connector=connector)
+
+    session = await _make_session()
+    try:
+        # Acknowledge all pending updates accumulated while the worker was down.
+        # We fetch with timeout=0 (instant return) and no offset, which returns
+        # any unacknowledged updates.  We then advance past them so we don't
+        # re-deliver stale summaries.
+        try:
+            async with session.post(
+                url,
+                json={"timeout": 0, "allowed_updates": ALLOWED},
+                timeout=aiohttp.ClientTimeout(total=10),
+            ) as resp:
+                data = await resp.json()
+                if data.get("ok") and data.get("result"):
+                    offset = data["result"][-1]["update_id"] + 1
+                    logger.info(f"Bot startup: skipped {len(data['result'])} pending updates (offset now {offset})")
+        except Exception as e:
+            logger.warning(f"Bot startup: could not drop pending updates: {e}")
+
+        logger.info("Telegram bot polling started")
+
+        consecutive_errors = 0
+        while True:
+            try:
+                async with session.post(
+                    url,
+                    json={"offset": offset, "timeout": 10, "allowed_updates": ALLOWED},
+                    timeout=aiohttp.ClientTimeout(total=60),
+                ) as resp:
+                    data = await resp.json()
+
+                consecutive_errors = 0
+
+                if not data.get("ok"):
+                    logger.warning(f"getUpdates error: {data.get('description', 'unknown')}")
+                    await asyncio.sleep(5)
+                    continue
+
+                for raw in data.get("result", []):
+                    update = TGUpdate.de_json(raw, bot_app.bot)
+                    asyncio.create_task(bot_app.process_update(update))
+                    offset = raw["update_id"] + 1
+
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:
+                consecutive_errors += 1
+                err_type = type(e).__name__
+                logger.error(f"Bot poll error ({err_type}): {e or 'timeout'}")
+                # After 3 consecutive failures, recreate the session to clear stale connections
+                if consecutive_errors >= 3:
+                    logger.warning("Bot poll: recreating session after repeated failures")
+                    await session.close()
+                    session = await _make_session()
+                    consecutive_errors = 0
+                    await asyncio.sleep(10)
+                else:
+                    await asyncio.sleep(5)
+    finally:
+        await session.close()
 
 
 # ── Main ───────────────────────────────────────────────────────
@@ -647,35 +815,13 @@ async def main():
     else:
         logger.warning("No ADMIN_TELEGRAM_CHAT_ID set - monitoring alerts disabled")
 
-    # Start Telegram bot (polling in background)
-    # Polling is optional: if another instance already holds the session, we
-    # skip command handling but keep delivery (which uses Bot directly).
+    # Start Telegram bot
     bot_app = create_bot_application()
     await bot_app.initialize()
     await bot_app.start()
 
     # Register the slash-command menu (left of the Telegram input bar)
     await setup_bot_commands(bot_app)
-
-    # Force Telegram to deliver callback_query updates.
-    # Telegram caches allowed_updates server-side from the last getUpdates/setWebhook call.
-    # If a previous session only requested ["message"], callbacks are silently dropped.
-    # One explicit getUpdates call with the full list fixes the cache before polling starts.
-    try:
-        await bot_app.bot.get_updates(
-            allowed_updates=["message", "callback_query"],
-            timeout=0,
-        )
-        logger.info("Telegram allowed_updates registered: message, callback_query")
-    except Exception as e:
-        logger.warning(f"Could not pre-register allowed_updates: {e}")
-
-    try:
-        await bot_app.updater.start_polling(allowed_updates=["message", "callback_query"], drop_pending_updates=True)
-        logger.info("Telegram bot polling started")
-    except Exception as e:
-        logger.warning(f"Bot polling failed to start (another instance may be running): {e}")
-        logger.info("Continuing without command handler — deliveries will still work")
 
     # Initialize monitoring alert system
     alert_system = MonitoringAlert(bot_app, ADMIN_TELEGRAM_CHAT_ID)
@@ -695,6 +841,7 @@ async def main():
             rss_loop(alert_system),
             processor_loop(alert_system),
             delivery_loop(alert_system),
+            _bot_poll_loop(bot_app),
         ]
 
         # Add alert processor if admin configured
@@ -714,7 +861,6 @@ async def main():
             )
             await alert_system.stop()
 
-        await bot_app.updater.stop()
         await bot_app.stop()
         await bot_app.shutdown()
 

@@ -95,7 +95,7 @@ async def send_audio_to_user(
     video_url = f"https://youtu.be/{video_id}"
 
     keyboard = InlineKeyboardMarkup([[
-        InlineKeyboardButton("⚙️", callback_data=f"options_{video_id}_{language}")
+        InlineKeyboardButton("⚙️ Options", callback_data=f"options_{video_id}_{language}")
     ]])
 
     # ── Step 1: Convert MP3 → OGG/OPUS ─────────────────────────────────────

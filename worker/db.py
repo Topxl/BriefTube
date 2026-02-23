@@ -500,6 +500,50 @@ def mark_delivery_failed(delivery_id: str):
     sb.table("deliveries").update({"status": "failed"}).eq("id", delivery_id).execute()
 
 
+def recover_failed_deliveries() -> int:
+    """Reset failed deliveries to pending when their video is now completed with audio.
+
+    Handles the case where:
+    - A video was initially failed → delivery marked failed by cleanup
+    - The video was later re-processed successfully
+    - Or a transient error caused the delivery to fail (not a Telegram rejection)
+
+    Only recovers deliveries where sent_at IS NULL (never actually sent).
+    Deliveries with sent_at set were already delivered and should not be retried.
+    """
+    sb = get_client()
+
+    # Find all completed video IDs that have audio
+    completed = (
+        sb.table("processed_videos")
+        .select("video_id")
+        .eq("status", "completed")
+        .not_.is_("audio_url", "null")
+        .execute()
+    )
+    if not completed.data:
+        return 0
+
+    completed_ids = [r["video_id"] for r in completed.data]
+    recovered = 0
+
+    for i in range(0, len(completed_ids), 100):
+        batch = completed_ids[i : i + 100]
+        res = (
+            sb.table("deliveries")
+            .update({"status": "pending"})
+            .eq("status", "failed")
+            .is_("sent_at", "null")      # Never actually sent — safe to retry
+            .in_("video_id", batch)
+            .execute()
+        )
+        recovered += len(res.data or [])
+
+    if recovered:
+        logger.info(f"Recovered {recovered} failed deliveries → pending")
+    return recovered
+
+
 def claim_delivery(delivery_id: str) -> bool:
     """Atomically claim a delivery: pending → sending.
 
@@ -535,18 +579,36 @@ def reset_stuck_processing_jobs(timeout_seconds: int = 700) -> int:
     sb = get_client()
     cutoff = (datetime.now(timezone.utc) - timedelta(seconds=timeout_seconds)).isoformat()
 
-    stuck = (
+    # Match jobs stuck in 'processing' with either:
+    # - started_at older than the timeout (normal stuck case)
+    # - started_at IS NULL (worker crashed before setting started_at)
+    stuck_timed = (
         sb.table("processing_queue")
         .select("id, attempts")
         .eq("status", "processing")
         .lt("started_at", cutoff)
         .execute()
     )
-    if not stuck.data:
+    stuck_null = (
+        sb.table("processing_queue")
+        .select("id, attempts")
+        .eq("status", "processing")
+        .is_("started_at", "null")
+        .execute()
+    )
+    # Merge and deduplicate by id
+    seen_ids: set[str] = set()
+    stuck_rows: list[dict] = []
+    for row in (stuck_timed.data or []) + (stuck_null.data or []):
+        if row["id"] not in seen_ids:
+            seen_ids.add(row["id"])
+            stuck_rows.append(row)
+
+    if not stuck_rows:
         return 0
 
     count = 0
-    for row in stuck.data:
+    for row in stuck_rows:
         new_attempts = (row.get("attempts") or 0) + 1
         new_status = "failed" if new_attempts >= 3 else "queued"
         sb.table("processing_queue").update({
@@ -679,6 +741,191 @@ def get_processed_video(video_id: str, language: str) -> dict | None:
         .execute()
     )
     return res.data[0] if res.data else None
+
+
+def get_video_channel(video_id: str) -> dict | None:
+    """Look up channel_id and channel_name for a video from processed_videos.
+
+    Returns None for on-demand videos (channel_id is empty).
+    """
+    sb = get_client()
+    res = (
+        sb.table("processed_videos")
+        .select("channel_id")
+        .eq("video_id", video_id)
+        .neq("channel_id", "")
+        .limit(1)
+        .execute()
+    )
+    if not res.data or not res.data[0].get("channel_id"):
+        return None
+    channel_id = res.data[0]["channel_id"]
+    name_res = (
+        sb.table("subscriptions")
+        .select("channel_name")
+        .eq("channel_id", channel_id)
+        .limit(1)
+        .execute()
+    )
+    channel_name = name_res.data[0]["channel_name"] if name_res.data else channel_id
+    return {"channel_id": channel_id, "channel_name": channel_name}
+
+
+def get_available_languages_for_video(video_id: str) -> list[str]:
+    """Return all languages with a completed summary for this video."""
+    sb = get_client()
+    res = (
+        sb.table("processed_videos")
+        .select("language")
+        .eq("video_id", video_id)
+        .eq("status", "completed")
+        .execute()
+    )
+    return [row["language"] for row in res.data]
+
+
+def get_any_processed_video(video_id: str) -> dict | None:
+    """Fetch basic info for a video from any language row (for re-queuing in a new language)."""
+    sb = get_client()
+    res = (
+        sb.table("processed_videos")
+        .select("video_id, video_title, channel_id")
+        .eq("video_id", video_id)
+        .limit(1)
+        .execute()
+    )
+    return res.data[0] if res.data else None
+
+
+def enqueue_video_for_language(
+    video_id: str,
+    youtube_url: str,
+    video_title: str,
+    channel_id: str,
+    language: str,
+    tts_voice: str | None = None,
+) -> bool:
+    """Queue a video for processing in a specific language.
+
+    - If no job exists in processing_queue → insert new job.
+    - If job is completed/failed → update it to re-queue for the new language.
+    - If job is queued/processing → do nothing (already active).
+
+    Returns True if a job was created/updated, False if already active.
+    """
+    sb = get_client()
+
+    existing = (
+        sb.table("processing_queue")
+        .select("id, status")
+        .eq("video_id", video_id)
+        .execute()
+    )
+
+    row = {
+        "video_id": video_id,
+        "youtube_url": youtube_url,
+        "video_title": video_title,
+        "channel_id": channel_id,
+        "status": "queued",
+        "user_language": language,
+        "tts_voice": tts_voice,
+    }
+
+    if not existing.data:
+        sb.table("processing_queue").insert(row).execute()
+        return True
+
+    job = existing.data[0]
+    if job["status"] in ("queued", "processing"):
+        return False  # Already active — do not interrupt
+
+    # Job is completed/failed — reuse the slot
+    sb.table("processing_queue").update({
+        "status": "queued",
+        "user_language": language,
+        "tts_voice": tts_voice,
+    }).eq("id", job["id"]).execute()
+    return True
+
+
+def is_subscribed_to_channel(user_id: str, channel_id: str) -> bool:
+    """Return True if user has an active subscription to this channel."""
+    sb = get_client()
+    res = (
+        sb.table("subscriptions")
+        .select("id")
+        .eq("user_id", user_id)
+        .eq("channel_id", channel_id)
+        .eq("active", True)
+        .execute()
+    )
+    return bool(res.data)
+
+
+def unsubscribe_channel(user_id: str, channel_id: str) -> bool:
+    """Set subscription inactive. Returns True if a row was updated."""
+    sb = get_client()
+    res = (
+        sb.table("subscriptions")
+        .update({"active": False})
+        .eq("user_id", user_id)
+        .eq("channel_id", channel_id)
+        .eq("active", True)
+        .execute()
+    )
+    return bool(res.data)
+
+
+def subscribe_to_channel(
+    user_id: str,
+    channel_id: str,
+    channel_name: str,
+    channel_avatar_url: str | None = None,
+) -> bool:
+    """Subscribe user to a channel.
+
+    Reactivates if previously inactive.
+    Returns True if subscription is now active (new or reactivated),
+    False if the user was already subscribed.
+    """
+    sb = get_client()
+    existing = (
+        sb.table("subscriptions")
+        .select("id, active")
+        .eq("user_id", user_id)
+        .eq("channel_id", channel_id)
+        .execute()
+    )
+    if existing.data:
+        row = existing.data[0]
+        if row["active"]:
+            return False  # already subscribed
+        update_data: dict = {"active": True}
+        if channel_avatar_url:
+            update_data["channel_avatar_url"] = channel_avatar_url
+        sb.table("subscriptions").update(update_data).eq("id", row["id"]).execute()
+        return True
+    sb.table("subscriptions").insert({
+        "user_id": user_id,
+        "channel_id": channel_id,
+        "channel_name": channel_name,
+        "channel_avatar_url": channel_avatar_url,
+    }).execute()
+    return True
+
+
+def get_subscription_count(user_id: str) -> int:
+    """Count active channel subscriptions for a user."""
+    sb = get_client()
+    res = (
+        sb.table("subscriptions")
+        .select("id", count="exact")
+        .eq("user_id", user_id)
+        .eq("active", True)
+        .execute()
+    )
+    return res.count or 0
 
 
 def mark_existing_videos_as_skipped(channel_id: str):

@@ -22,6 +22,25 @@ from youtube_transcript_api._errors import (
 
 logger = logging.getLogger(__name__)
 
+# Patterns that strongly suggest a video contains only music / ambient sounds
+# with no meaningful speech to transcribe.  Checked against the video title
+# before attempting the (expensive) Whisper fallback.
+_MUSIC_TITLE_RE = re.compile(
+    r'\b\d+\s*hz\b'           # 432Hz, 528 Hz, 888hz …
+    r'|binaural\s+beats?'
+    r'|solfeggio'
+    r'|white\s+noise'
+    r'|rain\s+sounds?'
+    r'|ambient\s+music'
+    r'|sleep\s+music'
+    r'|relaxing\s+music'
+    r'|study\s+music'
+    r'|focus\s+music'
+    r'|healing\s+(music|sounds?|frequency|frequencies)'
+    r'|meditation\s+(music|sounds?|frequency|frequencies)',
+    re.IGNORECASE,
+)
+
 # Path to YouTube cookies file (Netscape format).
 # Set YOUTUBE_COOKIES_FILE in .env, or place cookies at worker/cookies/youtube.txt.
 _COOKIES_FILE = Path(__file__).parent / "cookies" / "youtube.txt"
@@ -142,10 +161,16 @@ class TranscriptExtractor:
         logger.error(f"Could not extract video ID from URL: {url}")
         return None
 
+    @staticmethod
+    def _is_music_video(title: str) -> bool:
+        """Return True if the title strongly suggests a music/ambient video."""
+        return bool(_MUSIC_TITLE_RE.search(title))
+
     def get_transcript(
         self,
         youtube_url: str,
-        preferred_languages: list[str] = None
+        preferred_languages: list[str] = None,
+        video_title: str = "",
     ) -> Tuple[Optional[str], Optional[str], Optional[str], float]:
         """
         Get transcript for a YouTube video
@@ -219,7 +244,7 @@ class TranscriptExtractor:
                 # Step 3: Whisper API fallback (paid, uses Groq quota)
                 if self.enable_whisper_fallback and self.whisper_transcriber:
                     logger.warning("YouTube transcripts not available, trying Whisper API fallback...")
-                    return self._whisper_fallback(youtube_url, preferred_languages)
+                    return self._whisper_fallback(youtube_url, preferred_languages, video_title)
                 else:
                     return None, None, "no_transcript_available", 0.0
 
@@ -236,7 +261,7 @@ class TranscriptExtractor:
                 self.last_ip_blocked = False
             if self.enable_whisper_fallback and self.whisper_transcriber:
                 logger.info("Trying Whisper API fallback...")
-                return self._whisper_fallback(youtube_url, preferred_languages)
+                return self._whisper_fallback(youtube_url, preferred_languages, video_title)
             return None, None, "transcripts_disabled", 0.0
 
         except VideoUnavailable:
@@ -248,7 +273,7 @@ class TranscriptExtractor:
             # Try Whisper fallback as last resort
             if self.enable_whisper_fallback and self.whisper_transcriber:
                 logger.info("Trying Whisper API fallback after error...")
-                return self._whisper_fallback(youtube_url, preferred_languages)
+                return self._whisper_fallback(youtube_url, preferred_languages, video_title)
             return None, None, f"error: {str(e)}", 0.0
 
     def _ytdlp_subtitles(
@@ -355,13 +380,19 @@ class TranscriptExtractor:
     def _whisper_fallback(
         self,
         youtube_url: str,
-        preferred_languages: list[str] = None
+        preferred_languages: list[str] = None,
+        video_title: str = "",
     ) -> Tuple[Optional[str], Optional[str], Optional[str], float]:
         """
         Fallback to Whisper API when YouTube transcripts are not available
 
         Returns same tuple as get_transcript
         """
+        # Skip Whisper for music/ambient videos — no speech to transcribe
+        if video_title and TranscriptExtractor._is_music_video(video_title):
+            logger.info(f"Skipping Whisper — music/ambient video detected: {video_title[:80]}")
+            return None, None, "likely_music_no_speech", 0.0
+
         try:
             # Use first preferred language, or None for auto-detect
             target_lang = preferred_languages[0] if preferred_languages else None
