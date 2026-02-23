@@ -59,21 +59,24 @@ def is_video_processed(video_id: str) -> bool:
     return len(res.data) > 0
 
 
-def get_all_known_video_ids() -> set[str]:
-    """Return the set of ALL video_ids already in processed_videos.
+def get_all_known_video_ids(days: int = 30) -> set[str]:
+    """Return video_ids created within the last `days` days.
 
-    Used by the RSS scanner to check new videos in O(1) locally instead
-    of making one DB query per video (which causes 3000+ queries per scan).
-    Paginates past the PostgREST 1000-row default limit so the full set is
-    returned even when processed_videos has thousands of rows.
+    YouTube RSS feeds only contain the last ~15 videos per channel, which are
+    always recent. Videos older than 30 days cannot appear in the current RSS
+    feed and do not need to be in the cache — this keeps the set small even
+    when processed_videos has millions of rows.
     """
+    from datetime import timedelta
     sb = get_client()
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
     known: set[str] = set()
     offset = 0
     while True:
         res = (
             sb.table("processed_videos")
             .select("video_id")
+            .gte("created_at", cutoff)
             .range(offset, offset + 999)
             .execute()
         )
@@ -100,7 +103,7 @@ def mark_video_completed(video_id: str, summary: str, audio_url: str, metadata: 
     sb.table("processed_videos").update(update_data).eq("video_id", video_id).eq("language", language).execute()
 
 
-def mark_video_failed(video_id: str, language: str = "fr"):
+def mark_video_failed(video_id: str, language: str = "fr", immediate: bool = False):
     sb = get_client()
     # Increment failure_count — use execute() (not .single()) to avoid throwing
     # if the row was deleted between job pick and failure handling.
@@ -114,7 +117,7 @@ def mark_video_failed(video_id: str, language: str = "fr"):
     if not res.data:
         return  # Row gone — nothing to update
     count = (res.data[0].get("failure_count") or 0) + 1
-    status = "failed" if count >= 3 else "pending"
+    status = "failed" if (immediate or count >= 3) else "pending"
     sb.table("processed_videos").update({
         "failure_count": count,
         "status": status,
@@ -190,8 +193,13 @@ def complete_job(job_id: str):
     sb.table("processing_queue").update({"status": "completed"}).eq("id", job_id).execute()
 
 
-def fail_job(job_id: str) -> bool:
-    """Mark a job as failed. Returns True if this was a permanent failure (3rd attempt)."""
+def fail_job(job_id: str, immediate: bool = False) -> bool:
+    """Mark a job as failed. Returns True if this was a permanent failure.
+
+    immediate=True skips the 3-attempt retry cycle and fails permanently on
+    the first call. Use for deterministic errors (no transcript available,
+    music/ambient video) where retrying will never succeed.
+    """
     sb = get_client()
     # Use execute() without .single() — avoids throwing if the job was deleted.
     res = sb.table("processing_queue").select("attempts, video_id, user_language").eq("id", job_id).execute()
@@ -199,7 +207,7 @@ def fail_job(job_id: str) -> bool:
         return False  # Job already gone — nothing to update
     attempts = (res.data[0].get("attempts") or 0) + 1
     user_language = res.data[0].get("user_language") or "fr"
-    status = "failed" if attempts >= 3 else "queued"
+    status = "failed" if (immediate or attempts >= 3) else "queued"
     sb.table("processing_queue").update({
         "status": status,
         "attempts": attempts,
@@ -209,7 +217,7 @@ def fail_job(job_id: str) -> bool:
     if status == "failed":
         video_id = res.data[0].get("video_id")
         if video_id:
-            mark_video_failed(video_id, language=user_language)
+            mark_video_failed(video_id, language=user_language, immediate=immediate)
         return True
     return False
 
@@ -275,7 +283,11 @@ def get_subscriber_languages(channel_id: str) -> list[dict]:
 
 
 def create_deliveries_for_video(video_id: str, channel_id: str, language: str = "fr"):
-    """Create delivery entries for all users subscribed to this channel with the given language."""
+    """Create delivery entries for all users subscribed to this channel with the given language.
+
+    Uses a single bulk check + single batch insert instead of N individual
+    SELECT+INSERT calls — reduces DB round-trips from O(users) to O(1).
+    """
     sb = get_client()
     # Get all users subscribed to this channel
     subs = (
@@ -288,40 +300,42 @@ def create_deliveries_for_video(video_id: str, channel_id: str, language: str = 
     if not subs.data:
         return
 
-    # Deduplicate user_ids — a user may have multiple active subscriptions to
-    # the same channel (e.g. direct + via a list), which would create duplicate
-    # delivery rows and cause the same video to be sent multiple times.
+    # Deduplicate user_ids
     user_ids = list({s["user_id"] for s in subs.data})
 
-    # Only create deliveries for users whose preferred_language matches
+    # Only users whose preferred_language matches
     profiles = (
         sb.table("profiles")
         .select("id, preferred_language")
         .in_("id", user_ids)
         .execute()
     )
-    for profile in (profiles.data or []):
-        user_lang = profile.get("preferred_language") or "fr"
-        if user_lang != language:
-            continue
-        # Use select+insert instead of upsert(on_conflict=...) because the
-        # deliveries table has no UNIQUE constraint on (user_id, video_id, language),
-        # which would cause a 42P10 "no unique constraint" error on every new video.
-        existing = (
-            sb.table("deliveries")
-            .select("id")
-            .eq("user_id", profile["id"])
-            .eq("video_id", video_id)
-            .eq("language", language)
-            .execute()
-        )
-        if not existing.data:
-            sb.table("deliveries").insert({
-                "user_id": profile["id"],
-                "video_id": video_id,
-                "status": "pending",
-                "language": language,
-            }).execute()
+    matching_ids = [
+        p["id"] for p in (profiles.data or [])
+        if (p.get("preferred_language") or "fr") == language
+    ]
+    if not matching_ids:
+        return
+
+    # Fetch all existing deliveries for this video+language in one query
+    existing = (
+        sb.table("deliveries")
+        .select("user_id")
+        .eq("video_id", video_id)
+        .eq("language", language)
+        .in_("user_id", matching_ids)
+        .execute()
+    )
+    existing_ids = {d["user_id"] for d in (existing.data or [])}
+
+    # Batch insert all missing deliveries in a single request
+    to_insert = [
+        {"user_id": uid, "video_id": video_id, "status": "pending", "language": language}
+        for uid in matching_ids
+        if uid not in existing_ids
+    ]
+    if to_insert:
+        sb.table("deliveries").insert(to_insert).execute()
 
 
 def get_pending_deliveries(limit: int = 20) -> list[dict]:
@@ -437,24 +451,24 @@ def get_pending_deliveries(limit: int = 20) -> list[dict]:
 
 
 def cleanup_undeliverable_deliveries() -> int:
-    """Mark pending deliveries as failed when their video failed or when the
+    """Mark pending deliveries as failed when their video failed/skipped or when the
     user has no Telegram connected. Prevents stuck deliveries from blocking
     the queue forever. Returns the number of deliveries cleaned up."""
     sb = get_client()
     cleaned = 0
 
-    # Failed videos → deliveries can never succeed
-    failed_videos = (
+    # Failed or skipped videos → deliveries can never succeed
+    dead_videos = (
         sb.table("processed_videos")
         .select("video_id")
-        .eq("status", "failed")
+        .in_("status", ["failed", "skipped"])
         .execute()
     )
-    if failed_videos.data:
-        failed_ids = [v["video_id"] for v in failed_videos.data]
+    if dead_videos.data:
+        dead_ids = [v["video_id"] for v in dead_videos.data]
         # Process in batches of 100 to stay within PostgREST limits
-        for i in range(0, len(failed_ids), 100):
-            batch = failed_ids[i : i + 100]
+        for i in range(0, len(dead_ids), 100):
+            batch = dead_ids[i : i + 100]
             res = (
                 sb.table("deliveries")
                 .update({"status": "failed"})
@@ -972,3 +986,36 @@ def mark_existing_videos_as_skipped(channel_id: str):
             on_conflict="video_id,language",
             ignore_duplicates=True,
         ).execute()
+
+
+# ── Worker Stats ─────────────────────────────────────────────────
+
+def save_worker_stats(date: str, data: dict) -> None:
+    """Upsert daily worker stats into the worker_stats table.
+
+    Args:
+        date: ISO date string (YYYY-MM-DD)
+        data: dict with keys: videos_processed, videos_failed, deliveries_sent,
+              deliveries_failed, groq_seconds_today, groq_cost_today
+    """
+    sb = get_client()
+    sb.table("worker_stats").upsert(
+        {
+            "date": date,
+            "videos_processed": data.get("videos_processed", 0),
+            "videos_failed": data.get("videos_failed", 0),
+            "deliveries_sent": data.get("deliveries_sent", 0),
+            "deliveries_failed": data.get("deliveries_failed", 0),
+            "groq_seconds": data.get("groq_seconds_today", 0.0),
+            "groq_cost": data.get("groq_cost_today", 0.0),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        },
+        on_conflict="date",
+    ).execute()
+
+
+def load_worker_stats(date: str) -> dict | None:
+    """Load worker stats for a given date. Returns None if no row exists."""
+    sb = get_client()
+    res = sb.table("worker_stats").select("*").eq("date", date).execute()
+    return res.data[0] if res.data else None

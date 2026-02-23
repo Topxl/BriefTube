@@ -312,18 +312,22 @@ async def _process_video(
                 logger.info(
                     f"[{video_id}] Skipping permanently ({error}): {video_title[:80]}"
                 )
-                db.fail_job(job["id"])
-                db.mark_video_failed(video_id, language=user_language)
+                db.fail_job(job["id"], immediate=True)
                 return
 
             logger.error(f"[{video_id}] Transcript extraction failed: {error}")
             if TranscriptExtractor.should_retry(error):
+                # Transient error (rate limit, video not yet available) — retry later
                 logger.info(f"[{video_id}] Will retry later")
                 permanent = db.fail_job(job["id"])
                 if permanent:
                     await _notify_video_failure(video_id, alert_system)
             else:
-                raise Exception(f"Transcript extraction failed: {error}")
+                # Deterministic error (transcripts disabled, video private) — fail immediately
+                logger.info(f"[{video_id}] Permanent transcript failure — no retry")
+                db.fail_job(job["id"], immediate=True)
+                await _notify_video_failure(video_id, alert_system)
+                stats.record_video_failed("TranscriptUnavailable", error or "no_transcript")
             return
 
         logger.info(
@@ -536,8 +540,9 @@ async def delivery_loop(alert_system: MonitoringAlert):
     """Send completed audio to subscribed users."""
     logger.info("Telegram Deliverer started")
 
-    _cleanup_counter = 0  # Run cleanup every N cycles
-    _recover_counter = 0  # Run recovery every N cycles
+    _cleanup_counter = 0       # Run delivery cleanup every N cycles
+    _recover_counter = 0       # Run delivery recovery every N cycles
+    _audio_cleanup_counter = 0  # Run audio file cleanup every N cycles
 
     while True:
         try:
@@ -568,7 +573,7 @@ async def delivery_loop(alert_system: MonitoringAlert):
             max_retries = 3
             for attempt in range(max_retries):
                 try:
-                    deliveries = await asyncio.to_thread(db.get_pending_deliveries, 10)
+                    deliveries = await asyncio.to_thread(db.get_pending_deliveries, 30)
                     break
                 except Exception as e:
                     if attempt < max_retries - 1:
@@ -657,7 +662,7 @@ async def delivery_loop(alert_system: MonitoringAlert):
                         await asyncio.to_thread(db.mark_delivery_failed, d["delivery_id"])
                         stats.record_delivery_failed()
 
-                    await asyncio.sleep(1)
+                    await asyncio.sleep(0.05)
 
                 except Exception as e:
                     # Unexpected error during send (network, audio file issue...).
@@ -668,8 +673,11 @@ async def delivery_loop(alert_system: MonitoringAlert):
             if not deliveries:
                 await asyncio.sleep(15)
 
-            # Cleanup old audio files every cycle
-            cleanup_audio_files(max_age_hours=1)
+            # Cleanup old audio files every ~10 min (40 × 15s sleep)
+            _audio_cleanup_counter += 1
+            if _audio_cleanup_counter >= 40:
+                _audio_cleanup_counter = 0
+                cleanup_audio_files(max_age_hours=1)
 
         except Exception as e:
             error_msg = str(e)
@@ -775,6 +783,77 @@ async def _bot_poll_loop(bot_app) -> None:
         await session.close()
 
 
+# ── Loop : Health Check HTTP ───────────────────────────────────
+
+async def health_loop():
+    """Minimal HTTP server for uptime monitoring.
+
+    GET /health → {"status": "ok", "uptime": "...", ...}
+    Useful for external uptime monitors (UptimeRobot, etc.).
+    """
+    from aiohttp import web
+
+    async def handle(request):
+        return web.json_response({
+            "status": "ok",
+            "uptime": stats.get_uptime(),
+            "videos_processed": stats.videos_processed,
+            "deliveries_sent": stats.deliveries_sent,
+            "groq_quota_pct": round(stats.groq_quota_pct, 1),
+        })
+
+    app = web.Application()
+    app.router.add_get("/health", handle)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "0.0.0.0", 8080)
+    await site.start()
+    logger.info("Health check server started on :8080/health")
+    await asyncio.Event().wait()  # Keep running forever alongside other loops
+
+
+# ── Loop: Worker Stats persistence ────────────────────────────
+
+async def stats_save_loop():
+    """Restore today's WorkerStats from Supabase at startup, then save every 5 min.
+
+    Prevents counters from resetting to zero when the worker is restarted
+    (e.g., after a deploy or crash). Uses a dedicated worker_stats table keyed
+    by UTC date so daily totals are accumulated correctly.
+    """
+    today = datetime.now(timezone.utc).date().isoformat()
+    try:
+        row = await asyncio.to_thread(db.load_worker_stats, today)
+        if row:
+            stats.videos_processed = row.get("videos_processed", 0)
+            stats.videos_failed = row.get("videos_failed", 0)
+            stats.deliveries_sent = row.get("deliveries_sent", 0)
+            stats.deliveries_failed = row.get("deliveries_failed", 0)
+            stats.groq_seconds_today = float(row.get("groq_seconds", 0.0))
+            stats.groq_cost_today = float(row.get("groq_cost", 0.0))
+            logger.info(
+                f"WorkerStats restored from DB: {stats.videos_processed} videos processed, "
+                f"{stats.deliveries_sent} deliveries sent today"
+            )
+    except Exception as e:
+        logger.warning(f"Could not restore WorkerStats from DB: {e}")
+
+    while True:
+        await asyncio.sleep(300)  # Save every 5 minutes
+        try:
+            save_today = datetime.now(timezone.utc).date().isoformat()
+            await asyncio.to_thread(db.save_worker_stats, save_today, {
+                "videos_processed": stats.videos_processed,
+                "videos_failed": stats.videos_failed,
+                "deliveries_sent": stats.deliveries_sent,
+                "deliveries_failed": stats.deliveries_failed,
+                "groq_seconds_today": stats.groq_seconds_today,
+                "groq_cost_today": stats.groq_cost_today,
+            })
+        except Exception as e:
+            logger.warning(f"WorkerStats periodic save failed: {e}")
+
+
 # ── Main ───────────────────────────────────────────────────────
 
 async def main():
@@ -857,6 +936,8 @@ async def main():
             processor_loop(alert_system),
             delivery_loop(alert_system),
             _bot_poll_loop(bot_app),
+            health_loop(),
+            stats_save_loop(),
         ]
 
         # Add alert processor if admin configured
@@ -866,6 +947,21 @@ async def main():
         await asyncio.gather(*tasks)
 
     finally:
+        # Save stats before shutdown so today's counters survive the restart
+        try:
+            shutdown_date = datetime.now(timezone.utc).date().isoformat()
+            await asyncio.to_thread(db.save_worker_stats, shutdown_date, {
+                "videos_processed": stats.videos_processed,
+                "videos_failed": stats.videos_failed,
+                "deliveries_sent": stats.deliveries_sent,
+                "deliveries_failed": stats.deliveries_failed,
+                "groq_seconds_today": stats.groq_seconds_today,
+                "groq_cost_today": stats.groq_cost_today,
+            })
+            logger.info("WorkerStats saved on shutdown")
+        except Exception as e:
+            logger.warning(f"Could not save WorkerStats on shutdown: {e}")
+
         # Send shutdown alert
         if ADMIN_TELEGRAM_CHAT_ID:
             await alert_system.send_alert(

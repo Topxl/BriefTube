@@ -39,10 +39,10 @@ R2_PUBLIC_URL = os.getenv("R2_PUBLIC_URL", "")
 DEFAULT_TTS_VOICE = os.getenv("TTS_VOICE", "fr-FR-DeniseNeural")
 
 # RSS
-RSS_CHECK_INTERVAL = int(os.getenv("RSS_CHECK_INTERVAL", "300"))  # 5 minutes
+RSS_CHECK_INTERVAL = int(os.getenv("RSS_CHECK_INTERVAL", "1800"))  # 30 minutes (WebSub handles real-time)
 
 # Concurrent video processing (how many videos to process simultaneously)
-MAX_CONCURRENT_VIDEOS = int(os.getenv("MAX_CONCURRENT_VIDEOS", "2"))
+MAX_CONCURRENT_VIDEOS = int(os.getenv("MAX_CONCURRENT_VIDEOS", "6"))
 
 # CPU throttling — worker pauses before starting a new video job when system
 # CPU usage (all cores, 1-second sample) is above this threshold.

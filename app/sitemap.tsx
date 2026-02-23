@@ -1,7 +1,27 @@
 import type { MetadataRoute } from "next";
 import { SiteConfig } from "@/site-config";
+import { createAdminClient } from "@/lib/supabase/server";
+import { articles } from "@/content/blog";
+import { comparisons } from "@/content/comparisons";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const supabase = createAdminClient();
+  const [{ data: publicLists }, { data: channelRows }] = await Promise.all([
+    supabase
+      .from("channel_lists")
+      .select("id, created_at")
+      .eq("is_public", true),
+    supabase
+      .from("subscriptions")
+      .select("channel_id")
+      .eq("active", true)
+      .limit(500),
+  ]);
+
+  const uniqueChannelIds = [
+    ...new Set((channelRows ?? []).map((r) => r.channel_id)),
+  ];
+
   return [
     {
       url: `${SiteConfig.prodUrl}`,
@@ -16,6 +36,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.7,
     },
     {
+      url: `${SiteConfig.prodUrl}/pricing`,
+      lastModified: new Date("2026-02-24"),
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
+    {
       url: `${SiteConfig.prodUrl}/privacy`,
       lastModified: new Date("2026-02-18"),
       changeFrequency: "yearly",
@@ -27,5 +53,45 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "yearly",
       priority: 0.3,
     },
+    // Blog
+    {
+      url: `${SiteConfig.prodUrl}/blog`,
+      lastModified: new Date("2026-02-24"),
+      changeFrequency: "weekly",
+      priority: 0.7,
+    },
+    ...articles.map((article) => ({
+      url: `${SiteConfig.prodUrl}/blog/${article.slug}`,
+      lastModified: new Date(article.date),
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
+    })),
+    // Comparisons
+    {
+      url: `${SiteConfig.prodUrl}/vs`,
+      lastModified: new Date("2026-02-24"),
+      changeFrequency: "monthly",
+      priority: 0.6,
+    },
+    ...comparisons.map((comp) => ({
+      url: `${SiteConfig.prodUrl}/vs/${comp.slug}`,
+      lastModified: new Date(comp.lastUpdated),
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
+    })),
+    // Public lists
+    ...(publicLists ?? []).map((list) => ({
+      url: `${SiteConfig.prodUrl}/lists/${list.id}`,
+      lastModified: new Date(list.created_at ?? Date.now()),
+      changeFrequency: "weekly" as const,
+      priority: 0.6,
+    })),
+    // Programmatic channel pages
+    ...uniqueChannelIds.map((channelId) => ({
+      url: `${SiteConfig.prodUrl}/channels/${channelId}`,
+      lastModified: new Date("2026-02-24"),
+      changeFrequency: "daily" as const,
+      priority: 0.5,
+    })),
   ];
 }
