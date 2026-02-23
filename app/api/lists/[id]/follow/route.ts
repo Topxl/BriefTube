@@ -129,6 +129,38 @@ export async function POST(req: NextRequest, { params }: Params) {
     }));
 
   if (ghostSubs.length > 0) {
+    // Pre-mark all existing RSS videos for new channels as "skipped" so the RSS
+    // scanner never treats historical videos as new deliveries for this user.
+    await Promise.allSettled(
+      ghostSubs.map(async (ch) => {
+        try {
+          const rssRes = await fetch(
+            `https://www.youtube.com/feeds/videos.xml?channel_id=${ch.channel_id}`,
+            { signal: AbortSignal.timeout(5000) },
+          );
+          if (!rssRes.ok) return;
+          const text = await rssRes.text();
+          const videoIds = [
+            ...text.matchAll(/<yt:videoId>([^<]+)<\/yt:videoId>/g),
+          ].map((m) => m[1]);
+          if (videoIds.length === 0) return;
+          await supabase.from("processed_videos").upsert(
+            videoIds.map((videoId) => ({
+              video_id: videoId,
+              channel_id: ch.channel_id,
+              video_title: "[pre-subscription]",
+              video_url: `https://www.youtube.com/watch?v=${videoId}`,
+              status: "skipped",
+              language: "fr",
+            })),
+            { onConflict: "video_id,language", ignoreDuplicates: true },
+          );
+        } catch {
+          // Best-effort — don't fail the subscription if RSS is unavailable
+        }
+      }),
+    );
+
     const { error } = await supabase.from("subscriptions").insert(ghostSubs);
     if (error) {
       // Rollback follow record
