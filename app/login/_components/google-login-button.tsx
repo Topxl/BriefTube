@@ -1,27 +1,14 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 
 export function GoogleLoginButton() {
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleGoogleLogin = async () => {
+  const handleGoogleLogin = () => {
     setIsLoading(true);
-    const supabase = createClient();
-
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin}/auth/callback`,
-      },
-    });
-
-    if (error) {
-      // Error will be handled by redirect
-      setIsLoading(false);
-    }
+    window.location.href = "/api/auth/google";
   };
 
   return (
