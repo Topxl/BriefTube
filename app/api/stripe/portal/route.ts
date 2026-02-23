@@ -14,11 +14,27 @@ export async function POST() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("stripe_customer_id")
+    .select("stripe_customer_id, email")
     .eq("id", user.id)
     .single();
 
-  if (!profile?.stripe_customer_id) {
+  let customerId = profile?.stripe_customer_id;
+
+  // Fallback: look up customer by email in Stripe if ID is missing
+  if (!customerId && (profile?.email ?? user.email)) {
+    const email = profile?.email ?? user.email ?? "";
+    const customers = await stripe.customers.list({ email, limit: 1 });
+    if (customers.data.length > 0) {
+      customerId = customers.data[0].id;
+      // Save it for next time
+      await supabase
+        .from("profiles")
+        .update({ stripe_customer_id: customerId })
+        .eq("id", user.id);
+    }
+  }
+
+  if (!customerId) {
     return NextResponse.json(
       { error: "No Stripe customer found" },
       { status: 400 },
@@ -26,8 +42,8 @@ export async function POST() {
   }
 
   const session = await stripe.billingPortal.sessions.create({
-    customer: profile.stripe_customer_id,
-    return_url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/dashboard/billing`,
+    customer: customerId,
+    return_url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/dashboard/profile`,
   });
 
   return NextResponse.redirect(session.url, 303);

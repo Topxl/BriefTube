@@ -183,7 +183,7 @@ export function ProfileContent({
               </form>
             </div>
           )}
-          {hasStripeCustomer && (
+          {(hasStripeCustomer || isActivePro) && (
             <div className="border-t border-white/[0.04] px-4 py-2.5">
               <form
                 action="/api/stripe/portal"

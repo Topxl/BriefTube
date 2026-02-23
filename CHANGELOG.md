@@ -3,6 +3,7 @@
 ## 2026-02-24
 
 FIX: Stripe webhook — fallback to metadata.userId when stripe_customer_id is null, always save customer ID and update max_channels on subscription events
+FIX: Stripe portal — fallback lookup by email when stripe_customer_id is missing, show manage billing button for all active subscribers
 
 CHORE: Add logo-hd.png (512x512) and logo-120.png (120x120) for Google OAuth consent screen
 FIX: Privacy policy — add YouTube API Services Privacy Policy link (required for Google OAuth verification) and unify contact email to contact@brief-tube.com
