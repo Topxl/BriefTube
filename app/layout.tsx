@@ -1,3 +1,4 @@
+import Script from "next/script";
 import { NextTopLoader } from "@/features/page/next-top-loader";
 import { ServerToaster } from "@/features/server-sonner/server-toaster";
 import { getServerUrl } from "@/lib/server-url";
@@ -75,6 +76,21 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
+      <head>
+        <Script
+          async
+          src="https://www.googletagmanager.com/gtag/js?id=AW-17972477350"
+          strategy="afterInteractive"
+        />
+        <Script id="google-ads" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'AW-17972477350');
+          `}
+        </Script>
+      </head>
       <body
         suppressHydrationWarning
         className={cn(

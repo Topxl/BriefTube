@@ -33,7 +33,7 @@ import rss_scanner
 import storage
 import db
 import websub_manager
-from datetime import datetime, time as datetime_time
+from datetime import datetime, time as datetime_time, timezone
 
 # ── Logging ────────────────────────────────────────────────────
 

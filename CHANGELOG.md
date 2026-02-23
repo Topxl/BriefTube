@@ -2,6 +2,9 @@
 
 ## 2026-02-24
 
+CHORE: Add logo-hd.png (512x512) and logo-120.png (120x120) for Google OAuth consent screen
+FIX: Privacy policy — add YouTube API Services Privacy Policy link (required for Google OAuth verification) and unify contact email to contact@brief-tube.com
+
 FIX: Anti-abuse — block free trial on re-signup after account deletion (deleted_accounts table + check in both OAuth callbacks)
 FEATURE: Landing pages variants — add 5 static ad-targeted landing pages at /lp/[variant] (commuter, backlog, speed, niche, telegram) with noindex metadata and UTM-tracked CTAs to /login
 
