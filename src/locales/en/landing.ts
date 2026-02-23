@@ -19,7 +19,7 @@ export const landing = {
     heading: "Stay on top of your YouTube channels",
     headingHighlight: "without watching a single video",
     subtitle:
-      "BriefTube monitors your channels, generates an AI audio summary, and sends it directly to your Telegram. Automatically.",
+      "Add your channels, connect your Telegram, and that's it. BriefTube tracks new uploads, summarizes them with AI, and sends you the audio — usually within a few minutes of the video going live.",
     ctaPrimary: "Get my summaries for free",
     ctaSecondary: "Try without signing up",
     socialProof: "No credit card · Cancel anytime · 7-day Pro trial",
@@ -36,75 +36,78 @@ export const landing = {
     headingMuted: "You can't watch them all.",
     items: [
       {
-        title: "Too many videos, not enough time",
+        title: "The backlog never shrinks",
         description:
-          "Your subscriptions pile up. Dozens of new videos every day. You can't watch them all.",
+          "New videos pile up faster than you can get to them. At some point you just stop trying.",
       },
       {
-        title: "Can't watch while doing other things",
+        title: "Watching takes your full attention",
         description:
-          "Commuting, cooking, working out — your eyes are busy but your ears are free.",
+          "On a commute, at the gym, cooking dinner — your ears are free but a 40-minute video isn't happening.",
       },
       {
-        title: "Missing key insights",
+        title: "You miss things that matter",
         description:
-          "Important videos slip through the cracks. You never know what you're missing.",
+          "That one video with the insight you actually needed? You'll probably never see it.",
       },
     ],
   },
   howItWorks: {
     heading: "How it works",
-    subtitle: "Three steps. Two minutes. Zero effort after that.",
+    subtitle: "Three steps to set up. Nothing to do after that.",
     stepPrefix: "Step",
     steps: [
       {
-        title: "Subscribe to channels",
+        title: "Add your channels",
         description:
-          "Add your favorite YouTube channels from the dashboard. Paste URLs or channel IDs.",
+          "Paste a YouTube channel URL into the dashboard. That's all — no RSS setup, no API keys.",
       },
       {
-        title: "AI summarizes each video",
+        title: "AI reads each new video",
         description:
-          "When a new video drops, our AI watches it and generates a detailed summary in seconds.",
+          "When something new drops, BriefTube pulls the transcript and generates a summary. Takes under a minute for most videos.",
       },
       {
-        title: "Listen on Telegram",
+        title: "You get a Telegram message",
         description:
-          "Receive natural-sounding audio summaries directly in your Telegram. Listen anywhere.",
+          "An audio file lands in your chat, ready to play. Works while driving, walking, doing dishes.",
       },
     ],
   },
   features: {
-    heading: "Everything you need",
-    subtitle: "Simple, powerful, and completely automated.",
+    heading: "What you actually get",
+    subtitle:
+      "No dashboard to check. No notifications to manage. It just shows up.",
     items: [
       {
-        title: "AI-Powered Summaries",
+        title: "Summaries that go beyond the title",
         description:
-          "Detailed summaries that capture the key points, not just the title.",
+          "The AI covers the main arguments, examples, and takeaways — not just a rephrased headline.",
       },
       {
-        title: "Natural Audio",
+        title: "Audio that doesn't sound like a robot",
         description:
-          "Neural text-to-speech voices that sound human. Not robotic.",
+          "We use Microsoft Edge's neural TTS voices. Not perfect, but genuinely listenable.",
       },
       {
-        title: "Instant Delivery",
-        description: "Get summaries within minutes of a video going live.",
-      },
-      {
-        title: "Multi-Language",
+        title: "Fast enough to be useful",
         description:
-          "French, English, and more. Choose the voice that suits you.",
+          "Most summaries arrive within a few minutes of a video going live. Sometimes faster.",
       },
       {
-        title: "Unlimited Channels",
-        description: "Follow every channel you care about. No limits on Pro.",
-      },
-      {
-        title: "Listen Anywhere",
+        title: "French and English (more coming)",
         description:
-          "Telegram works offline. Download summaries and listen without internet.",
+          "Pick the language that works for you. Pro users can also choose the specific voice.",
+      },
+      {
+        title: "No channel limit on Pro",
+        description:
+          "Follow as many channels as you want. We don't arbitrarily cap it.",
+      },
+      {
+        title: "Telegram works offline",
+        description:
+          "Audio files download to your phone. No internet needed once they're in your chat.",
       },
     ],
   },
@@ -120,14 +123,15 @@ export const landing = {
     hint: "3 free tries · Works on videos with subtitles",
   },
   pricing: {
-    heading: "Simple pricing",
-    subtitle: "Start free. Upgrade when you need more. Cancel anytime.",
+    heading: "Straightforward pricing",
+    subtitle:
+      "Free to start, no card required. Upgrade if you hit the channel limit.",
     mostPopular: "Most Popular",
     perMonth: "month",
     plans: {
       free: {
         name: "Free",
-        description: "Try it out. No credit card needed.",
+        description: `${FREE} channels is enough to test whether this actually fits your workflow.`,
         features: [
           `${FREE} YouTube channels`,
           "AI audio summaries",
@@ -138,7 +142,8 @@ export const landing = {
       },
       pro: {
         name: "Pro",
-        description: "For power users who follow everything.",
+        description:
+          "For anyone who follows more channels than they'd like to admit.",
         features: [
           "Unlimited channels",
           "Priority processing",
@@ -154,39 +159,39 @@ export const landing = {
     selfHostSuffix: "it's open source.",
   },
   faq: {
-    heading: "Frequently asked questions",
-    priceQuestionFn: (price: string) => `Is it really only ${price}/month?`,
+    heading: "Questions people actually ask",
+    priceQuestionFn: (price: string) => `Wait, it's only ${price}/month?`,
     items: [
       {
-        question: "How does it work?",
+        question: "How does it actually work?",
         answer:
-          "BriefTube monitors YouTube RSS feeds for new videos from your subscribed channels. When a new video is detected, our AI generates a detailed summary, converts it to natural-sounding audio, and sends it directly to your Telegram.",
+          "Each channel you follow gets checked automatically through YouTube's RSS feed. The moment a new video appears, BriefTube reads its transcript, generates a summary, converts it to audio, and sends it to your Telegram — usually within a few minutes. No manual steps on your end.",
       },
       {
         question: "",
         answer:
-          "Yes! We keep costs extremely low by using efficient AI processing and lightweight infrastructure. No hidden fees, no surprise charges.",
+          "Yeah, it is. We keep things lean: no big cloud infra, shared processing across users for the same video, free TTS. The goal was to build something I'd actually pay for myself, so the price had to make sense.",
       },
       {
-        question: "What languages are supported?",
+        question: "Which languages work?",
         answer:
-          "We currently support French and English voices, with more languages coming soon. Pro users can choose their preferred voice from our selection.",
+          "French and English voices are available right now. More are in the pipeline. If you're on Pro, you can pick a specific voice — there are a few to choose from in each language.",
       },
       {
-        question: "Do I need to create a Telegram bot?",
+        question: "Do I need to set up a Telegram bot?",
         answer:
-          "No. You simply connect your Telegram account by clicking a link and sending a message to our @brief_tube_bot. It takes 10 seconds.",
+          "No. You click a connect link, it opens @brief_tube_bot in Telegram, you send /start. That's the whole process — maybe 15 seconds if you type slowly.",
       },
       {
-        question: "What if I want to cancel?",
+        question: "What happens if I cancel?",
         answer:
-          "Cancel anytime from your dashboard. No questions asked, no cancellation fees. Your free tier access remains active.",
+          "You drop back to the free plan — your channels stay, your history stays, you just lose access to the Pro features. No cancellation fees, no awkward retention flows.",
       },
     ],
   },
   finalCta: {
-    heading: "Start receiving audio summaries in 2 minutes",
-    subtitle: `Free forever for up to ${FREE} channels. No credit card required.`,
+    heading: "Takes about 2 minutes to set up",
+    subtitle: `Free for up to ${FREE} channels. No credit card, no commitment.`,
     ctaPrimary: "Sign Up Free",
     ctaSecondary: "Self-Host (Open Source)",
     loginText: "Already have an account?",
