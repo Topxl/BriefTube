@@ -5,21 +5,27 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     {
       url: `${SiteConfig.prodUrl}`,
-      lastModified: new Date(),
+      lastModified: new Date("2026-02-24"),
       changeFrequency: "weekly",
       priority: 1,
     },
     {
       url: `${SiteConfig.prodUrl}/login`,
-      lastModified: new Date(),
+      lastModified: new Date("2026-02-24"),
       changeFrequency: "monthly",
-      priority: 0.8,
+      priority: 0.7,
     },
     {
-      url: `${SiteConfig.prodUrl}/pricing`,
-      lastModified: new Date(),
-      changeFrequency: "monthly",
-      priority: 0.9,
+      url: `${SiteConfig.prodUrl}/privacy`,
+      lastModified: new Date("2026-02-18"),
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
+    {
+      url: `${SiteConfig.prodUrl}/terms`,
+      lastModified: new Date("2026-02-18"),
+      changeFrequency: "yearly",
+      priority: 0.3,
     },
   ];
 }

@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-02-24
+
+CHORE: SEO — robots.ts disallow /dashboard /api /auth /onboarding pour économiser le crawl budget
+CHORE: SEO — sitemap ajoute /privacy et /terms, supprime /pricing (page protégée), lastModified statiques
+CHORE: SEO — layout.tsx title template (%s — BriefTube), robots googleBot maxSnippet/maxImagePreview, OG siteName/locale, Twitter site handle
+CHORE: SEO — page.tsx JSON-LD enrichi : SoftwareApplication avec offres Free+Pro, Organization schema, FAQPage schema (4 Q&A)
+CHORE: SEO — login/layout.tsx : metadata noindex pour la page de connexion (client component)
+CHORE: SEO — terms/page.tsx et privacy/page.tsx : metadata title/description/canonical
+CHORE: SEO IA — public/llms.txt : fichier de découverte pour les LLMs (ChatGPT Search, Perplexity, Claude, etc.)
+CHORE: worker — fix cleanup_audio_files fréquence : appelé toutes les 10 min (counter 40 cycles) au lieu de chaque cycle de livraison
+FEATURE: worker — logs centralisés via Better Stack / Logtail (LOGTAIL_TOKEN optionnel) ; logtail-python ajouté aux dépendances
+FEATURE: worker — persistance WorkerStats dans Supabase (table worker_stats) ; restauration des compteurs au démarrage, sauvegarde toutes les 5 min + à l'arrêt
+
 ## 2026-02-23
 
 FEATURE: Admin panel — add conversion funnel (free/trial/pro/churned), trials expiring in 7 days list, and at-risk users (Telegram connected, active channels, no deliveries in 7 days)

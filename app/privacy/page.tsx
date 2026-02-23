@@ -1,9 +1,12 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { SiteConfig } from "@/site-config";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — BriefTube",
-  description: "Privacy Policy for BriefTube",
+  title: "Privacy Policy",
+  description:
+    "Read the BriefTube Privacy Policy. Learn how we collect, use, and protect your data when you use our AI-powered YouTube summary and Telegram delivery service.",
+  alternates: { canonical: `${SiteConfig.prodUrl}/privacy` },
 };
 
 export default function PrivacyPage() {

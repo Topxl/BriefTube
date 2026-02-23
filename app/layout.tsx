@@ -11,21 +11,45 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-  title: SiteConfig.title,
+  title: {
+    default: SiteConfig.title,
+    template: `%s — ${SiteConfig.title}`,
+  },
   description: SiteConfig.description,
   metadataBase: new URL(getServerUrl()),
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-snippet": -1,
+      "max-image-preview": "large",
+      "max-video-preview": -1,
+    },
+  },
   openGraph: {
     title: SiteConfig.title,
     description: SiteConfig.description,
     url: SiteConfig.prodUrl,
+    siteName: SiteConfig.title,
     type: "website",
-    images: [{ url: "/opengraph-image", width: 1200, height: 630 }],
+    locale: "en_US",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: SiteConfig.title,
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: SiteConfig.title,
     description: SiteConfig.description,
     images: ["/opengraph-image"],
+    site: "@brieftube",
   },
 };
 
