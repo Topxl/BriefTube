@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { WorkerCard } from "@/components/admin/worker-card";
 import {
   Users,
@@ -89,9 +89,8 @@ type FailedVideo = {
 // ---------------------------------------------------------------
 
 export default async function AdminPage() {
+  // Auth guard — use user client to verify session
   const supabase = await createClient();
-
-  // Admin guard
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -99,6 +98,9 @@ export default async function AdminPage() {
   if (user?.id !== ADMIN_USER_ID) {
     redirect("/dashboard");
   }
+
+  // All data queries use admin client to bypass RLS
+  const admin = createAdminClient();
 
   // Compute date without Date.now() (impure in RSC linting context)
   const oneDayAgo = new Date();
@@ -114,39 +116,36 @@ export default async function AdminPage() {
     { data: deliveriesToday },
     { count: totalCompleted },
   ] = await Promise.all([
-    supabase.from("profiles").select("*", { count: "exact", head: true }),
-    supabase
+    admin.from("profiles").select("*", { count: "exact", head: true }),
+    admin
       .from("profiles")
       .select("*", { count: "exact", head: true })
       .eq("telegram_connected", true),
-    supabase
+    admin
       .from("profiles")
       .select("*", { count: "exact", head: true })
       .eq("subscription_status", "active"),
-    supabase
+    admin
       .from("subscriptions")
       .select("*", { count: "exact", head: true })
       .eq("active", true),
-    supabase
-      .from("processed_videos")
-      .select("status")
-      .gte("created_at", since24h),
-    supabase.from("deliveries").select("status").gte("created_at", since24h),
-    supabase
+    admin.from("processed_videos").select("status").gte("created_at", since24h),
+    admin.from("deliveries").select("status").gte("created_at", since24h),
+    admin
       .from("processed_videos")
       .select("*", { count: "exact", head: true })
       .eq("status", "completed"),
   ]);
 
   // Queries with columns not in generated types — cast explicitly
-  const { data: pendingQueueRaw } = await supabase
+  const { data: pendingQueueRaw } = await admin
     .from("processed_videos")
     .select("video_id, channel_id, language, created_at, status")
     .in("status", ["pending", "processing"])
     .order("created_at", { ascending: true });
   const pendingQueue = pendingQueueRaw as unknown as PendingVideo[] | null;
 
-  const { data: recentFailedRaw } = await supabase
+  const { data: recentFailedRaw } = await admin
     .from("processed_videos")
     .select("video_id, language, created_at")
     .eq("status", "failed")

@@ -2,6 +2,8 @@
 
 ## 2026-02-23
 
+CHORE: worker — MAX_CONCURRENT_VIDEOS 2→6, RSS_CHECK_INTERVAL 300→1800s (WebSub gère le temps réel) ; fail_job/mark_video_failed avec immediate=True pour échec permanent sans retry sur erreurs déterministes ; WebSub sync parallèle (semaphore 50 au lieu de séquentiel 0.1s/channel)
+
 UX: profile — bouton Admin panel visible uniquement pour l'admin (isAdmin prop + ShieldAlert icon)
 
 FIX: worker — cleanup_undeliverable_deliveries inclut désormais les vidéos "skipped" (pas seulement "failed") ; 2860 livraisons bloquées nettoyées en DB
