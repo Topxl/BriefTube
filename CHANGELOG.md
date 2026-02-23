@@ -2,6 +2,10 @@
 
 ## 2026-02-23
 
+CHORE: worker — migration Supabase Storage → Cloudflare R2 pour les fichiers audio (zero egress cost) ; storage.py, config R2, migrate_audio_to_r2.py
+
+FEATURE: Auth — custom Google OAuth flow via brief-tube.com/api/auth/google (bypass Supabase redirect domain) with CSRF state, id_token exchange, and preserved trial/referral logic
+
 UX: scrollbars — style global fin et sombre (4px, rgba blanc/12%) sur toute l'app ; nettoyage des classes inline redondantes
 
 UX: landing — réduction du padding mobile (pt-36→pt-20), suppression du badge et du social proof

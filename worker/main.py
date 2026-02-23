@@ -30,6 +30,7 @@ from telegram_deliverer import send_audio_to_user
 from bot_handler import create_bot_application, setup_bot_commands, MonitoringAlert, send_daily_report
 from monitoring import stats
 import rss_scanner
+import storage
 import db
 from datetime import datetime, time as datetime_time
 
@@ -352,20 +353,14 @@ async def _process_video(
             output_filename=f"video_{video_id}"
         )
 
-        # Step 4: Upload to Supabase Storage (one file per language)
+        # Step 4: Upload to Cloudflare R2 (zero egress cost)
+        storage_key = f"audio/{video_id}_{user_language}.mp3"
         audio_url = ""
         try:
-            sb = db.get_client()
-            with open(audio_path, "rb") as f:
-                storage_path = f"audio/{video_id}_{user_language}.mp3"
-                sb.storage.from_("audio").upload(
-                    storage_path,
-                    f.read(),
-                    {"content-type": "audio/mpeg", "upsert": "true"},
-                )
-            audio_url = sb.storage.from_("audio").get_public_url(storage_path)
+            audio_url = storage.upload_audio(audio_path, storage_key)
+            logger.info(f"[{video_id}] Uploaded to R2: {storage_key}")
         except Exception as e:
-            logger.warning(f"[{video_id}] Storage upload failed (using local): {e}")
+            logger.warning(f"[{video_id}] R2 upload failed (using local path): {e}")
             audio_url = str(audio_path)
 
         # Step 5: Mark done (per language)
