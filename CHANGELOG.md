@@ -2,6 +2,8 @@
 
 ## 2026-02-23
 
+UX: scrollbars — style global fin et sombre (4px, rgba blanc/12%) sur toute l'app ; nettoyage des classes inline redondantes
+
 UX: landing — réduction du padding mobile (pt-36→pt-20), suppression du badge et du social proof
 UX: onboarding — dots de progression dans le header avec le logo ; suppression des grandes icônes par étape
 
