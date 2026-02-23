@@ -5,6 +5,7 @@ import logging
 import re
 import time
 import feedparser
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import db
 
@@ -68,27 +69,29 @@ def fetch_channel_videos(channel_id: str) -> list[dict]:
 def scan_all_channels():
     """Scan all subscribed channels for new videos.
 
-    For each new video found:
-    - Insert into processed_videos (pending)
-    - Enqueue in processing_queue
-    - Create deliveries for all subscribed users
+    Fetches all RSS feeds in parallel (up to 50 concurrent HTTP requests)
+    then processes results sequentially for DB writes.
     """
     channel_ids = db.get_all_channel_ids()
     logger.info(f"Scanning {len(channel_ids)} channels...")
 
-    # Load all known video IDs once — avoids 3000+ individual DB queries per scan
-    # (225 channels × 15 videos = up to 3375 is_video_processed calls otherwise).
+    # Load known video IDs once — avoids 3000+ individual DB queries per scan
     known_video_ids = db.get_all_known_video_ids()
     logger.info(f"Loaded {len(known_video_ids)} known video IDs into memory")
 
-    new_count = 0
-    for channel_id in channel_ids:
-        try:
-            videos = fetch_channel_videos(channel_id)
-        except Exception as e:
-            logger.error(f"Error fetching RSS for channel {channel_id}: {e}")
-            continue
+    # Fetch all RSS feeds in parallel — 50x faster than sequential
+    channel_videos: dict[str, list[dict]] = {}
+    with ThreadPoolExecutor(max_workers=50) as executor:
+        futures = {executor.submit(fetch_channel_videos, ch): ch for ch in channel_ids}
+        for future in as_completed(futures):
+            ch = futures[future]
+            try:
+                channel_videos[ch] = future.result()
+            except Exception as e:
+                logger.error(f"Error fetching RSS for channel {ch}: {e}")
 
+    new_count = 0
+    for channel_id, videos in channel_videos.items():
         for video in videos:
             vid = video["video_id"]
 
@@ -110,9 +113,6 @@ def scan_all_channels():
                     known_video_ids.add(vid)
                     continue
 
-                # Enqueue one job per unique subscriber language.
-                # Each job generates a summary + audio in that language so that
-                # every subscriber receives their preferred language.
                 for lang_info in subscriber_langs:
                     lang = lang_info["language"]
                     tts_voice = lang_info["tts_voice"]
@@ -125,18 +125,13 @@ def scan_all_channels():
             except Exception as e:
                 error_str = str(e)
                 logger.error(f"Error queuing video {vid} ({video['title'][:40]}): {e}")
-                # If the error is a known constraint violation (duplicate key or
-                # missing unique constraint), mark the video as known so the scanner
-                # stops retrying it — deleting it would cause an infinite re-detect loop.
                 if (
                     "23505" in error_str  # duplicate key
-                    or "42P10" in error_str  # no unique constraint (harmless — row already inserted)
+                    or "42P10" in error_str  # no unique constraint
                     or "duplicate key" in error_str.lower()
                 ):
                     known_video_ids.add(vid)
                 else:
-                    # Unexpected error — remove from processed_videos so the next
-                    # scan retries it cleanly.
                     try:
                         db.get_client().table("processed_videos").delete().eq("video_id", vid).execute()
                     except Exception:

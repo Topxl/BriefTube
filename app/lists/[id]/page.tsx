@@ -1,12 +1,55 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, Youtube } from "@/lib/icons";
 import { ListActions } from "@/components/lists/list-actions";
 import { ShareListButton } from "@/components/lists/share-list-button";
+import { SiteConfig } from "@/site-config";
 
 type Props = { params: Promise<{ id: string }> };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = createAdminClient();
+
+  const { data: list } = await supabase
+    .from("channel_lists")
+    .select("name, description, category")
+    .eq("id", id)
+    .eq("is_public", true)
+    .single();
+
+  if (!list) {
+    return {
+      title: "List Not Found",
+    };
+  }
+
+  const description =
+    list.description ??
+    `A curated collection of YouTube channels${list.category ? ` for ${list.category}` : ""} — follow them all and get AI audio summaries on BriefTube.`;
+
+  return {
+    title: list.name,
+    description,
+    openGraph: {
+      title: list.name,
+      description,
+      images: [
+        {
+          url: "https://img.youtube.com/vi/default/hqdefault.jpg",
+          alt: list.name,
+        },
+      ],
+    },
+    alternates: {
+      canonical: `${SiteConfig.prodUrl}/lists/${id}`,
+    },
+  };
+}
 
 export default async function ListDetailPage({ params }: Props) {
   const { id } = await params;

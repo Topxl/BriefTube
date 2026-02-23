@@ -1,7 +1,17 @@
-import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2 } from "@/lib/icons";
+import { SiteConfig } from "@/site-config";
+
+export const metadata: Metadata = {
+  title: "Pricing",
+  description:
+    "Start free with 3 YouTube channels, or go Pro for unlimited channels, priority processing and custom voices. Simple, transparent pricing.",
+  alternates: {
+    canonical: `${SiteConfig.prodUrl}/pricing`,
+  },
+};
 
 export default async function PricingPage() {
   const supabase = await createClient();
@@ -9,17 +19,17 @@ export default async function PricingPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    redirect("/login");
+  let isPro = false;
+
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .single();
+
+    isPro = profile?.subscription_status === "active";
   }
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single();
-
-  const isPro = profile?.subscription_status === "active";
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-12">
@@ -55,13 +65,18 @@ export default async function PricingPage() {
                 </li>
               ))}
             </ul>
-            {!isPro && (
+            {user && !isPro && (
               <Button
                 disabled
                 className="mt-5 w-full rounded-full"
                 variant="outline"
               >
                 Current Plan
+              </Button>
+            )}
+            {!user && (
+              <Button asChild className="mt-5 w-full rounded-full">
+                <a href="/login">Start free trial</a>
               </Button>
             )}
           </div>
@@ -104,7 +119,8 @@ export default async function PricingPage() {
               >
                 Current Plan
               </Button>
-            ) : (
+            ) : null}
+            {user && !isPro && (
               <form
                 action="/api/stripe/checkout"
                 method="POST"
@@ -118,6 +134,14 @@ export default async function PricingPage() {
                   Upgrade to Pro
                 </Button>
               </form>
+            )}
+            {!user && (
+              <Button
+                asChild
+                className="mt-5 w-full rounded-full bg-red-600 hover:bg-red-500"
+              >
+                <a href="/login">Start Pro Trial</a>
+              </Button>
             )}
           </div>
         </div>

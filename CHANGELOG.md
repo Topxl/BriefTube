@@ -2,6 +2,14 @@
 
 ## 2026-02-24
 
+CHORE: SEO — sitemap étendu avec /blog, /blog/[slug], /vs, /vs/[slug] (statiques) et /channels/[channel_id] dynamiques (unique channel_ids depuis subscriptions)
+FEATURE: Admin panel — add 6 new metric sections (MRR, active users 7d, signups 14d, growth chart, referral conversion, top channels, language distribution)
+FEATURE: SEO — generateMetadata for /lists/[id] with OG images, canonical URLs, and dynamic descriptions from list metadata
+FEATURE: SEO — public pricing page with metadata, "Start free trial" button for unauthenticated users
+FEATURE: SEO — sitemap includes public lists with /pricing entry, dynamic lastModified from list creation date
+FEATURE: Blog — add complete SEO blog system with 3 long-form articles (YouTube info overload, best channels, setup guide), blog index with card grid, and article details with JSON-LD schema and CTA
+FEATURE: SEO — add programmatic channel pages at /channels/[channel_id] showing 20 latest AI summaries with metadata
+FEATURE: SEO — create comparison pages at /vs (Eightify, NoteGPT) with feature tables, verdicts, and JSON-LD schema
 CHORE: copywriting — humanisation du texte landing page (hero, problem, features, pricing, FAQ, CTA) pour améliorer le SEO et la crédibilité perçue
 CHORE: SEO — robots.ts disallow /dashboard /api /auth /onboarding pour économiser le crawl budget
 CHORE: SEO — sitemap ajoute /privacy et /terms, supprime /pricing (page protégée), lastModified statiques
@@ -11,7 +19,6 @@ CHORE: SEO — login/layout.tsx : metadata noindex pour la page de connexion (cl
 CHORE: SEO — terms/page.tsx et privacy/page.tsx : metadata title/description/canonical
 CHORE: SEO IA — public/llms.txt : fichier de découverte pour les LLMs (ChatGPT Search, Perplexity, Claude, etc.)
 CHORE: worker — fix cleanup_audio_files fréquence : appelé toutes les 10 min (counter 40 cycles) au lieu de chaque cycle de livraison
-FEATURE: worker — logs centralisés via Better Stack / Logtail (LOGTAIL_TOKEN optionnel) ; logtail-python ajouté aux dépendances
 FEATURE: worker — persistance WorkerStats dans Supabase (table worker_stats) ; restauration des compteurs au démarrage, sauvegarde toutes les 5 min + à l'arrêt
 
 ## 2026-02-23

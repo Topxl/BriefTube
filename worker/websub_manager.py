@@ -58,7 +58,8 @@ async def sync_subscriptions(session: aiohttp.ClientSession) -> tuple[int, int]:
     """Subscribe new channels and renew expiring subscriptions.
 
     Returns (new_count, renewed_count).
-    Rate-limited to 10 requests/second (0.1s sleep between requests).
+    Processes up to 50 channels in parallel to handle large channel counts
+    efficiently (50K channels × 0.1s sequential = 83min → ~30s with concurrency).
     """
     channel_ids = db.get_all_channel_ids()
     if not channel_ids:
@@ -68,42 +69,58 @@ async def sync_subscriptions(session: aiohttp.ClientSession) -> tuple[int, int]:
     now = datetime.now(timezone.utc)
     renew_threshold = now + timedelta(seconds=_RENEW_BEFORE_SECONDS)
 
-    new_count = 0
-    renewed_count = 0
+    # Classify channels into two lists
+    to_subscribe: list[str] = []
+    to_renew: list[str] = []
 
     for channel_id in channel_ids:
         sub = existing.get(channel_id)
 
         if sub is None or sub["status"] == "failed":
-            # New channel or previously failed — subscribe
-            ok = await subscribe_channel(channel_id, session)
-            if ok:
-                new_count += 1
-            await asyncio.sleep(0.1)
+            to_subscribe.append(channel_id)
             continue
 
         if sub["status"] == "pending":
-            # Already pending hub verification — skip
-            continue
+            continue  # Hub verification in progress — skip
 
-        # Active — check if it's expiring soon
+        # Active — check if expiring soon
         expires_at = sub.get("expires_at")
+        needs_renew = True
         if expires_at:
             try:
-                if isinstance(expires_at, str):
-                    # Parse ISO string from Supabase
-                    exp_dt = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
-                else:
-                    exp_dt = expires_at
+                exp_dt = (
+                    datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
+                    if isinstance(expires_at, str)
+                    else expires_at
+                )
                 if exp_dt > renew_threshold:
-                    continue  # Still fresh — no renewal needed
+                    needs_renew = False
             except Exception:
                 pass  # Malformed date — renew to be safe
+        if needs_renew:
+            to_renew.append(channel_id)
 
-        # Renew
-        ok = await subscribe_channel(channel_id, session)
-        if ok:
-            renewed_count += 1
-        await asyncio.sleep(0.1)
+    if not to_subscribe and not to_renew:
+        return 0, 0
+
+    # Process both lists in parallel batches of 50
+    semaphore = asyncio.Semaphore(50)
+
+    async def _sub(channel_id: str) -> bool:
+        async with semaphore:
+            return await subscribe_channel(channel_id, session)
+
+    new_results = await asyncio.gather(*[_sub(ch) for ch in to_subscribe])
+    renewed_results = await asyncio.gather(*[_sub(ch) for ch in to_renew])
+
+    new_count = sum(1 for r in new_results if r)
+    renewed_count = sum(1 for r in renewed_results if r)
+
+    if to_subscribe or to_renew:
+        logger.info(
+            f"[WebSub] Sync complete: {len(to_subscribe)} new requested, "
+            f"{len(to_renew)} renewals requested "
+            f"({new_count} accepted, {renewed_count} renewed)"
+        )
 
     return new_count, renewed_count
