@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { ProfileContent } from "@/components/dashboard/profile-content";
 import { SiteConfig } from "@/site-config";
 
+const ADMIN_USER_ID = "67320a39-948c-44d2-98e3-c0de49af1ec6";
+
 export default async function ProfilePage() {
   const supabase = await createClient();
   const {
@@ -83,6 +85,7 @@ export default async function ProfilePage() {
       maxChannels={profile?.max_channels ?? SiteConfig.freeChannelsLimit}
       referralCode={profile?.referral_code ?? ""}
       referrals={referrals}
+      isAdmin={user.id === ADMIN_USER_ID}
     />
   );
 }

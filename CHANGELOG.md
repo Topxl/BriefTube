@@ -2,6 +2,9 @@
 
 ## 2026-02-23
 
+UX: profile — bouton Admin panel visible uniquement pour l'admin (isAdmin prop + ShieldAlert icon)
+
+FIX: worker — cleanup_undeliverable_deliveries inclut désormais les vidéos "skipped" (pas seulement "failed") ; 2860 livraisons bloquées nettoyées en DB
 FEATURE: WebSub (YouTube Push Notifications) — élimine le polling RSS intensif (726 req/5min → push instantané) ; table websub_subscriptions, route GET+POST /api/webhooks/youtube avec vérification HMAC-SHA1, worker websub_manager.py (subscribe + renouvellement toutes les heures), RSS fallback inchangé
 CHORE: types Supabase régénérés — ajout websub_subscriptions + colonne language sur deliveries
 

@@ -5,7 +5,9 @@ import { createClient } from "@/lib/supabase/client";
 import { DeliverySection } from "@/components/dashboard/delivery-section";
 import { ReferralSection } from "@/components/dashboard/referral-section";
 import { Button } from "@/components/ui/button";
-import { LogOut, Trash2 } from "@/lib/icons";
+import Link from "next/link";
+import { LogOut, Trash2, ShieldAlert } from "@/lib/icons";
+
 import { dialogManager } from "@/features/dialog-manager/dialog-manager";
 import { toast } from "sonner";
 
@@ -29,6 +31,7 @@ type Props = {
   maxChannels: number;
   referralCode?: string;
   referrals?: ReferralRow[];
+  isAdmin?: boolean;
 };
 
 export function ProfileContent({
@@ -43,6 +46,7 @@ export function ProfileContent({
   maxChannels,
   referralCode,
   referrals,
+  isAdmin,
 }: Props) {
   const router = useRouter();
   const supabase = createClient();
@@ -204,6 +208,25 @@ export function ProfileContent({
         referralCode={referralCode ?? ""}
         referrals={referrals ?? []}
       />
+
+      {/* Admin */}
+      {isAdmin && (
+        <section className="space-y-2">
+          <h2 className="text-muted-foreground/50 px-1 text-xs font-medium tracking-wide uppercase">
+            Admin
+          </h2>
+          <div className="nm-raised overflow-hidden rounded-2xl">
+            <Link
+              href="/dashboard/admin"
+              className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-white/[0.02]"
+            >
+              <ShieldAlert className="h-4 w-4 text-red-400" />
+              <span className="text-sm font-medium">Admin panel</span>
+              <span className="text-muted-foreground ml-auto text-xs">→</span>
+            </Link>
+          </div>
+        </section>
+      )}
     </div>
   );
 }

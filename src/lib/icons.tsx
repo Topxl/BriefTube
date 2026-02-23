@@ -72,6 +72,7 @@ import {
   MessageCircle as _MessageCircle,
   Zap as _Zap,
   Layers as _Layers,
+  ShieldAlert as _ShieldAlert,
 } from "lucide-react";
 
 export type { LucideIcon, LucideProps } from "lucide-react";
@@ -148,3 +149,4 @@ export const Cpu = wrap(_Cpu);
 export const MessageCircle = wrap(_MessageCircle);
 export const Zap = wrap(_Zap);
 export const Layers = wrap(_Layers);
+export const ShieldAlert = wrap(_ShieldAlert);
