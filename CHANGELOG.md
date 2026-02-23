@@ -2,6 +2,9 @@
 
 ## 2026-02-24
 
+FIX: Anti-abuse — block free trial on re-signup after account deletion (deleted_accounts table + check in both OAuth callbacks)
+FEATURE: Landing pages variants — add 5 static ad-targeted landing pages at /lp/[variant] (commuter, backlog, speed, niche, telegram) with noindex metadata and UTM-tracked CTAs to /login
+
 UX: Landing — reduce section padding on mobile (py-20 → py-14 md:py-20) for consistent vertical spacing; fix HowItWorks mt-16 → mt-12 md:mt-16; standardize Demo section
 UX: Hero — increase mobile top padding (pt-20 → pt-28) to add breathing room between floating navbar and title
 FEATURE: Landing hero — replace Fireship video with Simon Sinek TED talk, add YouTube thumbnail as semi-transparent card background

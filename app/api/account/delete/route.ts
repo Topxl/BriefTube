@@ -8,6 +8,13 @@ export const DELETE = authRoute.handler(async (_req, { ctx }) => {
   const admin = createAdminClient();
   const userId = ctx.user.id;
 
+  // 0. Record email to prevent trial abuse on re-signup
+  if (ctx.user.email) {
+    await admin
+      .from("deleted_accounts")
+      .upsert({ email: ctx.user.email }, { onConflict: "email" });
+  }
+
   // 1. Cancel Stripe subscription if active (before deleting profile)
   const { data: profile } = await supabase
     .from("profiles")

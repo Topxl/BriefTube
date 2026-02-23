@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { NextResponse } from "next/server";
 import { SiteConfig } from "@/site-config";
@@ -32,20 +32,33 @@ export async function GET(request: Request) {
           .single();
 
         if (profile?.trial_ends_at === null) {
-          const trialEnd = new Date();
-          trialEnd.setDate(trialEnd.getDate() + SiteConfig.trialDays);
-          await supabase
-            .from("profiles")
-            .update({ trial_ends_at: trialEnd.toISOString() })
-            .eq("id", user.id);
-
-          // Send welcome email to new users (fire-and-forget)
+          const admin = createAdminClient();
+          let deletedAccount = null;
           if (user.email) {
-            void sendEmail({
-              to: user.email,
-              subject: "Welcome to BriefTube",
-              html: WelcomeEmail({ trialDays: SiteConfig.trialDays }),
-            });
+            const { data } = await admin
+              .from("deleted_accounts")
+              .select("id")
+              .eq("email", user.email)
+              .maybeSingle();
+            deletedAccount = data;
+          }
+
+          if (!deletedAccount) {
+            const trialEnd = new Date();
+            trialEnd.setDate(trialEnd.getDate() + SiteConfig.trialDays);
+            await supabase
+              .from("profiles")
+              .update({ trial_ends_at: trialEnd.toISOString() })
+              .eq("id", user.id);
+
+            // Send welcome email to new users (fire-and-forget)
+            if (user.email) {
+              void sendEmail({
+                to: user.email,
+                subject: "Welcome to BriefTube",
+                html: WelcomeEmail({ trialDays: SiteConfig.trialDays }),
+              });
+            }
           }
         }
 
