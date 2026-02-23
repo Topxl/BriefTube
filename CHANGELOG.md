@@ -2,6 +2,7 @@
 
 ## 2026-02-23
 
+CHORE: worker — service systemd Infisical corrigé (bon projectId brieftube-server + path /worker) ; boto3 installé dans Python 3.12 du venv
 CHORE: worker — migration Supabase Storage → Cloudflare R2 pour les fichiers audio (zero egress cost) ; storage.py, config R2, migrate_audio_to_r2.py
 
 FEATURE: Auth — custom Google OAuth flow via brief-tube.com/api/auth/google (bypass Supabase redirect domain) with CSRF state, id_token exchange, and preserved trial/referral logic
