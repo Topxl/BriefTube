@@ -2,6 +2,9 @@
 
 ## 2026-02-23
 
+UX: landing — réduction du padding mobile (pt-36→pt-20), suppression du badge et du social proof
+UX: onboarding — dots de progression dans le header avec le logo ; suppression des grandes icônes par étape
+
 FIX: bot — suppression complète de la limite de partage (3/jour) ; get_profile_by_telegram ne retournait pas trial_ends_at donc les utilisateurs en trial étaient traités comme Free
 FIX: bot — utilisateurs en période d'essai (trial_ends_at) considérés comme Pro pour toutes les limites (partage, canaux, résumés on-demand) ; seul subscription_status="active" était vérifié auparavant
 UX: bot — menu Options : suppression du bouton Language ; bouton Unsubscribe demande confirmation avant de se désabonner ([Yes, unsubscribe] / [Cancel])
