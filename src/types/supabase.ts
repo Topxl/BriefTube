@@ -56,6 +56,7 @@ export type Database = {
         Row: {
           created_at: string | null;
           id: string;
+          language: string;
           sent_at: string | null;
           source: string | null;
           status: string | null;
@@ -65,6 +66,7 @@ export type Database = {
         Insert: {
           created_at?: string | null;
           id?: string;
+          language?: string;
           sent_at?: string | null;
           source?: string | null;
           status?: string | null;
@@ -74,6 +76,7 @@ export type Database = {
         Update: {
           created_at?: string | null;
           id?: string;
+          language?: string;
           sent_at?: string | null;
           source?: string | null;
           status?: string | null;
@@ -198,7 +201,7 @@ export type Database = {
           created_at: string | null;
           failure_count: number | null;
           id: string;
-          language: string | null;
+          language: string;
           metadata: Json | null;
           processed_at: string | null;
           retry_at: string | null;
@@ -221,7 +224,7 @@ export type Database = {
           created_at?: string | null;
           failure_count?: number | null;
           id?: string;
-          language?: string | null;
+          language?: string;
           metadata?: Json | null;
           processed_at?: string | null;
           retry_at?: string | null;
@@ -244,7 +247,7 @@ export type Database = {
           created_at?: string | null;
           failure_count?: number | null;
           id?: string;
-          language?: string | null;
+          language?: string;
           metadata?: Json | null;
           processed_at?: string | null;
           retry_at?: string | null;
@@ -262,50 +265,6 @@ export type Database = {
           video_url?: string | null;
         };
         Relationships: [];
-      };
-      shared_summaries: {
-        Row: {
-          id: string;
-          short_id: string;
-          video_id: string;
-          language: string;
-          shared_by: string | null;
-          view_count: number;
-          max_views: number;
-          expires_at: string;
-          created_at: string | null;
-        };
-        Insert: {
-          id?: string;
-          short_id: string;
-          video_id: string;
-          language?: string;
-          shared_by?: string | null;
-          view_count?: number;
-          max_views?: number;
-          expires_at?: string;
-          created_at?: string | null;
-        };
-        Update: {
-          id?: string;
-          short_id?: string;
-          video_id?: string;
-          language?: string;
-          shared_by?: string | null;
-          view_count?: number;
-          max_views?: number;
-          expires_at?: string;
-          created_at?: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "shared_summaries_shared_by_fkey";
-            columns: ["shared_by"];
-            isOneToOne: false;
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
-          },
-        ];
       };
       processing_queue: {
         Row: {
@@ -480,6 +439,50 @@ export type Database = {
           },
         ];
       };
+      shared_summaries: {
+        Row: {
+          created_at: string | null;
+          expires_at: string;
+          id: string;
+          language: string;
+          max_views: number | null;
+          shared_by: string | null;
+          short_id: string;
+          video_id: string;
+          view_count: number | null;
+        };
+        Insert: {
+          created_at?: string | null;
+          expires_at?: string;
+          id?: string;
+          language?: string;
+          max_views?: number | null;
+          shared_by?: string | null;
+          short_id: string;
+          video_id: string;
+          view_count?: number | null;
+        };
+        Update: {
+          created_at?: string | null;
+          expires_at?: string;
+          id?: string;
+          language?: string;
+          max_views?: number | null;
+          shared_by?: string | null;
+          short_id?: string;
+          video_id?: string;
+          view_count?: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "shared_summaries_shared_by_fkey";
+            columns: ["shared_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       subscriptions: {
         Row: {
           active: boolean | null;
@@ -531,6 +534,27 @@ export type Database = {
           },
         ];
       };
+      websub_subscriptions: {
+        Row: {
+          channel_id: string;
+          expires_at: string | null;
+          status: string | null;
+          subscribed_at: string | null;
+        };
+        Insert: {
+          channel_id: string;
+          expires_at?: string | null;
+          status?: string | null;
+          subscribed_at?: string | null;
+        };
+        Update: {
+          channel_id?: string;
+          expires_at?: string | null;
+          status?: string | null;
+          subscribed_at?: string | null;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       transcript_cost_analytics: {
@@ -546,7 +570,36 @@ export type Database = {
         Relationships: [];
       };
     };
-    Functions: Record<never, never>;
+    Functions: {
+      pick_next_processing_job: {
+        Args: never;
+        Returns: {
+          attempts: number | null;
+          channel_id: string;
+          channel_name: string | null;
+          completed_at: string | null;
+          created_at: string | null;
+          error_message: string | null;
+          id: string;
+          max_attempts: number | null;
+          priority: number | null;
+          started_at: string | null;
+          status: string | null;
+          tts_voice: string | null;
+          user_language: string | null;
+          video_id: string;
+          video_title: string | null;
+          worker_id: string | null;
+          youtube_url: string;
+        }[];
+        SetofOptions: {
+          from: "*";
+          to: "processing_queue";
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
+      };
+    };
     Enums: Record<never, never>;
     CompositeTypes: Record<never, never>;
   };

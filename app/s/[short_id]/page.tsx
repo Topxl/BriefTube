@@ -83,7 +83,9 @@ export default async function SharedSummaryPage({
   // 2. Check expiry and view limit
   const isExpired =
     new Date(share.expires_at) < new Date() ||
-    share.view_count >= share.max_views;
+    (share.view_count !== null &&
+      share.max_views !== null &&
+      share.view_count >= share.max_views);
 
   if (isExpired) {
     return <ExpiredSummaryView loginUrl="/login" />;
@@ -92,7 +94,7 @@ export default async function SharedSummaryPage({
   // 3. Increment view count (non-blocking — fire and forget)
   void supabase
     .from("shared_summaries")
-    .update({ view_count: share.view_count + 1 })
+    .update({ view_count: (share.view_count ?? 0) + 1 })
     .eq("id", share.id);
 
   // 4. Resolve language: query param takes priority

@@ -32,6 +32,7 @@ from monitoring import stats
 import rss_scanner
 import storage
 import db
+import websub_manager
 from datetime import datetime, time as datetime_time
 
 # ── Logging ────────────────────────────────────────────────────
@@ -436,7 +437,25 @@ async def _wait_for_cpu_headroom() -> None:
         await asyncio.sleep(CPU_CHECK_INTERVAL)
 
 
-# ── Loop 2: Gemini Processor (concurrent) ─────────────────────
+# ── Loop 2: WebSub Manager ─────────────────────────────────────
+
+async def websub_loop(alert_system: MonitoringAlert):
+    """Subscribe all channels to WebSub and renew expiring subscriptions every hour."""
+    logger.info("WebSub manager started")
+
+    while True:
+        try:
+            async with aiohttp.ClientSession() as session:
+                new, renewed = await websub_manager.sync_subscriptions(session)
+                if new or renewed:
+                    logger.info(f"WebSub: {new} new subscriptions, {renewed} renewed")
+        except Exception as e:
+            logger.error(f"WebSub loop error: {e}")
+
+        await asyncio.sleep(3600)  # Run every hour
+
+
+# ── Loop 4: Gemini Processor (concurrent) ─────────────────────
 
 # Serialize job picking so concurrent tasks never grab the same row
 _pick_lock = asyncio.Lock()
@@ -511,7 +530,7 @@ async def processor_loop(alert_system: MonitoringAlert):
             await asyncio.sleep(10)
 
 
-# ── Loop 3: Telegram Deliverer ─────────────────────────────────
+# ── Loop 5: Telegram Deliverer ─────────────────────────────────
 
 async def delivery_loop(alert_system: MonitoringAlert):
     """Send completed audio to subscribed users."""
@@ -669,7 +688,7 @@ async def delivery_loop(alert_system: MonitoringAlert):
                 await asyncio.sleep(15)
 
 
-# ── Loop 4: Telegram Bot Polling ──────────────────────────────
+# ── Loop 6: Telegram Bot Polling ──────────────────────────────
 
 async def _bot_poll_loop(bot_app) -> None:
     """Custom long-polling loop for the Telegram bot.
@@ -834,6 +853,7 @@ async def main():
         # Run all loops concurrently (including alert processor)
         tasks = [
             rss_loop(alert_system),
+            websub_loop(alert_system),
             processor_loop(alert_system),
             delivery_loop(alert_system),
             _bot_poll_loop(bot_app),

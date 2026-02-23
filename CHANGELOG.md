@@ -2,6 +2,10 @@
 
 ## 2026-02-23
 
+FEATURE: WebSub (YouTube Push Notifications) — élimine le polling RSS intensif (726 req/5min → push instantané) ; table websub_subscriptions, route GET+POST /api/webhooks/youtube avec vérification HMAC-SHA1, worker websub_manager.py (subscribe + renouvellement toutes les heures), RSS fallback inchangé
+CHORE: types Supabase régénérés — ajout websub_subscriptions + colonne language sur deliveries
+
+
 FIX: onboarding/follow-list + lists/follow — pre-mark existing channel videos as skipped before inserting subscriptions (prevents historical videos from being queued as new deliveries)
 CHORE: worker — service systemd Infisical corrigé (bon projectId brieftube-server + path /worker) ; boto3 installé dans Python 3.12 du venv
 CHORE: worker — migration Supabase Storage → Cloudflare R2 pour les fichiers audio (zero egress cost) ; storage.py, config R2, migrate_audio_to_r2.py
