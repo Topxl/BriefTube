@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { ExternalLink } from "lucide-react";
 import { Typography } from "@/components/nowts/typography";
 import { Button } from "@/components/ui/button";
@@ -27,96 +28,115 @@ export function SharedSummaryView({
   const youtubeUrl = `https://youtu.be/${videoId}`;
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-4 px-4 py-8">
-      {/* Header: thumbnail + title */}
-      <div className="nm-raised overflow-hidden rounded-2xl p-4">
-        <div className="flex items-start gap-4">
-          <a
-            href={youtubeUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="shrink-0"
-          >
-            <img
-              src={thumbnailUrl}
-              alt={videoTitle}
-              width={120}
-              height={90}
-              className="h-[90px] w-[120px] rounded-xl object-cover"
+    <>
+      <header className="sticky top-0 z-40 border-b border-white/[0.06] backdrop-blur-2xl">
+        <div className="mx-auto flex h-14 max-w-2xl items-center justify-between px-4">
+          <Link href="/" className="flex items-center gap-2">
+            <Image
+              src="/logo.svg"
+              alt="BriefTube"
+              width={28}
+              height={28}
+              suppressHydrationWarning
             />
-          </a>
-          <div className="flex min-w-0 flex-col gap-1">
+            <span className="text-sm font-semibold">BriefTube</span>
+          </Link>
+          <Button size="sm" className="bg-red-600 hover:bg-red-500" asChild>
+            <Link href="/login">Sign in</Link>
+          </Button>
+        </div>
+      </header>
+      <div className="mx-auto flex max-w-2xl flex-col gap-4 px-4 py-8">
+        {/* Header: thumbnail + title */}
+        <div className="nm-raised overflow-hidden rounded-2xl p-4">
+          <div className="flex items-start gap-4">
             <a
               href={youtubeUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="group flex items-start gap-1"
+              className="shrink-0"
             >
-              <Typography variant="h3" className="group-hover:underline">
-                {videoTitle}
-              </Typography>
-              <ExternalLink className="text-muted-foreground mt-1 h-4 w-4 shrink-0" />
+              <img
+                src={thumbnailUrl}
+                alt={videoTitle}
+                width={120}
+                height={90}
+                className="h-[90px] w-[120px] rounded-xl object-cover"
+              />
             </a>
-            <Typography variant="muted">AI Summary</Typography>
-          </div>
-        </div>
-
-        {/* Language picker */}
-        {availableLanguages.length > 1 && (
-          <div className="mt-3 flex flex-wrap gap-2 border-t border-white/[0.04] pt-3">
-            {availableLanguages.map((lang) => (
-              <Link
-                key={lang}
-                href={`/s/${shortId}?lang=${lang}`}
-                className={
-                  lang === currentLanguage
-                    ? "nm-inset rounded-full px-3 py-1 text-xs font-medium text-red-400"
-                    : "nm-raised-sm text-muted-foreground hover:text-foreground rounded-full px-3 py-1 text-xs font-medium"
-                }
+            <div className="flex min-w-0 flex-col gap-1">
+              <a
+                href={youtubeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group flex items-start gap-1"
               >
-                {lang.toUpperCase()}
-              </Link>
-            ))}
+                <Typography variant="h3" className="group-hover:underline">
+                  {videoTitle}
+                </Typography>
+                <ExternalLink className="text-muted-foreground mt-1 h-4 w-4 shrink-0" />
+              </a>
+              <Typography variant="muted">AI Summary</Typography>
+            </div>
           </div>
-        )}
-      </div>
 
-      {/* Audio player */}
-      <div className="nm-raised overflow-hidden rounded-2xl px-5 py-4">
-        <p className="text-muted-foreground/50 mb-3 text-xs font-medium tracking-wide uppercase">
-          Audio
-        </p>
-        <ShareAudioPlayer src={audioUrl} />
-      </div>
+          {/* Language picker */}
+          {availableLanguages.length > 1 && (
+            <div className="mt-3 flex flex-wrap gap-2 border-t border-white/[0.04] pt-3">
+              {availableLanguages.map((lang) => (
+                <Link
+                  key={lang}
+                  href={`/s/${shortId}?lang=${lang}`}
+                  className={
+                    lang === currentLanguage
+                      ? "nm-inset rounded-full px-3 py-1 text-xs font-medium text-red-400"
+                      : "nm-raised-sm text-muted-foreground hover:text-foreground rounded-full px-3 py-1 text-xs font-medium"
+                  }
+                >
+                  {lang.toUpperCase()}
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
 
-      {/* Summary text */}
-      <div className="nm-raised overflow-hidden rounded-2xl px-5 py-4">
-        <p className="text-muted-foreground/50 mb-3 text-xs font-medium tracking-wide uppercase">
-          Summary
-        </p>
-        <div className="leading-7 whitespace-pre-line">
-          <Typography variant="p">{summary}</Typography>
+        {/* Audio player */}
+        <div className="nm-raised overflow-hidden rounded-2xl px-5 py-4">
+          <p className="text-muted-foreground/50 mb-3 text-xs font-medium tracking-wide uppercase">
+            Audio
+          </p>
+          <ShareAudioPlayer src={audioUrl} />
+        </div>
+
+        {/* Summary text */}
+        <div className="nm-raised overflow-hidden rounded-2xl px-5 py-4">
+          <p className="text-muted-foreground/50 mb-3 text-xs font-medium tracking-wide uppercase">
+            Summary
+          </p>
+          <div className="leading-7 whitespace-pre-line">
+            <Typography variant="p">{summary}</Typography>
+          </div>
+        </div>
+
+        {/* CTA */}
+        <div className="nm-raised overflow-hidden rounded-2xl p-6 text-center">
+          <p className="text-base font-semibold">
+            Get summaries for YOUR channels, delivered to Telegram
+          </p>
+          <p className="text-muted-foreground mt-2 text-sm">
+            BriefTube monitors your YouTube channels, generates AI-powered
+            summaries, and delivers audio to your Telegram — fully automated.
+          </p>
+          <Button
+            asChild
+            size="lg"
+            className="mt-5 rounded-full bg-red-600 hover:bg-red-500"
+          >
+            <Link href="/login">Start free trial</Link>
+          </Button>
         </div>
       </div>
-
-      {/* CTA */}
-      <div className="nm-raised overflow-hidden rounded-2xl p-6 text-center">
-        <p className="text-base font-semibold">
-          Get summaries for YOUR channels, delivered to Telegram
-        </p>
-        <p className="text-muted-foreground mt-2 text-sm">
-          BriefTube monitors your YouTube channels, generates AI-powered
-          summaries, and delivers audio to your Telegram — fully automated.
-        </p>
-        <Button
-          asChild
-          size="lg"
-          className="mt-5 rounded-full bg-red-600 hover:bg-red-500"
-        >
-          <Link href="/login">Start free trial</Link>
-        </Button>
-      </div>
-    </div>
+    </>
   );
 }
 
