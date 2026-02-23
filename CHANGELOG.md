@@ -2,6 +2,32 @@
 
 ## 2026-02-23
 
+UX: share — header avec logo et bouton Sign in sur la page de partage
+UX: bot — menu Options affiche uniquement Subscribe OU Unsubscribe selon l'état d'abonnement actuel (plus les deux boutons simultanément) ; si chaîne inconnue, aucun bouton affiché
+FIX: bot — boutons Subscribe/Unsubscribe depuis Options fonctionnent désormais pour les vidéos on-demand (channel_id="" en DB) : fallback scraping de la page YouTube pour extraire channelId et channel_name
+UX: bot — picker de langue share : édite le clavier en place (pas de nouveau message, pas de texte d'explication) ; après sélection, le message revient à l'URL + [Language][Share →] ou affiche le statut de génération
+UX: bot — bouton langue sur le message de partage renommé "Language" (plus clair que le nom de la langue courante)
+UX: bot — message du lien de partage dispose maintenant d'un bouton "Share →" qui ouvre le sélecteur de contacts/groupes Telegram natif pour transférer le lien directement
+UX: bot — bouton Options remplace le clavier du message existant en place (edit_reply_markup) au lieu d'envoyer un nouveau message "Options:" dans le chat
+UX: bot — share language picker affiche toutes les langues supportées (pas seulement les disponibles) ; les déjà générées marquées avec *, la courante avec ✓ ; choisir une langue non disponible déclenche la génération du résumé dans cette langue puis livre l'audio
+UX: bot — bouton Share affiche uniquement l'URL (propre, sans texte superflu) + bouton langue en dessous ; cliquer sur la langue ouvre un picker ; choisir une autre langue génère un nouveau lien de partage dans cette langue et reçoit le résumé
+FIX: worker — latence bot : psutil.cpu_percent(interval=1) bloquait l'event loop 1 seconde entière à chaque check CPU ; déplacé dans asyncio.to_thread() pour libérer l'event loop pendant la mesure
+FIX: worker — latence bot : get_pending_deliveries(), mark_delivery_sent(), mark_delivery_failed() dans delivery_loop appelés sans asyncio.to_thread() — bloquaient l'event loop à chaque livraison
+FIX: bot — latence boutons : tous les appels DB synchrones dans les callback handlers (get_profile_by_telegram, get_processed_video, get_or_create_share) déplacés dans asyncio.to_thread() ; handle_share_callback parallélise les 2 fetches indépendants avec asyncio.gather()
+FEATURE: worker — récupération automatique des livraisons échouées toutes les 10 min : si la vidéo est maintenant completed avec audio et que la livraison a sent_at=NULL, elle est remise en pending automatiquement
+FIX: worker — bot polling : keepalive_timeout=60 au lieu de force_close=True pour réutiliser les connexions SSL existantes (évite un handshake de 6s par cycle de polling)
+FIX: worker — upsert livraison ne remettait pas sent_at à NULL sur conflit (user_id, video_id), laissant la livraison bloquée en 'failed' pour toujours ; remplacé par UPDATE explicite + INSERT si absent
+FIX: worker — bot polling Telegram recréait pas la session aiohttp après des erreurs réseau répétées ; session TCP maintenant recréée après 3 échecs consécutifs + force_close=True pour éviter les stale connections
+FIX: worker — limite CPU throttle passée de 65% à 90% (Chrome en fond saturait la limite système, bloquant tout traitement vidéo alors que le worker consommait seulement 2%)
+FEATURE: worker — détection automatique des vidéos musicales/ambient (titres avec Hz/binaural/méditation/etc.) pour bloquer Whisper inutilement ; aussi blocage si audio > 80 MB après téléchargement
+FIX: worker — voix TTS automatiquement ajustée à la langue cible si la voix configurée ne correspond pas (ex: voix française sur résumé arabe → ar-SA-ZariyahNeural)
+FIX: worker — reset_stuck_processing_jobs capture aussi les jobs avec started_at=NULL (bloqués indéfiniment car filtre SQL started_at < cutoff exclut les NULL)
+FIX: worker — import manquant InlineKeyboardButton/InlineKeyboardMarkup dans bot_handler.py causait NameError sur le menu Options
+FIX: db — 8 vidéos débloquées manuellement (6 orphelines sans job dans processing_queue, 2 bloquées en processing, 2 job completed mais processed_videos toujours pending)
+FEATURE: bot — menu Options avec 4 boutons (Partager, Langue, S'abonner, Se désabonner) accessible via le bouton "⚙️ Options" sur chaque résumé livré
+FEATURE: bot — collage d'un lien de chaîne YouTube : vérifie l'abonnement et propose Abonner/Désabonner avec boutons inline au lieu de s'abonner immédiatement
+UX: bot — bouton renommé "⚙️ Options" (au lieu de "⚙️" seul)
+FIX: bot — token Telegram régénéré (conflit 409 causé par processus bun externe sur /home/vj/claude-telegram-bot)
 FEATURE: worker — add 6 new database functions for channel/subscription management (get_video_channel, get_available_languages_for_video, is_subscribed_to_channel, unsubscribe_channel, subscribe_to_channel, get_subscription_count)
 UX: share — bouton de vitesse x1/x1.5/x2/x3/x4 sur le lecteur audio de la page de partage
 UX: share — audio avant le résumé texte sur la page de partage
