@@ -52,7 +52,7 @@ const stepIcons = [
 
 export function HowItWorks() {
   return (
-    <section id="how-it-works" className="py-20">
+    <section id="how-it-works" className="py-14 md:py-20">
       <div className="mx-auto max-w-6xl px-6">
         <ScrollReveal>
           <h2 className="font-display text-center text-2xl font-bold md:text-3xl">
@@ -64,7 +64,7 @@ export function HowItWorks() {
         </ScrollReveal>
 
         <ScrollReveal delay={150}>
-          <div className="mt-16 grid gap-12 md:grid-cols-3">
+          <div className="mt-12 grid gap-12 md:mt-16 md:grid-cols-3">
             {tl.steps.map((step, i) => (
               <div key={step.title} className="relative text-center">
                 {i < tl.steps.length - 1 && (

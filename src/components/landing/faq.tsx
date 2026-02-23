@@ -32,7 +32,7 @@ export function FAQ() {
   }, []);
 
   return (
-    <section id="faq" className="py-20">
+    <section id="faq" className="py-14 md:py-20">
       <div className="mx-auto max-w-2xl px-6">
         <ScrollReveal>
           <h2 className="font-display text-center text-2xl font-bold md:text-3xl">
