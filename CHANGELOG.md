@@ -3,6 +3,7 @@
 ## 2026-02-24
 
 UX: Landing — reduce section padding on mobile (py-20 → py-14 md:py-20) for consistent vertical spacing; fix HowItWorks mt-16 → mt-12 md:mt-16; standardize Demo section
+UX: Hero — increase mobile top padding (pt-20 → pt-28) to add breathing room between floating navbar and title
 FEATURE: Landing hero — replace Fireship video with Simon Sinek TED talk, add YouTube thumbnail as semi-transparent card background
 FEATURE: Telegram bot — add "Summary" button in Options menu to display the full text summary
 CHORE: SEO — sitemap étendu avec /blog, /blog/[slug], /vs, /vs/[slug] (statiques) et /channels/[channel_id] dynamiques (unique channel_ids depuis subscriptions)

@@ -103,7 +103,7 @@ export function Hero() {
   );
 
   return (
-    <section className="relative overflow-hidden pt-20 pb-14 md:pt-44 md:pb-32">
+    <section className="relative overflow-hidden pt-28 pb-14 md:pt-44 md:pb-32">
       {/* Gradient background orbs */}
       <div className="pointer-events-none absolute inset-0 -z-10">
         <div
