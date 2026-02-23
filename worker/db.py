@@ -657,11 +657,11 @@ def count_on_demand_this_month(user_id: str) -> int:
 # ── Shared Summaries ───────────────────────────────────────────
 
 def get_profile_by_telegram(telegram_chat_id: str) -> dict | None:
-    """Fetch id + subscription_status for a connected Telegram user."""
+    """Fetch profile fields needed by bot handlers for a connected Telegram user."""
     sb = get_client()
     res = (
         sb.table("profiles")
-        .select("id, subscription_status")
+        .select("id, subscription_status, trial_ends_at, max_channels, preferred_language, tts_voice")
         .eq("telegram_chat_id", telegram_chat_id)
         .eq("telegram_connected", True)
         .execute()
@@ -693,15 +693,8 @@ def get_or_create_share(
     is_pro: bool,
     video_title: str,
 ) -> dict | None:
-    """Return or create a shared_summaries row for (video_id, language, user_id).
-
-    Returns None if the free daily limit (3 shares/day) has been reached.
-    """
+    """Return or create a shared_summaries row for (video_id, language, user_id)."""
     import secrets
-
-    # Free limit check
-    if not is_pro and count_shares_today(user_id) >= 3:
-        return None
 
     sb = get_client()
     now = datetime.now(timezone.utc).isoformat()

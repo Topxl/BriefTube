@@ -380,6 +380,21 @@ def _get_profile_by_chat_id(chat_id: str) -> dict | None:
     return res.data[0] if res.data else None
 
 
+def _is_pro(profile: dict) -> bool:
+    """Return True if the user has an active subscription OR an active trial."""
+    from datetime import datetime, timezone
+    if profile.get("subscription_status") == "active":
+        return True
+    trial_ends_at = profile.get("trial_ends_at")
+    if trial_ends_at:
+        try:
+            ends = datetime.fromisoformat(trial_ends_at.replace("Z", "+00:00"))
+            return datetime.now(timezone.utc) <= ends
+        except Exception:
+            pass
+    return False
+
+
 def _get_plan_label(profile: dict) -> str:
     """Return a human-readable plan label: Pro / Trial (Xd left) / Free."""
     if profile.get("subscription_status") == "active":
@@ -554,6 +569,19 @@ def _upsert_delivery(sb, user_id: str, video_id: str, language: str) -> None:
         }).execute()
 
 
+def _get_channel_name_from_subscription(channel_id: str) -> str:
+    """Return channel_name from subscriptions table, fallback to channel_id."""
+    sb = db.get_client()
+    res = (
+        sb.table("subscriptions")
+        .select("channel_name")
+        .eq("channel_id", channel_id)
+        .limit(1)
+        .execute()
+    )
+    return res.data[0]["channel_name"] if res.data else channel_id
+
+
 async def _get_channel_name_from_rss(channel_id: str) -> str | None:
     """Get channel name from YouTube RSS feed."""
     rss_url = f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"
@@ -577,7 +605,7 @@ async def _get_channel_name_from_rss(channel_id: str) -> str | None:
 async def handle_video_request(update: Update, profile: dict, video_id: str) -> None:
     """Handle a YouTube video URL — queue an on-demand summary."""
     user_id = profile["id"]
-    is_pro = profile["subscription_status"] == "active"
+    is_pro = _is_pro(profile)
     used_this_month = 0
 
     # Check monthly limit for free users
@@ -787,10 +815,7 @@ async def handle_options_callback(update: Update, context: ContextTypes.DEFAULT_
             sub_row = [InlineKeyboardButton("➕ Subscribe", callback_data=f"sub_{video_id}")]
 
     rows = [
-        [
-            InlineKeyboardButton("🔗 Share", callback_data=f"share_{video_id}_{language}"),
-            InlineKeyboardButton("🌐 Language", callback_data=f"lang_{video_id}_{language}"),
-        ],
+        [InlineKeyboardButton("🔗 Share", callback_data=f"share_{video_id}_{language}")],
     ]
     if sub_row:
         rows.append(sub_row)
@@ -823,18 +848,13 @@ async def handle_share_callback(update: Update, context: ContextTypes.DEFAULT_TY
         await query.message.reply_text("Connect your BriefTube account first (/start).")
         return
 
-    is_pro = profile.get("subscription_status") in ("active",)
+    is_pro = _is_pro(profile)
     video_title = pv.get("video_title", "this summary") if pv else "this summary"
 
     share = await asyncio.to_thread(
         db.get_or_create_share, video_id, language, profile["id"], is_pro, video_title
     )
     if share is None:
-        await query.message.reply_text(
-            "You've reached the free share limit (3/day).\n\n"
-            f"Upgrade to Pro for unlimited sharing: {APP_URL}/dashboard/profile",
-            parse_mode="HTML",
-        )
         return
 
     url = f"{APP_URL}/s/{share['short_id']}"
@@ -898,7 +918,7 @@ async def handle_share_set_lang_callback(update: Update, context: ContextTypes.D
         return
 
     lang_label = _LANG_LABELS.get(new_lang, new_lang.upper())
-    is_pro = profile.get("subscription_status") in ("active",)
+    is_pro = _is_pro(profile)
 
     # ── Case 1: already processed in this language ─────────────────
     if pv and pv.get("audio_url"):
@@ -907,11 +927,6 @@ async def handle_share_set_lang_callback(update: Update, context: ContextTypes.D
             db.get_or_create_share, video_id, new_lang, profile["id"], is_pro, video_title
         )
         if share is None:
-            await query.message.reply_text(
-                "You've reached the free share limit (3/day).\n\n"
-                f"Upgrade to Pro for unlimited sharing: {APP_URL}/dashboard/profile",
-                parse_mode="HTML",
-            )
             return
 
         # Also queue delivery so the user receives the audio
@@ -1062,7 +1077,7 @@ async def handle_sub_channel_callback(update: Update, context: ContextTypes.DEFA
     channel_id = channel_info["channel_id"]
     channel_name = channel_info["channel_name"]
 
-    is_pro = profile.get("subscription_status") == "active"
+    is_pro = _is_pro(profile)
     if not is_pro:
         count = await asyncio.to_thread(db.get_subscription_count, profile["id"])
         max_ch = profile.get("max_channels", 5)
@@ -1092,7 +1107,7 @@ async def handle_sub_channel_callback(update: Update, context: ContextTypes.DEFA
 
 
 async def handle_unsub_channel_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Unsubscribe from the channel of a video (from Options menu)."""
+    """Ask for confirmation before unsubscribing (from Options menu)."""
     query = update.callback_query
     try:
         await query.answer()
@@ -1101,32 +1116,64 @@ async def handle_unsub_channel_callback(update: Update, context: ContextTypes.DE
 
     video_id = query.data[6:]  # strip "unsub_"
 
-    profile = await asyncio.to_thread(db.get_profile_by_telegram, str(query.from_user.id))
-    if not profile:
-        await query.message.reply_text("Connect your BriefTube account first (/start).")
-        return
-
     channel_info = await asyncio.to_thread(db.get_video_channel, video_id)
     if not channel_info:
-        # Fallback: on-demand videos have channel_id="" in DB — scrape YouTube
         channel_info = await _get_channel_for_video(video_id)
     if not channel_info:
-        await query.message.reply_text(
-            "Could not find the channel for this video."
-        )
+        await query.message.reply_text("Could not find the channel for this video.")
         return
 
     channel_id = channel_info["channel_id"]
     channel_name = channel_info["channel_name"]
 
-    deactivated = await asyncio.to_thread(
-        db.unsubscribe_channel, profile["id"], channel_id
+    keyboard = InlineKeyboardMarkup([[
+        InlineKeyboardButton("Yes, unsubscribe", callback_data=f"confirmUnsub_{channel_id}"),
+        InlineKeyboardButton("Cancel", callback_data="cancelUnsub"),
+    ]])
+    await query.message.reply_text(
+        f"Unsubscribe from <b>{_html.escape(channel_name)}</b>?",
+        parse_mode="HTML",
+        reply_markup=keyboard,
     )
+
+
+async def handle_confirm_unsub_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Actually unsubscribe after confirmation."""
+    query = update.callback_query
+    try:
+        await query.answer()
+    except Exception:
+        pass
+
+    channel_id = query.data[len("confirmUnsub_"):]
+
+    profile, channel_name = await asyncio.gather(
+        asyncio.to_thread(db.get_profile_by_telegram, str(query.from_user.id)),
+        asyncio.to_thread(_get_channel_name_from_subscription, channel_id),
+    )
+    if not profile:
+        await query.message.edit_text("Connect your BriefTube account first (/start).")
+        return
+
+    deactivated = await asyncio.to_thread(db.unsubscribe_channel, profile["id"], channel_id)
     if deactivated:
-        await query.message.reply_text(f"Unsubscribed from {channel_name}.")
-        logger.info(f"Options unsubscribe: user={profile['id']}, channel={channel_name} ({channel_id})")
+        await query.message.edit_text(f"Unsubscribed from {channel_name}.", reply_markup=None)
+        logger.info(f"Options unsubscribe confirmed: user={profile['id']}, channel={channel_name} ({channel_id})")
     else:
-        await query.message.reply_text(f"You're not subscribed to {channel_name}.")
+        await query.message.edit_text(f"You're not subscribed to {channel_name}.", reply_markup=None)
+
+
+async def handle_cancel_unsub_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Cancel the unsubscribe confirmation."""
+    query = update.callback_query
+    try:
+        await query.answer()
+    except Exception:
+        pass
+    try:
+        await query.message.delete()
+    except Exception:
+        await query.message.edit_text("Cancelled.", reply_markup=None)
 
 
 async def handle_subch_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -1148,7 +1195,7 @@ async def handle_subch_callback(update: Update, context: ContextTypes.DEFAULT_TY
         await query.message.reply_text("Connect your BriefTube account first (/start).")
         return
 
-    is_pro = profile.get("subscription_status") == "active"
+    is_pro = _is_pro(profile)
     if not is_pro:
         count = await asyncio.to_thread(db.get_subscription_count, profile["id"])
         max_ch = profile.get("max_channels", 5)
@@ -1267,6 +1314,8 @@ def create_bot_application() -> Application:
     app.add_handler(CallbackQueryHandler(handle_lang_callback, pattern=r"^lang_"))
     app.add_handler(CallbackQueryHandler(handle_setlang_callback, pattern=r"^setlang_"))
     app.add_handler(CallbackQueryHandler(handle_sub_channel_callback, pattern=r"^sub_"))
+    app.add_handler(CallbackQueryHandler(handle_confirm_unsub_callback, pattern=r"^confirmUnsub_"))
+    app.add_handler(CallbackQueryHandler(handle_cancel_unsub_callback, pattern=r"^cancelUnsub$"))
     app.add_handler(CallbackQueryHandler(handle_unsub_channel_callback, pattern=r"^unsub_"))
     app.add_handler(CallbackQueryHandler(handle_subch_callback, pattern=r"^subch_"))
     app.add_handler(CallbackQueryHandler(handle_unsubch_callback, pattern=r"^unsubch_"))
