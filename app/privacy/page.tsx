@@ -104,8 +104,17 @@ export default function PrivacyPage() {
               className="text-red-400 underline hover:text-red-300"
             >
               YouTube Terms of Service
-            </a>{" "}
-            and the{" "}
+            </a>
+            , the{" "}
+            <a
+              href="https://www.youtube.com/t/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-red-400 underline hover:text-red-300"
+            >
+              YouTube API Services Privacy Policy
+            </a>
+            , and the{" "}
             <a
               href="https://policies.google.com/privacy"
               target="_blank"
@@ -204,10 +213,10 @@ export default function PrivacyPage() {
           <p className="text-muted-foreground text-sm leading-relaxed">
             To exercise these rights, contact us at{" "}
             <a
-              href="mailto:support@brieftube.app"
+              href="mailto:contact@brief-tube.com"
               className="text-red-400 underline hover:text-red-300"
             >
-              support@brieftube.app
+              contact@brief-tube.com
             </a>
             .
           </p>
@@ -247,10 +256,10 @@ export default function PrivacyPage() {
           </p>
           <p className="text-sm">
             <a
-              href="mailto:support@brieftube.app"
+              href="mailto:contact@brief-tube.com"
               className="text-red-400 underline hover:text-red-300"
             >
-              support@brieftube.app
+              contact@brief-tube.com
             </a>
           </p>
         </section>
