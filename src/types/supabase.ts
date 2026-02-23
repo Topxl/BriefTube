@@ -52,6 +52,24 @@ export type Database = {
           },
         ];
       };
+      deleted_accounts: {
+        Row: {
+          id: string;
+          email: string;
+          deleted_at: string;
+        };
+        Insert: {
+          id?: string;
+          email: string;
+          deleted_at?: string;
+        };
+        Update: {
+          id?: string;
+          email?: string;
+          deleted_at?: string;
+        };
+        Relationships: [];
+      };
       deliveries: {
         Row: {
           created_at: string | null;

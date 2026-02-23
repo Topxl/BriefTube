@@ -20,7 +20,7 @@ class RouteBuilder<TBody = unknown, TParams = unknown> {
     fn: Handler<{
       body?: TBody;
       params?: TParams;
-      ctx: { user: { id: string } };
+      ctx: { user: { id: string; email: string | null } };
     }>,
   ) {
     return async (req: NextRequest, context: { params?: TParams }) => {
@@ -49,7 +49,7 @@ class RouteBuilder<TBody = unknown, TParams = unknown> {
       const result = await fn(req, {
         body: parsedBody,
         params: context.params,
-        ctx: { user: { id: user.id } },
+        ctx: { user: { id: user.id, email: user.email ?? null } },
       });
 
       if (result instanceof Response || result instanceof NextResponse) {
