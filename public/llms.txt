@@ -1,0 +1,47 @@
+# BriefTube
+
+> AI-powered YouTube summaries delivered as audio to your Telegram, fully automated.
+
+BriefTube is a B2C SaaS platform that monitors YouTube channels, generates concise AI summaries using Google Gemini, converts them to natural-sounding audio with neural TTS voices, and delivers everything to your Telegram — automatically when new videos are published.
+
+## What BriefTube does
+
+- Monitors YouTube channels via RSS for new videos
+- Generates AI-powered text summaries with Google Gemini
+- Converts summaries to audio using Microsoft Edge neural TTS (multiple voices and languages)
+- Delivers audio summaries directly to your Telegram account via @brief_tube_bot
+- Supports multiple languages (English, French, more coming)
+- Provides shareable public links for any summary
+
+## Pricing
+
+- **Free**: Up to 3 YouTube channels, AI audio summaries, Telegram delivery — $0/month
+- **Pro**: Unlimited channels, priority processing, custom TTS voice — $9/month
+- 7-day free Pro trial on signup, no credit card required
+
+## Key pages
+
+- Homepage: https://www.brief-tube.com
+- Login / Sign up: https://www.brief-tube.com/login
+- Privacy Policy: https://www.brief-tube.com/privacy
+- Terms of Service: https://www.brief-tube.com/terms
+
+## Telegram bot
+
+- Bot username: @brief_tube_bot
+- Connect by visiting https://www.brief-tube.com and linking your account
+
+## Technology
+
+- Next.js 15 (App Router) frontend hosted on Vercel
+- Python worker for RSS monitoring, AI processing, and Telegram delivery
+- Supabase (PostgreSQL) for database and file storage
+- Google Gemini for AI summarization
+- Microsoft Edge TTS for neural voice synthesis
+- Stripe for subscription billing
+
+## Company
+
+- Product: BriefTube
+- Website: https://www.brief-tube.com
+- Domain: brief-tube.com

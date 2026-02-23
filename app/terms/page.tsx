@@ -1,4 +1,12 @@
 import Link from "next/link";
+import type { Metadata } from "next";
+import { SiteConfig } from "@/site-config";
+
+export const metadata: Metadata = {
+  title: "Terms of Service",
+  description: `Read the Terms of Service for ${SiteConfig.title}. Understand your rights and obligations when using our AI-powered YouTube summary and Telegram delivery service.`,
+  alternates: { canonical: `${SiteConfig.prodUrl}/terms` },
+};
 
 export default function TermsPage() {
   return (
