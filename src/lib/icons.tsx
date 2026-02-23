@@ -28,6 +28,7 @@ import {
   ChevronRightIcon as _ChevronRightIcon,
   ChevronUpIcon as _ChevronUpIcon,
   CircleIcon as _CircleIcon,
+  Clock as _Clock,
   Copy as _Copy,
   CopyIcon as _CopyIcon,
   Download as _Download,
@@ -106,6 +107,7 @@ export const ChevronRight = wrap(_ChevronRight);
 export const ChevronRightIcon = wrap(_ChevronRightIcon);
 export const ChevronUpIcon = wrap(_ChevronUpIcon);
 export const CircleIcon = wrap(_CircleIcon);
+export const Clock = wrap(_Clock);
 export const Copy = wrap(_Copy);
 export const CopyIcon = wrap(_CopyIcon);
 export const Download = wrap(_Download);

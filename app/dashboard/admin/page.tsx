@@ -10,6 +10,8 @@ import {
   Send,
   Loader2,
   Activity,
+  AlertCircle,
+  Clock,
 } from "@/lib/icons";
 
 const ADMIN_USER_ID = "67320a39-948c-44d2-98e3-c0de49af1ec6";
@@ -84,6 +86,17 @@ type FailedVideo = {
   created_at: string;
 };
 
+type ExpiringTrial = {
+  id: string;
+  email: string;
+  trial_ends_at: string;
+};
+
+type AtRiskUser = {
+  id: string;
+  email: string;
+};
+
 // ---------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------
@@ -153,6 +166,83 @@ export default async function AdminPage() {
     .limit(5);
   const recentFailed = recentFailedRaw as unknown as FailedVideo[] | null;
 
+  // ── Funnel de conversion ──────────────────────────────────────
+  const now = new Date().toISOString();
+  const sevenDaysFromNow = new Date();
+  sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+
+  const [
+    { count: trialActive },
+    { count: trialExpired },
+    { count: freeNoTrial },
+    { count: churned },
+    { data: expiringTrialsRaw },
+  ] = await Promise.all([
+    admin
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .eq("subscription_status", "free")
+      .gt("trial_ends_at", now),
+    admin
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .eq("subscription_status", "free")
+      .not("trial_ends_at", "is", null)
+      .lt("trial_ends_at", now),
+    admin
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .eq("subscription_status", "free")
+      .is("trial_ends_at", null),
+    admin
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .in("subscription_status", ["cancelled", "past_due"]),
+    admin
+      .from("profiles")
+      .select("id, email, trial_ends_at")
+      .eq("subscription_status", "free")
+      .gt("trial_ends_at", now)
+      .lt("trial_ends_at", sevenDaysFromNow.toISOString())
+      .order("trial_ends_at", { ascending: true })
+      .limit(10),
+  ]);
+  const expiringTrials = (expiringTrialsRaw ?? []) as ExpiringTrial[];
+
+  // ── Utilisateurs à risque ─────────────────────────────────────
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+  const { data: activeSubs } = await admin
+    .from("subscriptions")
+    .select("user_id")
+    .eq("active", true);
+  const activeSubUserIds = [
+    ...new Set((activeSubs ?? []).map((s) => s.user_id)),
+  ];
+
+  let atRiskUsers: AtRiskUser[] = [];
+  if (activeSubUserIds.length > 0) {
+    const [{ data: telegramCandidates }, { data: recentSent }] =
+      await Promise.all([
+        admin
+          .from("profiles")
+          .select("id, email")
+          .eq("telegram_connected", true)
+          .in("id", activeSubUserIds),
+        admin
+          .from("deliveries")
+          .select("user_id")
+          .eq("status", "sent")
+          .gte("created_at", sevenDaysAgo.toISOString())
+          .in("user_id", activeSubUserIds),
+      ]);
+    const recentIds = new Set((recentSent ?? []).map((d) => d.user_id));
+    atRiskUsers = ((telegramCandidates ?? []) as AtRiskUser[]).filter(
+      (u) => !recentIds.has(u.id),
+    );
+  }
+
   // Compute stats — Partial<Record> so values are number | undefined → ?? 0 is valid
   const videosByStatus = (videosToday ?? []).reduce<
     Partial<Record<string, number>>
@@ -180,6 +270,12 @@ export default async function AdminPage() {
   const total = totalUsers ?? 0;
   const connected = telegramConnected ?? 0;
   const telegramPct = total > 0 ? Math.round((connected / total) * 100) : 0;
+
+  const proCount = proUsers ?? 0;
+  const trialExpiredCount = trialExpired ?? 0;
+  const trialsStarted = proCount + trialExpiredCount;
+  const conversionRate =
+    trialsStarted > 0 ? Math.round((proCount / trialsStarted) * 100) : 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -231,6 +327,92 @@ export default async function AdminPage() {
             icon={<Activity className="h-4 w-4" />}
           />
         </div>
+      </div>
+
+      {/* Funnel de conversion */}
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between px-1">
+          <SectionTitle>Funnel de conversion</SectionTitle>
+          <span
+            className={`nm-raised-sm rounded-full px-2.5 py-0.5 text-[11px] font-semibold tabular-nums ${
+              conversionRate >= 20
+                ? "text-emerald-400"
+                : conversionRate >= 10
+                  ? "text-yellow-400"
+                  : "text-muted-foreground"
+            }`}
+          >
+            {conversionRate}% converti
+          </span>
+        </div>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+          <StatCard
+            label="Free (jamais trial)"
+            value={freeNoTrial ?? 0}
+            icon={<Users className="h-4 w-4" />}
+          />
+          <StatCard
+            label="Trial actif"
+            value={trialActive ?? 0}
+            icon={<Clock className="h-4 w-4" />}
+            variant="warning"
+          />
+          <StatCard
+            label="Trial expiré"
+            value={trialExpiredCount}
+            sub="n'ont pas converti"
+            icon={<XCircleIcon className="h-4 w-4" />}
+            variant={trialExpiredCount > 0 ? "danger" : "default"}
+          />
+          <StatCard
+            label="Pro actif"
+            value={proCount}
+            icon={<Zap className="h-4 w-4" />}
+            variant="success"
+          />
+          <StatCard
+            label="Churned"
+            value={churned ?? 0}
+            sub="annulé / impayé"
+            icon={<AlertCircle className="h-4 w-4" />}
+            variant={(churned ?? 0) > 0 ? "danger" : "default"}
+          />
+        </div>
+
+        {/* Trials expirant bientôt */}
+        {expiringTrials.length > 0 && (
+          <div className="nm-raised overflow-hidden rounded-xl">
+            <div className="flex items-center gap-2 border-b border-white/[0.04] px-4 py-2">
+              <Clock className="text-muted-foreground/40 h-3.5 w-3.5" />
+              <p className="text-muted-foreground text-xs font-medium">
+                Trials expirant dans 7 jours ({expiringTrials.length})
+              </p>
+            </div>
+            <div className="divide-y divide-white/[0.04]">
+              {expiringTrials.map((t) => {
+                const daysLeft = Math.ceil(
+                  (new Date(t.trial_ends_at).getTime() - new Date().getTime()) /
+                    86400000,
+                );
+                return (
+                  <div
+                    key={t.id}
+                    className="flex items-center justify-between px-4 py-2"
+                  >
+                    <p className="text-sm">{t.email}</p>
+                    <span
+                      className={`text-xs font-medium tabular-nums ${
+                        daysLeft <= 2 ? "text-red-400" : "text-yellow-400"
+                      }`}
+                    >
+                      J-{daysLeft}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Activity 24h */}
@@ -360,6 +542,40 @@ export default async function AdminPage() {
               )}
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Utilisateurs à risque */}
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between px-1">
+          <SectionTitle>Utilisateurs à risque</SectionTitle>
+          <span className="text-muted-foreground text-xs">
+            Telegram connecté · chaîne active · 0 livraison / 7j
+          </span>
+        </div>
+        <div className="nm-raised overflow-hidden rounded-xl">
+          {atRiskUsers.length === 0 ? (
+            <div className="flex items-center gap-2 px-4 py-4">
+              <CheckCircle className="h-4 w-4 text-emerald-400" />
+              <p className="text-muted-foreground text-sm">
+                Aucun utilisateur à risque
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-white/[0.04]">
+              {atRiskUsers.map((u) => (
+                <div
+                  key={u.id}
+                  className="flex items-center justify-between px-4 py-2.5"
+                >
+                  <p className="text-sm">{u.email}</p>
+                  <span className="nm-raised-sm rounded-full px-2 py-0.5 text-[10px] font-medium text-red-400">
+                    à risque
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
