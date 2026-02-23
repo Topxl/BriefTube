@@ -56,34 +56,34 @@ const jsonLd = [
     mainEntity: [
       {
         "@type": "Question",
-        name: "How does BriefTube work?",
+        name: "How does BriefTube actually work?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "BriefTube monitors YouTube RSS feeds for new videos from your subscribed channels. When a new video is detected, our AI generates a detailed summary, converts it to natural-sounding audio, and sends it directly to your Telegram.",
+          text: "Each channel you follow gets checked automatically through YouTube's RSS feed. The moment a new video appears, BriefTube reads its transcript, generates a summary, converts it to audio, and sends it to your Telegram — usually within a few minutes. No manual steps on your end.",
         },
       },
       {
         "@type": "Question",
-        name: "What languages are supported?",
+        name: "Which languages work?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "We currently support French and English voices, with more languages coming soon. Pro users can choose their preferred voice from our selection.",
+          text: "French and English voices are available right now. More are in the pipeline. If you're on Pro, you can pick a specific voice — there are a few to choose from in each language.",
         },
       },
       {
         "@type": "Question",
-        name: "Do I need to create a Telegram bot?",
+        name: "Do I need to set up a Telegram bot?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "No. You simply connect your Telegram account by clicking a link and sending a message to our @brief_tube_bot. It takes 10 seconds.",
+          text: "No. You click a connect link, it opens @brief_tube_bot in Telegram, you send /start. That's the whole process — maybe 15 seconds if you type slowly.",
         },
       },
       {
         "@type": "Question",
-        name: "What if I want to cancel?",
+        name: "What happens if I cancel?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Cancel anytime from your dashboard. No questions asked, no cancellation fees. Your free tier access remains active.",
+          text: "You drop back to the free plan — your channels stay, your history stays, you just lose access to the Pro features. No cancellation fees, no awkward retention flows.",
         },
       },
     ],

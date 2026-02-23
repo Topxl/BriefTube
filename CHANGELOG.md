@@ -2,6 +2,7 @@
 
 ## 2026-02-24
 
+CHORE: copywriting — humanisation du texte landing page (hero, problem, features, pricing, FAQ, CTA) pour améliorer le SEO et la crédibilité perçue
 CHORE: SEO — robots.ts disallow /dashboard /api /auth /onboarding pour économiser le crawl budget
 CHORE: SEO — sitemap ajoute /privacy et /terms, supprime /pricing (page protégée), lastModified statiques
 CHORE: SEO — layout.tsx title template (%s — BriefTube), robots googleBot maxSnippet/maxImagePreview, OG siteName/locale, Twitter site handle
