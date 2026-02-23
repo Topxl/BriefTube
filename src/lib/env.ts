@@ -18,6 +18,7 @@ export const env = createEnv({
     EMAIL_FROM: z.string().optional(),
     YOUTUBE_API_KEY: z.string().optional(),
     GEMINI_API_KEY: z.string().optional(),
+    WEBSUB_SECRET: z.string().optional(),
     NODE_ENV: z.enum(["development", "production", "test"]),
     CI: z.coerce.boolean().optional(),
   },

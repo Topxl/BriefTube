@@ -55,6 +55,9 @@ CPU_CHECK_INTERVAL = float(os.getenv("CPU_CHECK_INTERVAL", "5.0"))
 # App
 APP_URL = os.getenv("APP_URL", "https://brief-tube.com")
 
+# WebSub (YouTube Push Notifications)
+WEBSUB_SECRET = os.getenv("WEBSUB_SECRET", "")
+
 # YouTube cookies (Netscape format) — helps with age-restricted / login-required
 # videos, but does NOT bypass cloud IP blocks on the transcript API.
 # Export via "Get cookies.txt LOCALLY" browser extension → worker/cookies/youtube.txt

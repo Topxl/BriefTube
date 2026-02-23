@@ -921,6 +921,33 @@ def get_subscription_count(user_id: str) -> int:
     return res.count or 0
 
 
+# ── WebSub Subscriptions ────────────────────────────────────────
+
+def get_websub_subscriptions() -> dict[str, dict]:
+    """Return all WebSub subscriptions as {channel_id: {status, expires_at}}."""
+    sb = get_client()
+    res = sb.table("websub_subscriptions").select("channel_id, status, expires_at").execute()
+    return {row["channel_id"]: {"status": row["status"], "expires_at": row["expires_at"]} for row in (res.data or [])}
+
+
+def upsert_websub_subscription(channel_id: str, expires_at: str | None = None, status: str = "pending"):
+    """Upsert a WebSub subscription record."""
+    sb = get_client()
+    row: dict = {"channel_id": channel_id, "status": status}
+    if expires_at is not None:
+        row["expires_at"] = expires_at
+    sb.table("websub_subscriptions").upsert(row, on_conflict="channel_id").execute()
+
+
+def update_websub_active(channel_id: str, expires_at: str):
+    """Mark a WebSub subscription as active with the given expiry (called by GET webhook verification)."""
+    sb = get_client()
+    sb.table("websub_subscriptions").update({
+        "status": "active",
+        "expires_at": expires_at,
+    }).eq("channel_id", channel_id).execute()
+
+
 def mark_existing_videos_as_skipped(channel_id: str):
     """Mark all existing RSS videos for a channel as skipped."""
     import feedparser
