@@ -815,6 +815,7 @@ async def handle_options_callback(update: Update, context: ContextTypes.DEFAULT_
             sub_row = [InlineKeyboardButton("➕ Subscribe", callback_data=f"sub_{video_id}")]
 
     rows = [
+        [InlineKeyboardButton("📄 Summary", callback_data=f"summary_{video_id}_{language}")],
         [InlineKeyboardButton("🔗 Share", callback_data=f"share_{video_id}_{language}")],
     ]
     if sub_row:
@@ -824,6 +825,38 @@ async def handle_options_callback(update: Update, context: ContextTypes.DEFAULT_
         await query.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup(rows))
     except Exception:
         pass
+
+
+async def handle_summary_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Send the full text summary for a delivered video."""
+    query = update.callback_query
+    try:
+        await query.answer()
+    except Exception:
+        pass
+
+    _, _, rest = query.data.partition("_")  # strip "summary_"
+    video_id, _, language = rest.rpartition("_")
+    if not video_id or not language:
+        return
+
+    pv = await asyncio.to_thread(db.get_processed_video, video_id, language)
+    if not pv or not pv.get("summary"):
+        try:
+            await query.message.reply_text("Summary not available for this video.")
+        except Exception:
+            pass
+        return
+
+    summary = pv["summary"]
+    # Telegram messages are capped at 4096 chars — split if needed
+    MAX = 4096
+    chunks = [summary[i : i + MAX] for i in range(0, len(summary), MAX)]
+    for chunk in chunks:
+        try:
+            await query.message.reply_text(chunk)
+        except Exception:
+            pass
 
 
 async def handle_share_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -1308,6 +1341,7 @@ def create_bot_application() -> Application:
 
     # Inline keyboard callbacks — options menu and sub-actions
     app.add_handler(CallbackQueryHandler(handle_options_callback, pattern=r"^options_"))
+    app.add_handler(CallbackQueryHandler(handle_summary_callback, pattern=r"^summary_"))
     app.add_handler(CallbackQueryHandler(handle_share_set_lang_callback, pattern=r"^shareSetLang_"))
     app.add_handler(CallbackQueryHandler(handle_share_lang_callback, pattern=r"^shareLang_"))
     app.add_handler(CallbackQueryHandler(handle_share_callback, pattern=r"^share_"))
