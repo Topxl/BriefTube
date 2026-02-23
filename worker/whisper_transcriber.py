@@ -184,6 +184,16 @@ class WhisperTranscriber:
             file_size_mb = audio_file.stat().st_size / (1024 * 1024)
             logger.info(f"Audio downloaded: {file_size_mb:.2f} MB")
 
+            # Reject files that are too large — likely music/ambient (8h+)
+            # At 64kbps: 80 MB ≈ 2.8h, beyond that it's almost certainly not speech
+            _MAX_AUDIO_MB = 80
+            if file_size_mb > _MAX_AUDIO_MB:
+                logger.warning(
+                    f"Audio too large ({file_size_mb:.1f} MB > {_MAX_AUDIO_MB} MB) — "
+                    "likely music/ambient content, skipping Whisper"
+                )
+                return None, None, "audio_too_large_for_speech", 0.0
+
             # Step 2: Split into chunks if needed
             chunks = self._split_audio_chunks(audio_file, Path(temp_dir))
 

@@ -2,6 +2,7 @@
 
 ## 2026-02-23
 
+FIX: bot — abonnement via Telegram (bouton Subscribe ou lien de chaîne) stocke maintenant l'avatar YouTube en scrappant la page de la chaîne ; l'image apparaît correctement dans l'interface web
 UX: share — header avec logo et bouton Sign in sur la page de partage
 UX: bot — menu Options affiche uniquement Subscribe OU Unsubscribe selon l'état d'abonnement actuel (plus les deux boutons simultanément) ; si chaîne inconnue, aucun bouton affiché
 FIX: bot — boutons Subscribe/Unsubscribe depuis Options fonctionnent désormais pour les vidéos on-demand (channel_id="" en DB) : fallback scraping de la page YouTube pour extraire channelId et channel_name

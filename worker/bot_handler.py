@@ -5,10 +5,11 @@ import html as _html
 import re
 import logging
 import traceback
+from urllib.parse import quote as _url_quote
 import aiohttp
 import feedparser
 from typing import Optional
-from telegram import Bot, BotCommand, Update
+from telegram import Bot, BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.error import Conflict
 from telegram.ext import (
     Application,
@@ -126,6 +127,27 @@ CHANNEL_URL_RE = re.compile(
 HANDLE_RE = re.compile(r"^@([\w.-]+)$")
 ON_DEMAND_MONTHLY_LIMIT = 30
 
+def _share_keyboard(url: str, video_id: str, language: str) -> InlineKeyboardMarkup:
+    """Return keyboard for a share-link message: [Language] [Share →]"""
+    tg_share_url = f"https://t.me/share/url?url={_url_quote(url)}"
+    return InlineKeyboardMarkup([[
+        InlineKeyboardButton("Language", callback_data=f"shareLang_{video_id}_{language}"),
+        InlineKeyboardButton("Share →", url=tg_share_url),
+    ]])
+
+
+_LANG_LABELS: dict[str, str] = {
+    "fr": "Français",
+    "en": "English",
+    "es": "Español",
+    "de": "Deutsch",
+    "it": "Italiano",
+    "pt": "Português",
+    "ja": "日本語",
+    "zh": "中文",
+    "ar": "العربية",
+}
+
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle /start command. Links Telegram account if token is provided."""
@@ -216,7 +238,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle /status command."""
     chat_id = str(update.effective_chat.id)
-    profile = _get_profile_by_chat_id(chat_id)
+    profile = await asyncio.to_thread(_get_profile_by_chat_id, chat_id)
 
     if profile:
         plan = _get_plan_label(profile)
@@ -444,6 +466,94 @@ async def _resolve_handle(handle: str) -> dict | None:
     return {"channel_id": channel_id, "channel_name": name}
 
 
+async def _get_channel_for_video(video_id: str) -> dict | None:
+    """Scrape the YouTube video page to extract channel_id + channel_name.
+
+    Used as fallback when a video was processed on-demand and has no channel_id
+    stored in the database (channel_id = "").
+    """
+    url = f"https://www.youtube.com/watch?v={video_id}"
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "Accept-Language": "en-US,en;q=0.9",
+            }) as resp:
+                if resp.status != 200:
+                    return None
+                html = await resp.text()
+    except Exception:
+        return None
+
+    id_match = (
+        re.search(r'"channelId":"(UC[\w-]+)"', html) or
+        re.search(r'"externalId":"(UC[\w-]+)"', html) or
+        re.search(r'/channel/(UC[\w-]+)', html)
+    )
+    if not id_match:
+        return None
+    channel_id = id_match.group(1)
+
+    name_match = (
+        re.search(r'"channelMetadataRenderer":\{"title":"([^"]+)"', html) or
+        re.search(r'"ownerChannelName":"([^"]+)"', html)
+    )
+    channel_name = name_match.group(1) if name_match else channel_id
+
+    return {"channel_id": channel_id, "channel_name": channel_name}
+
+
+async def _get_channel_avatar(channel_id: str) -> str | None:
+    """Fetch channel avatar URL from the YouTube channel page (og:image meta tag)."""
+    url = f"https://www.youtube.com/channel/{channel_id}"
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "Accept-Language": "en-US,en;q=0.9",
+            }) as resp:
+                if resp.status != 200:
+                    return None
+                html = await resp.text()
+    except Exception:
+        return None
+
+    m = re.search(r'<meta property="og:image" content="([^"]+)"', html)
+    return m.group(1) if m else None
+
+
+def _upsert_delivery(sb, user_id: str, video_id: str, language: str) -> None:
+    """Insert or reset a delivery to pending.
+
+    The supabase-py upsert() doesn't clear sent_at on conflict, leaving the
+    row permanently stuck. Instead we check for an existing row and UPDATE it,
+    or INSERT if it doesn't exist yet.
+    """
+    existing = (
+        sb.table("deliveries")
+        .select("id")
+        .eq("user_id", user_id)
+        .eq("video_id", video_id)
+        .maybe_single()
+        .execute()
+    )
+    if existing.data:
+        sb.table("deliveries").update({
+            "status": "pending",
+            "source": "on_demand",
+            "language": language,
+            "sent_at": None,
+        }).eq("id", existing.data["id"]).execute()
+    else:
+        sb.table("deliveries").insert({
+            "user_id": user_id,
+            "video_id": video_id,
+            "status": "pending",
+            "source": "on_demand",
+            "language": language,
+        }).execute()
+
+
 async def _get_channel_name_from_rss(channel_id: str) -> str | None:
     """Get channel name from YouTube RSS feed."""
     rss_url = f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"
@@ -498,26 +608,14 @@ async def handle_video_request(update: Update, profile: dict, video_id: str) -> 
         video_row = existing.data[0]
         if video_row["status"] == "completed":
             logger.info(f"[{video_id}] Already completed — queuing delivery for user={user_id}")
-            sb.table("deliveries").upsert({
-                "user_id": user_id,
-                "video_id": video_id,
-                "status": "pending",
-                "source": "on_demand",
-                "language": user_language,
-            }, on_conflict="user_id,video_id").execute()
+            _upsert_delivery(sb, user_id, video_id, user_language)
             await update.message.reply_text(
                 "This video was already summarized. Sending you the audio now..."
             )
             return
         elif video_row["status"] in ("pending", "processing"):
             logger.info(f"[{video_id}] Already in queue (status={video_row['status']}) — adding delivery for user={user_id}")
-            sb.table("deliveries").upsert({
-                "user_id": user_id,
-                "video_id": video_id,
-                "status": "pending",
-                "source": "on_demand",
-                "language": user_language,
-            }, on_conflict="user_id,video_id").execute()
+            _upsert_delivery(sb, user_id, video_id, user_language)
             await update.message.reply_text(
                 "This video is being processed. You'll receive the audio summary shortly."
             )
@@ -567,10 +665,7 @@ async def handle_video_request(update: Update, profile: dict, video_id: str) -> 
 # ── Handler: subscribe to channel from Telegram ──────────────
 
 async def handle_channel_subscribe(update: Update, profile: dict, text: str) -> None:
-    """Handle a YouTube channel URL or @handle — subscribe the user."""
-    user_id = profile["id"]
-    is_pro = profile["subscription_status"] == "active"
-
+    """Handle a YouTube channel URL or @handle — check subscription then propose."""
     resolved = await _resolve_channel(text)
     if not resolved:
         await update.message.reply_text(
@@ -582,54 +677,33 @@ async def handle_channel_subscribe(update: Update, profile: dict, text: str) -> 
     channel_id = resolved["channel_id"]
     channel_name = resolved["channel_name"]
 
-    # Check subscription limit for free users
-    if not is_pro:
-        sb = db.get_client()
-        count_res = (
-            sb.table("subscriptions")
-            .select("id", count="exact")
-            .eq("user_id", user_id)
-            .eq("active", True)
-            .execute()
-        )
-        current_count = count_res.count or 0
-        max_channels = profile.get("max_channels", 5)
-        if current_count >= max_channels:
-            await update.message.reply_text(
-                f"You've reached your limit of {max_channels} channels.\n\n"
-                f"Upgrade to Pro for unlimited channels at {APP_URL}"
-            )
-            return
-
-    # Insert subscription
-    sb = db.get_client()
-    try:
-        sb.table("subscriptions").insert({
-            "user_id": user_id,
-            "channel_id": channel_id,
-            "channel_name": channel_name,
-        }).execute()
-    except Exception as e:
-        if "23505" in str(e):
-            await update.message.reply_text(
-                f"You're already subscribed to {channel_name}."
-            )
-            return
-        logger.error(f"Subscription insert error: {e}")
-        await update.message.reply_text("Failed to subscribe. Please try again.")
-        return
-
-    # Mark existing videos as skipped (non-blocking)
-    try:
-        db.mark_existing_videos_as_skipped(channel_id)
-    except Exception:
-        pass
-
-    await update.message.reply_text(
-        f"Subscribed to {channel_name}!\n\n"
-        "You'll receive audio summaries when new videos are published."
+    already = await asyncio.to_thread(
+        db.is_subscribed_to_channel, profile["id"], channel_id
     )
-    logger.info(f"Telegram subscribe: user={user_id}, channel={channel_name} ({channel_id})")
+
+    if already:
+        keyboard = InlineKeyboardMarkup([[
+            InlineKeyboardButton("❌ Unsubscribe", callback_data=f"unsubch_{channel_id}"),
+        ]])
+        await update.message.reply_text(
+            f"You're already subscribed to <b>{_html.escape(channel_name)}</b>.",
+            parse_mode="HTML",
+            reply_markup=keyboard,
+        )
+    else:
+        # Encode channel_name in callback_data (truncated to fit 64-byte limit).
+        # Format: subch_{channel_id}!{channel_name_truncated}
+        max_name = 63 - len("subch_") - len(channel_id) - 1  # 1 for "!"
+        name_safe = channel_name[:max(max_name, 0)]
+        keyboard = InlineKeyboardMarkup([[
+            InlineKeyboardButton("➕ Subscribe", callback_data=f"subch_{channel_id}!{name_safe}"),
+        ]])
+        await update.message.reply_text(
+            f"<b>{_html.escape(channel_name)}</b>\n\n"
+            "Subscribe to receive audio summaries when new videos are published?",
+            parse_mode="HTML",
+            reply_markup=keyboard,
+        )
 
 
 # ── Message router ────────────────────────────────────────────
@@ -644,7 +718,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     logger.info(f"Message from chat_id={chat_id}: {text[:100]!r}")
 
     # Check if user is connected
-    profile = _get_profile_by_chat_id(chat_id)
+    profile = await asyncio.to_thread(_get_profile_by_chat_id, chat_id)
     if not profile:
         logger.warning(f"Message from unconnected chat_id={chat_id}")
         await update.message.reply_text(
@@ -676,38 +750,85 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 
 async def handle_options_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle the ⚙️ inline button — generate and send a share link."""
+    """Show the Options menu (⚙️ button on each delivered summary)."""
     query = update.callback_query
-    logger.info(f"⚙️ Options callback: data={query.data!r} from user={query.from_user.id}")
+    logger.info(f"Options menu: data={query.data!r} from user={query.from_user.id}")
     try:
-        await query.answer()  # Remove the spinner
+        await query.answer()
     except Exception:
-        # Query may have expired (>30s) — still generate the share link
         pass
 
-    # callback_data format: "options_{video_id}_{language}"
-    # Use rpartition to split at the LAST underscore — video IDs can contain underscores
-    # e.g. "options_PJTviWt_59U_fr" → rest="PJTviWt_59U_fr" → video_id="PJTviWt_59U", language="fr"
-    data = query.data  # e.g. "options_dQw4w9WgXcQ_fr"
-    _, _, rest = data.partition("_")  # rest = "dQw4w9WgXcQ_fr"
-    video_id, _, language = rest.rpartition("_")  # split at LAST "_"
+    # callback_data: "options_{video_id}_{language}" — video IDs can contain underscores,
+    # so we split at the LAST underscore to isolate the language code.
+    _, _, rest = query.data.partition("_")  # strip "options_" prefix
+    video_id, _, language = rest.rpartition("_")
     if not video_id or not language:
         return
 
-    profile = db.get_profile_by_telegram(str(query.from_user.id))
-    if not profile:
-        await query.message.reply_text(
-            "Connect your BriefTube account first (/start)."
+    # Fetch profile and channel info in parallel
+    profile, channel_info = await asyncio.gather(
+        asyncio.to_thread(db.get_profile_by_telegram, str(query.from_user.id)),
+        asyncio.to_thread(db.get_video_channel, video_id),
+    )
+
+    # Fallback for on-demand videos (channel_id="" in DB) — scrape YouTube
+    if not channel_info:
+        channel_info = await _get_channel_for_video(video_id)
+
+    # Determine which sub/unsub button to show (only one, based on current status)
+    sub_row: list[InlineKeyboardButton] = []
+    if channel_info and profile:
+        is_subscribed = await asyncio.to_thread(
+            db.is_subscribed_to_channel, profile["id"], channel_info["channel_id"]
         )
+        if is_subscribed:
+            sub_row = [InlineKeyboardButton("❌ Unsubscribe", callback_data=f"unsub_{video_id}")]
+        else:
+            sub_row = [InlineKeyboardButton("➕ Subscribe", callback_data=f"sub_{video_id}")]
+
+    rows = [
+        [
+            InlineKeyboardButton("🔗 Share", callback_data=f"share_{video_id}_{language}"),
+            InlineKeyboardButton("🌐 Language", callback_data=f"lang_{video_id}_{language}"),
+        ],
+    ]
+    if sub_row:
+        rows.append(sub_row)
+
+    try:
+        await query.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup(rows))
+    except Exception:
+        pass
+
+
+async def handle_share_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Generate and send a share link for this summary."""
+    query = update.callback_query
+    try:
+        await query.answer()
+    except Exception:
+        pass
+
+    _, _, rest = query.data.partition("_")  # strip "share_"
+    video_id, _, language = rest.rpartition("_")
+    if not video_id or not language:
+        return
+
+    # Fetch profile and video metadata in parallel — independent queries
+    profile, pv = await asyncio.gather(
+        asyncio.to_thread(db.get_profile_by_telegram, str(query.from_user.id)),
+        asyncio.to_thread(db.get_processed_video, video_id, language),
+    )
+    if not profile:
+        await query.message.reply_text("Connect your BriefTube account first (/start).")
         return
 
     is_pro = profile.get("subscription_status") in ("active",)
-
-    pv = db.get_processed_video(video_id, language)
     video_title = pv.get("video_title", "this summary") if pv else "this summary"
 
-    share = db.get_or_create_share(video_id, language, profile["id"], is_pro, video_title)
-
+    share = await asyncio.to_thread(
+        db.get_or_create_share, video_id, language, profile["id"], is_pro, video_title
+    )
     if share is None:
         await query.message.reply_text(
             "You've reached the free share limit (3/day).\n\n"
@@ -717,13 +838,382 @@ async def handle_options_callback(update: Update, context: ContextTypes.DEFAULT_
         return
 
     url = f"{APP_URL}/s/{share['short_id']}"
-    msg = (
-        f"🔗 <b>Share this summary</b>\n\n"
-        f"<code>{url}</code>\n\n"
-        f"Suggested text:\n"
-        f'"I listened to an AI summary of <i>{_html.escape(share["video_title"])}</i> — read it here 👆"'
+    await query.message.reply_text(
+        f"<code>{url}</code>",
+        parse_mode="HTML",
+        reply_markup=_share_keyboard(url, video_id, language),
     )
-    await query.message.reply_text(msg, parse_mode="HTML")
+
+
+async def handle_share_lang_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Show all supported languages for the share link (available ones marked with ✓)."""
+    query = update.callback_query
+    try:
+        await query.answer()
+    except Exception:
+        pass
+
+    _, _, rest = query.data.partition("_")  # strip "shareLang_"
+    video_id, _, current_lang = rest.rpartition("_")
+    if not video_id:
+        return
+
+    available_set = set(await asyncio.to_thread(db.get_available_languages_for_video, video_id))
+
+    buttons = [
+        [InlineKeyboardButton(
+            f"✓ {label}" if lang == current_lang
+            else f"{label} *" if lang in available_set
+            else label,
+            callback_data=f"shareSetLang_{video_id}_{lang}",
+        )]
+        for lang, label in _LANG_LABELS.items()
+    ]
+    try:
+        await query.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup(buttons))
+    except Exception:
+        pass
+
+
+async def handle_share_set_lang_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Switch share link language — if already processed: show link; if not: queue generation."""
+    query = update.callback_query
+    try:
+        await query.answer()
+    except Exception:
+        pass
+
+    _, _, rest = query.data.partition("_")  # strip "shareSetLang_"
+    video_id, _, new_lang = rest.rpartition("_")
+    if not video_id or not new_lang:
+        return
+
+    # Fetch profile and processed video in parallel — independent reads
+    profile, pv = await asyncio.gather(
+        asyncio.to_thread(db.get_profile_by_telegram, str(query.from_user.id)),
+        asyncio.to_thread(db.get_processed_video, video_id, new_lang),
+    )
+    if not profile:
+        await query.message.reply_text("Connect your BriefTube account first (/start).")
+        return
+
+    lang_label = _LANG_LABELS.get(new_lang, new_lang.upper())
+    is_pro = profile.get("subscription_status") in ("active",)
+
+    # ── Case 1: already processed in this language ─────────────────
+    if pv and pv.get("audio_url"):
+        video_title = pv.get("video_title", "this summary")
+        share = await asyncio.to_thread(
+            db.get_or_create_share, video_id, new_lang, profile["id"], is_pro, video_title
+        )
+        if share is None:
+            await query.message.reply_text(
+                "You've reached the free share limit (3/day).\n\n"
+                f"Upgrade to Pro for unlimited sharing: {APP_URL}/dashboard/profile",
+                parse_mode="HTML",
+            )
+            return
+
+        # Also queue delivery so the user receives the audio
+        await asyncio.to_thread(
+            lambda: _upsert_delivery(db.get_client(), profile["id"], video_id, new_lang)
+        )
+
+        url = f"{APP_URL}/s/{share['short_id']}"
+        try:
+            await query.message.edit_text(
+                f"<code>{url}</code>",
+                parse_mode="HTML",
+                reply_markup=_share_keyboard(url, video_id, new_lang),
+            )
+        except Exception:
+            pass
+        return
+
+    # ── Case 2: not yet processed — queue generation ────────────────
+    base = await asyncio.to_thread(db.get_any_processed_video, video_id)
+    if not base:
+        try:
+            await query.message.edit_reply_markup(reply_markup=None)
+        except Exception:
+            pass
+        return
+
+    video_title = base.get("video_title", video_id)
+    channel_id = base.get("channel_id", "")
+    youtube_url = f"https://www.youtube.com/watch?v={video_id}"
+    tts_voice = profile.get("tts_voice")
+
+    def _queue_new_lang() -> bool:
+        db.insert_new_video(video_id, channel_id, video_title, youtube_url, language=new_lang)
+        queued = db.enqueue_video_for_language(
+            video_id, youtube_url, video_title, channel_id, new_lang, tts_voice=tts_voice
+        )
+        _upsert_delivery(db.get_client(), profile["id"], video_id, new_lang)
+        return queued
+
+    queued = await asyncio.to_thread(_queue_new_lang)
+
+    status_text = (
+        f"Generating in {lang_label}... You'll receive it shortly and can share it then."
+        if queued else
+        f"Already being processed. You'll receive {lang_label} shortly."
+    )
+    try:
+        await query.message.edit_text(status_text, reply_markup=None)
+    except Exception:
+        pass
+
+
+async def handle_lang_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Show available language variants for this summary."""
+    query = update.callback_query
+    try:
+        await query.answer()
+    except Exception:
+        pass
+
+    _, _, rest = query.data.partition("_")  # strip "lang_"
+    video_id, _, current_lang = rest.rpartition("_")
+    if not video_id:
+        return
+
+    available = await asyncio.to_thread(db.get_available_languages_for_video, video_id)
+    other_langs = [lang for lang in available if lang != current_lang]
+
+    if not other_langs:
+        await query.message.reply_text(
+            "This summary is only available in one language for now."
+        )
+        return
+
+    buttons = [
+        [InlineKeyboardButton(
+            _LANG_LABELS.get(lang, lang),
+            callback_data=f"setlang_{video_id}_{lang}",
+        )]
+        for lang in other_langs
+    ]
+    await query.message.reply_text(
+        "Choose a language to receive this summary in:",
+        reply_markup=InlineKeyboardMarkup(buttons),
+    )
+
+
+async def handle_setlang_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Queue delivery of this summary in a different language."""
+    query = update.callback_query
+    try:
+        await query.answer()
+    except Exception:
+        pass
+
+    _, _, rest = query.data.partition("_")  # strip "setlang_"
+    video_id, _, new_lang = rest.rpartition("_")
+    if not video_id or not new_lang:
+        return
+
+    profile = await asyncio.to_thread(db.get_profile_by_telegram, str(query.from_user.id))
+    if not profile:
+        await query.message.reply_text("Connect your BriefTube account first (/start).")
+        return
+
+    def _queue_lang_delivery() -> None:
+        sb = db.get_client()
+        sb.table("deliveries").upsert({
+            "user_id": profile["id"],
+            "video_id": video_id,
+            "status": "pending",
+            "source": "on_demand",
+            "language": new_lang,
+        }, on_conflict="user_id,video_id").execute()
+
+    await asyncio.to_thread(_queue_lang_delivery)
+
+    label = _LANG_LABELS.get(new_lang, new_lang)
+    await query.message.reply_text(f"You'll receive this summary in {label} shortly.")
+
+
+async def handle_sub_channel_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Subscribe to the channel of a video (from Options menu)."""
+    query = update.callback_query
+    try:
+        await query.answer()
+    except Exception:
+        pass
+
+    video_id = query.data[4:]  # strip "sub_"
+
+    profile = await asyncio.to_thread(db.get_profile_by_telegram, str(query.from_user.id))
+    if not profile:
+        await query.message.reply_text("Connect your BriefTube account first (/start).")
+        return
+
+    channel_info = await asyncio.to_thread(db.get_video_channel, video_id)
+    if not channel_info:
+        # Fallback: on-demand videos have channel_id="" in DB — scrape YouTube
+        channel_info = await _get_channel_for_video(video_id)
+    if not channel_info:
+        await query.message.reply_text(
+            "Could not find the channel for this video."
+        )
+        return
+
+    channel_id = channel_info["channel_id"]
+    channel_name = channel_info["channel_name"]
+
+    is_pro = profile.get("subscription_status") == "active"
+    if not is_pro:
+        count = await asyncio.to_thread(db.get_subscription_count, profile["id"])
+        max_ch = profile.get("max_channels", 5)
+        if count >= max_ch:
+            await query.message.reply_text(
+                f"You've reached your limit of {max_ch} channels.\n\n"
+                f"Upgrade to Pro for unlimited channels: {APP_URL}/dashboard/profile"
+            )
+            return
+
+    avatar_url = await _get_channel_avatar(channel_id)
+    newly = await asyncio.to_thread(
+        db.subscribe_to_channel, profile["id"], channel_id, channel_name, avatar_url
+    )
+    if newly:
+        try:
+            await asyncio.to_thread(db.mark_existing_videos_as_skipped, channel_id)
+        except Exception:
+            pass
+        await query.message.reply_text(
+            f"Subscribed to {channel_name}!\n\n"
+            "You'll receive audio summaries when new videos are published."
+        )
+        logger.info(f"Options subscribe: user={profile['id']}, channel={channel_name} ({channel_id})")
+    else:
+        await query.message.reply_text(f"You're already subscribed to {channel_name}.")
+
+
+async def handle_unsub_channel_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Unsubscribe from the channel of a video (from Options menu)."""
+    query = update.callback_query
+    try:
+        await query.answer()
+    except Exception:
+        pass
+
+    video_id = query.data[6:]  # strip "unsub_"
+
+    profile = await asyncio.to_thread(db.get_profile_by_telegram, str(query.from_user.id))
+    if not profile:
+        await query.message.reply_text("Connect your BriefTube account first (/start).")
+        return
+
+    channel_info = await asyncio.to_thread(db.get_video_channel, video_id)
+    if not channel_info:
+        # Fallback: on-demand videos have channel_id="" in DB — scrape YouTube
+        channel_info = await _get_channel_for_video(video_id)
+    if not channel_info:
+        await query.message.reply_text(
+            "Could not find the channel for this video."
+        )
+        return
+
+    channel_id = channel_info["channel_id"]
+    channel_name = channel_info["channel_name"]
+
+    deactivated = await asyncio.to_thread(
+        db.unsubscribe_channel, profile["id"], channel_id
+    )
+    if deactivated:
+        await query.message.reply_text(f"Unsubscribed from {channel_name}.")
+        logger.info(f"Options unsubscribe: user={profile['id']}, channel={channel_name} ({channel_id})")
+    else:
+        await query.message.reply_text(f"You're not subscribed to {channel_name}.")
+
+
+async def handle_subch_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Confirm subscription to a channel (from channel link flow)."""
+    query = update.callback_query
+    try:
+        await query.answer()
+    except Exception:
+        pass
+
+    # Format: subch_{channel_id}!{channel_name_truncated}
+    rest = query.data[6:]  # strip "subch_"
+    channel_id, _, channel_name = rest.partition("!")
+    if not channel_name:
+        channel_name = channel_id
+
+    profile = await asyncio.to_thread(db.get_profile_by_telegram, str(query.from_user.id))
+    if not profile:
+        await query.message.reply_text("Connect your BriefTube account first (/start).")
+        return
+
+    is_pro = profile.get("subscription_status") == "active"
+    if not is_pro:
+        count = await asyncio.to_thread(db.get_subscription_count, profile["id"])
+        max_ch = profile.get("max_channels", 5)
+        if count >= max_ch:
+            await query.message.reply_text(
+                f"You've reached your limit of {max_ch} channels.\n\n"
+                f"Upgrade to Pro for unlimited channels: {APP_URL}/dashboard/profile"
+            )
+            return
+
+    avatar_url = await _get_channel_avatar(channel_id)
+    newly = await asyncio.to_thread(
+        db.subscribe_to_channel, profile["id"], channel_id, channel_name, avatar_url
+    )
+    if newly:
+        try:
+            await asyncio.to_thread(db.mark_existing_videos_as_skipped, channel_id)
+        except Exception:
+            pass
+        await query.message.reply_text(
+            f"Subscribed to {channel_name}!\n\n"
+            "You'll receive audio summaries when new videos are published."
+        )
+        logger.info(f"Channel link subscribe: user={profile['id']}, channel={channel_name} ({channel_id})")
+    else:
+        await query.message.reply_text(f"You're already subscribed to {channel_name}.")
+
+
+async def handle_unsubch_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Confirm unsubscription from a channel (from channel link flow)."""
+    query = update.callback_query
+    try:
+        await query.answer()
+    except Exception:
+        pass
+
+    channel_id = query.data[8:]  # strip "unsubch_"
+
+    profile = await asyncio.to_thread(db.get_profile_by_telegram, str(query.from_user.id))
+    if not profile:
+        await query.message.reply_text("Connect your BriefTube account first (/start).")
+        return
+
+    def _get_channel_name() -> str:
+        sb = db.get_client()
+        name_res = (
+            sb.table("subscriptions")
+            .select("channel_name")
+            .eq("channel_id", channel_id)
+            .eq("user_id", profile["id"])
+            .limit(1)
+            .execute()
+        )
+        return name_res.data[0]["channel_name"] if name_res.data else channel_id
+
+    channel_name = await asyncio.to_thread(_get_channel_name)
+
+    deactivated = await asyncio.to_thread(
+        db.unsubscribe_channel, profile["id"], channel_id
+    )
+    if deactivated:
+        await query.message.reply_text(f"Unsubscribed from {channel_name}.")
+        logger.info(f"Channel link unsubscribe: user={profile['id']}, channel={channel_name} ({channel_id})")
+    else:
+        await query.message.reply_text(f"You're not subscribed to {channel_name}.")
 
 
 async def _error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -753,9 +1243,10 @@ async def setup_bot_commands(app: Application) -> None:
 
 def create_bot_application() -> Application:
     """Create the Telegram bot application with command handlers."""
-    app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+    # .updater(None) prevents PTB from creating an Updater, which would
+    # auto-start its own getUpdates polling and conflict with our custom loop.
+    app = Application.builder().token(TELEGRAM_BOT_TOKEN).updater(None).build()
 
-    # Silence Conflict errors in logs — deliveries work independently of polling
     app.add_error_handler(_error_handler)
 
     # User commands
@@ -768,8 +1259,17 @@ def create_bot_application() -> Application:
     app.add_handler(CommandHandler("monitor_stats", monitor_stats_command))
     app.add_handler(CommandHandler("monitor_logs", monitor_logs_command))
 
-    # Inline keyboard callbacks
+    # Inline keyboard callbacks — options menu and sub-actions
     app.add_handler(CallbackQueryHandler(handle_options_callback, pattern=r"^options_"))
+    app.add_handler(CallbackQueryHandler(handle_share_set_lang_callback, pattern=r"^shareSetLang_"))
+    app.add_handler(CallbackQueryHandler(handle_share_lang_callback, pattern=r"^shareLang_"))
+    app.add_handler(CallbackQueryHandler(handle_share_callback, pattern=r"^share_"))
+    app.add_handler(CallbackQueryHandler(handle_lang_callback, pattern=r"^lang_"))
+    app.add_handler(CallbackQueryHandler(handle_setlang_callback, pattern=r"^setlang_"))
+    app.add_handler(CallbackQueryHandler(handle_sub_channel_callback, pattern=r"^sub_"))
+    app.add_handler(CallbackQueryHandler(handle_unsub_channel_callback, pattern=r"^unsub_"))
+    app.add_handler(CallbackQueryHandler(handle_subch_callback, pattern=r"^subch_"))
+    app.add_handler(CallbackQueryHandler(handle_unsubch_callback, pattern=r"^unsubch_"))
 
     # Message handler LAST — catches non-command text messages
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))

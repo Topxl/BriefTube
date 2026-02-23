@@ -13,6 +13,7 @@ import {
   Trash2,
   ChevronDown,
   ListFilter,
+  Loader2,
 } from "@/lib/icons";
 import { dialogManager } from "@/features/dialog-manager/dialog-manager";
 import type { Tables } from "@/types/supabase";
@@ -127,10 +128,14 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
   const [filterStatus, setFilterStatus] = useState<"all" | "active" | "paused">(
     "all",
   );
+  const [bulkLoading, setBulkLoading] = useState<"activate" | "pause" | null>(
+    null,
+  );
   const [q] = useQueryState("q", { defaultValue: "", shallow: true });
   const supabase = createClient();
 
   const activeCount = sources.filter((s) => s.active).length;
+  const pausedCount = sources.length - activeCount;
   const atActiveLimit = !isPro && activeCount >= maxChannels;
 
   // Ignore YouTube URLs in the search filter (they're handled by ChannelSearchBar)
@@ -224,6 +229,40 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
     });
   };
 
+  const bulkToggle = async (action: "activate_all" | "pause_all") => {
+    const kind = action === "activate_all" ? "activate" : "pause";
+    setBulkLoading(kind);
+    const prevSources = sources;
+    // Optimistic update
+    setSources((prev) =>
+      prev.map((s) => ({
+        ...s,
+        active:
+          action === "pause_all"
+            ? false
+            : isPro || prev.filter((x) => x.active).length < maxChannels
+              ? true
+              : s.active,
+      })),
+    );
+    try {
+      const res = await fetch("/api/subscriptions", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      if (!res.ok) {
+        setSources(prevSources);
+        toast.error("Failed to update channels");
+      }
+    } catch {
+      setSources(prevSources);
+      toast.error("Something went wrong");
+    } finally {
+      setBulkLoading(null);
+    }
+  };
+
   const rowProps = {
     onToggle: toggleActive,
     onRemove: removeSource,
@@ -246,17 +285,53 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
             className={`text-muted-foreground/40 h-3.5 w-3.5 transition-transform duration-200 ${collapsed ? "-rotate-90" : ""}`}
           />
         </button>
-        <button
-          onClick={() => setShowFilter((f) => !f)}
-          title="Filter"
-          className={`flex h-6 w-6 items-center justify-center rounded transition-colors ${
-            showFilter || filterStatus !== "all"
-              ? "nm-inset-sm text-foreground"
-              : "text-muted-foreground/40 hover:text-muted-foreground hover:bg-white/[0.04]"
-          }`}
-        >
-          <ListFilter className="h-3.5 w-3.5" />
-        </button>
+        <div className="flex items-center gap-1.5">
+          {sources.length > 0 && !collapsed && (
+            <>
+              {pausedCount > 0 && (
+                <button
+                  onClick={() => void bulkToggle("activate_all")}
+                  disabled={bulkLoading !== null || atActiveLimit}
+                  title="Activate all"
+                  className="nm-raised-sm text-muted-foreground/50 hover:text-foreground flex h-6 items-center gap-1 rounded-full px-2 text-[10px] transition-colors disabled:opacity-40"
+                >
+                  {bulkLoading === "activate" ? (
+                    <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                  ) : (
+                    <Play className="h-2.5 w-2.5" />
+                  )}
+                  All on
+                </button>
+              )}
+              {activeCount > 0 && (
+                <button
+                  onClick={() => void bulkToggle("pause_all")}
+                  disabled={bulkLoading !== null}
+                  title="Pause all"
+                  className="nm-raised-sm text-muted-foreground/50 hover:text-foreground flex h-6 items-center gap-1 rounded-full px-2 text-[10px] transition-colors disabled:opacity-40"
+                >
+                  {bulkLoading === "pause" ? (
+                    <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                  ) : (
+                    <Pause className="h-2.5 w-2.5" />
+                  )}
+                  All off
+                </button>
+              )}
+            </>
+          )}
+          <button
+            onClick={() => setShowFilter((f) => !f)}
+            title="Filter"
+            className={`flex h-6 w-6 items-center justify-center rounded transition-colors ${
+              showFilter || filterStatus !== "all"
+                ? "nm-inset-sm text-foreground"
+                : "text-muted-foreground/40 hover:text-muted-foreground hover:bg-white/[0.04]"
+            }`}
+          >
+            <ListFilter className="h-3.5 w-3.5" />
+          </button>
+        </div>
       </div>
 
       {/* Filter pills */}
