@@ -101,12 +101,25 @@ const checkoutSessionCompleted = async (
 
   const supabase = await createClient();
 
-  // Find user by Stripe customer ID
-  const { data: profile } = await supabase
+  // Find user by Stripe customer ID first, then fallback to metadata.userId
+  let profile: { id: string; email: string } | null = null;
+
+  const { data: profileByCustomer } = await supabase
     .from("profiles")
     .select("id, email")
     .eq("stripe_customer_id", customerId)
-    .single();
+    .maybeSingle();
+
+  profile = profileByCustomer ?? null;
+
+  if (!profile && session.metadata?.userId) {
+    const { data: profileByUserId } = await supabase
+      .from("profiles")
+      .select("id, email")
+      .eq("id", session.metadata.userId)
+      .maybeSingle();
+    profile = profileByUserId ?? null;
+  }
 
   if (!profile) {
     logger.error(`User not found for customer ID: ${customerId}`);
@@ -124,12 +137,14 @@ const checkoutSessionCompleted = async (
     status: stripeSubscription.status,
   });
 
-  // Update user profile with subscription info
+  // Update user profile with subscription info + save customer ID if missing
   await supabase
     .from("profiles")
     .update({
+      stripe_customer_id: customerId,
       stripe_subscription_id: subscriptionId,
       subscription_status: stripeSubscription.status,
+      max_channels: 999,
     })
     .eq("id", profile.id);
 
@@ -243,11 +258,15 @@ const customerSubscriptionUpdated = async (
     return;
   }
 
-  // Update subscription status
+  const isActive =
+    subscription.status === "active" || subscription.status === "trialing";
+
+  // Update subscription status and max_channels accordingly
   await supabase
     .from("profiles")
     .update({
       subscription_status: subscription.status,
+      max_channels: isActive ? 999 : 3,
     })
     .eq("id", profile.id);
 
@@ -288,6 +307,7 @@ const customerSubscriptionDeleted = async (
     .update({
       subscription_status: "free",
       stripe_subscription_id: null,
+      max_channels: 3,
     })
     .eq("id", profile.id);
 
