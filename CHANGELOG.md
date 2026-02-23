@@ -2,6 +2,8 @@
 
 ## 2026-02-23
 
+FEATURE: Admin panel — add conversion funnel (free/trial/pro/churned), trials expiring in 7 days list, and at-risk users (Telegram connected, active channels, no deliveries in 7 days)
+CHORE: worker — 5 optimisations de performance : RSS scanner parallèle (ThreadPoolExecutor 50 workers, 50x plus rapide) ; get_all_known_video_ids() fenêtrée 30 jours (96% réduction mémoire) ; create_deliveries_for_video() batch insert O(1) au lieu O(N) ; delivery_loop fetchPending 10→30 avec sleep 1s→0.05s (30x accélération) ; health check HTTP GET /health :8080 pour monitoring externe
 CHORE: worker — MAX_CONCURRENT_VIDEOS 2→6, RSS_CHECK_INTERVAL 300→1800s (WebSub gère le temps réel) ; fail_job/mark_video_failed avec immediate=True pour échec permanent sans retry sur erreurs déterministes ; WebSub sync parallèle (semaphore 50 au lieu de séquentiel 0.1s/channel)
 
 UX: profile — bouton Admin panel visible uniquement pour l'admin (isAdmin prop + ShieldAlert icon)
