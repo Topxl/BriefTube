@@ -6,7 +6,7 @@ const tl = t.landing.hero;
 
 export function Hero() {
   return (
-    <section className="relative overflow-hidden pt-36 pb-20 md:pt-44 md:pb-32">
+    <section className="relative overflow-hidden pt-20 pb-20 md:pt-44 md:pb-32">
       {/* Gradient background orbs */}
       <div className="pointer-events-none absolute inset-0 -z-10">
         <div
@@ -24,13 +24,6 @@ export function Hero() {
       </div>
 
       <div className="mx-auto max-w-4xl px-6 text-center">
-        <div className="mb-3 flex flex-col items-center gap-2">
-          <div className="text-muted-foreground inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.04] px-4 py-1.5 text-sm backdrop-blur-sm">
-            <span className="inline-block h-2 w-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
-            {tl.badge}
-          </div>
-        </div>
-
         <h1 className="font-display text-4xl leading-tight font-bold tracking-tight md:text-6xl md:leading-[1.1]">
           {tl.heading}{" "}
           <span className="bg-gradient-to-r from-red-500 to-orange-400 bg-clip-text text-transparent">
@@ -59,9 +52,6 @@ export function Hero() {
             <a href="#demo">{tl.ctaSecondary}</a>
           </Button>
         </div>
-
-        {/* Social proof */}
-        <p className="text-muted-foreground mt-5 text-sm">{tl.socialProof}</p>
 
         {/* Telegram mockup */}
         <div

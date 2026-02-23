@@ -2,20 +2,13 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import {
-  Loader2,
-  ArrowRight,
-  ArrowLeft,
-  Youtube,
-  Headphones,
-  Send,
-  Layers,
-  Check,
-} from "@/lib/icons";
+import { Loader2, ArrowRight, ArrowLeft, Youtube, Check } from "@/lib/icons";
 import type { Tables } from "@/types/supabase";
 import { SiteConfig } from "@/site-config";
 import { languages } from "@/lib/languages";
@@ -233,37 +226,44 @@ export function OnboardingWizard({
 
   return (
     <div className="w-full max-w-lg">
-      {/* Progress indicator */}
-      <div className="mb-10 flex items-center justify-center gap-2">
-        {([1, 2, 3] as Step[]).map((s) => (
-          <div
-            key={s}
-            className={`h-1.5 rounded-full transition-all duration-500 ${
-              s <= step ? "w-10 bg-red-500" : "nm-inset-sm w-3 bg-transparent"
-            }`}
+      {/* Header: logo + step dots */}
+      <div className="mb-8 flex items-center justify-between">
+        <Link href="/" className="flex items-center gap-2">
+          <Image
+            src="/logo.svg"
+            alt="BriefTube"
+            width={26}
+            height={26}
+            suppressHydrationWarning
           />
-        ))}
+          <span className="text-sm font-semibold">BriefTube</span>
+        </Link>
+        <div className="flex items-center gap-2">
+          {([1, 2, 3] as Step[]).map((s) => (
+            <div
+              key={s}
+              className={`h-1.5 rounded-full transition-all duration-500 ${
+                s <= step ? "w-8 bg-red-500" : "nm-inset-sm w-3 bg-transparent"
+              }`}
+            />
+          ))}
+        </div>
       </div>
 
       {/* Step 1: Pick a curated playlist */}
       {step === 1 && (
         <div className="space-y-6">
-          <div className="space-y-4">
-            <div className="nm-raised flex h-14 w-14 items-center justify-center rounded-2xl bg-red-500/[0.08]">
-              <Layers className="h-7 w-7 text-red-400" />
-            </div>
-            <div>
-              <p className="text-muted-foreground mb-1 text-sm font-medium">
-                Step 1 of 3
-              </p>
-              <h1 className="text-2xl font-bold">
-                What do you want to listen to?
-              </h1>
-              <p className="text-muted-foreground mt-1.5 text-sm">
-                Pick a playlist and get audio summaries delivered automatically
-                to your Telegram.
-              </p>
-            </div>
+          <div>
+            <p className="text-muted-foreground mb-1 text-sm font-medium">
+              Step 1 of 3
+            </p>
+            <h1 className="text-2xl font-bold">
+              What do you want to listen to?
+            </h1>
+            <p className="text-muted-foreground mt-1.5 text-sm">
+              Pick a playlist and get audio summaries delivered automatically to
+              your Telegram.
+            </p>
           </div>
 
           <ListPicker
@@ -380,19 +380,14 @@ export function OnboardingWizard({
       {/* Step 2: Choose language */}
       {step === 2 && (
         <div className="space-y-6">
-          <div className="space-y-4">
-            <div className="nm-raised flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-500/[0.08]">
-              <Headphones className="h-7 w-7 text-violet-400" />
-            </div>
-            <div>
-              <p className="text-muted-foreground mb-1 text-sm font-medium">
-                Step 2 of 3
-              </p>
-              <h1 className="text-2xl font-bold">Select your language</h1>
-              <p className="text-muted-foreground mt-1.5 text-sm">
-                Your audio summaries will be delivered in this language.
-              </p>
-            </div>
+          <div>
+            <p className="text-muted-foreground mb-1 text-sm font-medium">
+              Step 2 of 3
+            </p>
+            <h1 className="text-2xl font-bold">Select your language</h1>
+            <p className="text-muted-foreground mt-1.5 text-sm">
+              Your audio summaries will be delivered in this language.
+            </p>
           </div>
 
           <Input
@@ -457,21 +452,15 @@ export function OnboardingWizard({
       {/* Step 3: Link Telegram */}
       {step === 3 && (
         <div className="space-y-6">
-          <div className="space-y-4">
-            <div className="nm-raised flex h-14 w-14 items-center justify-center rounded-2xl bg-sky-500/[0.08]">
-              <Send className="h-7 w-7 text-sky-400" />
-            </div>
-            <div>
-              <p className="text-muted-foreground mb-1 text-sm font-medium">
-                Step 3 of 3
-              </p>
-              <h1 className="text-2xl font-bold">Link Telegram</h1>
-              <p className="text-muted-foreground mt-1.5 text-sm">
-                BriefTube delivers your audio summaries directly to your
-                Telegram chat — no app to check, everything arrives
-                automatically.
-              </p>
-            </div>
+          <div>
+            <p className="text-muted-foreground mb-1 text-sm font-medium">
+              Step 3 of 3
+            </p>
+            <h1 className="text-2xl font-bold">Link Telegram</h1>
+            <p className="text-muted-foreground mt-1.5 text-sm">
+              BriefTube delivers your audio summaries directly to your Telegram
+              chat — no app to check, everything arrives automatically.
+            </p>
           </div>
 
           {telegramConnected ? (
