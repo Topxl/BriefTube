@@ -6,10 +6,16 @@ After=network.target
 Type=simple
 User=vj
 WorkingDirectory=/home/vj/Bureau/Projets/BriefTube/worker
-ExecStart=/home/vj/Bureau/Projets/BriefTube/worker/venv/bin/python main.py
+Environment=PYTHONUNBUFFERED=1
+Environment=INFISICAL_UNIVERSAL_AUTH_CLIENT_ID=57646e4b-3990-4cb6-a3d1-339cf67f6808
+Environment=INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET=64f72977df7059f18445f4a8e81475d95d60521ffb26c632600bb8f95b26548a
+ExecStart=infisical run \
+  --projectId=089a5c93-5c51-4a24-8bf0-9d8bceb3a114 \
+  --env=prod \
+  --path=/worker \
+  -- /home/vj/Bureau/Projets/BriefTube/worker/venv/bin/python main.py
 Restart=on-failure
 RestartSec=10
-Environment=PYTHONUNBUFFERED=1
 StandardOutput=append:/home/vj/Bureau/Projets/BriefTube/worker/worker.log
 StandardError=append:/home/vj/Bureau/Projets/BriefTube/worker/worker.log
 
