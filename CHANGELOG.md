@@ -2,6 +2,10 @@
 
 ## 2026-02-23
 
+FIX: bot — suppression complète de la limite de partage (3/jour) ; get_profile_by_telegram ne retournait pas trial_ends_at donc les utilisateurs en trial étaient traités comme Free
+FIX: bot — utilisateurs en période d'essai (trial_ends_at) considérés comme Pro pour toutes les limites (partage, canaux, résumés on-demand) ; seul subscription_status="active" était vérifié auparavant
+UX: bot — menu Options : suppression du bouton Language ; bouton Unsubscribe demande confirmation avant de se désabonner ([Yes, unsubscribe] / [Cancel])
+
 FIX: bot — abonnement via Telegram (bouton Subscribe ou lien de chaîne) stocke maintenant l'avatar YouTube en scrappant la page de la chaîne ; l'image apparaît correctement dans l'interface web
 UX: share — header avec logo et bouton Sign in sur la page de partage
 UX: bot — menu Options affiche uniquement Subscribe OU Unsubscribe selon l'état d'abonnement actuel (plus les deux boutons simultanément) ; si chaîne inconnue, aucun bouton affiché
