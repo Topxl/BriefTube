@@ -5,6 +5,8 @@ import { SiteConfig } from "@/site-config";
 import { cookies } from "next/headers";
 import { sendEmail } from "@/lib/mail/send-email";
 import { WelcomeEmail } from "@/components/emails/welcome-email";
+import { resend } from "@/lib/mail/resend";
+import { env } from "@/lib/env";
 
 const REFERRAL_COOKIE = SiteConfig.referral.cookieName;
 
@@ -51,13 +53,26 @@ export async function GET(request: Request) {
               .update({ trial_ends_at: trialEnd.toISOString() })
               .eq("id", user.id);
 
-            // Send welcome email to new users (fire-and-forget)
             if (user.email) {
+              // Send welcome email (fire-and-forget)
               void sendEmail({
                 to: user.email,
                 subject: "Welcome to BriefTube",
                 html: WelcomeEmail({ trialDays: SiteConfig.trialDays }),
               });
+
+              // Add to newsletter audience (fire-and-forget)
+              if (env.RESEND_AUDIENCE_ID) {
+                void resend.contacts
+                  .create({
+                    email: user.email,
+                    audienceId: env.RESEND_AUDIENCE_ID,
+                    unsubscribed: false,
+                  })
+                  .catch((err) => {
+                    logger.error("Failed to add newsletter contact:", err);
+                  });
+              }
             }
           }
         }

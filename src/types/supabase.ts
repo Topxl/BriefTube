@@ -52,6 +52,41 @@ export type Database = {
           },
         ];
       };
+      cancellation_feedbacks: {
+        Row: {
+          id: string;
+          user_id: string;
+          reason: string;
+          custom_message: string | null;
+          offer_accepted: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          reason: string;
+          custom_message?: string | null;
+          offer_accepted?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          reason?: string;
+          custom_message?: string | null;
+          offer_accepted?: boolean;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "cancellation_feedbacks_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       deleted_accounts: {
         Row: {
           id: string;

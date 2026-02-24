@@ -1,4 +1,3 @@
-import Link from "next/link";
 import type { Metadata } from "next";
 import { SiteConfig } from "@/site-config";
 
@@ -11,20 +10,13 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <div className="container max-w-3xl py-12">
-      <div className="mb-8">
-        <Link
-          href="/"
-          className="text-muted-foreground hover:text-foreground text-sm transition-colors"
-        >
-          ← Back to Home
-        </Link>
+    <div className="mx-auto max-w-3xl px-4">
+      <div className="mb-12 flex flex-col gap-2">
+        <h1 className="text-3xl font-bold">Privacy Policy</h1>
+        <p className="text-muted-foreground text-sm">
+          Last updated: February 18, 2026
+        </p>
       </div>
-
-      <h1 className="mb-2 text-3xl font-bold">Privacy Policy</h1>
-      <p className="text-muted-foreground mb-10 text-sm">
-        Last updated: February 18, 2026
-      </p>
 
       <div className="flex flex-col gap-10">
         <section className="flex flex-col gap-3">
@@ -254,14 +246,12 @@ export default function PrivacyPage() {
           <p className="text-muted-foreground text-sm leading-relaxed">
             For any questions about this Privacy Policy:
           </p>
-          <p className="text-sm">
-            <a
-              href="mailto:contact@brief-tube.com"
-              className="text-red-400 underline hover:text-red-300"
-            >
-              contact@brief-tube.com
-            </a>
-          </p>
+          <a
+            href="mailto:contact@brief-tube.com"
+            className="text-sm text-red-400 underline hover:text-red-300"
+          >
+            contact@brief-tube.com
+          </a>
         </section>
       </div>
     </div>

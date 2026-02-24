@@ -16,6 +16,7 @@ import {
   Clock,
   TrendingUp,
 } from "@/lib/icons";
+import { NewsletterSeedButton } from "@/components/admin/newsletter-seed-button";
 
 const ADMIN_USER_ID = "67320a39-948c-44d2-98e3-c0de49af1ec6";
 
@@ -98,6 +99,14 @@ type ExpiringTrial = {
 type AtRiskUser = {
   id: string;
   email: string;
+};
+
+type CancellationFeedbackRow = {
+  id: string;
+  reason: string;
+  custom_message: string | null;
+  offer_accepted: boolean;
+  created_at: string;
 };
 
 // ---------------------------------------------------------------
@@ -395,6 +404,19 @@ export default async function AdminPage() {
     .sort((a, b) => b[1].count - a[1].count)
     .slice(0, 10)
     .map(([id, data]) => ({ id, name: data.name, count: data.count }));
+
+  // ── Churn feedbacks ───────────────────────────────────────────
+  const { data: cancellationFeedbacksRaw } = await admin
+    .from("cancellation_feedbacks")
+    .select("id, reason, custom_message, offer_accepted, created_at")
+    .order("created_at", { ascending: false })
+    .limit(20);
+  const cancellationFeedbacks =
+    (cancellationFeedbacksRaw as unknown as CancellationFeedbackRow[] | null) ??
+    [];
+  const offersAccepted = cancellationFeedbacks.filter(
+    (f) => f.offer_accepted,
+  ).length;
 
   return (
     <div className="flex flex-col gap-6">
@@ -857,6 +879,63 @@ export default async function AdminPage() {
                   <span className="nm-raised-sm rounded-full px-2 py-0.5 text-[10px] font-medium text-red-400">
                     à risque
                   </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Newsletter */}
+      <div className="flex flex-col gap-2">
+        <SectionTitle>Newsletter</SectionTitle>
+        <div className="nm-raised flex items-center justify-between rounded-xl px-4 py-3">
+          <p className="text-muted-foreground text-sm">
+            Sync all existing users to Resend audience
+          </p>
+          <NewsletterSeedButton />
+        </div>
+      </div>
+
+      {/* Churn feedbacks */}
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between px-1">
+          <SectionTitle>Cancellation reasons</SectionTitle>
+          <span className="text-muted-foreground text-xs">
+            {offersAccepted}/{cancellationFeedbacks.length} offer accepted
+          </span>
+        </div>
+        <div className="nm-raised overflow-hidden rounded-xl">
+          {cancellationFeedbacks.length === 0 ? (
+            <div className="flex items-center gap-2 px-4 py-4">
+              <CheckCircle className="h-4 w-4 text-emerald-400" />
+              <p className="text-muted-foreground text-sm">No cancellations</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-white/[0.04]">
+              {cancellationFeedbacks.map((f) => (
+                <div key={f.id} className="flex flex-col gap-1 px-4 py-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-medium">{f.reason}</p>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      {f.offer_accepted && (
+                        <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-400">
+                          offer accepted
+                        </span>
+                      )}
+                      <span className="text-muted-foreground text-[10px] tabular-nums">
+                        {new Date(f.created_at).toLocaleDateString("fr-FR", {
+                          day: "2-digit",
+                          month: "2-digit",
+                        })}
+                      </span>
+                    </div>
+                  </div>
+                  {f.custom_message && (
+                    <p className="text-muted-foreground text-xs">
+                      {f.custom_message}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>

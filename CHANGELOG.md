@@ -2,6 +2,25 @@
 
 ## 2026-02-24
 
+FEATURE: Admin — newsletter seed button to sync all existing DB users to Resend audience
+FEATURE: Auth callback — auto-add new signups to Resend newsletter audience
+
+FEATURE: Footer — real logo, Product/Legal columns, Support link, newsletter signup (Resend contacts API)
+
+FEATURE: Support/Privacy/Terms — shared layout with Navbar + Footer via (legal) route group, improved support page style
+FIX: Worker — ffmpeg chunk split used -q:a 0 (VBR ~220kbps) instead of -c copy, causing each chunk to be ~55 MB and triggering Groq 413 despite splitting; fixed with stream copy
+FIX: Worker — detect live streams (is_live info dict + error patterns) and snooze silently 2h instead of failing with user notification; covers transcript_extractor, whisper_transcriber and main processor
+CHORE: Landing — remove all open source / self-host / GitHub references (navbar star button, pricing self-host paragraph, final CTA secondary button, footer GitHub & Contribute links)
+FEATURE: Cancel flow — modal multi-étapes (raisons → offre irrésistible −50% 3 mois → confirmation), stockage feedback en DB, section churn dans admin
+
+FIX: Lists — follow/star counts always showed 0 due to RLS policies filtering to current user only; now uses adminClient for count queries to bypass RLS
+FIX: Worker — cleanup_undeliverable_deliveries() now deletes deliveries for skipped videos instead of marking them failed (pre-subscription skips are intentional, not errors)
+FIX: Worker — fix "not enough values to unpack (expected 3, got 2)" crash in transcript_extractor._ytdlp_subtitles (line 352 missing third None in early return)
+FEATURE: Worker — detect premiere/scheduled YouTube videos (yt-dlp "live event will begin in Xh"), snooze job with retry_after instead of failing permanently, no false failure notification sent to users
+FIX: Worker — add nocheckcertificate to yt-dlp options in transcript_extractor and whisper_transcriber to fix SSL CERTIFICATE_VERIFY_FAILED errors
+FIX: Worker — increase VIDEO_TIMEOUT from 600s to 1200s to handle long videos requiring Whisper fallback; reset Om1Mys0AIa8 to queued for reprocessing
+FIX: Stripe — patch stripe_customer_id null for user D (cus_REDACTED) and manually send upgrade confirmation email
+
 FIX: Stripe webhook — fallback to metadata.userId when stripe_customer_id is null, always save customer ID and update max_channels on subscription events
 FIX: Stripe portal — fallback lookup by email when stripe_customer_id is missing, show manage billing button for all active subscribers
 
