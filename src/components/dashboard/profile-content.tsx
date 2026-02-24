@@ -9,6 +9,7 @@ import Link from "next/link";
 import { LogOut, Trash2, ShieldAlert } from "@/lib/icons";
 
 import { dialogManager } from "@/features/dialog-manager/dialog-manager";
+import { openCancelSubscriptionModal } from "@/components/dashboard/cancel-subscription-modal";
 import { toast } from "sonner";
 
 type ReferralRow = {
@@ -143,17 +144,27 @@ export function ProfileContent({
         </h2>
         <div className="nm-raised overflow-hidden rounded-2xl">
           {isActivePro ? (
-            <div className="flex items-center justify-between px-4 py-3">
-              <div>
-                <p className="text-sm font-medium">Pro Plan</p>
-                <p className="text-muted-foreground text-[11px]">
-                  Unlimited channels and lists
-                </p>
+            <>
+              <div className="flex items-center justify-between px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium">Pro Plan</p>
+                  <p className="text-muted-foreground text-[11px]">
+                    Unlimited channels and lists
+                  </p>
+                </div>
+                <span className="rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-semibold text-white uppercase">
+                  Active
+                </span>
               </div>
-              <span className="rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-semibold text-white uppercase">
-                Active
-              </span>
-            </div>
+              <div className="border-t border-white/[0.04] px-4 py-2.5">
+                <button
+                  onClick={openCancelSubscriptionModal}
+                  className="text-muted-foreground hover:text-destructive text-xs transition-colors"
+                >
+                  Cancel subscription →
+                </button>
+              </div>
+            </>
           ) : (
             <div className="flex items-center justify-between gap-4 px-4 py-3.5">
               <div className="min-w-0">
