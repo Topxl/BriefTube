@@ -30,20 +30,6 @@ export function FinalCTA() {
             >
               <Link href="/login">{tl.ctaPrimary}</Link>
             </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="h-12 px-8 text-base"
-              asChild
-            >
-              <a
-                href="https://github.com/Topxl/BriefTube"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {tl.ctaSecondary}
-              </a>
-            </Button>
           </div>
           <p className="text-muted-foreground mt-4 text-xs">
             {tl.loginText}{" "}

@@ -11,6 +11,7 @@ Groq advantages:
 
 import math
 import os
+import re
 import logging
 import shutil
 import subprocess
@@ -19,6 +20,24 @@ from pathlib import Path
 from typing import Optional, Tuple
 import yt_dlp
 from groq import Groq
+
+_PREMIERE_RE = re.compile(
+    r"live event will begin|premiere will begin|this event will begin"
+    r"|scheduled to begin|upcoming premiere",
+    re.IGNORECASE,
+)
+
+def _hours_until_premiere(err: str) -> int:
+    m = re.search(r"begin in (\d+) days?", err, re.IGNORECASE)
+    if m:
+        return max(1, int(m.group(1)) * 24)
+    m = re.search(r"begin in (\d+) hours?", err, re.IGNORECASE)
+    if m:
+        return max(1, int(m.group(1)))
+    m = re.search(r"begin in (\d+) minutes?", err, re.IGNORECASE)
+    if m:
+        return max(1, (int(m.group(1)) + 59) // 60)
+    return 2
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +71,26 @@ class WhisperTranscriber:
             True if successful, False otherwise
         """
         try:
+            # Pre-check: detect live/upcoming streams before attempting download.
+            # Avoids downloading an infinite HLS stream for 10+ minutes.
+            try:
+                pre_opts = {"quiet": True, "no_warnings": True, "nocheckcertificate": True, "skip_download": True}
+                with yt_dlp.YoutubeDL(pre_opts) as ydl_info:
+                    pre_info = ydl_info.extract_info(youtube_url, download=False)
+                if pre_info:
+                    live_status = pre_info.get("live_status")
+                    if live_status in ("is_live", "is_upcoming") or pre_info.get("is_live"):
+                        logger.info(f"Audio pre-check: live stream detected (live_status={live_status}) — skip download")
+                        return "live"
+            except Exception as pre_e:
+                pre_err = str(pre_e)
+                if _PREMIERE_RE.search(pre_err):
+                    hours = _hours_until_premiere(pre_err)
+                    return f"premiere:{hours}"
+                if any(kw in pre_err.lower() for kw in ("is a live stream", "live event")):
+                    return "live"
+                # Other pre-check errors: proceed to actual download
+
             # 64kbps is more than sufficient for Whisper speech recognition and
             # keeps file size well under Groq's 25 MB limit (~54 min max at 64kbps).
             # 192kbps would exceed the limit for any video longer than ~15 min.
@@ -66,6 +105,7 @@ class WhisperTranscriber:
                 'quiet': True,
                 'no_warnings': True,
                 'noprogress': True,
+                'nocheckcertificate': True,
             }
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -80,11 +120,23 @@ class WhisperTranscriber:
             return False
 
         except Exception as e:
+            err = str(e)
+            if _PREMIERE_RE.search(err):
+                hours = _hours_until_premiere(err)
+                logger.info(f"Audio download: premiere/scheduled — retry in {hours}h")
+                return f"premiere:{hours}"
+            if any(kw in err.lower() for kw in (
+                "is a live stream", "currently broadcasting",
+                "is a live event", "live event",
+            )):
+                logger.info("Audio download: live stream detected — no audio to download")
+                return "live"
             logger.error(f"Error downloading audio: {e}")
             return False
 
-    # Groq hard limit: 25 MB per request. Use 20 MB chunks to leave margin.
-    _MAX_CHUNK_BYTES = 20 * 1024 * 1024
+    # Groq hard limit: 25 MB per request. Use 15 MB chunks to leave margin
+    # for HTTP multipart overhead and audio encoding variance.
+    _MAX_CHUNK_BYTES = 15 * 1024 * 1024
 
     def _split_audio_chunks(self, audio_file: Path, temp_dir: Path) -> list[Path]:
         """Split audio into ≤20 MB chunks so each fits within Groq's 25 MB limit.
@@ -127,7 +179,7 @@ class WhisperTranscriber:
                     "-ss", str(start),
                     "-t", str(chunk_duration),
                     "-i", str(audio_file),
-                    "-q:a", "0",
+                    "-c", "copy",  # stream copy — no re-encoding, keeps 64kbps
                     str(chunk_path),
                 ],
                 capture_output=True,
@@ -177,7 +229,13 @@ class WhisperTranscriber:
 
             # Step 1: Download audio
             logger.info(f"Downloading audio from YouTube: {youtube_url}")
-            if not self._download_audio(youtube_url, audio_path):
+            dl_result = self._download_audio(youtube_url, audio_path)
+            if isinstance(dl_result, str) and dl_result.startswith("premiere:"):
+                hours = int(dl_result.split(":")[1])
+                return None, None, f"premiere_not_available_yet:{hours}", 0.0
+            if dl_result == "live":
+                return None, None, "video_is_live", 0.0
+            if not dl_result:
                 return None, None, "audio_download_failed", 0.0
 
             audio_file = audio_path.with_suffix(".mp3")

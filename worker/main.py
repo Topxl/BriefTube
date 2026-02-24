@@ -113,7 +113,7 @@ logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 # ── Constants ──────────────────────────────────────────────────
 
-VIDEO_TIMEOUT = 600  # 10 minutes max per video
+VIDEO_TIMEOUT = 1200  # 20 minutes max per video (Whisper fallback on long videos needs more time)
 
 # Default TTS voice per language code — mirrors src/lib/languages.ts
 _DEFAULT_VOICES: dict[str, str] = {
@@ -315,6 +315,26 @@ async def _process_video(
                 db.fail_job(job["id"], immediate=True)
                 return
 
+            # Premiere/scheduled video — snooze until it starts, no failure notification
+            if error and error.startswith("premiere_not_available_yet:"):
+                try:
+                    hours = int(error.split(":")[1])
+                except (IndexError, ValueError):
+                    hours = 2
+                logger.info(
+                    f"[{video_id}] Premiere/scheduled — snoozed for {hours}h: {video_title[:80]}"
+                )
+                db.snooze_job(job["id"], hours=hours)
+                return
+
+            # Live stream currently broadcasting — no transcript/audio yet, snooze silently
+            if error == "video_is_live":
+                logger.info(
+                    f"[{video_id}] Live stream in progress — snoozed 2h: {video_title[:80]}"
+                )
+                db.snooze_job(job["id"], hours=2)
+                return
+
             logger.error(f"[{video_id}] Transcript extraction failed: {error}")
             if TranscriptExtractor.should_retry(error):
                 # Transient error (rate limit, video not yet available) — retry later
@@ -345,6 +365,11 @@ async def _process_video(
         )
 
         if not summary:
+            # Transcript too short to summarize — permanent, silent skip (no user notification)
+            if summary_error == "transcript_too_short":
+                logger.info(f"[{video_id}] Transcript too short — skipping permanently: {video_title[:80]}")
+                db.fail_job(job["id"], immediate=True)
+                return
             raise Exception(f"Summary generation failed: {summary_error}")
 
         logger.info(f"[{video_id}] Summary: {len(summary)} chars")

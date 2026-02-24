@@ -41,6 +41,31 @@ _MUSIC_TITLE_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Patterns that indicate a video is a premiere / scheduled live stream not yet started.
+_PREMIERE_RE = re.compile(
+    r"live event will begin"
+    r"|premiere will begin"
+    r"|this event will begin"
+    r"|scheduled to begin"
+    r"|upcoming premiere",
+    re.IGNORECASE,
+)
+
+
+def _hours_until_premiere(err: str) -> int:
+    """Parse 'will begin in X days/hours/minutes' from yt-dlp error. Default 2h."""
+    m = re.search(r"begin in (\d+) days?", err, re.IGNORECASE)
+    if m:
+        return max(1, int(m.group(1)) * 24)
+    m = re.search(r"begin in (\d+) hours?", err, re.IGNORECASE)
+    if m:
+        return max(1, int(m.group(1)))
+    m = re.search(r"begin in (\d+) minutes?", err, re.IGNORECASE)
+    if m:
+        return max(1, (int(m.group(1)) + 59) // 60)
+    return 2  # safe default
+
+
 # Path to YouTube cookies file (Netscape format).
 # Set YOUTUBE_COOKIES_FILE in .env, or place cookies at worker/cookies/youtube.txt.
 _COOKIES_FILE = Path(__file__).parent / "cookies" / "youtube.txt"
@@ -237,9 +262,15 @@ class TranscriptExtractor:
 
             if transcript_data is None:
                 # Step 2b: Try yt-dlp subtitle download before Whisper (free, no quota)
-                vtt_text, vtt_lang = self._ytdlp_subtitles(youtube_url, preferred_languages)
+                vtt_text, vtt_lang, vtt_error = self._ytdlp_subtitles(youtube_url, preferred_languages)
                 if vtt_text:
                     return vtt_text, vtt_lang, None, 0.0
+                if vtt_error and vtt_error.startswith("premiere_not_available_yet"):
+                    # Scheduled/premiere video — skip Whisper, snooze until it starts
+                    return None, None, vtt_error, 0.0
+                if vtt_error == "video_is_live":
+                    # Live stream in progress — no captions yet, skip Whisper entirely
+                    return None, None, "video_is_live", 0.0
 
                 # Step 3: Whisper API fallback (paid, uses Groq quota)
                 if self.enable_whisper_fallback and self.whisper_transcriber:
@@ -280,11 +311,12 @@ class TranscriptExtractor:
         self,
         youtube_url: str,
         preferred_languages: list[str],
-    ) -> tuple[Optional[str], Optional[str]]:
+    ) -> tuple[Optional[str], Optional[str], Optional[str]]:
         """Download subtitles via yt-dlp as a free fallback before Whisper.
 
         Uses the authenticated cookies session (if available) to download VTT
-        subtitle files. Returns (text, language) or (None, None) on failure.
+        subtitle files. Returns (text, language, error_code) or (None, None, None) on failure.
+        Returns (None, None, "premiere_not_available_yet:N") for scheduled/premiere videos.
         This is free and bypasses the youtube-transcript-api IP block issue
         since yt-dlp uses a different YouTube endpoint.
         """
@@ -304,6 +336,7 @@ class TranscriptExtractor:
             "quiet": True,
             "no_warnings": True,
             "noprogress": True,
+            "nocheckcertificate": True,
         }
         if cookies_file:
             ydl_opts["cookiefile"] = cookies_file
@@ -318,11 +351,31 @@ class TranscriptExtractor:
             with tempfile.TemporaryDirectory(prefix="brieftube_vtt_") as tmp:
                 ydl_opts["outtmpl"] = os.path.join(tmp, "%(id)s")
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    ydl.download([youtube_url])
+                    # extract_info(download=True) respects skip_download=True:
+                    # skips the media download, still writes subtitle files,
+                    # and returns the info dict so we can check is_live.
+                    info = ydl.extract_info(youtube_url, download=True)
+
+                    if info:
+                        live_status = info.get("live_status")
+                        # Scheduled/upcoming live — not started yet
+                        if live_status == "is_upcoming":
+                            scheduled = info.get("scheduled_start_time")
+                            if scheduled:
+                                import time as _time
+                                hours = max(1, int((scheduled - _time.time()) / 3600) + 1)
+                            else:
+                                hours = 24
+                            logger.info(f"yt-dlp: upcoming live — snooze {hours}h")
+                            return None, None, f"premiere_not_available_yet:{hours}"
+                        # Live stream currently broadcasting — no captions yet
+                        if live_status == "is_live" or info.get("is_live"):
+                            logger.info("yt-dlp: video is currently live — snooze 2h")
+                            return None, None, "video_is_live"
 
                 vtt_files = glob.glob(os.path.join(tmp, "*.vtt"))
                 if not vtt_files:
-                    return None, None
+                    return None, None, None
 
                 # Pick file matching preferred language
                 selected = vtt_files[0]
@@ -340,18 +393,30 @@ class TranscriptExtractor:
                         f"✅ yt-dlp subtitle extracted ({len(text)} chars) "
                         f"lang: {detected_lang} [FREE]"
                     )
-                    return text, detected_lang
+                    return text, detected_lang, None
 
         except Exception as e:
             err = str(e)
-            if "429" in err or "Too Many Requests" in err:
+            if _PREMIERE_RE.search(err):
+                hours = _hours_until_premiere(err)
+                logger.info(
+                    f"yt-dlp subtitle: premiere/scheduled video — retry in {hours}h"
+                )
+                return None, None, f"premiere_not_available_yet:{hours}"
+            elif any(kw in err.lower() for kw in (
+                "is a live stream", "currently broadcasting",
+                "is a live event", "live event",
+            )):
+                logger.info("yt-dlp subtitle: live stream detected — snooze 2h")
+                return None, None, "video_is_live"
+            elif "429" in err or "Too Many Requests" in err:
                 logger.warning("yt-dlp subtitle: rate-limited (429) — will try Whisper")
             elif "Sign in" in err or "bot" in err.lower():
                 logger.warning("yt-dlp subtitle: auth required — will try Whisper")
             else:
                 logger.warning(f"yt-dlp subtitle failed: {err[:120]}")
 
-        return None, None
+        return None, None, None
 
     @staticmethod
     def _parse_vtt(filepath: str) -> Optional[str]:
