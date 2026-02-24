@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-02-25
+
+FEATURE: Google Ads — fire conversion event on Pro activation (gtag trackAdConversion via NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_LABEL); clear ?success=true from URL after success to prevent re-firing
+
 ## 2026-02-24
 
 FIX: Stripe — billing page now passes ?success=true to profile, shows Pro toast on activation, auto-refreshes if webhook hasn't processed yet

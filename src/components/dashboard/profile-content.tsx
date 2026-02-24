@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { DeliverySection } from "@/components/dashboard/delivery-section";
 import { ReferralSection } from "@/components/dashboard/referral-section";
@@ -12,6 +12,7 @@ import { LogOut, Trash2, ShieldAlert } from "@/lib/icons";
 import { dialogManager } from "@/features/dialog-manager/dialog-manager";
 import { openCancelSubscriptionModal } from "@/components/dashboard/cancel-subscription-modal";
 import { toast } from "sonner";
+import { trackAdConversion } from "@/lib/gtag";
 
 type ReferralRow = {
   maskedEmail: string;
@@ -54,19 +55,27 @@ export function ProfileContent({
 }: Props) {
   const router = useRouter();
 
+  const [retryCount, setRetryCount] = useState(0);
+
   useEffect(() => {
     if (!paymentSuccess) return;
     if (isActivePro) {
+      trackAdConversion();
       toast.success("You're now Pro!", {
         description: "Enjoy unlimited channels and priority processing.",
         duration: 6000,
       });
-    } else {
-      // Webhook not yet processed — refresh until status is updated
-      const timer = setTimeout(() => router.refresh(), 3000);
-      return () => clearTimeout(timer);
+      router.replace("/dashboard/profile");
+      return;
     }
-  }, [paymentSuccess, isActivePro, router]);
+    // Webhook not yet processed — keep retrying every 3s (max 10 times = 30s)
+    if (retryCount >= 10) return;
+    const timer = setTimeout(() => {
+      router.refresh();
+      setRetryCount((c) => c + 1);
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [paymentSuccess, isActivePro, router, retryCount]);
   const supabase = createClient();
 
   const handleLogout = async () => {
