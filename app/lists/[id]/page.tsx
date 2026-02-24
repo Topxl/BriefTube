@@ -59,26 +59,32 @@ export default async function ListDetailPage({ params }: Props) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: list } = await supabase
-    .from("channel_lists")
-    .select(
-      `
-      id, name, description, category, created_at, created_by, is_public,
-      list_channels(id, channel_id, channel_name, channel_avatar_url, added_at),
-      list_stars(count),
-      list_follows(count)
-    `,
-    )
-    .eq("id", id)
-    .eq("is_public", true)
-    .single();
+  const adminSupabase = createAdminClient();
+
+  const [{ data: list }, { count: starCount }, { count: followCount }] =
+    await Promise.all([
+      supabase
+        .from("channel_lists")
+        .select(
+          `
+        id, name, description, category, created_at, created_by, is_public,
+        list_channels(id, channel_id, channel_name, channel_avatar_url, added_at)
+      `,
+        )
+        .eq("id", id)
+        .eq("is_public", true)
+        .single(),
+      adminSupabase
+        .from("list_stars")
+        .select("*", { count: "exact", head: true })
+        .eq("list_id", id),
+      adminSupabase
+        .from("list_follows")
+        .select("*", { count: "exact", head: true })
+        .eq("list_id", id),
+    ]);
 
   if (!list) notFound();
-
-  const starCount =
-    (list.list_stars as unknown as { count: number }[])[0]?.count ?? 0;
-  const followCount =
-    (list.list_follows as unknown as { count: number }[])[0]?.count ?? 0;
 
   let starred = false;
   let following = false;
@@ -168,8 +174,8 @@ export default async function ListDetailPage({ params }: Props) {
             listId={id}
             initialStarred={starred}
             initialFollowing={following}
-            starCount={starCount}
-            followCount={followCount}
+            starCount={starCount ?? 0}
+            followCount={followCount ?? 0}
             isAuthenticated={!!user}
           />
         </div>

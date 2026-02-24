@@ -5,7 +5,11 @@ import { SiteConfig } from "@/site-config";
 
 const ADMIN_USER_ID = "67320a39-948c-44d2-98e3-c0de49af1ec6";
 
-export default async function ProfilePage() {
+export default async function ProfilePage(props: {
+  searchParams: Promise<{ success?: string }>;
+}) {
+  const searchParams = await props.searchParams;
+  const paymentSuccess = searchParams.success === "true";
   const supabase = await createClient();
   const {
     data: { user },
@@ -86,6 +90,7 @@ export default async function ProfilePage() {
       referralCode={profile?.referral_code ?? ""}
       referrals={referrals}
       isAdmin={user.id === ADMIN_USER_ID}
+      paymentSuccess={paymentSuccess}
     />
   );
 }

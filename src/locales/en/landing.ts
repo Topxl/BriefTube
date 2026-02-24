@@ -152,9 +152,6 @@ export const landing = {
         cta: "Go Pro",
       },
     },
-    selfHostPrefix: "Prefer to self-host?",
-    selfHostLink: "Deploy with Docker in 5 minutes",
-    selfHostSuffix: "it's open source.",
   },
   faq: {
     heading: "Questions people actually ask",
@@ -191,15 +188,12 @@ export const landing = {
     heading: "Takes about 2 minutes to set up",
     subtitle: `Free for up to ${FREE} channels. No credit card, no commitment.`,
     ctaPrimary: "Sign Up Free",
-    ctaSecondary: "Self-Host (Open Source)",
     loginText: "Already have an account?",
     loginLink: "Log in",
   },
   footer: {
     privacy: "Privacy",
     terms: "Terms",
-    github: "GitHub",
-    contribute: "Contribute",
     copyright: (year: number) => `© ${year} BriefTube. All rights reserved.`,
   },
 };

@@ -161,19 +161,6 @@ export function Pricing() {
             })}
           </div>
         </ScrollReveal>
-
-        <p className="text-muted-foreground mt-8 text-center text-sm">
-          {tl.selfHostPrefix}{" "}
-          <a
-            href="https://github.com/Topxl/BriefTube#self-hosting"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-foreground underline"
-          >
-            {tl.selfHostLink}
-          </a>{" "}
-          &mdash; {tl.selfHostSuffix}
-        </p>
       </div>
     </section>
   );

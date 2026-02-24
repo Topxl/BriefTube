@@ -193,6 +193,22 @@ def complete_job(job_id: str):
     sb.table("processing_queue").update({"status": "completed"}).eq("id", job_id).execute()
 
 
+def snooze_job(job_id: str, hours: int) -> None:
+    """Put a job back to queued with a retry_after delay (for premiere/scheduled videos).
+
+    Does NOT increment attempts — this is not a failure, just a wait.
+    """
+    from datetime import datetime, timezone, timedelta
+    retry_after = (datetime.now(timezone.utc) + timedelta(hours=hours)).isoformat()
+    sb = get_client()
+    sb.table("processing_queue").update({
+        "status": "queued",
+        "retry_after": retry_after,
+        "started_at": None,
+    }).eq("id", job_id).execute()
+    logger.info(f"Job {job_id} snoozed for {hours}h (premiere/scheduled)")
+
+
 def fail_job(job_id: str, immediate: bool = False) -> bool:
     """Mark a job as failed. Returns True if this was a permanent failure.
 
@@ -451,24 +467,50 @@ def get_pending_deliveries(limit: int = 20) -> list[dict]:
 
 
 def cleanup_undeliverable_deliveries() -> int:
-    """Mark pending deliveries as failed when their video failed/skipped or when the
-    user has no Telegram connected. Prevents stuck deliveries from blocking
-    the queue forever. Returns the number of deliveries cleaned up."""
+    """Clean up deliveries that can never be delivered.
+
+    - Skipped videos   → DELETE the delivery (pre-subscription skip is intentional,
+                         not a real failure — keeps the admin dashboard clean)
+    - Failed videos    → mark as 'failed' (real processing error, worth tracking)
+    - No Telegram      → mark as 'failed'
+
+    Returns the number of deliveries cleaned up.
+    """
     sb = get_client()
     cleaned = 0
 
-    # Failed or skipped videos → deliveries can never succeed
-    dead_videos = (
+    # Skipped videos → DELETE silently (expected behaviour, not an error)
+    skipped_videos = (
         sb.table("processed_videos")
         .select("video_id")
-        .in_("status", ["failed", "skipped"])
+        .eq("status", "skipped")
         .execute()
     )
-    if dead_videos.data:
-        dead_ids = [v["video_id"] for v in dead_videos.data]
+    if skipped_videos.data:
+        skipped_ids = [v["video_id"] for v in skipped_videos.data]
+        for i in range(0, len(skipped_ids), 100):
+            batch = skipped_ids[i : i + 100]
+            res = (
+                sb.table("deliveries")
+                .delete()
+                .in_("status", ["pending", "failed"])
+                .in_("video_id", batch)
+                .execute()
+            )
+            cleaned += len(res.data or [])
+
+    # Failed videos → mark as failed (real processing error)
+    failed_videos = (
+        sb.table("processed_videos")
+        .select("video_id")
+        .eq("status", "failed")
+        .execute()
+    )
+    if failed_videos.data:
+        failed_ids = [v["video_id"] for v in failed_videos.data]
         # Process in batches of 100 to stay within PostgREST limits
-        for i in range(0, len(dead_ids), 100):
-            batch = dead_ids[i : i + 100]
+        for i in range(0, len(failed_ids), 100):
+            batch = failed_ids[i : i + 100]
             res = (
                 sb.table("deliveries")
                 .update({"status": "failed"})

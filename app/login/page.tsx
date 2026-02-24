@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { GoogleLoginButton } from "./_components/google-login-button";
 import { t } from "@/locales";
 
@@ -23,22 +24,8 @@ export default function LoginPage() {
 
       <div className="nm-raised w-full max-w-sm overflow-hidden rounded-2xl">
         <div className="flex flex-col items-center px-6 pt-8 pb-4 text-center">
-          <Link
-            href="/"
-            className="nm-raised mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-red-600 shadow-[0_0_20px_rgba(239,68,68,0.3)]"
-          >
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 32 32"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <g transform="translate(0, 2)">
-                <path d="M0 0L10 9L0 18V0Z" fill="white" />
-                <path d="M13 0L23 9L13 18V0Z" fill="white" opacity="0.85" />
-              </g>
-            </svg>
+          <Link href="/" className="mb-5">
+            <Image src="/logo.svg" alt="BriefTube" width={48} height={48} />
           </Link>
           <p className="text-lg font-semibold">{tl.heading}</p>
           <p className="text-muted-foreground mt-1 text-sm">{tl.subtitle}</p>

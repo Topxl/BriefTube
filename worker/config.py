@@ -42,12 +42,12 @@ DEFAULT_TTS_VOICE = os.getenv("TTS_VOICE", "fr-FR-DeniseNeural")
 RSS_CHECK_INTERVAL = int(os.getenv("RSS_CHECK_INTERVAL", "1800"))  # 30 minutes (WebSub handles real-time)
 
 # Concurrent video processing (how many videos to process simultaneously)
-MAX_CONCURRENT_VIDEOS = int(os.getenv("MAX_CONCURRENT_VIDEOS", "6"))
+MAX_CONCURRENT_VIDEOS = int(os.getenv("MAX_CONCURRENT_VIDEOS", "3"))
 
 # CPU throttling — worker pauses before starting a new video job when system
 # CPU usage (all cores, 1-second sample) is above this threshold.
 # Set to 100 to disable. Recommended: 60-75 on a personal machine.
-MAX_CPU_PERCENT = int(os.getenv("MAX_CPU_PERCENT", "65"))
+MAX_CPU_PERCENT = int(os.getenv("MAX_CPU_PERCENT", "75"))
 
 # How long (seconds) to wait between CPU checks when throttling
 CPU_CHECK_INTERVAL = float(os.getenv("CPU_CHECK_INTERVAL", "5.0"))

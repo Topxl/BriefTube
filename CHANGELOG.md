@@ -2,6 +2,11 @@
 
 ## 2026-02-24
 
+FIX: Stripe — billing page now passes ?success=true to profile, shows Pro toast on activation, auto-refreshes if webhook hasn't processed yet
+FIX: Worker — transcript_too_short caused infinite retry loop (not treated as immediate failure); now skips permanently and silently like music videos
+FIX: Worker — Whisper _download_audio now pre-checks live_status before downloading, preventing 18-min HLS infinite stream download that caused false failure notification
+FIX: Worker — upcoming lives (live_status=is_upcoming) not detected by is_live check; now uses live_status + scheduled_start_time for accurate snooze duration
+FIX: Worker — _hours_until_premiere ignored "days" unit ("begin in 7 days" → 2h snooze); now correctly converts days to hours
 FEATURE: Admin — newsletter seed button to sync all existing DB users to Resend audience
 FEATURE: Auth callback — auto-add new signups to Resend newsletter audience
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { DeliverySection } from "@/components/dashboard/delivery-section";
 import { ReferralSection } from "@/components/dashboard/referral-section";
@@ -33,6 +34,7 @@ type Props = {
   referralCode?: string;
   referrals?: ReferralRow[];
   isAdmin?: boolean;
+  paymentSuccess?: boolean;
 };
 
 export function ProfileContent({
@@ -48,8 +50,23 @@ export function ProfileContent({
   referralCode,
   referrals,
   isAdmin,
+  paymentSuccess,
 }: Props) {
   const router = useRouter();
+
+  useEffect(() => {
+    if (!paymentSuccess) return;
+    if (isActivePro) {
+      toast.success("You're now Pro!", {
+        description: "Enjoy unlimited channels and priority processing.",
+        duration: 6000,
+      });
+    } else {
+      // Webhook not yet processed — refresh until status is updated
+      const timer = setTimeout(() => router.refresh(), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [paymentSuccess, isActivePro, router]);
   const supabase = createClient();
 
   const handleLogout = async () => {
