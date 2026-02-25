@@ -5,11 +5,12 @@ import html as _html
 import re
 import logging
 import traceback
+from pathlib import Path
 from urllib.parse import quote as _url_quote
 import aiohttp
 import feedparser
 from typing import Optional
-from telegram import Bot, BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram import Bot, BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, LinkPreviewOptions, Update
 from telegram.error import Conflict
 from telegram.ext import (
     Application,
@@ -40,6 +41,8 @@ class MonitoringAlert:
         # Use the dedicated log bot for admin alerts so they don't appear in the public bot
         self._log_bot: Optional[Bot] = Bot(LOG_BOT_TOKEN) if LOG_BOT_TOKEN else None
         self._log_chat_id: str = LOG_BOT_ADMIN_CHAT_ID or admin_chat_id or ""
+        # Track video_ids already mirrored this session (avoid sending N copies for N subscribers)
+        self._mirrored_video_ids: set = set()
 
     async def send_alert(self, message: str, level: str = "INFO"):
         """Queue an alert to be sent to admin via the log bot."""
@@ -84,6 +87,52 @@ class MonitoringAlert:
             except Exception as e:
                 logger.error(f"Alert processing error: {e}")
                 await asyncio.sleep(5)
+
+    async def mirror_delivery(
+        self,
+        video_id: str,
+        video_title: str,
+        channel_id: str,
+        audio_path: Path,
+    ) -> None:
+        """Send a copy of a delivery to the admin log bot — once per video per session.
+
+        Lets the admin see every video sent to users (title, YouTube link, audio)
+        without receiving N duplicates when multiple subscribers get the same video.
+        """
+        if not self._log_bot or not self._log_chat_id:
+            return
+        if video_id in self._mirrored_video_ids:
+            return
+        self._mirrored_video_ids.add(video_id)
+
+        video_url = f"https://youtu.be/{video_id}"
+        title_esc = _html.escape(video_title)
+        channel_esc = _html.escape(channel_id)
+
+        # Text message with inline YouTube preview
+        preview = None
+        try:
+            preview = await self._log_bot.send_message(
+                chat_id=self._log_chat_id,
+                text=f"📤 <b>{title_esc}</b>\n<i>{channel_esc}</i>\n{video_url}",
+                parse_mode="HTML",
+                link_preview_options=LinkPreviewOptions(prefer_large_media=True),
+            )
+        except Exception as e:
+            logger.warning(f"Delivery mirror preview failed ({video_id}): {e}")
+
+        # Audio voice message (MP3 sent directly — no OGG conversion needed for admin)
+        try:
+            if audio_path.exists():
+                with open(audio_path, "rb") as f:
+                    await self._log_bot.send_voice(
+                        chat_id=self._log_chat_id,
+                        voice=f,
+                        reply_to_message_id=preview.message_id if preview else None,
+                    )
+        except Exception as e:
+            logger.warning(f"Delivery mirror audio failed ({video_id}): {e}")
 
     async def stop(self):
         """Stop the alert processor."""

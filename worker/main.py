@@ -726,6 +726,13 @@ async def delivery_loop(alert_system: MonitoringAlert):
                                         f"Could not mark delivery {d['delivery_id']} as sent "
                                         f"after 3 attempts — audio was already sent to user"
                                     )
+                        # Mirror to admin log bot (fire-and-forget, once per video)
+                        asyncio.create_task(alert_system.mirror_delivery(
+                            video_id=video_id,
+                            video_title=d["video_title"],
+                            channel_id=d["channel_id"],
+                            audio_path=audio_path,
+                        ))
                     else:
                         # send_audio_to_user returned False: Telegram permanently
                         # rejected the send (user blocked bot, invalid chat, etc.).
