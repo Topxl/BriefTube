@@ -3,7 +3,9 @@
 # BriefTube VPS — Script de setup initial
 # À exécuter UNE SEULE FOIS en tant que root sur un Hetzner Debian/Ubuntu vierge
 #
-# Usage : ssh root@VPS_IP "bash -s" < vps/setup.sh
+# Usage :
+#   scp vps/setup.sh root@VPS_IP:/tmp/setup.sh
+#   ssh -t root@VPS_IP "bash /tmp/setup.sh"
 # ─────────────────────────────────────────────────────────────────────────────
 
 set -e
@@ -32,8 +34,8 @@ apt install -y -q python3 python3-pip python3-venv git ffmpeg curl unzip
 
 # ─── 2. Infisical CLI ─────────────────────────────────────────────────────────
 info "Installation de Infisical CLI..."
-curl -1sLf 'https://dl.cloudsmith.io/public/infisical/infisical-cli/setup.deb.sh' | bash
-apt install -y infisical
+curl -1sLf 'https://artifacts-cli.infisical.com/setup.deb.sh' | bash
+apt-get update -q && apt install -y infisical
 
 # ─── 3. Utilisateur deploy ───────────────────────────────────────────────────
 info "Création de l'utilisateur ${DEPLOY_USER}..."
@@ -52,6 +54,11 @@ info "Génération de la clé SSH deploy..."
 if [ ! -f "/home/${DEPLOY_USER}/.ssh/deploy_key" ]; then
     sudo -u "${DEPLOY_USER}" ssh-keygen -t ed25519 -f "/home/${DEPLOY_USER}/.ssh/deploy_key" -N "" -C "brieftube-vps-deploy"
 fi
+
+# Autoriser GitHub Actions à se connecter en SSH avec cette clé
+cat "/home/${DEPLOY_USER}/.ssh/deploy_key.pub" >> "/home/${DEPLOY_USER}/.ssh/authorized_keys"
+chmod 600 "/home/${DEPLOY_USER}/.ssh/authorized_keys"
+chown "${DEPLOY_USER}:${DEPLOY_USER}" "/home/${DEPLOY_USER}/.ssh/authorized_keys"
 
 # Ajouter github.com aux known hosts pour éviter le prompt interactif
 sudo -u "${DEPLOY_USER}" ssh-keyscan -H github.com >> "/home/${DEPLOY_USER}/.ssh/known_hosts" 2>/dev/null
@@ -81,7 +88,7 @@ echo "  Clé      :"
 echo ""
 cat "/home/${DEPLOY_USER}/.ssh/deploy_key.pub"
 echo ""
-read -p "Appuie sur Entrée une fois la clé ajoutée sur GitHub..."
+read -p "Appuie sur Entrée une fois la clé ajoutée sur GitHub..." < /dev/tty
 
 info "Clonage du repo..."
 sudo -u "${DEPLOY_USER}" git clone "${REPO_URL}" "${APP_DIR}"
@@ -104,13 +111,14 @@ echo -e "${YELLOW}════════════════════�
 echo ""
 echo "Récupère tes credentials sur https://app.infisical.com → Machine Identities"
 echo ""
-read -p "INFISICAL_UNIVERSAL_AUTH_CLIENT_ID : " INFISICAL_CLIENT_ID
-read -p "INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET : " INFISICAL_CLIENT_SECRET
+read -p "INFISICAL_UNIVERSAL_AUTH_CLIENT_ID : " INFISICAL_CLIENT_ID < /dev/tty
+read -p "INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET : " INFISICAL_CLIENT_SECRET < /dev/tty
 
 # ─── 9. Services systemd ─────────────────────────────────────────────────────
 info "Installation des services systemd..."
 cp "${APP_DIR}/vps/brieftube-worker.service" /etc/systemd/system/brieftube-worker.service
 cp "${APP_DIR}/vps/brieftube-processor@.service" /etc/systemd/system/brieftube-processor@.service
+chmod +x "${APP_DIR}/vps/run-worker.sh"
 
 # Injecter les credentials Infisical dans le service
 sed -i "s|REMPLACER_ICI|${INFISICAL_CLIENT_ID}|1" /etc/systemd/system/brieftube-worker.service
@@ -145,7 +153,7 @@ echo "Upload le fichier cookies depuis ta machine locale :"
 echo ""
 echo "  scp worker/cookies/youtube.txt ${DEPLOY_USER}@VPS_IP:${APP_DIR}/worker/cookies/"
 echo ""
-read -p "Appuie sur Entrée une fois le fichier uploadé (ou S pour skipper)..." SKIP_COOKIES
+read -p "Appuie sur Entrée une fois le fichier uploadé (ou S pour skipper)..." SKIP_COOKIES < /dev/tty
 if [[ "${SKIP_COOKIES}" != "S" && "${SKIP_COOKIES}" != "s" ]]; then
     [ -f "${APP_DIR}/worker/cookies/youtube.txt" ] && info "Cookies trouvés ✓" || warning "Fichier cookies absent — le worker tournera sans (certaines vidéos pourraient échouer)"
 fi
