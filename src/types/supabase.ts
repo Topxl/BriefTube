@@ -14,6 +14,41 @@ export type Database = {
   };
   public: {
     Tables: {
+      cancellation_feedbacks: {
+        Row: {
+          created_at: string;
+          custom_message: string | null;
+          id: string;
+          offer_accepted: boolean;
+          reason: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          custom_message?: string | null;
+          id?: string;
+          offer_accepted?: boolean;
+          reason: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          custom_message?: string | null;
+          id?: string;
+          offer_accepted?: boolean;
+          reason?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "cancellation_feedbacks_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       channel_lists: {
         Row: {
           category: string | null;
@@ -52,56 +87,21 @@ export type Database = {
           },
         ];
       };
-      cancellation_feedbacks: {
-        Row: {
-          id: string;
-          user_id: string;
-          reason: string;
-          custom_message: string | null;
-          offer_accepted: boolean;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          reason: string;
-          custom_message?: string | null;
-          offer_accepted?: boolean;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          reason?: string;
-          custom_message?: string | null;
-          offer_accepted?: boolean;
-          created_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "cancellation_feedbacks_user_id_fkey";
-            columns: ["user_id"];
-            isOneToOne: false;
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
       deleted_accounts: {
         Row: {
-          id: string;
-          email: string;
           deleted_at: string;
+          email: string;
+          id: string;
         };
         Insert: {
-          id?: string;
-          email: string;
           deleted_at?: string;
+          email: string;
+          id?: string;
         };
         Update: {
-          id?: string;
-          email?: string;
           deleted_at?: string;
+          email?: string;
+          id?: string;
         };
         Relationships: [];
       };
@@ -139,6 +139,35 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "deliveries_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      email_logs: {
+        Row: {
+          email_type: string;
+          id: string;
+          sent_at: string;
+          user_id: string;
+        };
+        Insert: {
+          email_type: string;
+          id?: string;
+          sent_at?: string;
+          user_id: string;
+        };
+        Update: {
+          email_type?: string;
+          id?: string;
+          sent_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "email_logs_user_id_fkey";
             columns: ["user_id"];
             isOneToOne: false;
             referencedRelation: "profiles";
@@ -330,6 +359,7 @@ export type Database = {
           id: string;
           max_attempts: number | null;
           priority: number | null;
+          retry_after: string | null;
           started_at: string | null;
           status: string | null;
           tts_voice: string | null;
@@ -349,6 +379,7 @@ export type Database = {
           id?: string;
           max_attempts?: number | null;
           priority?: number | null;
+          retry_after?: string | null;
           started_at?: string | null;
           status?: string | null;
           tts_voice?: string | null;
@@ -368,6 +399,7 @@ export type Database = {
           id?: string;
           max_attempts?: number | null;
           priority?: number | null;
+          retry_after?: string | null;
           started_at?: string | null;
           status?: string | null;
           tts_voice?: string | null;
@@ -608,6 +640,39 @@ export type Database = {
         };
         Relationships: [];
       };
+      worker_stats: {
+        Row: {
+          date: string;
+          deliveries_failed: number;
+          deliveries_sent: number;
+          groq_cost: number;
+          groq_seconds: number;
+          updated_at: string;
+          videos_failed: number;
+          videos_processed: number;
+        };
+        Insert: {
+          date: string;
+          deliveries_failed?: number;
+          deliveries_sent?: number;
+          groq_cost?: number;
+          groq_seconds?: number;
+          updated_at?: string;
+          videos_failed?: number;
+          videos_processed?: number;
+        };
+        Update: {
+          date?: string;
+          deliveries_failed?: number;
+          deliveries_sent?: number;
+          groq_cost?: number;
+          groq_seconds?: number;
+          updated_at?: string;
+          videos_failed?: number;
+          videos_processed?: number;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       transcript_cost_analytics: {
@@ -636,6 +701,7 @@ export type Database = {
           id: string;
           max_attempts: number | null;
           priority: number | null;
+          retry_after: string | null;
           started_at: string | null;
           status: string | null;
           tts_voice: string | null;

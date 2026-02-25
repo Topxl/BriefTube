@@ -2,10 +2,13 @@
 
 ## 2026-02-26
 
+FEATURE: Trial expiry emails — séquence J-3/J-1/expired avec déduplication via email_logs, cron route protégée CRON_SECRET, bouton admin
 FEATURE: Posthog — product analytics integration (pageview, user identify, onboarding funnel, cancellation, subscription_activated via server-side posthog-node)
 
 CHORE: VPS — log bot migré du local vers le VPS (service brieftube-log-bot.service + run-log-bot.sh)
 CHORE: GitHub Actions — deploy-worker.yml redémarre aussi brieftube-log-bot à chaque déploiement
+CHORE: VPS README — documentation complète des services, commandes et architecture (worker + log-bot)
+CHORE: VPS setup.sh — installation du service brieftube-log-bot intégrée au script de setup initial
 
 ## 2026-02-25
 
