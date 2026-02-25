@@ -2,6 +2,10 @@
 
 ## 2026-02-25
 
+FEATURE: Worker — endpoint GET /logs sur le serveur HTTP du worker (port 8080), protégé par WORKER_API_SECRET, retourne les 60 dernières lignes de log + status systemd
+FEATURE: Admin panel — route /api/admin/worker appelle l'endpoint VPS distant si VPS_WORKER_URL est configuré (fallback local pour dev)
+CHORE: env.ts — ajout de VPS_WORKER_URL et WORKER_API_SECRET (optionnels)
+
 CHORE: VPS — documentation complète dans vps/README.md (setup Hetzner, Infisical, GitHub Actions, worker modes, commandes)
 FIX: VPS — setup.sh : nouveau dépôt Infisical (artifacts-cli.infisical.com), read interactifs via /dev/tty, authorized_keys pour GitHub Actions, usage scp+ssh -t
 CHORE: VPS — run-worker.sh : wrapper Universal Auth Infisical (login → token → run) remplace l'ancien infisical run inline
