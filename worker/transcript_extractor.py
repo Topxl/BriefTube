@@ -303,7 +303,18 @@ class TranscriptExtractor:
             return None, None, "transcripts_disabled", 0.0
 
         except VideoUnavailable:
-            logger.error(f"Video unavailable: {video_id}")
+            logger.warning(f"Video unavailable (may be live): {video_id}")
+            # youtube_transcript_api raises VideoUnavailable for live streams too.
+            # Run the same yt-dlp check used in the normal flow before giving up.
+            vtt_text, vtt_lang, vtt_error = self._ytdlp_subtitles(youtube_url, preferred_languages)
+            if vtt_text:
+                return vtt_text, vtt_lang, None, 0.0
+            if vtt_error == "video_is_live":
+                return None, None, "video_is_live", 0.0
+            if vtt_error and vtt_error.startswith("premiere_not_available_yet"):
+                return None, None, vtt_error, 0.0
+            if self.enable_whisper_fallback and self.whisper_transcriber:
+                return self._whisper_fallback(youtube_url, preferred_languages, video_title)
             return None, None, "video_unavailable", 0.0
 
         except Exception as e:
@@ -413,6 +424,7 @@ class TranscriptExtractor:
             elif any(kw in err.lower() for kw in (
                 "is a live stream", "currently broadcasting",
                 "is a live event", "live event",
+                "this is a live stream", "cannot download live",
             )):
                 logger.info("yt-dlp subtitle: live stream detected — snooze 2h")
                 return None, None, "video_is_live"
