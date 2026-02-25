@@ -139,7 +139,7 @@ systemctl enable brieftube-worker
 # ─── 10. Permissions sudo pour le deploy ─────────────────────────────────────
 info "Configuration des permissions sudo..."
 cat > /etc/sudoers.d/brieftube << EOF
-brieftube ALL=(ALL) NOPASSWD: /bin/systemctl restart brieftube-worker, /bin/systemctl status brieftube-worker --no-pager
+brieftube ALL=(ALL) NOPASSWD: /bin/systemctl restart brieftube-worker, /bin/systemctl status brieftube-worker --no-pager, /bin/systemctl daemon-reload
 EOF
 chmod 440 /etc/sudoers.d/brieftube
 
