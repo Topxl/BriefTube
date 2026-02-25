@@ -130,7 +130,7 @@ sed -i "s|REMPLACER_ICI|${INFISICAL_CLIENT_SECRET}|1" /etc/systemd/system/brieft
 mkdir -p /etc/systemd/system/brieftube-worker.service.d
 cat > /etc/systemd/system/brieftube-worker.service.d/override.conf << EOF
 [Service]
-Environment="MAX_CONCURRENT_VIDEOS=2"
+Environment="MAX_CONCURRENT_VIDEOS=3"
 EOF
 
 systemctl daemon-reload

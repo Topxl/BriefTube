@@ -30,6 +30,7 @@ jobs:
             worker/venv/bin/pip install -r worker/requirements.txt -q
 
             echo "→ Restarting worker..."
+            sudo systemctl daemon-reload
             sudo systemctl restart brieftube-worker
             sleep 2
 
