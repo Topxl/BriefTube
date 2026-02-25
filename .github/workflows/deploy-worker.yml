@@ -29,10 +29,12 @@ jobs:
             echo "→ Updating dependencies..."
             worker/venv/bin/pip install -r worker/requirements.txt -q
 
-            echo "→ Restarting worker..."
+            echo "→ Restarting services..."
             sudo systemctl daemon-reload
             sudo systemctl restart brieftube-worker
+            sudo systemctl restart brieftube-log-bot
             sleep 2
 
             echo "→ Status:"
             sudo systemctl status brieftube-worker --no-pager
+            sudo systemctl status brieftube-log-bot --no-pager

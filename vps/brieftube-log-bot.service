@@ -1,0 +1,19 @@
+[Unit]
+Description=BriefTube Log Bot (admin monitoring via Telegram)
+After=network.target
+
+[Service]
+Type=simple
+User=brieftube
+WorkingDirectory=/home/brieftube/app/worker
+Environment=PYTHONUNBUFFERED=1
+Environment=INFISICAL_UNIVERSAL_AUTH_CLIENT_ID=REMPLACER_ICI
+Environment=INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET=REMPLACER_ICI
+ExecStart=/home/brieftube/app/vps/run-log-bot.sh
+Restart=on-failure
+RestartSec=10
+StandardOutput=append:/home/brieftube/app/worker/log_bot.log
+StandardError=append:/home/brieftube/app/worker/log_bot.log
+
+[Install]
+WantedBy=multi-user.target

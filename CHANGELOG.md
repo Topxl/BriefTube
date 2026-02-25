@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-02-26
+
+CHORE: VPS — log bot migré du local vers le VPS (service brieftube-log-bot.service + run-log-bot.sh)
+CHORE: GitHub Actions — deploy-worker.yml redémarre aussi brieftube-log-bot à chaque déploiement
+
 ## 2026-02-25
 
 FEATURE: Groq Flex service tier — whisper_transcriber utilise service_tier="flex" (10x quota : 288 000 sec/jour) avec retry automatique sur 498 capacity_exceeded (30s→60s→120s backoff)
