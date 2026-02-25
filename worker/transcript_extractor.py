@@ -42,25 +42,32 @@ _MUSIC_TITLE_RE = re.compile(
 )
 
 # Patterns that indicate a video is a premiere / scheduled live stream not yet started.
+# Covers both "premiere will begin in X hours" AND "Premieres in X hours" (yt-dlp verb form).
 _PREMIERE_RE = re.compile(
     r"live event will begin"
     r"|premiere will begin"
     r"|this event will begin"
     r"|scheduled to begin"
-    r"|upcoming premiere",
+    r"|upcoming premiere"
+    r"|premieres? in \d+",  # "Premieres in 5 hours" / "Premiere in 2 days"
     re.IGNORECASE,
 )
 
 
 def _hours_until_premiere(err: str) -> int:
-    """Parse 'will begin in X days/hours/minutes' from yt-dlp error. Default 2h."""
-    m = re.search(r"begin in (\d+) days?", err, re.IGNORECASE)
+    """Parse premiere delay from yt-dlp error message. Default 2h.
+
+    Handles both:
+    - "will begin in X days/hours/minutes" (scheduled live)
+    - "Premieres in X days/hours/minutes"  (premiere video)
+    """
+    m = re.search(r"(?:begin|premieres?) in (\d+) days?", err, re.IGNORECASE)
     if m:
         return max(1, int(m.group(1)) * 24)
-    m = re.search(r"begin in (\d+) hours?", err, re.IGNORECASE)
+    m = re.search(r"(?:begin|premieres?) in (\d+) hours?", err, re.IGNORECASE)
     if m:
         return max(1, int(m.group(1)))
-    m = re.search(r"begin in (\d+) minutes?", err, re.IGNORECASE)
+    m = re.search(r"(?:begin|premieres?) in (\d+) minutes?", err, re.IGNORECASE)
     if m:
         return max(1, (int(m.group(1)) + 59) // 60)
     return 2  # safe default

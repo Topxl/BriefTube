@@ -1,0 +1,35 @@
+name: Deploy Worker
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "worker/**"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: brieftube
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -e
+            cd /home/brieftube/app
+
+            echo "→ Pulling latest code..."
+            git pull origin main
+
+            echo "→ Updating dependencies..."
+            worker/venv/bin/pip install -r worker/requirements.txt -q
+
+            echo "→ Restarting worker..."
+            sudo systemctl restart brieftube-worker
+            sleep 2
+
+            echo "→ Status:"
+            sudo systemctl status brieftube-worker --no-pager
