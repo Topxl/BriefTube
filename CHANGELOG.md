@@ -2,6 +2,7 @@
 
 ## 2026-02-25
 
+FIX: transcript_extractor — VideoUnavailable exception handler passe maintenant par _ytdlp_subtitles avant de déclarer la vidéo indisponible, évite les fausses notifications "could not be processed" pour les lives en cours
 FEATURE: Détection musique/ambient en 2 couches — titre (regex haute précision, zéro appel API) dans rss_scanner + catégorie YouTube "Music" (via yt-dlp pre-check) dans whisper_transcriber — évite de gaspiller le quota Groq Whisper sur du contenu non parlé
 FEATURE: Log bot — menu slash commands enregistré via setMyCommands (/start, /status, /stats, /watch)
 FIX: Log bot — bouton "Alertes live" affiche maintenant ON/OFF selon l'état actif
