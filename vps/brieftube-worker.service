@@ -9,11 +9,7 @@ WorkingDirectory=/home/brieftube/app/worker
 Environment=PYTHONUNBUFFERED=1
 Environment=INFISICAL_UNIVERSAL_AUTH_CLIENT_ID=REMPLACER_ICI
 Environment=INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET=REMPLACER_ICI
-ExecStart=infisical run \
-  --projectId=089a5c93-5c51-4a24-8bf0-9d8bceb3a114 \
-  --env=prod \
-  --path=/worker \
-  -- /home/brieftube/app/worker/venv/bin/python main.py
+ExecStart=/home/brieftube/app/vps/run-worker.sh
 Restart=on-failure
 RestartSec=10
 StandardOutput=append:/home/brieftube/app/worker/worker.log
