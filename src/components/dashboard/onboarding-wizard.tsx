@@ -16,6 +16,7 @@ import type { Language } from "@/lib/languages";
 import { ListPicker } from "@/components/lists/list-picker";
 import type { ListPickerItem } from "@/components/lists/list-picker";
 import { completeOnboarding } from "@app/onboarding/actions";
+import { capture } from "@/lib/posthog/client";
 
 type Subscription = Tables<"subscriptions">;
 
@@ -143,6 +144,7 @@ export function OnboardingWizard({
 
   useEffect(() => {
     if (telegramConnected) {
+      capture("telegram_connected");
       toast.success("Telegram linked!");
       const timer = setTimeout(() => void complete(), 4000);
       return () => clearTimeout(timer);
@@ -151,6 +153,7 @@ export function OnboardingWizard({
 
   const followListAndAdvance = async () => {
     if (selectedListIds.length === 0) {
+      capture("onboarding_step_completed", { step: 1, method: "skipped" });
       setStep(2);
       return;
     }
@@ -166,6 +169,11 @@ export function OnboardingWizard({
         if (data.subscribed > 0) {
           toast.success(`${data.subscribed} channels added!`);
         }
+        capture("onboarding_step_completed", {
+          step: 1,
+          method: "curated_list",
+          channels_count: data.subscribed,
+        });
       }
     } catch {
       toast.error("Failed to subscribe. Please try again.");
@@ -217,6 +225,10 @@ export function OnboardingWizard({
 
   const complete = async () => {
     setCompleting(true);
+    capture("onboarding_completed", {
+      telegram_connected: telegramConnected,
+      channels_count: sources.length,
+    });
     try {
       await completeOnboarding();
     } finally {
@@ -439,7 +451,10 @@ export function OnboardingWizard({
               Back
             </button>
             <Button
-              onClick={() => setStep(3)}
+              onClick={() => {
+                capture("onboarding_step_completed", { step: 2, voice });
+                setStep(3);
+              }}
               className="bg-red-600 hover:bg-red-500"
             >
               Continue
