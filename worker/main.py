@@ -21,7 +21,7 @@ from pathlib import Path
 import aiohttp
 import psutil
 
-from config import RSS_CHECK_INTERVAL, TELEGRAM_BOT_TOKEN, SUPABASE_URL, ADMIN_TELEGRAM_CHAT_ID, MAX_CONCURRENT_VIDEOS, MAX_CPU_PERCENT, CPU_CHECK_INTERVAL
+from config import RSS_CHECK_INTERVAL, TELEGRAM_BOT_TOKEN, SUPABASE_URL, ADMIN_TELEGRAM_CHAT_ID, MAX_CONCURRENT_VIDEOS, MAX_CPU_PERCENT, CPU_CHECK_INTERVAL, HEALTH_PORT, WORKER_INSTANCE, APP_URL
 from transcript_extractor import TranscriptExtractor
 from gemini_api import GeminiSummarizer
 from text_cleaner import clean_for_tts
@@ -111,6 +111,28 @@ def _enforce_single_instance() -> None:
     logger.info(f"Single-instance lock acquired (PID {os.getpid()}, file: {PID_FILE})")
 logging.getLogger("httpcore").setLevel(logging.WARNING)
 
+
+# ── Null alert system for processor-only mode ──────────────────
+
+class _NullAlert:
+    """No-op MonitoringAlert used in processor mode (no Telegram bot available).
+
+    Processor instances don't need to send admin alerts or user notifications
+    directly — the primary 'full' instance handles those. This class lets
+    processor_loop and _process_video call alert_system.* without branching.
+    """
+    bot_app = None  # Signals _notify_video_failure to skip user notifications
+
+    async def send_alert(self, message: str, level: str = "INFO") -> None:
+        pass  # Silent — no bot to send to
+
+    async def process_alerts(self) -> None:
+        pass
+
+    async def stop(self) -> None:
+        pass
+
+
 # ── Constants ──────────────────────────────────────────────────
 
 VIDEO_TIMEOUT = 1200  # 20 minutes max per video (Whisper fallback on long videos needs more time)
@@ -175,8 +197,10 @@ def _resolve_tts_voice(voice: str | None, language: str) -> str | None:
 
 # ── Video failure notification ────────────────────────────────
 
-async def _notify_video_failure(video_id: str, alert_system: MonitoringAlert) -> None:
+async def _notify_video_failure(video_id: str, alert_system) -> None:
     """Notify all affected Telegram users that a video permanently failed."""
+    if getattr(alert_system, "bot_app", None) is None:
+        return  # Processor-only mode — primary worker handles user notifications
     try:
         chat_ids = await asyncio.to_thread(db.get_telegram_chat_ids_for_video, video_id)
     except Exception as e:
@@ -307,7 +331,7 @@ async def _process_video(
 
         if not transcript:
             # Music/ambient videos — silently discard, no alert
-            _MUSIC_SKIP_ERRORS = ("likely_music_no_speech", "audio_too_large_for_speech")
+            _MUSIC_SKIP_ERRORS = ("likely_music_no_speech", "audio_too_large_for_speech", "audio_unsupported_format")
             if error in _MUSIC_SKIP_ERRORS:
                 logger.info(
                     f"[{video_id}] Skipping permanently ({error}): {video_title[:80]}"
@@ -406,6 +430,21 @@ async def _process_video(
         )
         db.complete_job(job["id"])
 
+        # Chain: re-queue for the next pending language (e.g. "en" after "fr").
+        # Each language is processed sequentially, reusing the same job slot.
+        next_lang = await asyncio.to_thread(
+            db.get_next_pending_language_for_video, video_id, user_language
+        )
+        if next_lang:
+            re_queued = await asyncio.to_thread(
+                db.enqueue_video_for_language,
+                video_id, youtube_url, video_title,
+                job.get("channel_id", ""), next_lang,
+                None,  # tts_voice resolved at processing time by _resolve_tts_voice
+            )
+            if re_queued:
+                logger.info(f"[{video_id}] Queued for next language: {next_lang}")
+
         processing_time = (datetime.now() - start_time).total_seconds()
         stats.record_video_processed(processing_time)
 
@@ -470,7 +509,13 @@ async def _wait_for_cpu_headroom() -> None:
 
 async def websub_loop(alert_system: MonitoringAlert):
     """Subscribe all channels to WebSub and renew expiring subscriptions every hour."""
-    logger.info("WebSub manager started")
+    callback_url = websub_manager.CALLBACK_URL
+    if "localhost" in APP_URL or "127.0.0.1" in APP_URL:
+        logger.warning(
+            f"[WebSub] APP_URL looks local ({APP_URL}) — YouTube cannot reach the callback. "
+            "Set APP_URL to the public Next.js URL (e.g. https://www.brief-tube.com)."
+        )
+    logger.info(f"WebSub manager started — callback: {callback_url}")
 
     while True:
         try:
@@ -827,13 +872,14 @@ async def health_loop():
             "groq_quota_pct": round(stats.groq_quota_pct, 1),
         })
 
+    port = HEALTH_PORT + WORKER_INSTANCE  # Instance 0→8080, 1→8081, 2→8082, …
     app = web.Application()
     app.router.add_get("/health", handle)
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, "0.0.0.0", 8080)
+    site = web.TCPSite(runner, "0.0.0.0", port)
     await site.start()
-    logger.info("Health check server started on :8080/health")
+    logger.info(f"Health check server started on :{port}/health")
     await asyncio.Event().wait()  # Keep running forever alongside other loops
 
 
@@ -1001,5 +1047,51 @@ async def main():
         await bot_app.shutdown()
 
 
+async def processor_main():
+    """Processor-only mode: picks and processes jobs from the shared queue.
+
+    Designed to run as N parallel instances on the same machine or across
+    different VPS nodes. Each instance claims jobs atomically via PostgreSQL
+    FOR UPDATE SKIP LOCKED — no job is ever processed twice.
+
+    Start instance 0 : WORKER_MODE=processor WORKER_INSTANCE=0
+    Start instance 1 : WORKER_MODE=processor WORKER_INSTANCE=1
+    (Each gets its own health check port: 8080+N)
+    """
+    label = f"Processor#{WORKER_INSTANCE}"
+    logger.info("=" * 50)
+    logger.info(f"BriefTube {label} starting...")
+    logger.info("=" * 50)
+
+    # Crash recovery: reset jobs this instance may have left stuck in 'processing'.
+    try:
+        n = db.reset_stuck_processing_jobs(timeout_seconds=VIDEO_TIMEOUT + 100)
+        if n:
+            logger.warning(f"[{label}] Crash recovery: reset {n} stuck 'processing' jobs → 'queued'")
+    except Exception as e:
+        logger.warning(f"[{label}] Could not reset stuck processing jobs: {e}")
+
+    try:
+        os.nice(10)
+    except OSError:
+        pass
+
+    logger.info(f"[{label}] CPU throttle: pause when CPU > {MAX_CPU_PERCENT}%")
+    logger.info(f"[{label}] Concurrent slots: {MAX_CONCURRENT_VIDEOS}")
+
+    # No Telegram bot, no scanner, no deliverer — null alert system is sufficient.
+    alert_system = _NullAlert()
+
+    await asyncio.gather(
+        processor_loop(alert_system),
+        health_loop(),
+    )
+
+
 if __name__ == "__main__":
-    asyncio.run(main())
+    import sys
+    worker_mode = os.getenv("WORKER_MODE", "full")
+    if worker_mode == "processor":
+        asyncio.run(processor_main())
+    else:
+        asyncio.run(main())

@@ -2,8 +2,14 @@
 
 ## 2026-02-25
 
+FEATURE: Worker — mode WORKER_MODE=processor pour instances parallèles (scale horizontal) : _NullAlert, processor_main(), HEALTH_PORT+WORKER_INSTANCE, WORKER_MODE env var ; template systemd brieftube-processor@.service
+CHORE: Worker — WebSub : log URL callback au démarrage + warning si APP_URL local
+CHORE: VPS — ajout du workflow GitHub Actions deploy-worker.yml (auto-deploy sur push main/worker/**) + script setup.sh + template systemd pour Hetzner
+CHORE: Worker — CPU optimization: replace libmp3lame (MP3 64kbps) with libopus in yt-dlp audio download (2-3x faster encoding); reduce MAX_CONCURRENT_VIDEOS from 3 to 2 via systemd drop-in override
 FIX: Worker — multi-language bug: when a channel had FR + EN subscribers, only FR was processed (enqueue_video created 1 job); EN rows stayed "pending" indefinitely; fix: after completing language X, worker now detects other pending languages and re-queues the same job slot for the next language (chain processing)
 FIX: Worker — DB repair: 56 orphaned "pending" EN jobs re-queued via migration requeue_multilang_orphaned_pending_videos
+FIX: Worker — "Premieres in X hours" yt-dlp error not matched by _PREMIERE_RE (pattern only covered "premiere will begin", not verb form); added "premieres? in \d+" to _PREMIERE_RE and updated _hours_until_premiere to parse "Premieres in X hours/days/minutes" in both transcript_extractor.py and whisper_transcriber.py
+FIX: Worker — DB repair: sync processed_videos.status for permanently failed jobs (reset_stuck_processing_jobs could set job to "failed" without calling mark_video_failed); migrations sync_failed_status_pending_videos + sync_failed_status_language_mismatch
 
 FIX: Account deletion — cancel Stripe subscriptions via customer ID fallback when stripe_subscription_id is missing (prevents orphaned active subscriptions)
 FEATURE: Google Ads — fire conversion event on Pro activation (gtag trackAdConversion via NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_LABEL); clear ?success=true from URL after success to prevent re-firing

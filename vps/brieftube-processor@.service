@@ -1,0 +1,42 @@
+# Processor instance template — run N copies in parallel for horizontal scaling.
+#
+# Usage:
+#   systemctl enable --now brieftube-processor@1
+#   systemctl enable --now brieftube-processor@2
+#   systemctl enable --now brieftube-processor@3
+#
+# Each instance picks jobs from the shared processing_queue atomically
+# (PostgreSQL FOR UPDATE SKIP LOCKED — no job is ever processed twice).
+#
+# Health check ports: instance 1 → :8081, instance 2 → :8082, etc.
+# (Main full worker keeps :8080)
+
+[Unit]
+Description=BriefTube Processor instance %i
+After=network.target
+# Ensure the main worker is running before any processor starts
+After=brieftube-worker.service
+
+[Service]
+Type=simple
+User=brieftube
+WorkingDirectory=/home/brieftube/app/worker
+Environment=PYTHONUNBUFFERED=1
+Environment=WORKER_MODE=processor
+Environment=WORKER_INSTANCE=%i
+Environment=MAX_CONCURRENT_VIDEOS=4
+Environment=MAX_CPU_PERCENT=90
+Environment=INFISICAL_UNIVERSAL_AUTH_CLIENT_ID=REMPLACER_ICI
+Environment=INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET=REMPLACER_ICI
+ExecStart=infisical run \
+  --projectId=089a5c93-5c51-4a24-8bf0-9d8bceb3a114 \
+  --env=prod \
+  --path=/worker \
+  -- /home/brieftube/app/worker/venv/bin/python main.py
+Restart=on-failure
+RestartSec=10
+StandardOutput=append:/home/brieftube/app/worker/worker.log
+StandardError=append:/home/brieftube/app/worker/worker.log
+
+[Install]
+WantedBy=multi-user.target

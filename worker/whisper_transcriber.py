@@ -23,18 +23,26 @@ from groq import Groq
 
 _PREMIERE_RE = re.compile(
     r"live event will begin|premiere will begin|this event will begin"
-    r"|scheduled to begin|upcoming premiere",
+    r"|scheduled to begin|upcoming premiere"
+    r"|premieres? in \d+",  # "Premieres in 5 hours" / "Premiere in 2 days"
     re.IGNORECASE,
 )
 
+
 def _hours_until_premiere(err: str) -> int:
-    m = re.search(r"begin in (\d+) days?", err, re.IGNORECASE)
+    """Parse premiere delay from yt-dlp error message. Default 2h.
+
+    Handles both:
+    - "will begin in X days/hours/minutes" (scheduled live)
+    - "Premieres in X days/hours/minutes"  (premiere video)
+    """
+    m = re.search(r"(?:begin|premieres?) in (\d+) days?", err, re.IGNORECASE)
     if m:
         return max(1, int(m.group(1)) * 24)
-    m = re.search(r"begin in (\d+) hours?", err, re.IGNORECASE)
+    m = re.search(r"(?:begin|premieres?) in (\d+) hours?", err, re.IGNORECASE)
     if m:
         return max(1, int(m.group(1)))
-    m = re.search(r"begin in (\d+) minutes?", err, re.IGNORECASE)
+    m = re.search(r"(?:begin|premieres?) in (\d+) minutes?", err, re.IGNORECASE)
     if m:
         return max(1, (int(m.group(1)) + 59) // 60)
     return 2
@@ -94,29 +102,31 @@ class WhisperTranscriber:
             # 64kbps is more than sufficient for Whisper speech recognition and
             # keeps file size well under Groq's 25 MB limit (~54 min max at 64kbps).
             # 192kbps would exceed the limit for any video longer than ~15 min.
+            # max_filesize: abort if raw audio exceeds 150 MB (≈ ~5h at 64kbps)
+            # before postprocessing — prevents infinite HLS live downloads.
             ydl_opts = {
                 'format': 'bestaudio/best',
                 'postprocessors': [{
                     'key': 'FFmpegExtractAudio',
-                    'preferredcodec': 'mp3',
-                    'preferredquality': '64',
+                    'preferredcodec': 'opus',  # libopus: 2-3x faster than libmp3lame
                 }],
-                'outtmpl': str(output_path.with_suffix('')),  # yt-dlp adds .mp3
+                'outtmpl': str(output_path.with_suffix('')),  # yt-dlp adds .opus
                 'quiet': True,
                 'no_warnings': True,
                 'noprogress': True,
                 'nocheckcertificate': True,
+                'max_filesize': 150 * 1024 * 1024,  # 150 MB hard cap
             }
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([youtube_url])
 
             # Check if file was created
-            mp3_path = output_path.with_suffix('.mp3')
-            if mp3_path.exists():
+            opus_path = output_path.with_suffix('.opus')
+            if opus_path.exists():
                 return True
 
-            logger.error(f"Audio file not created: {mp3_path}")
+            logger.error(f"Audio file not created: {opus_path}")
             return False
 
         except Exception as e:
@@ -131,6 +141,9 @@ class WhisperTranscriber:
             )):
                 logger.info("Audio download: live stream detected — no audio to download")
                 return "live"
+            if "error opening output files" in err.lower() or "invalid argument" in err.lower():
+                logger.warning("Audio download: ffmpeg output error (live stream or unsupported format) — skipping permanently")
+                return "unsupported"
             logger.error(f"Error downloading audio: {e}")
             return False
 
@@ -172,14 +185,14 @@ class WhisperTranscriber:
         chunks: list[Path] = []
         for i in range(num_chunks):
             start = i * chunk_duration
-            chunk_path = temp_dir / f"chunk_{i:03d}.mp3"
+            chunk_path = temp_dir / f"chunk_{i:03d}.opus"
             subprocess.run(
                 [
                     "ffmpeg", "-y",
                     "-ss", str(start),
                     "-t", str(chunk_duration),
                     "-i", str(audio_file),
-                    "-c", "copy",  # stream copy — no re-encoding, keeps 64kbps
+                    "-c", "copy",  # stream copy — no re-encoding
                     str(chunk_path),
                 ],
                 capture_output=True,
@@ -235,15 +248,17 @@ class WhisperTranscriber:
                 return None, None, f"premiere_not_available_yet:{hours}", 0.0
             if dl_result == "live":
                 return None, None, "video_is_live", 0.0
+            if dl_result == "unsupported":
+                return None, None, "audio_unsupported_format", 0.0
             if not dl_result:
                 return None, None, "audio_download_failed", 0.0
 
-            audio_file = audio_path.with_suffix(".mp3")
+            audio_file = audio_path.with_suffix(".opus")
             file_size_mb = audio_file.stat().st_size / (1024 * 1024)
             logger.info(f"Audio downloaded: {file_size_mb:.2f} MB")
 
             # Reject files that are too large — likely music/ambient (8h+)
-            # At 64kbps: 80 MB ≈ 2.8h, beyond that it's almost certainly not speech
+            # Opus at ~48kbps: 80 MB ≈ ~3.7h, beyond that it's almost certainly not speech
             _MAX_AUDIO_MB = 80
             if file_size_mb > _MAX_AUDIO_MB:
                 logger.warning(

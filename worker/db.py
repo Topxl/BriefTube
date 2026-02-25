@@ -833,6 +833,28 @@ def get_available_languages_for_video(video_id: str) -> list[str]:
     return [row["language"] for row in res.data]
 
 
+def get_next_pending_language_for_video(video_id: str, processed_language: str) -> str | None:
+    """Return the first other pending language for this video.
+
+    Used to chain multi-language processing: after language X completes,
+    find the next language that still needs processing for the same video.
+    Returns the language code, or None if no other languages are pending.
+    """
+    sb = get_client()
+    res = (
+        sb.table("processed_videos")
+        .select("language")
+        .eq("video_id", video_id)
+        .eq("status", "pending")
+        .neq("language", processed_language)
+        .limit(1)
+        .execute()
+    )
+    if not res.data:
+        return None
+    return res.data[0]["language"]
+
+
 def get_any_processed_video(video_id: str) -> dict | None:
     """Fetch basic info for a video from any language row (for re-queuing in a new language)."""
     sb = get_client()

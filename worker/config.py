@@ -44,6 +44,17 @@ RSS_CHECK_INTERVAL = int(os.getenv("RSS_CHECK_INTERVAL", "1800"))  # 30 minutes 
 # Concurrent video processing (how many videos to process simultaneously)
 MAX_CONCURRENT_VIDEOS = int(os.getenv("MAX_CONCURRENT_VIDEOS", "3"))
 
+# Worker mode — "full" (scanner + processor + deliverer) or "processor" (processor only)
+# Multiple "processor" instances can run in parallel on the same machine or different VPS.
+WORKER_MODE = os.getenv("WORKER_MODE", "full")
+
+# Instance ID for multi-processor deployments — used to offset the health check port.
+# Instance 0 uses HEALTH_PORT, instance 1 uses HEALTH_PORT+1, etc.
+WORKER_INSTANCE = int(os.getenv("WORKER_INSTANCE", "0"))
+
+# Health check HTTP port (default 8080; processor instances use 8081, 8082, …)
+HEALTH_PORT = int(os.getenv("HEALTH_PORT", "8080"))
+
 # CPU throttling — worker pauses before starting a new video job when system
 # CPU usage (all cores, 1-second sample) is above this threshold.
 # Set to 100 to disable. Recommended: 60-75 on a personal machine.
