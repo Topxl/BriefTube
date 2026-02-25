@@ -97,6 +97,10 @@ class WhisperTranscriber:
                     if live_status in ("is_live", "is_upcoming") or pre_info.get("is_live"):
                         logger.info(f"Audio pre-check: live stream detected (live_status={live_status}) — skip download")
                         return "live"
+                    categories = pre_info.get("categories") or []
+                    if "Music" in categories:
+                        logger.info("Audio pre-check: YouTube category=Music — skip Whisper")
+                        return "music"
             except Exception as pre_e:
                 pre_err = str(pre_e)
                 if _PREMIERE_RE.search(pre_err):
@@ -259,6 +263,8 @@ class WhisperTranscriber:
                 return None, None, f"premiere_not_available_yet:{hours}", 0.0
             if dl_result == "live":
                 return None, None, "video_is_live", 0.0
+            if dl_result == "music":
+                return None, None, "music_content", 0.0
             if dl_result == "unsupported":
                 return None, None, "audio_unsupported_format", 0.0
             if not dl_result:
