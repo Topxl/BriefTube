@@ -63,6 +63,10 @@ MAX_CPU_PERCENT = int(os.getenv("MAX_CPU_PERCENT", "75"))
 # How long (seconds) to wait between CPU checks when throttling
 CPU_CHECK_INTERVAL = float(os.getenv("CPU_CHECK_INTERVAL", "5.0"))
 
+# Worker HTTP API — secret token protecting the /logs endpoint (admin panel remote access)
+# Must match WORKER_API_SECRET in the Next.js env and in Infisical /worker secrets.
+WORKER_API_SECRET = os.getenv("WORKER_API_SECRET", "")
+
 # App
 APP_URL = os.getenv("APP_URL", "https://brief-tube.com")
 

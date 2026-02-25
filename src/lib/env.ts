@@ -19,6 +19,9 @@ export const env = createEnv({
     YOUTUBE_API_KEY: z.string().optional(),
     GEMINI_API_KEY: z.string().optional(),
     WEBSUB_SECRET: z.string().optional(),
+    // VPS worker remote API (admin panel logs)
+    VPS_WORKER_URL: z.string().url().optional(),
+    WORKER_API_SECRET: z.string().optional(),
     NODE_ENV: z.enum(["development", "production", "test"]),
     CI: z.coerce.boolean().optional(),
   },

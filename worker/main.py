@@ -21,7 +21,7 @@ from pathlib import Path
 import aiohttp
 import psutil
 
-from config import RSS_CHECK_INTERVAL, TELEGRAM_BOT_TOKEN, SUPABASE_URL, ADMIN_TELEGRAM_CHAT_ID, MAX_CONCURRENT_VIDEOS, MAX_CPU_PERCENT, CPU_CHECK_INTERVAL, HEALTH_PORT, WORKER_INSTANCE, APP_URL
+from config import RSS_CHECK_INTERVAL, TELEGRAM_BOT_TOKEN, SUPABASE_URL, ADMIN_TELEGRAM_CHAT_ID, MAX_CONCURRENT_VIDEOS, MAX_CPU_PERCENT, CPU_CHECK_INTERVAL, HEALTH_PORT, WORKER_INSTANCE, APP_URL, WORKER_API_SECRET
 from transcript_extractor import TranscriptExtractor
 from gemini_api import GeminiSummarizer
 from text_cleaner import clean_for_tts
@@ -856,14 +856,14 @@ async def _bot_poll_loop(bot_app) -> None:
 # ── Loop : Health Check HTTP ───────────────────────────────────
 
 async def health_loop():
-    """Minimal HTTP server for uptime monitoring.
+    """Minimal HTTP server for uptime monitoring and admin panel.
 
     GET /health → {"status": "ok", "uptime": "...", ...}
-    Useful for external uptime monitors (UptimeRobot, etc.).
+    GET /logs?token=SECRET → last 60 log lines + systemd status (admin panel)
     """
     from aiohttp import web
 
-    async def handle(request):
+    async def handle_health(request):
         return web.json_response({
             "status": "ok",
             "uptime": stats.get_uptime(),
@@ -872,14 +872,75 @@ async def health_loop():
             "groq_quota_pct": round(stats.groq_quota_pct, 1),
         })
 
+    async def handle_logs(request):
+        # Token auth
+        token = request.rel_url.query.get("token", "")
+        if WORKER_API_SECRET and token != WORKER_API_SECRET:
+            return web.json_response({"error": "Unauthorized"}, status=401)
+
+        # Read log file
+        log_lines: list = []
+        recent_errors: list = []
+        error_count = 0
+        try:
+            content = LOG_FILE.read_text(encoding="utf-8", errors="replace")
+            all_lines = [l for l in content.split("\n") if l]
+            deduped = [l for i, l in enumerate(all_lines) if i == 0 or l != all_lines[i - 1]]
+            log_lines = deduped[-60:]
+            last_200 = deduped[-200:]
+            error_count = sum(1 for l in last_200 if "] ERROR" in l or "] CRITICAL" in l)
+            recent_errors = [
+                l for l in last_200
+                if "] ERROR" in l or "] CRITICAL" in l or "] WARNING" in l
+            ][-10:]
+        except Exception:
+            log_lines = ["Log file not accessible"]
+
+        # Systemd status
+        worker_status: dict = {
+            "active": False, "status": "unknown",
+            "pid": None, "memory": None, "cpu": None, "since": None,
+        }
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                "systemctl", "status", "brieftube-worker", "--no-pager",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
+            )
+            stdout_bytes, _ = await asyncio.wait_for(proc.communicate(), timeout=5)
+            stdout = stdout_bytes.decode(errors="replace")
+            active_match = re.search(r"Active: (.+)", stdout)
+            pid_match = re.search(r"Main PID: (\d+)", stdout)
+            mem_match = re.search(r"Memory: ([^\n(]+)", stdout)
+            cpu_match = re.search(r"CPU: ([^\n]+)", stdout)
+            since_match = re.search(r"since [A-Za-z]+ (.+?);", stdout)
+            active_str = active_match.group(1) if active_match else ""
+            worker_status["active"] = "active (running)" in active_str
+            worker_status["status"] = active_str.strip().split(";")[0].strip() or "unknown"
+            worker_status["pid"] = pid_match.group(1) if pid_match else None
+            worker_status["memory"] = mem_match.group(1).strip() if mem_match else None
+            worker_status["cpu"] = cpu_match.group(1).strip() if cpu_match else None
+            worker_status["since"] = since_match.group(1).strip() if since_match else None
+        except Exception:
+            worker_status["status"] = "error reading status"
+
+        return web.json_response({
+            "workerStatus": worker_status,
+            "logLines": log_lines,
+            "recentErrors": recent_errors,
+            "errorCount": error_count,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        })
+
     port = HEALTH_PORT + WORKER_INSTANCE  # Instance 0→8080, 1→8081, 2→8082, …
     app = web.Application()
-    app.router.add_get("/health", handle)
+    app.router.add_get("/health", handle_health)
+    app.router.add_get("/logs", handle_logs)
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, "0.0.0.0", port)
     await site.start()
-    logger.info(f"Health check server started on :{port}/health")
+    logger.info(f"Health check server started on :{port}/health and :{port}/logs")
     await asyncio.Event().wait()  # Keep running forever alongside other loops
 
 

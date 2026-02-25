@@ -5,6 +5,7 @@ import { exec } from "child_process";
 import { promisify } from "util";
 import { readFile } from "fs/promises";
 import path from "path";
+import { env } from "@/lib/env";
 
 const execAsync = promisify(exec);
 const ADMIN_USER_ID = "67320a39-948c-44d2-98e3-c0de49af1ec6";
@@ -29,7 +30,27 @@ export async function GET() {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // --- Systemd status ---
+  // --- VPS remote endpoint (preferred) ---
+  if (env.VPS_WORKER_URL) {
+    const url = `${env.VPS_WORKER_URL}/logs${env.WORKER_API_SECRET ? `?token=${env.WORKER_API_SECRET}` : ""}`;
+    try {
+      const res = await fetch(url, {
+        signal: AbortSignal.timeout(8000),
+        cache: "no-store",
+      });
+      if (!res.ok) throw new Error(`VPS returned ${res.status}`);
+      const data = await res.json();
+      return NextResponse.json(data);
+    } catch (e) {
+      return NextResponse.json(
+        { error: `Cannot reach VPS worker: ${String(e)}` },
+        { status: 502 },
+      );
+    }
+  }
+
+  // --- Fallback: local filesystem + systemctl (dev / single-machine deploy) ---
+
   type WorkerStatus = {
     active: boolean;
     status: string;
