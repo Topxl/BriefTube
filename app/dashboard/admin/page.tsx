@@ -17,6 +17,7 @@ import {
   TrendingUp,
 } from "@/lib/icons";
 import { NewsletterSeedButton } from "@/components/admin/newsletter-seed-button";
+import { TrialRemindersButton } from "@/components/admin/trial-reminders-button";
 
 const ADMIN_USER_ID = "67320a39-948c-44d2-98e3-c0de49af1ec6";
 
@@ -894,6 +895,12 @@ export default async function AdminPage() {
             Sync all existing users to Resend audience
           </p>
           <NewsletterSeedButton />
+        </div>
+        <div className="nm-raised flex flex-col gap-2 rounded-xl px-4 py-3">
+          <p className="text-muted-foreground text-sm">
+            Send trial expiry reminders (J-3, J-1, expired)
+          </p>
+          <TrialRemindersButton />
         </div>
       </div>
 
