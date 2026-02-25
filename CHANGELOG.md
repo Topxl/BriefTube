@@ -2,6 +2,7 @@
 
 ## 2026-02-25
 
+FIX: whisper_transcriber — ajout cookiefile et proxy dans ydl_opts (pre-check + download) pour éviter le blocage YouTube "Sign in to confirm you're not a bot"
 FEATURE: Worker — endpoint GET /logs sur le serveur HTTP du worker (port 8080), protégé par WORKER_API_SECRET, retourne les 60 dernières lignes de log + status systemd
 FEATURE: Admin panel — route /api/admin/worker appelle l'endpoint VPS distant si VPS_WORKER_URL est configuré (fallback local pour dev)
 CHORE: env.ts — ajout de VPS_WORKER_URL et WORKER_API_SECRET (optionnels)

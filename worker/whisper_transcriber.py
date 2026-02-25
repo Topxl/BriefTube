@@ -78,11 +78,18 @@ class WhisperTranscriber:
         Returns:
             True if successful, False otherwise
         """
+        _cookies_file = Path(__file__).parent / "cookies" / "youtube.txt"
+        _http_proxy = os.environ.get("YOUTUBE_PROXY_HTTP", "")
+
         try:
             # Pre-check: detect live/upcoming streams before attempting download.
             # Avoids downloading an infinite HLS stream for 10+ minutes.
             try:
-                pre_opts = {"quiet": True, "no_warnings": True, "nocheckcertificate": True, "skip_download": True}
+                pre_opts: dict = {"quiet": True, "no_warnings": True, "nocheckcertificate": True, "skip_download": True}
+                if _cookies_file.exists():
+                    pre_opts["cookiefile"] = str(_cookies_file)
+                if _http_proxy:
+                    pre_opts["proxy"] = _http_proxy
                 with yt_dlp.YoutubeDL(pre_opts) as ydl_info:
                     pre_info = ydl_info.extract_info(youtube_url, download=False)
                 if pre_info:
@@ -104,7 +111,7 @@ class WhisperTranscriber:
             # 192kbps would exceed the limit for any video longer than ~15 min.
             # max_filesize: abort if raw audio exceeds 150 MB (≈ ~5h at 64kbps)
             # before postprocessing — prevents infinite HLS live downloads.
-            ydl_opts = {
+            ydl_opts: dict = {
                 'format': 'bestaudio/best',
                 'postprocessors': [{
                     'key': 'FFmpegExtractAudio',
@@ -117,6 +124,10 @@ class WhisperTranscriber:
                 'nocheckcertificate': True,
                 'max_filesize': 150 * 1024 * 1024,  # 150 MB hard cap
             }
+            if _cookies_file.exists():
+                ydl_opts['cookiefile'] = str(_cookies_file)
+            if _http_proxy:
+                ydl_opts['proxy'] = _http_proxy
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([youtube_url])
