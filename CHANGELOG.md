@@ -3,6 +3,10 @@
 ## 2026-02-25
 
 FEATURE: Détection musique/ambient en 2 couches — titre (regex haute précision, zéro appel API) dans rss_scanner + catégorie YouTube "Music" (via yt-dlp pre-check) dans whisper_transcriber — évite de gaspiller le quota Groq Whisper sur du contenu non parlé
+FEATURE: Log bot — menu slash commands enregistré via setMyCommands (/start, /status, /stats, /watch)
+FIX: Log bot — bouton "Alertes live" affiche maintenant ON/OFF selon l'état actif
+FIX: Log bot — format du temps humain (6h, 5min, 42s) au lieu des secondes brutes
+REFACTOR: Log bot — boucle watch extraite dans _start_watch() pour éviter la duplication
 FEATURE: Log bot — mirror des livraisons : chaque vidéo envoyée aux abonnés est copiée une fois (titre + lien YouTube + audio) dans le bot de monitoring admin
 FIX: whisper_transcriber — ajout cookiefile et proxy dans ydl_opts (pre-check + download) pour éviter le blocage YouTube "Sign in to confirm you're not a bot"
 FEATURE: Worker — endpoint GET /logs sur le serveur HTTP du worker (port 8080), protégé par WORKER_API_SECRET, retourne les 60 dernières lignes de log + status systemd

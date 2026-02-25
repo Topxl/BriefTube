@@ -32,7 +32,7 @@ from pathlib import Path
 import psutil
 from dotenv import load_dotenv
 from supabase import create_client, Client
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import BotCommand, Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 
 from monitoring import format_log_line
@@ -183,17 +183,30 @@ def _last_log_time() -> datetime | None:
         return None
 
 
+def _fmt_age(seconds: float) -> str:
+    """Convertit des secondes en durée lisible : 42s / 5min / 1h30."""
+    s = int(seconds)
+    if s < 60:
+        return f"{s}s"
+    m = s // 60
+    if m < 60:
+        return f"{m}min"
+    h, rm = divmod(m, 60)
+    return f"{h}h{rm:02d}" if rm else f"{h}h"
+
+
 def _worker_badge() -> str:
     """🟢 / 🟡 / 🔴 selon l'activité récente du worker."""
     last = _last_log_time()
     if last is None:
         return "🔴 Arrêté (aucun log)"
     age = (datetime.now(timezone.utc) - last).total_seconds()
+    age_str = _fmt_age(age)
     if age < 120:
-        return f"🟢 Actif (il y a {int(age)}s)"
+        return f"🟢 Actif (il y a {age_str})"
     if age < 600:
-        return f"🟡 En veille (il y a {int(age / 60)}m)"
-    return f"🔴 Arrêté ? (dernière activité il y a {int(age / 60)}m)"
+        return f"🟡 En veille (il y a {age_str})"
+    return f"🔴 Inactif (il y a {age_str})"
 
 
 def _queue_stats() -> dict:
@@ -452,7 +465,9 @@ def _text_system() -> str:
 
 # ── Keyboards ───────────────────────────────────────────────────────
 
-def _kb_menu() -> InlineKeyboardMarkup:
+def _kb_menu(chat_id: str = "") -> InlineKeyboardMarkup:
+    watch_on = bool(chat_id and chat_id in _watch_tasks and not _watch_tasks[chat_id].done())
+    watch_label = "🔴 Alertes live : ON" if watch_on else "🔔 Alertes live : OFF"
     return InlineKeyboardMarkup([
         [
             InlineKeyboardButton("📊 Stats", callback_data="stats"),
@@ -463,7 +478,7 @@ def _kb_menu() -> InlineKeyboardMarkup:
             InlineKeyboardButton("💻 Système", callback_data="system"),
         ],
         [
-            InlineKeyboardButton("🔔 Alertes live", callback_data="watch_toggle"),
+            InlineKeyboardButton(watch_label, callback_data="watch_toggle"),
             InlineKeyboardButton("🔄 Actualiser", callback_data="menu"),
         ],
     ])
@@ -491,7 +506,89 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         return
     await update.message.reply_text(
         _text_menu(),
-        reply_markup=_kb_menu(),
+        reply_markup=_kb_menu(chat_id),
+        parse_mode="HTML",
+    )
+
+
+async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat_id = str(update.effective_chat.id)
+    if not _is_admin(chat_id):
+        return
+    await update.message.reply_text(_text_menu(), reply_markup=_kb_menu(chat_id), parse_mode="HTML")
+
+
+async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat_id = str(update.effective_chat.id)
+    if not _is_admin(chat_id):
+        return
+    await update.message.reply_text(_text_stats(), reply_markup=_kb_view("stats"), parse_mode="HTML")
+
+
+def _start_watch(chat_id: str, bot) -> None:
+    """Démarre la boucle d'alertes live pour ce chat (helper partagé)."""
+    _watch_offsets[chat_id] = _log_size()
+    _RE = re.compile(r"\d{4}-\d{2}-\d{2} (\d{2}:\d{2}):\d{2},\d+ \[[^\]]+\] (\w+) (.*)")
+
+    async def _loop() -> None:
+        while chat_id in _watch_offsets:
+            await asyncio.sleep(20)
+            if chat_id not in _watch_offsets:
+                break
+            new_text, new_offset = _read_new_bytes(_watch_offsets[chat_id])
+            _watch_offsets[chat_id] = new_offset
+            if not new_text.strip():
+                continue
+            error_lines = [
+                l for l in new_text.splitlines()
+                if " ERROR " in l or " WARNING " in l or "✅" in l
+            ]
+            if not error_lines:
+                continue
+            formatted = []
+            for line in error_lines[-8:]:
+                m = _RE.match(line.rstrip())
+                if not m:
+                    continue
+                t, level, msg = m.groups()
+                msg = msg[:120] + ("…" if len(msg) > 120 else "")
+                safe = _html.escape(msg)
+                txt = f"{t}  {safe}"
+                if level in ("ERROR", "CRITICAL"):
+                    formatted.append(f"<b>{txt}</b>")
+                elif level == "WARNING":
+                    formatted.append(f"<i>{txt}</i>")
+                else:
+                    formatted.append(txt)
+            if formatted:
+                try:
+                    await bot.send_message(
+                        chat_id=chat_id,
+                        text="\n".join(formatted),
+                        parse_mode="HTML",
+                    )
+                except Exception as e:
+                    logger.error(f"Watch send error: {e}")
+
+    _watch_tasks[chat_id] = asyncio.create_task(_loop())
+
+
+async def watch_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Toggle live alerts from a slash command."""
+    chat_id = str(update.effective_chat.id)
+    if not _is_admin(chat_id):
+        return
+    if chat_id in _watch_tasks and not _watch_tasks[chat_id].done():
+        _watch_tasks[chat_id].cancel()
+        del _watch_tasks[chat_id]
+        _watch_offsets.pop(chat_id, None)
+        state = "désactivées"
+    else:
+        _start_watch(chat_id, context.bot)
+        state = "activées"
+    await update.message.reply_text(
+        f"🔔 Alertes live {state}.\n\n{_text_menu()}",
+        reply_markup=_kb_menu(chat_id),
         parse_mode="HTML",
     )
 
@@ -518,59 +615,12 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 del _watch_offsets[chat_id]
             await query.answer("Alertes live arrêtées", show_alert=True)
             text = _text_menu()
-            kb = _kb_menu()
+            kb = _kb_menu(chat_id)
         else:
-            # Start — watch from current end of file
-            _watch_offsets[chat_id] = _log_size()
-
-            async def _watch_loop() -> None:
-                while chat_id in _watch_offsets:
-                    await asyncio.sleep(20)
-                    if chat_id not in _watch_offsets:
-                        break
-                    new_text, new_offset = _read_new_bytes(_watch_offsets[chat_id])
-                    _watch_offsets[chat_id] = new_offset
-                    if not new_text.strip():
-                        continue
-                    # Only push if there are errors/warnings
-                    error_lines = [
-                        l for l in new_text.splitlines()
-                        if " ERROR " in l or " WARNING " in l or "✅" in l
-                    ]
-                    if not error_lines:
-                        continue
-                    formatted = []
-                    _RE = re.compile(
-                        r"\d{4}-\d{2}-\d{2} (\d{2}:\d{2}):\d{2},\d+ \[[^\]]+\] (\w+) (.*)"
-                    )
-                    for line in error_lines[-8:]:
-                        m = _RE.match(line.rstrip())
-                        if not m:
-                            continue
-                        t, level, msg = m.groups()
-                        msg = msg[:120] + ("…" if len(msg) > 120 else "")
-                        safe = _html.escape(msg)
-                        txt = f"{t}  {safe}"
-                        if level in ("ERROR", "CRITICAL"):
-                            formatted.append(f"<b>{txt}</b>")
-                        elif level == "WARNING":
-                            formatted.append(f"<i>{txt}</i>")
-                        else:
-                            formatted.append(txt)
-                    if formatted:
-                        try:
-                            await context.bot.send_message(
-                                chat_id=chat_id,
-                                text="\n".join(formatted),
-                                parse_mode="HTML",
-                            )
-                        except Exception as e:
-                            logger.error(f"Watch send error: {e}")
-
-            _watch_tasks[chat_id] = asyncio.create_task(_watch_loop())
+            _start_watch(chat_id, context.bot)
             await query.answer("Alertes live activées (toutes les 20s)", show_alert=True)
             text = _text_menu()
-            kb = _kb_menu()
+            kb = _kb_menu(chat_id)
 
         try:
             await query.edit_message_text(text=text, reply_markup=kb, parse_mode="HTML")
@@ -580,7 +630,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     # ── Regular views ────────────────────────────────────────────────
     builders = {
-        "menu": (_text_menu, _kb_menu),
+        "menu": (_text_menu, lambda: _kb_menu(chat_id)),
         "stats": (_text_stats, lambda: _kb_view("stats")),
         "errors": (_text_errors, lambda: _kb_view("errors")),
         "activity": (_text_activity, lambda: _kb_view("activity")),
@@ -604,6 +654,16 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
 # ── Entry point ────────────────────────────────────────────────────
 
+async def _register_commands(app: Application) -> None:
+    """Enregistre les commandes visibles dans le menu '/' de Telegram."""
+    await app.bot.set_my_commands([
+        BotCommand("start",  "Dashboard principal"),
+        BotCommand("status", "Statut rapide du worker"),
+        BotCommand("stats",  "Statistiques (file + livraisons + Groq)"),
+        BotCommand("watch",  "Activer / désactiver les alertes live"),
+    ])
+
+
 def main() -> None:
     _enforce_single_instance()
 
@@ -613,8 +673,16 @@ def main() -> None:
     if not LOG_BOT_ADMIN_CHAT_ID:
         logger.warning("LOG_BOT_ADMIN_CHAT_ID non défini — tous les accès seront refusés")
 
-    app = Application.builder().token(LOG_BOT_TOKEN).build()
-    app.add_handler(CommandHandler("start", start_command))
+    app = (
+        Application.builder()
+        .token(LOG_BOT_TOKEN)
+        .post_init(_register_commands)
+        .build()
+    )
+    app.add_handler(CommandHandler("start",  start_command))
+    app.add_handler(CommandHandler("status", status_command))
+    app.add_handler(CommandHandler("stats",  stats_command))
+    app.add_handler(CommandHandler("watch",  watch_command))
     app.add_handler(CallbackQueryHandler(button_callback))
 
     logger.info("Log bot starting...")
