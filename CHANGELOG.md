@@ -2,6 +2,15 @@
 
 ## 2026-02-25
 
+CHORE: VPS — documentation complète dans vps/README.md (setup Hetzner, Infisical, GitHub Actions, worker modes, commandes)
+FIX: VPS — setup.sh : nouveau dépôt Infisical (artifacts-cli.infisical.com), read interactifs via /dev/tty, authorized_keys pour GitHub Actions, usage scp+ssh -t
+CHORE: VPS — run-worker.sh : wrapper Universal Auth Infisical (login → token → run) remplace l'ancien infisical run inline
+FIX: VPS — brieftube-worker.service : utilise run-worker.sh au lieu de infisical run inline
+CHORE: VPS — GitHub Actions : ajout trigger workflow_dispatch + déclenchement sur vps/**, daemon-reload avant restart
+FIX: VPS — sudoers brieftube : ajout de systemctl daemon-reload dans les permissions NOPASSWD
+CHORE: VPS — MAX_CONCURRENT_VIDEOS passé de 2 à 3 slots (VPS + local)
+CHORE: Local — service systemd local configuré en WORKER_MODE=processor WORKER_INSTANCE=1 (pas de bot Telegram, pas de RSS)
+
 FEATURE: Worker — mode WORKER_MODE=processor pour instances parallèles (scale horizontal) : _NullAlert, processor_main(), HEALTH_PORT+WORKER_INSTANCE, WORKER_MODE env var ; template systemd brieftube-processor@.service
 CHORE: Worker — WebSub : log URL callback au démarrage + warning si APP_URL local
 CHORE: VPS — ajout du workflow GitHub Actions deploy-worker.yml (auto-deploy sur push main/worker/**) + script setup.sh + template systemd pour Hetzner
