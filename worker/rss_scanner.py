@@ -11,6 +11,26 @@ import db
 
 logger = logging.getLogger(__name__)
 
+# High-confidence music/ambient title patterns — only match clear-cut cases
+# to avoid false positives (podcasts with "music" in channel name, etc.)
+_MUSIC_TITLE_RE = re.compile(
+    r'\blofi\b'
+    r'|\bchill beats?\b'
+    r'|\b(?:study|sleep|relax(?:ing)?|focus)\s+music\b'
+    r'|\b\d+\s*h(?:ours?)?\s+(?:of\s+)?(?:music|beats?|jazz|classical|lofi|ambient)\b'
+    r'|\bbeats?\s+to\s+(?:study|relax|sleep|chill)\b'
+    r'|\b(?:no[- ]copyright|background|bgm)\s+music\b'
+    r'|\b(?:instrumental|ambient)\s+(?:music|mix|playlist)\b'
+    r'|\b24/?7\s+(?:music|stream|radio|lofi|chill)\b'
+    r'|\bmusic\s+(?:mix|playlist|24/?7|radio|live)\b',
+    re.IGNORECASE,
+)
+
+
+def is_likely_music(title: str) -> bool:
+    """Detect music/ambient videos by title. Returns True only for high-confidence matches."""
+    return bool(_MUSIC_TITLE_RE.search(title))
+
 
 def get_rss_url(channel_id: str) -> str:
     return f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"
@@ -101,6 +121,13 @@ def scan_all_channels():
 
             # Skip YouTube Shorts
             if is_youtube_short(video["url"]):
+                continue
+
+            # Skip music/ambient content by title — avoids wasting Groq Whisper quota.
+            # Duration alone is NOT a signal (6h+ podcasts like Lex Fridman must pass).
+            if is_likely_music(video["title"]):
+                logger.info(f"Music/ambient skip (title): {video['title'][:80]} ({vid})")
+                known_video_ids.add(vid)
                 continue
 
             logger.info(f"New video: {video['title']} ({vid})")

@@ -331,7 +331,7 @@ async def _process_video(
 
         if not transcript:
             # Music/ambient videos — silently discard, no alert
-            _MUSIC_SKIP_ERRORS = ("likely_music_no_speech", "audio_too_large_for_speech", "audio_unsupported_format")
+            _MUSIC_SKIP_ERRORS = ("likely_music_no_speech", "audio_too_large_for_speech", "audio_unsupported_format", "music_content")
             if error in _MUSIC_SKIP_ERRORS:
                 logger.info(
                     f"[{video_id}] Skipping permanently ({error}): {video_title[:80]}"
