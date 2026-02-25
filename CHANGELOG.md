@@ -2,11 +2,17 @@
 
 ## 2026-02-25
 
+FIX: Worker — multi-language bug: when a channel had FR + EN subscribers, only FR was processed (enqueue_video created 1 job); EN rows stayed "pending" indefinitely; fix: after completing language X, worker now detects other pending languages and re-queues the same job slot for the next language (chain processing)
+FIX: Worker — DB repair: 56 orphaned "pending" EN jobs re-queued via migration requeue_multilang_orphaned_pending_videos
+
+FIX: Account deletion — cancel Stripe subscriptions via customer ID fallback when stripe_subscription_id is missing (prevents orphaned active subscriptions)
 FEATURE: Google Ads — fire conversion event on Pro activation (gtag trackAdConversion via NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_LABEL); clear ?success=true from URL after success to prevent re-firing
 
 ## 2026-02-24
 
 FIX: Stripe — billing page now passes ?success=true to profile, shows Pro toast on activation, auto-refreshes if webhook hasn't processed yet
+FIX: Worker — "Error opening output files: Invalid argument" (ffmpeg live stream postprocessing failure) now caught as audio_unsupported_format → permanent silent skip, no user notification
+FIX: Worker — add max_filesize 150 MB to yt-dlp opts in _download_audio to abort infinite HLS live downloads before 20-min timeout kicks in
 FIX: Worker — transcript_too_short caused infinite retry loop (not treated as immediate failure); now skips permanently and silently like music videos
 FIX: Worker — Whisper _download_audio now pre-checks live_status before downloading, preventing 18-min HLS infinite stream download that caused false failure notification
 FIX: Worker — upcoming lives (live_status=is_upcoming) not detected by is_live check; now uses live_status + scheduled_start_time for accurate snooze duration

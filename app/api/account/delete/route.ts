@@ -18,7 +18,7 @@ export const DELETE = authRoute.handler(async (_req, { ctx }) => {
   // 1. Cancel Stripe subscription if active (before deleting profile)
   const { data: profile } = await supabase
     .from("profiles")
-    .select("stripe_subscription_id")
+    .select("stripe_subscription_id, stripe_customer_id")
     .eq("id", userId)
     .single();
 
@@ -27,9 +27,31 @@ export const DELETE = authRoute.handler(async (_req, { ctx }) => {
       await stripe.subscriptions.cancel(profile.stripe_subscription_id);
       logger.info(`Stripe subscription cancelled for user: ${userId}`);
     } catch (err) {
-      // Log but continue — subscription may already be cancelled
       logger.error(
         "Failed to cancel Stripe subscription during account deletion:",
+        err,
+      );
+    }
+  } else if (profile?.stripe_customer_id) {
+    // Fallback: cancel all active subscriptions by customer ID
+    // (handles case where stripe_subscription_id is missing due to webhook delay)
+    try {
+      const subscriptions = await stripe.subscriptions.list({
+        customer: profile.stripe_customer_id,
+        status: "active",
+      });
+      await Promise.all(
+        subscriptions.data.map(async (sub) =>
+          stripe.subscriptions.cancel(sub.id).then(() => {
+            logger.info(
+              `Stripe subscription ${sub.id} cancelled via customer fallback for user: ${userId}`,
+            );
+          }),
+        ),
+      );
+    } catch (err) {
+      logger.error(
+        "Failed to cancel Stripe subscriptions via customer ID fallback:",
         err,
       );
     }
