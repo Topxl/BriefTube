@@ -525,6 +525,10 @@ class TranscriptExtractor:
         if "429" in error_message or "rate_limit_exceeded" in error_message:
             return True
 
+        # Groq Flex 498 capacity_exceeded — transient, retry (backoff handled in _transcribe_chunk)
+        if "498" in error_message or "capacity_exceeded" in error_message:
+            return True
+
         return False
 
 
