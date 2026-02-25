@@ -10,6 +10,7 @@ import type Stripe from "stripe";
 import { sendEmail } from "@/lib/mail/send-email";
 import { UpgradeEmail } from "@/components/emails/upgrade-email";
 import { PaymentFailedEmail } from "@/components/emails/payment-failed-email";
+import { captureServerEvent } from "@/lib/posthog/server";
 
 export const maxDuration = 300;
 
@@ -149,6 +150,16 @@ const checkoutSessionCompleted = async (
     .eq("id", profile.id);
 
   logger.info(`Subscription activated for user: ${profile.id}`);
+
+  void captureServerEvent({
+    distinctId: profile.id,
+    event: "subscription_activated",
+    properties: {
+      email: profile.email,
+      subscription_id: subscriptionId,
+      plan: "pro",
+    },
+  });
 
   // Send upgrade confirmation email
   if (profile.email) {

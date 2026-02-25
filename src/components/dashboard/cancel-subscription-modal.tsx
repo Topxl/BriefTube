@@ -8,7 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { CheckCircle, Zap } from "@/lib/icons";
 import { dialogManager } from "@/features/dialog-manager/dialog-manager";
+import { capture } from "@/lib/posthog/client";
 import { toast } from "sonner";
+import { useEffect } from "react";
 
 const CANCELLATION_REASONS = [
   { id: "too_expensive", label: "It's too expensive for my usage" },
@@ -36,6 +38,10 @@ export function CancelSubscriptionModal({ onClose }: Props) {
   const [customMessage, setCustomMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
+  useEffect(() => {
+    capture("cancellation_started");
+  }, []);
+
   const callCancelApi = async (acceptOffer: boolean) => {
     const res = await fetch("/api/stripe/cancel", {
       method: "POST",
@@ -49,6 +55,7 @@ export function CancelSubscriptionModal({ onClose }: Props) {
     setIsLoading(true);
     try {
       await callCancelApi(true);
+      capture("offer_accepted", { reason });
       toast.success("Offer applied — thanks for staying with us!");
       onClose();
       router.refresh();
@@ -63,6 +70,10 @@ export function CancelSubscriptionModal({ onClose }: Props) {
     setIsLoading(true);
     try {
       await callCancelApi(false);
+      capture("subscription_cancelled", {
+        reason,
+        custom_message: customMessage,
+      });
       setStep("confirmed");
     } catch {
       toast.error("Something went wrong. Please try again.");

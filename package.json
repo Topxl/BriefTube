@@ -77,6 +77,8 @@
     "next-zod-route": "^1.0.0",
     "nprogress": "^0.2.0",
     "nuqs": "^2.8.5",
+    "posthog-js": "^1.354.0",
+    "posthog-node": "^5.26.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-email": "5.0.8",
