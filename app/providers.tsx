@@ -3,7 +3,6 @@
 import { Toaster } from "@/components/ui/sonner";
 import { DialogManagerRenderer } from "@/features/dialog-manager/dialog-manager-renderer";
 import { GlobalDialogLazy } from "@/features/global-dialog/global-dialog-lazy";
-import { PostHogProvider } from "@/components/posthog/posthog-provider";
 import { PostHogPageView } from "@/components/posthog/posthog-page-view";
 import { PostHogIdentify } from "@/components/posthog/posthog-identify";
 import {
@@ -38,24 +37,22 @@ export const Providers = ({ children }: PropsWithChildren) => {
   const queryClient = getQueryClient();
 
   return (
-    <PostHogProvider>
-      <ThemeProvider
-        attribute="class"
-        defaultTheme="system"
-        enableSystem
-        enableColorScheme
-      >
-        <QueryClientProvider client={queryClient}>
-          <Suspense fallback={null}>
-            <PostHogPageView />
-          </Suspense>
-          <PostHogIdentify />
-          <Toaster />
-          <DialogManagerRenderer />
-          <GlobalDialogLazy />
-          {children}
-        </QueryClientProvider>
-      </ThemeProvider>
-    </PostHogProvider>
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      enableColorScheme
+    >
+      <QueryClientProvider client={queryClient}>
+        <Suspense fallback={null}>
+          <PostHogPageView />
+        </Suspense>
+        <PostHogIdentify />
+        <Toaster />
+        <DialogManagerRenderer />
+        <GlobalDialogLazy />
+        {children}
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 };
