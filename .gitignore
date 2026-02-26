@@ -51,6 +51,8 @@ worker/*.log.*
 
 # Worker temporary files
 worker/audio/*.mp3
+worker/*.pid
+worker/*.lock
 worker/cookies/
 worker/.env
 worker/*.json
