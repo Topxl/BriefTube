@@ -75,9 +75,17 @@ ssh root@VPS_IP "chown brieftube:brieftube /home/brieftube/app/worker/cookies/yo
 
 ---
 
-## Architecture du worker
+## Architecture des services
 
-Le worker a deux modes :
+Trois services systemd tournent en permanence sur le VPS :
+
+| Service                    | Rôle                                                          | Log                              |
+|----------------------------|---------------------------------------------------------------|----------------------------------|
+| `brieftube-worker`         | RSS scanner + Bot Telegram principal + traitement vidéo       | `worker/worker.log`              |
+| `brieftube-log-bot`        | Bot Telegram admin (monitoring, alertes live, stats)          | `worker/log_bot.log`             |
+| `brieftube-processor@N`    | Instance de traitement vidéo supplémentaire (scalable)        | stdout systemd                   |
+
+### Modes du worker principal
 
 | Mode        | Variable                    | Rôle                                                    |
 |-------------|-----------------------------|---------------------------------------------------------|
@@ -98,6 +106,7 @@ Il exécute sur le VPS :
 2. `pip install -r worker/requirements.txt`
 3. `systemctl daemon-reload`
 4. `systemctl restart brieftube-worker`
+5. `systemctl restart brieftube-log-bot`
 
 Pour déclencher manuellement :
 ```bash
@@ -106,11 +115,19 @@ gh workflow run deploy-worker.yml --repo Topxl/BriefTube
 
 ---
 
-## Commandes utiles sur le VPS
+## Commandes VPS
+
+### Connexion
 
 ```bash
-# Se connecter
 ssh root@138.199.220.195
+```
+
+### Worker principal (`brieftube-worker`)
+
+```bash
+# Status
+systemctl status brieftube-worker
 
 # Logs en direct
 tail -f /home/brieftube/app/worker/worker.log
@@ -118,11 +135,55 @@ tail -f /home/brieftube/app/worker/worker.log
 # Logs systemd
 journalctl -u brieftube-worker -f
 
-# Status
-systemctl status brieftube-worker
-
 # Restart
 systemctl restart brieftube-worker
+
+# Stop / Start
+systemctl stop brieftube-worker
+systemctl start brieftube-worker
+```
+
+### Log bot admin (`brieftube-log-bot`)
+
+```bash
+# Status
+systemctl status brieftube-log-bot
+
+# Logs en direct
+tail -f /home/brieftube/app/worker/log_bot.log
+
+# Logs systemd
+journalctl -u brieftube-log-bot -f
+
+# Restart
+systemctl restart brieftube-log-bot
+
+# Stop / Start
+systemctl stop brieftube-log-bot
+systemctl start brieftube-log-bot
+```
+
+### Les deux services d'un coup
+
+```bash
+# Status global
+systemctl status brieftube-worker brieftube-log-bot
+
+# Restart des deux
+systemctl restart brieftube-worker brieftube-log-bot
+
+# Voir tous les services BriefTube
+systemctl list-units 'brieftube-*'
+```
+
+### Mise à jour manuelle (sans CI)
+
+```bash
+cd /home/brieftube/app
+git pull origin main
+worker/venv/bin/pip install -r worker/requirements.txt -q
+systemctl daemon-reload
+systemctl restart brieftube-worker brieftube-log-bot
 ```
 
 ---
@@ -178,18 +239,20 @@ curl -1sLf 'https://artifacts-cli.infisical.com/setup.deb.sh' | sudo bash
 sudo apt-get update && sudo apt-get install infisical
 ```
 
-Le wrapper `vps/run-worker.sh` gère l'authentification Universal Auth :
-il obtient un token via `infisical login --method=universal-auth`, puis
-lance le worker via `infisical run --token=...`.
+Les wrappers `vps/run-worker.sh` et `vps/run-log-bot.sh` gèrent l'authentification Universal Auth :
+ils obtiennent un token via `infisical login --method=universal-auth`, puis
+lancent le process via `infisical run --token=...`.
 
 ---
 
 ## Fichiers de configuration
 
-| Fichier                                | Rôle                                         |
-|----------------------------------------|----------------------------------------------|
-| `vps/setup.sh`                         | Script de setup initial du VPS               |
-| `vps/run-worker.sh`                    | Wrapper Infisical Universal Auth             |
-| `vps/brieftube-worker.service`         | Service systemd du worker principal          |
-| `vps/brieftube-processor@.service`     | Service systemd pour instances processor     |
-| `.github/workflows/deploy-worker.yml`  | CI/CD GitHub Actions                         |
+| Fichier                                | Rôle                                              |
+|----------------------------------------|---------------------------------------------------|
+| `vps/setup.sh`                         | Script de setup initial du VPS                    |
+| `vps/run-worker.sh`                    | Wrapper Infisical pour le worker principal        |
+| `vps/run-log-bot.sh`                   | Wrapper Infisical pour le log bot admin           |
+| `vps/brieftube-worker.service`         | Service systemd du worker principal               |
+| `vps/brieftube-log-bot.service`        | Service systemd du log bot admin                  |
+| `vps/brieftube-processor@.service`     | Service systemd pour instances processor          |
+| `.github/workflows/deploy-worker.yml`  | CI/CD GitHub Actions                              |

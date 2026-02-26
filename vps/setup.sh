@@ -118,13 +118,27 @@ read -p "INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET : " INFISICAL_CLIENT_SECRET < /d
 info "Installation des services systemd..."
 cp "${APP_DIR}/vps/brieftube-worker.service" /etc/systemd/system/brieftube-worker.service
 cp "${APP_DIR}/vps/brieftube-processor@.service" /etc/systemd/system/brieftube-processor@.service
+cp "${APP_DIR}/vps/brieftube-log-bot.service" /etc/systemd/system/brieftube-log-bot.service
 chmod +x "${APP_DIR}/vps/run-worker.sh"
+chmod +x "${APP_DIR}/vps/run-log-bot.sh"
 
-# Injecter les credentials Infisical dans le service
-sed -i "s|REMPLACER_ICI|${INFISICAL_CLIENT_ID}|1" /etc/systemd/system/brieftube-worker.service
-sed -i "s|REMPLACER_ICI|${INFISICAL_CLIENT_SECRET}|1" /etc/systemd/system/brieftube-worker.service
-sed -i "s|REMPLACER_ICI|${INFISICAL_CLIENT_ID}|1" /etc/systemd/system/brieftube-processor@.service
-sed -i "s|REMPLACER_ICI|${INFISICAL_CLIENT_SECRET}|1" /etc/systemd/system/brieftube-processor@.service
+# Injecter les credentials Infisical dans brieftube-worker
+cat > /etc/systemd/system/brieftube-worker.service << EOF
+$(sed '/REMPLACER_ICI/d' "${APP_DIR}/vps/brieftube-worker.service")
+EOF
+sed -i "/^Environment=PYTHONUNBUFFERED/a Environment=INFISICAL_UNIVERSAL_AUTH_CLIENT_ID=${INFISICAL_CLIENT_ID}\nEnvironment=INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET=${INFISICAL_CLIENT_SECRET}" /etc/systemd/system/brieftube-worker.service
+
+# Injecter les credentials Infisical dans brieftube-processor@
+cat > /etc/systemd/system/brieftube-processor@.service << EOF
+$(sed '/REMPLACER_ICI/d' "${APP_DIR}/vps/brieftube-processor@.service")
+EOF
+sed -i "/^Environment=PYTHONUNBUFFERED/a Environment=INFISICAL_UNIVERSAL_AUTH_CLIENT_ID=${INFISICAL_CLIENT_ID}\nEnvironment=INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET=${INFISICAL_CLIENT_SECRET}" /etc/systemd/system/brieftube-processor@.service
+
+# Injecter les credentials Infisical dans brieftube-log-bot
+cat > /etc/systemd/system/brieftube-log-bot.service << EOF
+$(sed '/REMPLACER_ICI/d' "${APP_DIR}/vps/brieftube-log-bot.service")
+EOF
+sed -i "/^Environment=PYTHONUNBUFFERED/a Environment=INFISICAL_UNIVERSAL_AUTH_CLIENT_ID=${INFISICAL_CLIENT_ID}\nEnvironment=INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET=${INFISICAL_CLIENT_SECRET}" /etc/systemd/system/brieftube-log-bot.service
 
 # Override MAX_CONCURRENT_VIDEOS
 mkdir -p /etc/systemd/system/brieftube-worker.service.d
@@ -135,11 +149,17 @@ EOF
 
 systemctl daemon-reload
 systemctl enable brieftube-worker
+systemctl enable brieftube-log-bot
 
 # ─── 10. Permissions sudo pour le deploy ─────────────────────────────────────
 info "Configuration des permissions sudo..."
 cat > /etc/sudoers.d/brieftube << EOF
-brieftube ALL=(ALL) NOPASSWD: /bin/systemctl restart brieftube-worker, /bin/systemctl status brieftube-worker --no-pager, /bin/systemctl daemon-reload
+brieftube ALL=(ALL) NOPASSWD: \
+  /bin/systemctl daemon-reload, \
+  /bin/systemctl restart brieftube-worker, \
+  /bin/systemctl restart brieftube-log-bot, \
+  /bin/systemctl status brieftube-worker --no-pager, \
+  /bin/systemctl status brieftube-log-bot --no-pager
 EOF
 chmod 440 /etc/sudoers.d/brieftube
 
@@ -159,10 +179,12 @@ if [[ "${SKIP_COOKIES}" != "S" && "${SKIP_COOKIES}" != "s" ]]; then
 fi
 
 # ─── 12. Démarrage ────────────────────────────────────────────────────────────
-info "Démarrage du worker..."
+info "Démarrage des services..."
 systemctl start brieftube-worker
+systemctl start brieftube-log-bot
 sleep 3
 systemctl status brieftube-worker --no-pager
+systemctl status brieftube-log-bot --no-pager
 
 # ─── Récapitulatif final ──────────────────────────────────────────────────────
 VPS_IP=$(curl -s ifconfig.me 2>/dev/null || hostname -I | awk '{print $1}')
@@ -185,7 +207,12 @@ echo ""
 echo "2. Tester le déploiement : modifie un fichier worker/ et pousse sur main"
 echo ""
 echo "Commandes utiles :"
-echo "  Logs en direct  : tail -f ${APP_DIR}/worker/worker.log"
-echo "  Status          : systemctl status brieftube-worker"
-echo "  Restart         : systemctl restart brieftube-worker"
-echo "  Logs systemd    : journalctl -u brieftube-worker -f"
+echo "  Worker — logs     : tail -f ${APP_DIR}/worker/worker.log"
+echo "  Worker — status   : systemctl status brieftube-worker"
+echo "  Worker — restart  : systemctl restart brieftube-worker"
+echo "  Worker — systemd  : journalctl -u brieftube-worker -f"
+echo ""
+echo "  Log bot — logs    : tail -f ${APP_DIR}/worker/log_bot.log"
+echo "  Log bot — status  : systemctl status brieftube-log-bot"
+echo "  Log bot — restart : systemctl restart brieftube-log-bot"
+echo "  Log bot — systemd : journalctl -u brieftube-log-bot -f"
