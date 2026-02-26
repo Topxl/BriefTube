@@ -2,6 +2,8 @@
 
 ## 2026-02-27
 
+FEATURE: Générateurs d'images Google Ads — /api/og/ads/telegram, /api/og/ads/before-after, /api/og/ads/stat (formats square/portrait/landscape)
+
 FIX: Worker delivery_loop — ne pas appeler mirror_delivery si mark_delivery_sent a échoué (évite faux positif admin + risque de doublon Telegram au restart)
 FIX: Worker whisper_transcriber — try/except sur int(split(":")[1]) pour éviter ValueError/IndexError si premiere_hours manquant
 FIX: Worker bot_handler — asyncio.wait_for(timeout=15s) sur les 4 asyncio.gather() pour éviter freeze infini si Supabase hang
