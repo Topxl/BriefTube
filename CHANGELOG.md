@@ -2,6 +2,7 @@
 
 ## 2026-02-26
 
+REFACTOR: Worker proxy — stratégie "direct-first" : transcript API + yt-dlp subtitles + téléchargement audio essaient d'abord sans proxy (VPS → YouTube CDN direct), proxy Webshare rotating utilisé uniquement si IP bloquée par YouTube (transcript API uniquement)
 FIX: CI — deploy-worker.yml corrige le project-slug Infisical ("brieftube-server-qy7-v" et non "brieftube-server") — Infisical ajoute un suffixe unique au slug
 CHORE: CI — deploy-worker.yml fetch VPS_SSH_KEY depuis Infisical (machine identity) au lieu de GitHub Secrets — VPS_HOST hardcodé (IP publique)
 CHORE: Worker — MAX_CONCURRENT_VIDEOS 3→12, throttle intelligent (CPU+load+RAM) remplace le simple check CPU
