@@ -26,7 +26,7 @@ jobs:
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1
         with:
-          host: 138.199.220.195
+          host: ${{ env.VPS_HOST }}
           username: brieftube
           key: ${{ env.VPS_SSH_KEY }}
           script: |
