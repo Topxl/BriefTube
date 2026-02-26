@@ -1,6 +1,6 @@
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
-import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/server";
 import { stripe } from "@/lib/stripe";
 import { SiteConfig } from "@/site-config";
 import { headers } from "next/headers";
@@ -100,7 +100,7 @@ const checkoutSessionCompleted = async (
       ? session.subscription
       : session.subscription.id;
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   // Find user by Stripe customer ID first, then fallback to metadata.userId
   let profile: {
@@ -174,9 +174,9 @@ const checkoutSessionCompleted = async (
     });
   }
 
-  // Reward referrer if applicable — use admin client to bypass RLS in webhook context
+  // Reward referrer if applicable
   if (profile.referred_by) {
-    const admin = createAdminClient();
+    const admin = supabase; // already admin client
 
     const { data: referral } = await admin
       .from("referrals")
@@ -255,7 +255,7 @@ const customerSubscriptionUpdated = async (
       ? subscription.customer
       : subscription.customer.id;
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   // Find user by Stripe customer ID
   const { data: profile } = await supabase
@@ -298,7 +298,7 @@ const customerSubscriptionDeleted = async (
       ? subscription.customer
       : subscription.customer.id;
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   // Find user by Stripe customer ID
   const { data: profile } = await supabase
@@ -338,7 +338,7 @@ const invoicePaymentFailed = async (invoiceData: Stripe.Invoice) => {
     return;
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data: profile } = await supabase
     .from("profiles")

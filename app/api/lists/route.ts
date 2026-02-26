@@ -16,8 +16,8 @@ export async function GET(req: NextRequest) {
   const category = searchParams.get("category");
   const q = searchParams.get("q");
 
-  // Fetch all public lists with counts via aggregation
-  const { data: lists, error } = await supabase
+  // Build query with DB-level filters
+  let query = supabase
     .from("channel_lists")
     .select(
       `
@@ -27,49 +27,44 @@ export async function GET(req: NextRequest) {
       category,
       is_public,
       created_at,
-      created_by,
       list_channels(count),
       list_stars(count),
       list_follows(count)
     `,
     )
-    .eq("is_public", true)
-    .order("created_at", { ascending: false });
+    .eq("is_public", true);
+
+  if (category) {
+    query = query.eq("category", category);
+  }
+
+  if (q) {
+    query = query.or(`name.ilike.%${q}%,description.ilike.%${q}%`);
+  }
+
+  const { data: lists, error } = await query.order("created_at", {
+    ascending: false,
+  });
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Map and filter
-  let result = lists.map((l) => ({
-    id: l.id,
-    name: l.name,
-    description: l.description,
-    category: l.category,
-    created_at: l.created_at,
-    created_by: l.created_by,
-    channel_count:
-      (l.list_channels as unknown as { count: number }[])[0]?.count ?? 0,
-    star_count: (l.list_stars as unknown as { count: number }[])[0]?.count ?? 0,
-    follow_count:
-      (l.list_follows as unknown as { count: number }[])[0]?.count ?? 0,
-  }));
-
-  if (category) {
-    result = result.filter((l) => l.category === category);
-  }
-
-  if (q) {
-    const norm = q.toLowerCase();
-    result = result.filter(
-      (l) =>
-        l.name.toLowerCase().includes(norm) ||
-        (l.description ?? "").toLowerCase().includes(norm),
-    );
-  }
-
-  // Sort by star_count desc
-  result.sort((a, b) => b.star_count - a.star_count);
+  const result = lists
+    .map((l) => ({
+      id: l.id,
+      name: l.name,
+      description: l.description,
+      category: l.category,
+      created_at: l.created_at,
+      channel_count:
+        (l.list_channels as unknown as { count: number }[])[0]?.count ?? 0,
+      star_count:
+        (l.list_stars as unknown as { count: number }[])[0]?.count ?? 0,
+      follow_count:
+        (l.list_follows as unknown as { count: number }[])[0]?.count ?? 0,
+    }))
+    .sort((a, b) => b.star_count - a.star_count);
 
   return NextResponse.json(result);
 }

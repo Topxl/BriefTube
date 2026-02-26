@@ -241,7 +241,7 @@ export async function POST(request: NextRequest) {
               video_title: "[pre-subscription]",
               video_url: `https://www.youtube.com/watch?v=${v.videoId}`,
               status: "skipped",
-              language: "fr", // sentinel — video_id presence in the set is enough for the scanner
+              language: profile?.preferred_language ?? "fr",
             },
             { onConflict: "video_id,language", ignoreDuplicates: true },
           ),

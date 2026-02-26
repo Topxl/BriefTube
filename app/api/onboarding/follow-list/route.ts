@@ -49,7 +49,9 @@ export async function POST(req: NextRequest) {
   // Fetch user profile to determine plan + active channel limit
   const { data: profile } = await admin
     .from("profiles")
-    .select("subscription_status, trial_ends_at, max_channels")
+    .select(
+      "subscription_status, trial_ends_at, max_channels, preferred_language",
+    )
     .eq("id", user.id)
     .single();
 
@@ -122,7 +124,7 @@ export async function POST(req: NextRequest) {
             video_title: "[pre-subscription]",
             video_url: `https://www.youtube.com/watch?v=${videoId}`,
             status: "skipped",
-            language: "fr",
+            language: profile?.preferred_language ?? "fr",
           })),
           { onConflict: "video_id,language", ignoreDuplicates: true },
         );

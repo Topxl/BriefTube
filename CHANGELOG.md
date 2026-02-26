@@ -2,6 +2,10 @@
 
 ## 2026-02-26
 
+FIX: Webhook Stripe — utiliser createAdminClient() pour bypasser RLS (évite silent failures)
+FIX: Subscriptions / onboarding — remplacer language "fr" hardcodé par preferred_language du profil
+FIX: API lists — retirer created_by (UUID utilisateur) de la réponse publique
+FIX: API lists — pousser filtres category/q en DB au lieu de filtrer en mémoire
 FEATURE: Onboarding wizard — visuels par catégorie (Business/Education/Finance/Science/Tech) : fond dégradé, icône SVG watermark, barre accent colorée
 
 FIX: Sécurité — supprimer /api/admin/debug (exposait l'ID admin publiquement sans auth)
