@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-02-27
+
+FIX: Worker — détecter la bot-detection YouTube ("Sign in to confirm you're not a bot") dans whisper_transcriber et retourner "youtube_auth_required" (retriable) au lieu de "audio_download_failed" (fail immédiat + notification utilisateur)
+
 ## 2026-02-26
 
 FIX: Worker — ne pas appeler mark_video_failed si mark_video_completed a déjà réussi (évite d'écraser status='completed' en 'failed' sur erreur DB post-traitement)
