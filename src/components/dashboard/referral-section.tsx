@@ -1,37 +1,35 @@
 "use client";
 
 import { useState } from "react";
-import { Copy, Check } from "@/lib/icons";
+import { Copy, Check, Share2 } from "@/lib/icons";
 import { SiteConfig } from "@/site-config";
+import QRCode from "react-qr-code";
 
 const shareText = `I use BriefTube to get AI audio summaries of YouTube videos delivered to my Telegram — try it:`;
 
 function ShareButtons({
   url,
   referralCode,
+  onNativeShare,
 }: {
   url: string;
   referralCode: string;
+  onNativeShare: () => void;
 }) {
   const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(url)}`;
   const tgUrl = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(shareText)}`;
   const storyImageUrl = `/api/og/story/${referralCode}`;
-  const canNativeShare = typeof navigator !== "undefined" && !!navigator.share;
-
-  const handleNativeShare = () => {
-    void navigator.share({ title: SiteConfig.title, text: shareText, url });
-  };
 
   return (
-    <div className="flex items-center gap-2">
-      {canNativeShare && (
-        <button
-          onClick={handleNativeShare}
-          className="nm-raised-sm text-muted-foreground hover:text-foreground rounded-full px-3 py-1.5 text-xs transition-all"
-        >
-          Share
-        </button>
-      )}
+    <div className="flex flex-wrap items-center gap-2">
+      {/* Native share — always visible */}
+      <button
+        onClick={onNativeShare}
+        className="nm-raised-sm text-muted-foreground hover:text-foreground flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs transition-all"
+      >
+        <Share2 className="h-3 w-3" />
+        Share
+      </button>
       <a
         href={tweetUrl}
         target="_blank"
@@ -95,33 +93,55 @@ export function ReferralSection({ referralCode, stats }: Props) {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleNativeShare = () => {
+    if ("share" in navigator) {
+      void navigator.share({
+        title: SiteConfig.title,
+        text: shareText,
+        url: referralUrl,
+      });
+    } else {
+      void handleCopy();
+    }
+  };
+
   return (
     <section className="space-y-2">
       <h2 className="text-muted-foreground/50 px-1 text-xs font-medium tracking-wide uppercase">
         Referral
       </h2>
       <div className="nm-raised overflow-hidden rounded-2xl">
-        {/* Referral link */}
-        <div className="flex items-center justify-between gap-3 px-4 py-3">
-          <p className="text-muted-foreground min-w-0 truncate text-xs">
-            {referralUrl}
-          </p>
+        {/* QR code */}
+        <div className="flex flex-col items-center gap-3 px-4 py-5">
+          <div className="rounded-xl bg-white p-3">
+            <QRCode value={referralUrl} size={140} />
+          </div>
           <button
             onClick={() => void handleCopy()}
-            className="text-muted-foreground hover:text-foreground shrink-0 transition-colors"
+            className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-xs transition-colors"
             aria-label="Copy referral link"
           >
             {copied ? (
-              <Check className="h-3.5 w-3.5 text-emerald-400" />
+              <>
+                <Check className="h-3.5 w-3.5 text-emerald-400" />
+                <span className="text-emerald-400">Copied!</span>
+              </>
             ) : (
-              <Copy className="h-3.5 w-3.5" />
+              <>
+                <Copy className="h-3.5 w-3.5" />
+                Copy link
+              </>
             )}
           </button>
         </div>
 
         {/* Share buttons */}
         <div className="border-t border-white/[0.04] px-4 py-3">
-          <ShareButtons url={referralUrl} referralCode={referralCode} />
+          <ShareButtons
+            url={referralUrl}
+            referralCode={referralCode}
+            onNativeShare={handleNativeShare}
+          />
         </div>
 
         {/* Stats grid */}

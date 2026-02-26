@@ -1,5 +1,8 @@
 import { ImageResponse } from "next/og";
 import { SiteConfig } from "@/site-config";
+import QRCode from "qrcode";
+import fs from "fs";
+import path from "path";
 
 export async function GET(
   _request: Request,
@@ -7,6 +10,24 @@ export async function GET(
 ) {
   const { code } = await params;
   const referralUrl = `${SiteConfig.domain}/r/${code}`;
+
+  // Generate QR code as data URL (white on dark)
+  const qrDataUrl = await QRCode.toDataURL(referralUrl, {
+    margin: 2,
+    width: 320,
+    color: {
+      dark: "#000000",
+      light: "#ffffff",
+    },
+  });
+
+  // Read real logo from filesystem
+  const logoPath = path.join(process.cwd(), "public/logo-hd.png");
+  const logoFallbackPath = path.join(process.cwd(), "public/logo-120.png");
+  const logoBuffer = fs.existsSync(logoPath)
+    ? fs.readFileSync(logoPath)
+    : fs.readFileSync(logoFallbackPath);
+  const logoBase64 = `data:image/png;base64,${logoBuffer.toString("base64")}`;
 
   return new ImageResponse(
     <div
@@ -27,25 +48,25 @@ export async function GET(
       <div
         style={{
           position: "absolute",
-          top: "15%",
-          left: "10%",
-          width: "500px",
-          height: "500px",
+          top: "10%",
+          left: "5%",
+          width: "600px",
+          height: "600px",
           borderRadius: "50%",
           background: "rgba(220, 38, 38, 0.12)",
-          filter: "blur(180px)",
+          filter: "blur(200px)",
         }}
       />
       <div
         style={{
           position: "absolute",
-          bottom: "20%",
-          right: "5%",
-          width: "400px",
-          height: "400px",
+          bottom: "15%",
+          right: "0%",
+          width: "500px",
+          height: "500px",
           borderRadius: "50%",
           background: "rgba(220, 38, 38, 0.08)",
-          filter: "blur(160px)",
+          filter: "blur(180px)",
         }}
       />
 
@@ -56,46 +77,28 @@ export async function GET(
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          padding: "80px 80px",
+          padding: "80px",
           zIndex: 1,
           textAlign: "center",
           gap: "0px",
         }}
       >
-        {/* Logo mark */}
-        <div
-          style={{
-            width: "80px",
-            height: "80px",
-            borderRadius: "20px",
-            background: "#dc2626",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            marginBottom: "48px",
-          }}
-        >
-          <div
-            style={{
-              width: "40px",
-              height: "40px",
-              borderLeft: "20px solid transparent",
-              borderRight: "0px solid transparent",
-              borderTop: "12px solid transparent",
-              borderBottom: "12px solid transparent",
-              borderLeftColor: "white",
-            }}
-          />
-        </div>
+        {/* Real logo */}
+        <img
+          src={logoBase64}
+          width={120}
+          height={120}
+          style={{ marginBottom: "40px", borderRadius: "24px" }}
+        />
 
         {/* Brand name */}
         <div
           style={{
-            fontSize: "52px",
+            fontSize: "56px",
             fontWeight: "800",
             color: "#ffffff",
             letterSpacing: "-1px",
-            marginBottom: "32px",
+            marginBottom: "28px",
           }}
         >
           BriefTube
@@ -123,7 +126,7 @@ export async function GET(
               textTransform: "uppercase",
             }}
           >
-            14-day free Pro trial
+            {SiteConfig.trialDays}-day free Pro trial
           </span>
         </div>
 
@@ -135,7 +138,7 @@ export async function GET(
             color: "#ffffff",
             lineHeight: 1.05,
             letterSpacing: "-2px",
-            marginBottom: "36px",
+            marginBottom: "32px",
             maxWidth: "900px",
           }}
         >
@@ -145,35 +148,24 @@ export async function GET(
         {/* Subheadline */}
         <div
           style={{
-            fontSize: "38px",
+            fontSize: "36px",
             color: "#a1a1aa",
             lineHeight: 1.4,
             maxWidth: "820px",
-            marginBottom: "80px",
+            marginBottom: "72px",
           }}
         >
-          Get AI summaries of your favorite channels delivered to Telegram —
+          AI summaries of your favorite channels delivered to Telegram —
           automatically.
         </div>
 
-        {/* Divider */}
-        <div
-          style={{
-            width: "64px",
-            height: "4px",
-            background: "#dc2626",
-            borderRadius: "2px",
-            marginBottom: "64px",
-          }}
-        />
-
-        {/* URL callout */}
+        {/* QR code */}
         <div
           style={{
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            gap: "12px",
+            gap: "20px",
           }}
         >
           <div
@@ -181,23 +173,19 @@ export async function GET(
               fontSize: "28px",
               color: "#71717a",
               fontWeight: "500",
-              letterSpacing: "0.5px",
             }}
           >
-            Start your free trial at
+            Scan to start your free trial
           </div>
           <div
             style={{
-              fontSize: "48px",
-              fontWeight: "700",
-              color: "#ffffff",
-              letterSpacing: "-0.5px",
-              background: "rgba(255,255,255,0.06)",
-              padding: "16px 40px",
-              borderRadius: "16px",
+              background: "#ffffff",
+              borderRadius: "20px",
+              padding: "20px",
+              display: "flex",
             }}
           >
-            {referralUrl}
+            <img src={qrDataUrl} width={280} height={280} />
           </div>
         </div>
       </div>
