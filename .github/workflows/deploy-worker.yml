@@ -23,11 +23,9 @@ jobs:
           echo "Auth HTTP status: $AUTH"
           if [ "$AUTH" = "200" ]; then
             TOKEN=$(cat /tmp/auth.json | python3 -c "import sys,json; print(json.load(sys.stdin)['accessToken'])")
-            echo "Login OK — fetching secrets..."
-            curl -s -o /tmp/secrets.json -w "Secrets HTTP status: %{http_code}\n" \
-              "https://app.infisical.com/api/v3/secrets/raw?workspaceSlug=brieftube-server&environment=prod&secretPath=/deploy" \
-              -H "Authorization: Bearer $TOKEN"
-            python3 -c "import sys,json; d=json.load(open('/tmp/secrets.json')); print('Error:', d.get('message', d.get('error', 'none')))" 2>/dev/null || true
+            echo "Login OK — identifying machine identity..."
+            curl -s "https://app.infisical.com/api/v1/auth/token/me" \
+              -H "Authorization: Bearer $TOKEN" | python3 -c "import sys,json; d=json.load(sys.stdin); print('Identity ID:', d.get('identityId', d))" 2>/dev/null || true
           else
             echo "Login FAILED:"
             cat /tmp/auth.json
