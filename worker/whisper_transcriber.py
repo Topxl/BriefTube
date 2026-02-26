@@ -85,7 +85,14 @@ class WhisperTranscriber:
             # Pre-check: detect live/upcoming streams before attempting download.
             # Avoids downloading an infinite HLS stream for 10+ minutes.
             try:
-                pre_opts: dict = {"quiet": True, "no_warnings": True, "nocheckcertificate": True, "skip_download": True}
+                pre_opts: dict = {
+                    "quiet": True,
+                    "no_warnings": True,
+                    "nocheckcertificate": True,
+                    "skip_download": True,
+                    # iOS client bypasses YouTube bot-detection on datacenter IPs
+                    "extractor_args": {"youtube": {"player_client": ["ios"]}},
+                }
                 if _cookies_file.exists():
                     pre_opts["cookiefile"] = str(_cookies_file)
                 with yt_dlp.YoutubeDL(pre_opts) as ydl_info:
@@ -132,6 +139,8 @@ class WhisperTranscriber:
                 'noprogress': True,
                 'nocheckcertificate': True,
                 'max_filesize': 150 * 1024 * 1024,  # 150 MB hard cap
+                # iOS client bypasses YouTube bot-detection on datacenter IPs
+                'extractor_args': {'youtube': {'player_client': ['ios']}},
             }
             if _cookies_file.exists():
                 ydl_opts['cookiefile'] = str(_cookies_file)

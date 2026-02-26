@@ -3,6 +3,7 @@
 ## 2026-02-27
 
 FIX: Worker — détecter la bot-detection YouTube ("Sign in to confirm you're not a bot") dans whisper_transcriber et retourner "youtube_auth_required" (retriable) au lieu de "audio_download_failed" (fail immédiat + notification utilisateur)
+FIX: Worker — utiliser player_client=ios dans yt-dlp (sous-titres + audio Whisper) pour contourner la bot-detection YouTube sur les IPs de datacenter
 
 ## 2026-02-26
 

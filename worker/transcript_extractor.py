@@ -363,6 +363,8 @@ class TranscriptExtractor:
             "no_warnings": True,
             "noprogress": True,
             "nocheckcertificate": True,
+            # iOS client bypasses YouTube bot-detection on datacenter IPs
+            "extractor_args": {"youtube": {"player_client": ["ios"]}},
         }
         if cookies_file:
             ydl_opts["cookiefile"] = cookies_file
