@@ -2,11 +2,23 @@
 
 ## 2026-02-26
 
+FIX: site-config freeChannelsLimit 3→5 (cohérent avec l'UI "5 YouTube channels")
+FIX: Webhooks stripe cancel/updated/deleted — max_channels hardcodé 3 remplacé par SiteConfig.freeChannelsLimit
+FEATURE: pricing-cards — prix dynamiques via /api/stripe/price (plus de hardcoding $9/$79)
+FEATURE: pricing-cards, landing/pricing, upsell-modal — défaut "Annual" au lieu de "Monthly"
+FEATURE: Badge économies toujours visible — mode monthly → badge amber "Save 27% with Annual" (cliquable), mode annual → badge emerald "You save 27%"
+FEATURE: profile-content — sélecteur Monthly/Annual inline dans la section Subscription avec prix dynamique
+FEATURE: profile-content — banner "Activating your subscription…" pendant le polling post-paiement
+FEATURE: trial-banner — messages urgents progressifs (>3j / ≤3j / dernier jour) + couleur rouge quand ≤3 jours, lien Upgrade pré-sélectionne annuel (?annual=true)
+FEATURE: Cron /api/cron/reconcile-subscriptions — réconciliation quotidienne Stripe↔DB à 3h du matin
+CHORE: vercel.json — schedulers Vercel Cron pour trial-reminders (9h) et reconcile-subscriptions (3h)
+
 FIX: Worker db.py enqueue_video() — réutilise le slot completed/failed au lieu de bloquer silencieusement les re-soumissions on-demand ; réinitialise attempts=0 et started_at pour éviter un fail immédiat
 FIX: Worker db.py enqueue_video_for_language() — réinitialise aussi attempts=0 et started_at quand un slot failed est réutilisé (sinon la prochaine erreur fail le job définitivement)
 FIX: Worker telegram_deliverer.py — video_title None causait 'NoneType has no attribute replace' via _html.escape() ; protégé par `video_title or ""`
 FIX: Worker telegram_deliverer.py — video_title None causait 'NoneType is not subscriptable' via video_title[:60] et video_title[:40] dans les logs post-send_voice ; protégé par (video_title or '')[:N]
 FIX: Worker db.py mark_video_completed() — ajoute paramètre video_title pour backfill les rows créées sans titre (ex. language-chained rows) ; main.py passe video_title à l'appel
+FIX: Worker transcript_extractor + whisper_transcriber — "No video formats found!" (erreur yt-dlp pour live en cours) non reconnu comme live → fail permanent + notification user au lieu de snooze 2h
 
 REFACTOR: Worker proxy — stratégie "direct-first" : transcript API + yt-dlp subtitles + téléchargement audio essaient d'abord sans proxy (VPS → YouTube CDN direct), proxy Webshare rotating utilisé uniquement si IP bloquée par YouTube (transcript API uniquement)
 FIX: CI — deploy-worker.yml corrige le project-slug Infisical ("brieftube-server-qy7-v" et non "brieftube-server") — Infisical ajoute un suffixe unique au slug

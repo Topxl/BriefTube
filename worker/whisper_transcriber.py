@@ -104,7 +104,9 @@ class WhisperTranscriber:
                 if _PREMIERE_RE.search(pre_err):
                     hours = _hours_until_premiere(pre_err)
                     return f"premiere:{hours}"
-                if any(kw in pre_err.lower() for kw in ("is a live stream", "live event")):
+                if any(kw in pre_err.lower() for kw in (
+                    "is a live stream", "live event", "no video formats found",
+                )):
                     return "live"
                 # Other pre-check errors: proceed to actual download
 
@@ -149,6 +151,7 @@ class WhisperTranscriber:
             if any(kw in err.lower() for kw in (
                 "is a live stream", "currently broadcasting",
                 "is a live event", "live event",
+                "no video formats found",  # live stream currently broadcasting
             )):
                 logger.info("Audio download: live stream detected — no audio to download")
                 return "live"

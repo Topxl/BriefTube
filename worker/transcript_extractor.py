@@ -429,6 +429,7 @@ class TranscriptExtractor:
                 "is a live stream", "currently broadcasting",
                 "is a live event", "live event",
                 "this is a live stream", "cannot download live",
+                "no video formats found",  # live stream currently broadcasting
             )):
                 logger.info("yt-dlp subtitle: live stream detected — snooze 2h")
                 return None, None, "video_is_live"
