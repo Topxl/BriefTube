@@ -13,12 +13,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Fetch secrets from Infisical
+        uses: Infisical/secrets-action@v1.0.7
+        with:
+          client-id: ${{ secrets.INFISICAL_CLIENT_ID }}
+          client-secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+          project-id: "089a5c93-5c51-4a24-8bf0-9d8bceb3a114"
+          env-slug: "prod"
+          secret-path: "/deploy"
+          export-type: "env"
+
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1
         with:
-          host: ${{ secrets.VPS_HOST }}
+          host: 138.199.220.195
           username: brieftube
-          key: ${{ secrets.VPS_SSH_KEY }}
+          key: ${{ env.VPS_SSH_KEY }}
           script: |
             set -e
             cd /home/brieftube/app
