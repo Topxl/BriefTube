@@ -1,7 +1,6 @@
 import Script from "next/script";
 import { NextTopLoader } from "@/features/page/next-top-loader";
 import { ServerToaster } from "@/features/server-sonner/server-toaster";
-import { getServerUrl } from "@/lib/server-url";
 import { cn } from "@/lib/utils";
 import { SiteConfig } from "@/site-config";
 import type { Metadata } from "next";
@@ -17,7 +16,7 @@ export const metadata: Metadata = {
     template: `%s — ${SiteConfig.title}`,
   },
   description: SiteConfig.description,
-  metadataBase: new URL(getServerUrl()),
+  metadataBase: new URL(SiteConfig.prodUrl),
   robots: {
     index: true,
     follow: true,

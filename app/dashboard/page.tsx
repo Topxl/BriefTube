@@ -6,6 +6,7 @@ import { SummariesFeed } from "@/components/dashboard/summaries-feed";
 import { TrialBanner } from "@/components/dashboard/trial-banner";
 import { SourcesSection } from "@/components/dashboard/sources-section";
 import { SectionErrorBoundary } from "@/components/nowts/section-error-boundary";
+import { PersonalStats } from "@/components/dashboard/personal-stats";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -64,6 +65,11 @@ export default async function DashboardPage() {
 
       {/* Trial banner */}
       {trialDaysLeft > 0 && <TrialBanner daysLeft={trialDaysLeft} />}
+
+      {/* Personal stats */}
+      <SectionErrorBoundary>
+        <PersonalStats userId={user.id} />
+      </SectionErrorBoundary>
 
       {/* Recent summaries */}
       <div className="space-y-3">

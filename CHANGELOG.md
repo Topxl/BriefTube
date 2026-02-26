@@ -2,6 +2,11 @@
 
 ## 2026-02-26
 
+FEATURE: Personal stats dashboard (P2-1) — this month, all time, time saved estimate, streak, top channels par activité
+FIX: SEO sitemap — supprime doublon sitemap.ts, retire /login (noindex) du sitemap.tsx, ajoute /support manquant
+FIX: SEO metadataBase — fixé sur SiteConfig.prodUrl (www.brief-tube.com) au lieu de getServerUrl() qui retournait le domaine Vercel interne, corrige "Google n'a pas choisi la même URL canonique"
+FEATURE: SEO sitemap — crée app/sitemap.ts avec pages statiques, articles blog, comparatifs et chaînes (depuis DB), référencé dans robots.ts
+CHORE: SEO trailing slash — ajoute trailingSlash: false dans next.config.ts pour éviter les pages dupliquées /page vs /page/
 FEATURE: Referral trial emails (P1-5) — email personnalisé J-3/J-1 pour les filleuls en fin de trial, prénom du parrain extrait de l'email, déduplication email_logs, bouton admin
 FEATURE: SEO channel pages (P1-3) — /channels index top 100 + enrichissement page chaîne (followers BriefTube, date dernier résumé) + sitemap lastModified dynamique
 FEATURE: Re-engagement email (P1-2) — email fondateur aux Pro sans livraison depuis 7 jours, déduplication email_logs, bouton admin
