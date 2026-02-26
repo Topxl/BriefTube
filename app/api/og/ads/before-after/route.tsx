@@ -146,10 +146,10 @@ export async function GET(req: Request) {
                 color: "#71717a",
                 fontWeight: 700,
                 letterSpacing: "1px",
-                textTransform: "uppercase",
+                textTransform: undefined,
               }}
             >
-              Before
+              BEFORE
             </span>
           </div>
 
@@ -234,10 +234,10 @@ export async function GET(req: Request) {
                 color: "#f87171",
                 fontWeight: 700,
                 letterSpacing: "1px",
-                textTransform: "uppercase",
+                textTransform: undefined,
               }}
             >
-              After
+              AFTER
             </span>
           </div>
 
