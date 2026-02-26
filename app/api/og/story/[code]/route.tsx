@@ -236,7 +236,7 @@ export async function GET(
               border: "1px solid rgba(220, 38, 38, 0.3)",
               borderRadius: "100px",
               padding: "8px 24px",
-              width: "fit-content",
+              alignSelf: "flex-start",
             }}
           >
             <span
