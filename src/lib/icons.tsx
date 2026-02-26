@@ -76,6 +76,8 @@ import {
   ShieldAlert as _ShieldAlert,
   TrendingUp as _TrendingUp,
   BarChart2 as _BarChart2,
+  Flame as _Flame,
+  Inbox as _Inbox,
 } from "lucide-react";
 
 export type { LucideIcon, LucideProps } from "lucide-react";
@@ -156,3 +158,5 @@ export const Layers = wrap(_Layers);
 export const ShieldAlert = wrap(_ShieldAlert);
 export const TrendingUp = wrap(_TrendingUp);
 export const BarChart2 = wrap(_BarChart2);
+export const Flame = wrap(_Flame);
+export const Inbox = wrap(_Inbox);
