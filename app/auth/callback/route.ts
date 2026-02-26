@@ -107,6 +107,16 @@ export async function GET(request: Request) {
                   referrerId: referrer.id,
                   refereeId: user.id,
                 });
+                // Extend trial to 14 days for referred users
+                const extendedTrialEnd = new Date();
+                extendedTrialEnd.setDate(
+                  extendedTrialEnd.getDate() +
+                    SiteConfig.referral.referredTrialDays,
+                );
+                await supabase
+                  .from("profiles")
+                  .update({ trial_ends_at: extendedTrialEnd.toISOString() })
+                  .eq("id", user.id);
               }
 
               // Notify referrer via Telegram (fire-and-forget)

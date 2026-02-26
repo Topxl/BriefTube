@@ -27,6 +27,8 @@ export const SiteConfig = {
     annualRewardMonths: 1,
     /** Stripe credit currency */
     currency: "usd",
+    /** Free trial duration for users who sign up via a referral link (days) */
+    referredTrialDays: 14,
   },
   features: {
     /**

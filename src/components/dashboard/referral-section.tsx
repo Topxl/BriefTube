@@ -6,9 +6,16 @@ import { SiteConfig } from "@/site-config";
 
 const shareText = `I use BriefTube to get AI audio summaries of YouTube videos delivered to my Telegram — try it:`;
 
-function ShareButtons({ url }: { url: string }) {
+function ShareButtons({
+  url,
+  referralCode,
+}: {
+  url: string;
+  referralCode: string;
+}) {
   const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(url)}`;
   const tgUrl = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(shareText)}`;
+  const storyImageUrl = `/api/og/story/${referralCode}`;
   const canNativeShare = typeof navigator !== "undefined" && !!navigator.share;
 
   const handleNativeShare = () => {
@@ -49,36 +56,43 @@ function ShareButtons({ url }: { url: string }) {
         </svg>
         Telegram
       </a>
+      <a
+        href={storyImageUrl}
+        download="brieftube-story.png"
+        className="nm-raised-sm text-muted-foreground hover:text-foreground flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs transition-all"
+        aria-label="Download Instagram Story"
+      >
+        <svg className="h-3 w-3" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z" />
+        </svg>
+        Story
+      </a>
     </div>
   );
 }
 
-type ReferralRow = {
-  maskedEmail: string;
-  status: string;
-  rewardType: string | null;
-  createdAt: string;
-  rewardedAt: string | null;
+type ReferralStats = {
+  total: number;
+  onTrial: number;
+  activePro: number;
+  rewarded: number;
 };
 
 type Props = {
   referralCode: string;
-  referrals: ReferralRow[];
+  stats: ReferralStats;
 };
 
-export function ReferralSection({ referralCode, referrals }: Props) {
+export function ReferralSection({ referralCode, stats }: Props) {
   const [copied, setCopied] = useState(false);
 
-  const referralUrl = `${SiteConfig.prodUrl}/?ref=${referralCode}`;
+  const referralUrl = `${SiteConfig.prodUrl}/r/${referralCode}`;
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(referralUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
-
-  const totalReferred = referrals.length;
-  const totalRewarded = referrals.filter((r) => r.status === "rewarded").length;
 
   return (
     <section className="space-y-2">
@@ -106,14 +120,35 @@ export function ReferralSection({ referralCode, referrals }: Props) {
 
         {/* Share buttons */}
         <div className="border-t border-white/[0.04] px-4 py-3">
-          <ShareButtons url={referralUrl} />
+          <ShareButtons url={referralUrl} referralCode={referralCode} />
         </div>
 
-        {/* Stats */}
-        <div className="border-t border-white/[0.04] px-4 py-3">
-          <p className="text-muted-foreground text-xs">
-            {totalReferred} referred · {totalRewarded} rewarded
-          </p>
+        {/* Stats grid */}
+        <div className="grid grid-cols-4 divide-x divide-white/[0.04] border-t border-white/[0.04]">
+          <div className="px-4 py-3 text-center">
+            <p className="text-foreground text-sm font-semibold">
+              {stats.total}
+            </p>
+            <p className="text-muted-foreground mt-0.5 text-[10px]">Referred</p>
+          </div>
+          <div className="px-4 py-3 text-center">
+            <p className="text-sm font-semibold text-amber-400">
+              {stats.onTrial}
+            </p>
+            <p className="text-muted-foreground mt-0.5 text-[10px]">Trial</p>
+          </div>
+          <div className="px-4 py-3 text-center">
+            <p className="text-sm font-semibold text-emerald-400">
+              {stats.activePro}
+            </p>
+            <p className="text-muted-foreground mt-0.5 text-[10px]">Pro</p>
+          </div>
+          <div className="px-4 py-3 text-center">
+            <p className="text-sm font-semibold text-sky-400">
+              {stats.rewarded}
+            </p>
+            <p className="text-muted-foreground mt-0.5 text-[10px]">Rewarded</p>
+          </div>
         </div>
 
         {/* Reward explanation */}
@@ -126,31 +161,6 @@ export function ReferralSection({ referralCode, referrals }: Props) {
             {SiteConfig.referral.annualRewardMonths > 1 ? "s" : ""} credit.
           </p>
         </div>
-
-        {/* Referral list */}
-        {referrals.length > 0 && (
-          <div className="border-t border-white/[0.04]">
-            <div className="divide-y divide-white/[0.04]">
-              {referrals.map((r, i) => (
-                <div
-                  key={i}
-                  className="flex items-center justify-between px-4 py-2.5"
-                >
-                  <p className="text-xs">{r.maskedEmail}</p>
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase ${
-                      r.status === "rewarded"
-                        ? "nm-inset-sm text-emerald-400"
-                        : "nm-raised-sm text-muted-foreground"
-                    }`}
-                  >
-                    {r.status === "rewarded" ? "Rewarded" : "Pending"}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </section>
   );
