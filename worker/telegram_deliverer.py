@@ -133,7 +133,7 @@ async def send_audio_to_user(
                 reply_to_message_id=reply_to,
                 reply_markup=keyboard,
             )
-        logger.info(f"Delivered to chat {chat_id}: {video_title[:60]}")
+        logger.info(f"Delivered to chat {chat_id}: {(video_title or '')[:60]}")
         return True
 
     except Exception as e:
@@ -148,7 +148,7 @@ async def send_audio_to_user(
 
     # Voice failed — if the preview went through, the user at least has the link
     if preview_msg:
-        logger.warning(f"Audio failed but YouTube preview sent to chat {chat_id}: {video_title[:40]}")
+        logger.warning(f"Audio failed but YouTube preview sent to chat {chat_id}: {(video_title or '')[:40]}")
         return True
 
     return False
