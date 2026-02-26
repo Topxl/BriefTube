@@ -106,7 +106,7 @@ async def send_audio_to_user(
         logger.warning(f"OGG conversion failed for {video_id} — will try MP3 via send_voice: {e}")
 
     # ── Step 2: Send text message with YouTube URL (inline preview) ─────────
-    title_escaped = _html.escape(video_title)
+    title_escaped = _html.escape(video_title or "")
     preview_msg = None
     try:
         preview_msg = await bot.send_message(

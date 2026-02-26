@@ -147,8 +147,12 @@ def insert_new_video(video_id: str, channel_id: str, video_title: str, video_url
 def enqueue_video(video_id: str, youtube_url: str, video_title: str, channel_id: str, language: str = "fr", tts_voice: str | None = None):
     """Enqueue a video for processing in a specific language.
 
-    One job is created per unique (video_id, language) pair. If a job already
-    exists for that pair (e.g. from a previous scan), it is left unchanged.
+    - If no job exists → insert new job.
+    - If job is completed/failed → reuse the slot (update to queued).
+    - If job is queued/processing → do nothing (already active).
+
+    This prevents on-demand re-submissions from being silently ignored when a
+    completed job already exists in processing_queue from a previous run.
     """
     sb = get_client()
     row = {
@@ -161,18 +165,27 @@ def enqueue_video(video_id: str, youtube_url: str, video_title: str, channel_id:
     }
     if tts_voice:
         row["tts_voice"] = tts_voice
-    # No unique constraint on (video_id, language) in processing_queue, so we
-    # check manually: only insert if no queued/processing job exists for this pair.
-    # Check all statuses — the unique constraint is on video_id alone, so any
-    # existing row (queued, processing, completed, failed) blocks a new insert.
+
     existing = (
         sb.table("processing_queue")
-        .select("id")
+        .select("id, status")
         .eq("video_id", video_id)
         .execute()
     )
+
     if not existing.data:
         sb.table("processing_queue").insert(row).execute()
+        return
+
+    job = existing.data[0]
+    if job["status"] in ("queued", "processing"):
+        return  # Already active — do not interrupt
+
+    # Job is completed/failed — reuse the slot for a fresh run
+    update = {"status": "queued", "user_language": language, "attempts": 0, "started_at": None}
+    if tts_voice:
+        update["tts_voice"] = tts_voice
+    sb.table("processing_queue").update(update).eq("id", job["id"]).execute()
 
 
 def pick_next_job() -> dict | None:
@@ -911,11 +924,13 @@ def enqueue_video_for_language(
     if job["status"] in ("queued", "processing"):
         return False  # Already active — do not interrupt
 
-    # Job is completed/failed — reuse the slot
+    # Job is completed/failed — reuse the slot and reset retry counters
     sb.table("processing_queue").update({
         "status": "queued",
         "user_language": language,
         "tts_voice": tts_voice,
+        "attempts": 0,
+        "started_at": None,
     }).eq("id", job["id"]).execute()
     return True
 
