@@ -20,6 +20,7 @@ import { NewsletterSeedButton } from "@/components/admin/newsletter-seed-button"
 import { TrialRemindersButton } from "@/components/admin/trial-reminders-button";
 import { ActivationEmailsButton } from "@/components/admin/activation-emails-button";
 import { ReengagementEmailsButton } from "@/components/admin/reengagement-emails-button";
+import { ReferralTrialEmailsButton } from "@/components/admin/referral-trial-emails-button";
 
 const ADMIN_USER_ID = "67320a39-948c-44d2-98e3-c0de49af1ec6";
 
@@ -916,6 +917,13 @@ export default async function AdminPage() {
             7 days)
           </p>
           <ReengagementEmailsButton />
+        </div>
+        <div className="nm-raised flex flex-col gap-2 rounded-xl px-4 py-3">
+          <p className="text-muted-foreground text-sm">
+            Send referral trial emails (referred users · trial ending in J-3 /
+            J-1)
+          </p>
+          <ReferralTrialEmailsButton />
         </div>
       </div>
 

@@ -2,6 +2,7 @@
 
 ## 2026-02-26
 
+FEATURE: Referral trial emails (P1-5) — email personnalisé J-3/J-1 pour les filleuls en fin de trial, prénom du parrain extrait de l'email, déduplication email_logs, bouton admin
 FEATURE: SEO channel pages (P1-3) — /channels index top 100 + enrichissement page chaîne (followers BriefTube, date dernier résumé) + sitemap lastModified dynamique
 FEATURE: Re-engagement email (P1-2) — email fondateur aux Pro sans livraison depuis 7 jours, déduplication email_logs, bouton admin
 FEATURE: Upsell modal in-app — modal avec toggle Monthly/Annual + checkout direct, déclenché au palier de canaux (activation, bannière amber, ajout en pause)
