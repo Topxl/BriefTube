@@ -25,13 +25,7 @@ jobs:
             TOKEN=$(cat /tmp/auth.json | python3 -c "import sys,json; print(json.load(sys.stdin)['accessToken'])")
             echo "Login OK — listing accessible projects..."
             curl -s "https://app.infisical.com/api/v1/workspace" \
-              -H "Authorization: Bearer $TOKEN" | python3 -c "
-import sys,json
-d=json.load(sys.stdin)
-ws=d.get('workspaces', d.get('projects', [d]))
-for w in ws:
-    print('name:', w.get('name','?'), '| slug:', w.get('slug','?'), '| id:', w.get('id','?'))
-" 2>/dev/null || true
+              -H "Authorization: Bearer $TOKEN" | python3 -c "import sys,json; d=json.load(sys.stdin); [print('name:', w.get('name'), '| slug:', w.get('slug'), '| id:', w.get('id')) for w in d.get('workspaces', d.get('projects', []))]" 2>/dev/null || true
           else
             echo "Login FAILED:"
             cat /tmp/auth.json
