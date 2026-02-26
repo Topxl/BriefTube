@@ -522,6 +522,7 @@ class TranscriptExtractor:
             "no_transcript_available",  # Might be generated later
             "rate_limited",             # Temporary
             "video_unavailable",        # Premiere / scheduled — retry when live
+            "youtube_auth_required",    # YouTube bot-detection — transient, retry later
         ]
         if error_message in retry_errors:
             return True
