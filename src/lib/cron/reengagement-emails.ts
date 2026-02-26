@@ -100,7 +100,7 @@ export async function runReengagementEmails(): Promise<RunResult> {
             "I checked and noticed you haven't received any BriefTube summaries in the past week.",
           ) +
           p(
-            "That usually means the channels you follow haven't posted new videos recently — completely normal for some creators.",
+            "That usually means the channels you follow haven't posted new videos recently. Completely normal for some creators.",
           ) +
           p(
             "If that's the case, it might be worth adding a few more active channels to your list. The more you track, the more summaries land in your Telegram.",
@@ -109,7 +109,7 @@ export async function runReengagementEmails(): Promise<RunResult> {
             "You can add channels directly from your dashboard: <a href='https://www.brief-tube.com/dashboard' style='color:#1a1a1a;'>brief-tube.com/dashboard</a>",
           ) +
           p(
-            "Also — is everything working fine on your end? If something broke or you're not getting summaries as expected, just reply and I'll look into it personally.",
+            "Also, is everything working fine on your end? If something broke or you're not getting summaries as expected, just reply and I'll look into it personally.",
           ) +
           signature(),
       );
