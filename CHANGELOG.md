@@ -2,6 +2,8 @@
 
 ## 2026-02-26
 
+FEATURE: Plan annuel $79/an — toggle Monthly/Annual sur landing et /pricing, checkout accepte interval, -27% vs mensuel
+
 FEATURE: Activation email — email fondateur personnalisé 24h après signup si Telegram non connecté, question ouverte sur la plateforme préférée
 FEATURE: Trial expiry emails — séquence J-3/J-1/expired avec déduplication via email_logs, cron route protégée CRON_SECRET, bouton admin
 FEATURE: Posthog — product analytics integration (pageview, user identify, onboarding funnel, cancellation, subscription_activated via server-side posthog-node)

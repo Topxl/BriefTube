@@ -8,6 +8,7 @@ export const env = createEnv({
     // Required — app won't work without these
     STRIPE_SECRET_KEY: z.string().min(1),
     STRIPE_PRO_PRICE_ID: z.string().min(1),
+    STRIPE_PRO_ANNUAL_PRICE_ID: z.string().min(1),
     STRIPE_WEBHOOK_SECRET: z.string().min(1),
     GOOGLE_CLIENT_ID: z.string().min(1),
     GOOGLE_CLIENT_SECRET: z.string().min(1),
