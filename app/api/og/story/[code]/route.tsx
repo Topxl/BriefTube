@@ -170,7 +170,7 @@ export async function GET(
           maxWidth: "900px",
         }}
       >
-        AI audio summaries of your YouTube channels — delivered to Telegram,
+        AI audio summaries of your YouTube channels, delivered to Telegram
         automatically.
       </div>
 
@@ -186,7 +186,7 @@ export async function GET(
         {[
           "Powered by Google Gemini AI",
           "Neural TTS voices, your language",
-          "Telegram delivery — no app to open",
+          "Telegram delivery, no app to open",
         ].map((feat) => (
           <div
             key={feat}

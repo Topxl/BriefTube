@@ -6,7 +6,7 @@ import { CheckCircle } from "@/lib/icons";
 
 const features = [
   "AI summaries of any YouTube channel delivered to Telegram",
-  "Natural audio in your language — listen while multitasking",
+  "Natural audio in your language, listen while multitasking",
   "New videos detected automatically, no manual browsing needed",
 ];
 
