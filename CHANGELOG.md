@@ -2,6 +2,10 @@
 
 ## 2026-02-26
 
+FIX: Worker db.py enqueue_video() — réutilise le slot completed/failed au lieu de bloquer silencieusement les re-soumissions on-demand ; réinitialise attempts=0 et started_at pour éviter un fail immédiat
+FIX: Worker db.py enqueue_video_for_language() — réinitialise aussi attempts=0 et started_at quand un slot failed est réutilisé (sinon la prochaine erreur fail le job définitivement)
+FIX: Worker telegram_deliverer.py — video_title None causait 'NoneType has no attribute replace' via _html.escape() ; protégé par `video_title or ""`
+
 REFACTOR: Worker proxy — stratégie "direct-first" : transcript API + yt-dlp subtitles + téléchargement audio essaient d'abord sans proxy (VPS → YouTube CDN direct), proxy Webshare rotating utilisé uniquement si IP bloquée par YouTube (transcript API uniquement)
 FIX: CI — deploy-worker.yml corrige le project-slug Infisical ("brieftube-server-qy7-v" et non "brieftube-server") — Infisical ajoute un suffixe unique au slug
 CHORE: CI — deploy-worker.yml fetch VPS_SSH_KEY depuis Infisical (machine identity) au lieu de GitHub Secrets — VPS_HOST hardcodé (IP publique)

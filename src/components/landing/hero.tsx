@@ -24,7 +24,7 @@ const DEMO_CARDS = [
     channel: tl.mockupVideo1Channel,
     title: tl.mockupVideo1Title,
     videoId: "qp0HIF3SfI4",
-    src: `${R2}/audio/qp0HIF3SfI4_fr.mp3`,
+    src: `${R2}/audio/qp0HIF3SfI4_en.mp3`,
     fallbackDuration: 167, // 2:47
   },
   {
