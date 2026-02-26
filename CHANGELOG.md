@@ -2,6 +2,11 @@
 
 ## 2026-02-26
 
+FIX: Sécurité — supprimer /api/admin/debug (exposait l'ID admin publiquement sans auth)
+FIX: Sécurité — /api/test/auth bloquer en production sans exception CI
+FIX: Sécurité — /api/newsletter ajouter rate limiting IP (3 req / 10 min)
+FIX: Sécurité — /api/demo/summarize corriger extraction IP (x-real-ip > last x-forwarded-for)
+
 FEATURE: Referral section — stats agrégées (Referred / Trial / Pro / Rewarded) sans données personnelles visibles
 FEATURE: Referral viral sharing — page /r/[code] exclusive (trial 14j), route /r/[code]/accept, image Story 1080×1920 téléchargeable, bouton Story dans le dashboard
 FIX: Referral callback OAuth — use admin client to bypass RLS when reading referrer profile and inserting into referrals table
