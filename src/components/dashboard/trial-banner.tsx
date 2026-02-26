@@ -46,21 +46,42 @@ export function TrialBanner({ daysLeft }: { daysLeft: number }) {
 
   if (daysLeft <= 0 || isDismissed) return null;
 
+  const isUrgent = daysLeft <= URGENT_DAYS;
+
+  const message =
+    daysLeft === 1
+      ? "Last day — your Telegram summaries stop tomorrow"
+      : daysLeft <= 3
+        ? `Only ${daysLeft} days left — upgrade to keep your summaries`
+        : `${daysLeft} days left in your Pro trial`;
+
   return (
-    <div className="nm-raised flex items-center gap-2 rounded-2xl bg-amber-500/[0.05] py-1.5 pr-1 pl-3">
-      <p className="text-muted-foreground min-w-0 flex-1 truncate text-xs">
-        <span className="font-medium text-amber-300/90">
-          {daysLeft === 1 ? "Last day" : `${daysLeft} days`}
+    <div
+      className={`nm-raised flex items-center gap-2 rounded-2xl py-1.5 pr-1 pl-3 ${
+        isUrgent ? "bg-red-500/[0.08]" : "bg-amber-500/[0.05]"
+      }`}
+    >
+      <p
+        className={`min-w-0 flex-1 truncate text-xs ${isUrgent ? "text-muted-foreground" : "text-muted-foreground"}`}
+      >
+        <span
+          className={`font-medium ${isUrgent ? "text-red-400/90" : "text-amber-300/90"}`}
+        >
+          {isUrgent ? "Urgent:" : "Trial:"}
         </span>{" "}
-        left in your Pro trial
+        {message}
       </p>
       <Button
         size="sm"
         variant="ghost"
-        className="h-6 shrink-0 px-2 text-xs text-amber-400/80 hover:bg-amber-500/10 hover:text-amber-300"
+        className={`h-6 shrink-0 px-2 text-xs ${
+          isUrgent
+            ? "text-red-400/80 hover:bg-red-500/10 hover:text-red-300"
+            : "text-amber-400/80 hover:bg-amber-500/10 hover:text-amber-300"
+        }`}
         asChild
       >
-        <Link href="/dashboard/billing">Upgrade</Link>
+        <Link href="/dashboard/billing?annual=true">Upgrade</Link>
       </Button>
       <button
         onClick={dismiss}

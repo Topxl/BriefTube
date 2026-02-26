@@ -277,7 +277,7 @@ const customerSubscriptionUpdated = async (
     .from("profiles")
     .update({
       subscription_status: subscription.status,
-      max_channels: isActive ? 999 : 3,
+      max_channels: isActive ? 999 : SiteConfig.freeChannelsLimit,
     })
     .eq("id", profile.id);
 
@@ -318,7 +318,7 @@ const customerSubscriptionDeleted = async (
     .update({
       subscription_status: "free",
       stripe_subscription_id: null,
-      max_channels: 3,
+      max_channels: SiteConfig.freeChannelsLimit,
     })
     .eq("id", profile.id);
 

@@ -34,7 +34,7 @@ const plans = [
 
 export function Pricing() {
   const [prices, setPrices] = useState<PricesData | null>(null);
-  const [interval, setInterval] = useState<Interval>("month");
+  const [interval, setInterval] = useState<Interval>("year");
 
   useEffect(() => {
     fetch("/api/stripe/price")
@@ -88,9 +88,16 @@ export function Pricing() {
                 Annual
               </button>
             </div>
-            {interval === "year" && (
+            {interval === "month" ? (
+              <button
+                onClick={() => setInterval("year")}
+                className="rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold text-amber-400 transition-colors hover:bg-amber-500/20"
+              >
+                Save 27% with Annual
+              </button>
+            ) : (
               <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-400">
-                Save 27%
+                You save 27%
               </span>
             )}
           </div>
