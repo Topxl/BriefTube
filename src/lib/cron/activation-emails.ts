@@ -79,7 +79,7 @@ export async function runActivationEmails(): Promise<RunResult> {
 
       // eslint-disable-next-line no-await-in-loop
       await sendEmail({
-        from: `Vin from BriefTube <${env.EMAIL_FROM ?? "hello@brief-tube.com"}>`,
+        from: "Vin from BriefTube <vin@brief-tube.com>",
         to: user.email,
         replyTo: env.NEXT_PUBLIC_EMAIL_CONTACT ?? "contact@brief-tube.com",
         subject: "Quick question about your BriefTube account",
