@@ -8,7 +8,13 @@ const RATE_LIMIT = 3;
 const RATE_WINDOW_MS = 10 * 60 * 1000;
 
 function getIp(req: NextRequest): string {
-  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  // x-real-ip is set by the infrastructure and can't be spoofed by the client.
+  // Fall back to the last entry of x-forwarded-for (added by Vercel's edge).
+  return (
+    req.headers.get("x-real-ip") ??
+    req.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim() ??
+    "unknown"
+  );
 }
 
 function isRateLimited(ip: string): boolean {

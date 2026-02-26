@@ -9,7 +9,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 const TEST_EMAIL = "e2e-test@brieftube.local";
 
 export async function GET(request: Request) {
-  if (process.env.NODE_ENV === "production" && !process.env.CI) {
+  if (process.env.NODE_ENV === "production") {
     return NextResponse.json({ error: "Not available" }, { status: 404 });
   }
 
