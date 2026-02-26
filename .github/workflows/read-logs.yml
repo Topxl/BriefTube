@@ -1,0 +1,31 @@
+name: Read VPS Logs
+
+on:
+  workflow_dispatch:
+
+jobs:
+  logs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch secrets from Infisical
+        uses: Infisical/secrets-action@v1.0.7
+        with:
+          client-id: ${{ secrets.INFISICAL_CLIENT_ID }}
+          client-secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+          project-slug: "brieftube-server-qy7-v"
+          env-slug: "prod"
+          secret-path: "/deploy"
+          export-type: "env"
+
+      - name: Read worker logs
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ env.VPS_HOST }}
+          username: brieftube
+          key: ${{ env.VPS_SSH_KEY }}
+          script: |
+            echo "===== WORKER LOGS (last 150 lines) ====="
+            sudo journalctl -u brieftube-worker -n 150 --no-pager
+            echo ""
+            echo "===== SERVICE STATUS ====="
+            sudo systemctl status brieftube-worker --no-pager
