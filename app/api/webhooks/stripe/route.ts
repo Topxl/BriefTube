@@ -1,6 +1,6 @@
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { stripe } from "@/lib/stripe";
 import { SiteConfig } from "@/site-config";
 import { headers } from "next/headers";
@@ -103,11 +103,15 @@ const checkoutSessionCompleted = async (
   const supabase = await createClient();
 
   // Find user by Stripe customer ID first, then fallback to metadata.userId
-  let profile: { id: string; email: string } | null = null;
+  let profile: {
+    id: string;
+    email: string;
+    referred_by: string | null;
+  } | null = null;
 
   const { data: profileByCustomer } = await supabase
     .from("profiles")
-    .select("id, email")
+    .select("id, email, referred_by")
     .eq("stripe_customer_id", customerId)
     .maybeSingle();
 
@@ -116,7 +120,7 @@ const checkoutSessionCompleted = async (
   if (!profile && session.metadata?.userId) {
     const { data: profileByUserId } = await supabase
       .from("profiles")
-      .select("id, email")
+      .select("id, email, referred_by")
       .eq("id", session.metadata.userId)
       .maybeSingle();
     profile = profileByUserId ?? null;
@@ -170,18 +174,14 @@ const checkoutSessionCompleted = async (
     });
   }
 
-  // Reward referrer if applicable
-  const { data: subscriberProfile } = await supabase
-    .from("profiles")
-    .select("id, referred_by")
-    .eq("stripe_customer_id", customerId)
-    .single();
+  // Reward referrer if applicable — use admin client to bypass RLS in webhook context
+  if (profile.referred_by) {
+    const admin = createAdminClient();
 
-  if (subscriberProfile?.referred_by) {
-    const { data: referral } = await supabase
+    const { data: referral } = await admin
       .from("referrals")
       .select("id, referrer_id, status")
-      .eq("referee_id", subscriberProfile.id)
+      .eq("referee_id", profile.id)
       .eq("status", "pending")
       .maybeSingle();
 
@@ -197,7 +197,7 @@ const checkoutSessionCompleted = async (
           : Math.round(amountTotal * monthlyRewardFraction);
       const rewardType = interval === "year" ? "free_month" : "discount_20pct";
 
-      const { data: referrer } = await supabase
+      const { data: referrer } = await admin
         .from("profiles")
         .select("email, stripe_customer_id")
         .eq("id", referral.referrer_id)
@@ -210,7 +210,7 @@ const checkoutSessionCompleted = async (
           metadata: { userId: referral.referrer_id },
         });
         referrerCustomerId = customer.id;
-        await supabase
+        await admin
           .from("profiles")
           .update({ stripe_customer_id: referrerCustomerId })
           .eq("id", referral.referrer_id);
@@ -223,7 +223,7 @@ const checkoutSessionCompleted = async (
           description: `Referral reward (${rewardType}) — user converted`,
         });
 
-        await supabase
+        await admin
           .from("referrals")
           .update({
             status: "rewarded",
@@ -234,7 +234,7 @@ const checkoutSessionCompleted = async (
 
         logger.info("Referral rewarded", {
           referrerId: referral.referrer_id,
-          refereeId: subscriberProfile.id,
+          refereeId: profile.id,
           creditAmount,
           rewardType,
         });
