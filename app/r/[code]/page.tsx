@@ -100,7 +100,7 @@ export default async function ReferralInvitePage({
                 {trialDays} days
               </span>{" "}
               <span className="text-muted-foreground text-xs line-through">
-                7 days
+                {SiteConfig.trialDays} days
               </span>
             </p>
             <p className="text-muted-foreground mt-0.5 text-xs">
