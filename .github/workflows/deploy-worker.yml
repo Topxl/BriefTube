@@ -18,7 +18,7 @@ jobs:
         with:
           client-id: ${{ secrets.INFISICAL_CLIENT_ID }}
           client-secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
-          project-id: "089a5c93-5c51-4a24-8bf0-9d8bceb3a114"
+          project-slug: "brieftube-server"
           env-slug: "prod"
           secret-path: "/deploy"
           export-type: "env"
