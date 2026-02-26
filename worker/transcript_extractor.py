@@ -123,37 +123,35 @@ class TranscriptExtractor:
         else:
             logger.info("No YouTube cookies found — transcript API may be IP-blocked on cloud IPs")
 
-    def _get_api(self) -> YouTubeTranscriptApi:
+    def _get_api(self, use_proxy: bool = False) -> YouTubeTranscriptApi:
         """Return a YouTubeTranscriptApi instance.
 
-        Uses WebshareProxyConfig (rotating residential) if YOUTUBE_PROXY_HTTP
-        is set — this retries up to 10 times with a new IP on each block,
-        reliably bypassing YouTube's cloud IP restrictions.
-        Falls back to cookies-only or plain API if no proxy is configured.
+        Direct-first strategy: by default (use_proxy=False) tries without proxy
+        using cookies. Only switches to rotating residential proxy when caller
+        explicitly sets use_proxy=True after detecting an IP block.
+        This dramatically reduces Webshare bandwidth consumption.
         """
         from youtube_transcript_api.proxies import WebshareProxyConfig, GenericProxyConfig
 
         http_proxy = os.environ.get("YOUTUBE_PROXY_HTTP", "")
 
-        if http_proxy and "p.webshare.io" in http_proxy:
-            # Extract credentials from the URL: http://user-rotate:pass@p.webshare.io:port
-            import re as _re
-            m = _re.match(r"https?://([^:]+)-rotate:([^@]+)@p\.webshare\.io:(\d+)", http_proxy)
-            if m:
-                username, password, port = m.group(1), m.group(2), int(m.group(3))
-                proxy_config = WebshareProxyConfig(
-                    proxy_username=username,
-                    proxy_password=password,
-                    proxy_port=port,
-                    retries_when_blocked=10,
-                )
-                logger.debug(f"Using WebshareProxyConfig (rotating residential, port {port})")
+        if use_proxy and http_proxy:
+            if "p.webshare.io" in http_proxy:
+                import re as _re
+                m = _re.match(r"https?://([^:]+)-rotate:([^@]+)@p\.webshare\.io:(\d+)", http_proxy)
+                if m:
+                    username, password, port = m.group(1), m.group(2), int(m.group(3))
+                    proxy_config = WebshareProxyConfig(
+                        proxy_username=username,
+                        proxy_password=password,
+                        proxy_port=port,
+                        retries_when_blocked=5,
+                    )
+                    logger.debug(f"Using WebshareProxyConfig (rotating residential, port {port})")
+                    return YouTubeTranscriptApi(proxy_config=proxy_config)
+            else:
+                proxy_config = GenericProxyConfig(http_url=http_proxy)
                 return YouTubeTranscriptApi(proxy_config=proxy_config)
-
-        if http_proxy:
-            # Generic proxy (non-Webshare)
-            proxy_config = GenericProxyConfig(http_url=http_proxy)
-            return YouTubeTranscriptApi(proxy_config=proxy_config)
 
         # No proxy — use cookies-only session if available
         import requests
@@ -233,35 +231,45 @@ class TranscriptExtractor:
             detected_lang = None
             ip_blocked = False
 
-            # Create API instance once per call (not once per language attempt)
-            api = self._get_api()
+            _IP_BLOCK_SIGNALS = ("blocking requests", "429", "too many requests", "proxy")
 
-            for lang in preferred_languages:
+            def _fetch_with_api(api: YouTubeTranscriptApi) -> tuple:
+                """Try fetching transcript with given api. Returns (data, lang, blocked)."""
+                nonlocal ip_blocked
+                for lang in preferred_languages:
+                    try:
+                        data = api.fetch(video_id, languages=[lang])
+                        return data, lang, False
+                    except NoTranscriptFound:
+                        continue
+                    except Exception as e:
+                        if any(s in str(e).lower() for s in _IP_BLOCK_SIGNALS):
+                            return None, None, True
+                        continue
+                # Multi-language fallback
                 try:
-                    transcript_data = api.fetch(video_id, languages=[lang])
-                    detected_lang = lang
-                    logger.info(f"Found transcript in preferred language: {lang}")
-                    break
-                except NoTranscriptFound:
-                    continue
+                    data = api.fetch(video_id, languages=preferred_languages)
+                    return data, 'auto', False
                 except Exception as e:
-                    if "blocking requests" in str(e).lower():
-                        ip_blocked = True
-                    continue
+                    blocked = any(s in str(e).lower() for s in _IP_BLOCK_SIGNALS)
+                    if not blocked:
+                        logger.error(f"Could not find any transcript: {e}")
+                    return None, None, blocked
 
-            # If no preferred language found individually, try all at once —
-            # the API will pick the first available. This handles French videos
-            # that have FR transcripts but no EN, without falling back to Whisper.
-            if transcript_data is None:
-                try:
-                    transcript_data = api.fetch(video_id, languages=preferred_languages)
-                    detected_lang = 'auto'
-                    logger.info("Found transcript via multi-language fallback")
-                except Exception as e:
-                    if "blocking requests" in str(e).lower():
-                        ip_blocked = True
-                    logger.error(f"Could not find any transcript: {e}")
-                    # Don't return here — fall through to Whisper fallback below
+            # Step 1: try direct (no proxy) — free, no bandwidth cost
+            api = self._get_api(use_proxy=False)
+            transcript_data, detected_lang, ip_blocked = _fetch_with_api(api)
+
+            # Step 2: if IP blocked, retry with rotating proxy
+            if ip_blocked and transcript_data is None:
+                logger.info("Direct connection blocked by YouTube — retrying with proxy")
+                api = self._get_api(use_proxy=True)
+                transcript_data, detected_lang, _ = _fetch_with_api(api)
+
+            if detected_lang == 'auto' and transcript_data is not None:
+                logger.info("Found transcript via multi-language fallback")
+            elif detected_lang and transcript_data is not None:
+                logger.info(f"Found transcript in preferred language: {detected_lang}")
 
             # Record whether this call was IP-blocked (thread-safe)
             with self._ip_blocked_lock:
@@ -360,10 +368,6 @@ class TranscriptExtractor:
             ydl_opts["cookiefile"] = cookies_file
         if deno_path.exists():
             ydl_opts["js_runtimes"] = {"deno": {"path": str(deno_path)}}
-
-        http_proxy = os.environ.get("YOUTUBE_PROXY_HTTP", "")
-        if http_proxy:
-            ydl_opts["proxy"] = http_proxy
 
         try:
             with tempfile.TemporaryDirectory(prefix="brieftube_vtt_") as tmp:
