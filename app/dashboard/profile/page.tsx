@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { ProfileContent } from "@/components/dashboard/profile-content";
 import { SiteConfig } from "@/site-config";
@@ -39,40 +39,41 @@ export default async function ProfilePage(props: {
         )
       : 0;
 
-  // Fetch referrals with referee emails
+  // Fetch referral stats (no personal data exposed)
+  const admin = createAdminClient();
+
   const { data: referralRows } = await supabase
     .from("referrals")
-    .select("id, status, reward_type, created_at, rewarded_at, referee_id")
-    .eq("referrer_id", user.id)
-    .order("created_at", { ascending: false });
+    .select("referee_id, status")
+    .eq("referrer_id", user.id);
 
   const refereeIds = (referralRows ?? []).map((r) => r.referee_id);
-  const emailMap = new Map<string, string>();
+
+  let onTrial = 0;
+  let activePro = 0;
 
   if (refereeIds.length > 0) {
-    const { data: refereeProfiles } = await supabase
+    const { data: refereeProfiles } = await admin
       .from("profiles")
-      .select("id, email")
+      .select("subscription_status, trial_ends_at")
       .in("id", refereeIds);
 
     for (const p of refereeProfiles ?? []) {
-      emailMap.set(p.id, p.email);
+      if (p.subscription_status === "active") {
+        activePro++;
+      } else if (p.trial_ends_at && new Date(p.trial_ends_at) > new Date()) {
+        onTrial++;
+      }
     }
   }
 
-  function maskEmail(email: string): string {
-    const [local, domain] = email.split("@");
-    if (!local || !domain) return "***@***";
-    return `${local.slice(0, 2)}***@${domain}`;
-  }
-
-  const referrals = (referralRows ?? []).map((r) => ({
-    maskedEmail: maskEmail(emailMap.get(r.referee_id) ?? ""),
-    status: r.status,
-    rewardType: r.reward_type,
-    createdAt: r.created_at,
-    rewardedAt: r.rewarded_at,
-  }));
+  const referralStats = {
+    total: referralRows?.length ?? 0,
+    onTrial,
+    activePro,
+    rewarded: (referralRows ?? []).filter((r) => r.status === "rewarded")
+      .length,
+  };
 
   return (
     <ProfileContent
@@ -88,7 +89,7 @@ export default async function ProfilePage(props: {
       }
       maxChannels={profile?.max_channels ?? SiteConfig.freeChannelsLimit}
       referralCode={profile?.referral_code ?? ""}
-      referrals={referrals}
+      referralStats={referralStats}
       isAdmin={user.id === ADMIN_USER_ID}
       paymentSuccess={paymentSuccess}
     />

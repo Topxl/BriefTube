@@ -23,12 +23,11 @@ import { openCancelSubscriptionModal } from "@/components/dashboard/cancel-subsc
 import { toast } from "sonner";
 import { trackAdConversion } from "@/lib/gtag";
 
-type ReferralRow = {
-  maskedEmail: string;
-  status: string;
-  rewardType: string | null;
-  createdAt: string;
-  rewardedAt: string | null;
+type ReferralStats = {
+  total: number;
+  onTrial: number;
+  activePro: number;
+  rewarded: number;
 };
 
 type Props = {
@@ -42,7 +41,7 @@ type Props = {
   initialLanguage: string;
   maxChannels: number;
   referralCode?: string;
-  referrals?: ReferralRow[];
+  referralStats?: ReferralStats;
   isAdmin?: boolean;
   paymentSuccess?: boolean;
 };
@@ -58,7 +57,7 @@ export function ProfileContent({
   initialLanguage,
   maxChannels,
   referralCode,
-  referrals,
+  referralStats,
   isAdmin,
   paymentSuccess,
 }: Props) {
@@ -329,7 +328,9 @@ export function ProfileContent({
       {/* Referral */}
       <ReferralSection
         referralCode={referralCode ?? ""}
-        referrals={referrals ?? []}
+        stats={
+          referralStats ?? { total: 0, onTrial: 0, activePro: 0, rewarded: 0 }
+        }
       />
 
       {/* Admin */}
