@@ -60,13 +60,13 @@ export async function runActivationEmails(): Promise<RunResult> {
       const html = founderEmail(
         p("Hey,") +
           p(
-            "I noticed you signed up for BriefTube yesterday but didn't connect your Telegram yet — so you haven't received any audio summaries.",
+            "I noticed you signed up for BriefTube yesterday but didn't connect your Telegram yet, so you haven't received any audio summaries.",
           ) +
           p(
             "I wanted to reach out personally to ask: <strong>why didn't you connect Telegram?</strong>",
           ) +
           p(
-            "Is it because you don't use Telegram? Would you prefer to receive your summaries somewhere else — WhatsApp, email, a mobile app? Or is there something else that stopped you?",
+            "Is it because you don't use Telegram? Would you prefer to receive your summaries somewhere else, like WhatsApp or email? Or is there something else that stopped you?",
           ) +
           p(
             "Just hit reply and tell me. I read every response and this directly shapes what we build next.",
