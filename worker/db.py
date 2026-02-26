@@ -90,7 +90,7 @@ def get_all_known_video_ids(days: int = 30) -> set[str]:
     return known
 
 
-def mark_video_completed(video_id: str, summary: str, audio_url: str, metadata: dict = None, language: str = "fr"):
+def mark_video_completed(video_id: str, summary: str, audio_url: str, metadata: dict = None, language: str = "fr", video_title: str | None = None):
     sb = get_client()
     update_data = {
         "summary": summary,
@@ -100,6 +100,9 @@ def mark_video_completed(video_id: str, summary: str, audio_url: str, metadata: 
     }
     if metadata:
         update_data["metadata"] = metadata
+    # Backfill title if the row was created without one (e.g. language-chained rows)
+    if video_title:
+        update_data["video_title"] = video_title
     sb.table("processed_videos").update(update_data).eq("video_id", video_id).eq("language", language).execute()
 
 

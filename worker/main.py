@@ -427,6 +427,7 @@ async def _process_video(
                 "summary_length": len(summary),
             },
             language=user_language,
+            video_title=video_title or None,
         )
         db.complete_job(job["id"])
 
