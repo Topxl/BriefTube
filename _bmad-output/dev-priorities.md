@@ -1,243 +1,286 @@
 # BriefTube — Development Priorities
 
 **Last updated:** 2026-02-26
-**Framework:** P0 (ship blocker) → P1 (growth lever) → P2 (polish)
-
-**Status legend:** ✅ Done · 🔄 In progress · ❌ Not started
-
----
-
-## Context
-
-**Product:** B2C SaaS — YouTube channels → AI audio summaries → Telegram delivery
-**Model:** Free (3 channels) + Pro $9/month (unlimited)
-**Trial:** 7 days free Pro
-**Core loop:** Signup → Connect Telegram → Add channel → Receive first summary (AHA) → Convert
-
-**Current state:**
-- Onboarding wizard: ✅ (3 steps: channels → language → Telegram)
-- Billing: ✅ (Stripe, cancel flow, retention offer -50%, annual plan)
-- Worker: ✅ (RSS → Gemini → TTS → Telegram, multi-language)
-- Emails: ✅ Full lifecycle (welcome, trial J-3/J-1/expired, activation, re-engagement, referral trial)
-- Analytics: ✅ Posthog (funnel, onboarding, cancellation, subscription)
-- SEO: ✅ /channels index + channel pages + sitemap
-- Referral reward: ⚠️ UI + emails done, Stripe credit automation not implemented
+**Framework:** AARRR (Acquisition → Activation → Retention → Revenue → Referral)
+**Status legend:** ✅ Done · ⚠️ Partial · ❌ Not started
 
 ---
 
-## P0 — Critical Path (blocks conversion & retention)
+## Bilan produit actuel
 
-> These gaps directly kill the trial-to-paid conversion rate.
-> Ship before any new feature.
+**Ce qui fonctionne bien :**
+- Produit core solide — RSS → Gemini → TTS → Telegram, multi-langue, multi-chaîne
+- Lifecycle emails complets (trial J-3/J-1/expired, activation, re-engagement, referral trial)
+- Billing Stripe avec plan mensuel + annuel, cancel flow + offre de rétention
+- Posthog installé — funnel visible
+- SEO pages chaînes en place (acquisition organique amorcée)
 
----
-
-### ✅ P0-1 · Trial expiry email sequence
-
-**Problem:** Users start a 7-day trial and hear nothing until it ends. When it does, there's no email. They just lose access silently.
-**Impact:** This is the single biggest conversion leak. Industry benchmark: 3-email drip = +20–40% trial conversion.
-
-**Sequence to build:**
-| Timing | Subject | Goal |
-|--------|---------|------|
-| Trial Day 4 (3 days before) | "Your BriefTube trial ends in 3 days" | Warm reminder + value recap |
-| Trial Day 6 (1 day before) | "Last chance — keep your BriefTube summaries" | Urgency + CTA to upgrade |
-| Trial Day 7+1 (expired) | "Your trial ended — here's what you're missing" | Loss aversion + discount |
-
-**Implementation:**
-- Scheduled job (Supabase pg_cron or worker cron loop)
-- Query `profiles` where `trial_ends_at` is in 3 days / 1 day / expired yesterday
-- Send via Resend using existing `sendEmail()` pattern
-- Track who opens → who converts
+**Ce qui bloque la croissance :**
+1. **Boucle virale absente** — les résumés restent privés dans Telegram. Zero partage, zero acquisition organique hors SEO.
+2. **Telegram obligatoire** — gros point de friction. Des utilisateurs potentiels n'ont pas Telegram ou refusent de l'installer. Cela limite l'adressable market.
+3. **Délai trop long avant la première valeur** — un user s'inscrit, ajoute une chaîne, attend 12-24h sa première livraison. Beaucoup partent avant. Benchmark SaaS : si un user n'est pas activé à J+1, il ne convertira probablement jamais.
+4. **Reward parrainage non déployé** — le mécanisme existe, mais Stripe ne crédite pas le parrain. C'est une promesse non tenue qui détruit la confiance.
+5. **Découverte de contenu nulle** — l'utilisateur doit connaître des chaînes à l'avance. Pas de suggestions, pas de trending, pas de "les autres suivent aussi".
 
 ---
 
-### ✅ P0-2 · Activation email (Telegram not connected)
+## Benchmarks clés à retenir
 
-**Problem:** Some users complete onboarding but skip the Telegram step. They never get a summary. They never have an AHA moment. They churn silently.
-**Signal:** `telegram_connected = false` after 24h of account creation.
-
-**Implementation:**
-- Trigger: 24h after signup, if `telegram_connected = false`
-- Email: "You're missing your summaries — connect Telegram in 1 click"
-- CTA → `/dashboard` with Telegram connection highlighted
-- Single send (not recurring)
-
----
-
-### ✅ P0-3 · Product analytics (Posthog)
-
-**Problem:** Zero funnel visibility. Can't answer: where do users drop off? What's the onboarding completion rate? What % connect Telegram? What's the trial-to-paid CVR?
-**Without this, every product decision is a guess.**
-
-**Implementation:**
-- Install Posthog (free tier, self-hostable)
-- Track key events:
-  - `onboarding_step_completed` (step 1/2/3)
-  - `telegram_connected`
-  - `channel_added`
-  - `first_summary_received`
-  - `upgrade_clicked`
-  - `trial_converted`
-  - `subscription_cancelled`
-- Funnel view: Signup → Telegram → Channel → Summary → Paid
-- Session replay on onboarding (identify drop-off UX issues)
+| Métrique | Benchmark B2C SaaS | Objectif BriefTube |
+|----------|-------------------|-------------------|
+| Trial → Paid CVR | 2–5% | > 10% (product-led) |
+| Activation rate (J+1) | 37% médian | > 60% |
+| Churn mensuel | 5–8% | < 4% |
+| NRR | 106% médian | > 110% (upsell annuel) |
+| Time to first value | < 10 min idéal | Actuellement 12-24h ← problème critique |
 
 ---
 
-### ⚠️ P0-4 · Referral reward automation
-
-**Problem:** Referral page shows "20% monthly credit or 1 free month" but this is never actually applied in Stripe. It's a broken promise.
-**Risk:** If a referred user converts and the referrer notices no credit, trust is destroyed.
-
-**Implementation:**
-- Stripe: create a coupon `REFERRAL_MONTHLY_20PCT` (20% off, repeating)
-- On `customer.subscription.updated` webhook: if referee converts, apply coupon to referrer's subscription via Stripe API
-- Or: use Stripe credit balance (`stripe.customers.createBalanceTransaction`)
-- Track in `referrals` table: add `rewarded_at` column
+## P0 — Bloqueurs critiques (toujours actifs)
 
 ---
 
-## P1 — Growth Levers (ship after P0 is done)
+### ⚠️ P0-4 · Referral reward automation (Stripe)
 
-> These move acquisition and retention metrics. High ROI, medium effort.
-
----
-
-### ✅ P1-1 · Annual plan
-
-**Why:** Annual subscribers churn 3–4x less than monthly. Offering annual at $79/year (vs $108/year monthly) = 27% discount, immediate cash, lower churn.
-**Implementation:**
-- New Stripe price for annual
-- Pricing page: toggle Monthly / Annual with "Save 27%" badge
-- Checkout flow already supports different price IDs
+**Problème :** Le parrain voit "Tu gagnes 1 mois gratuit par parrainage" mais ce crédit n'est jamais appliqué dans Stripe. Promesse non tenue = destruction de confiance.
+**Impact :** Chaque utilisateur qui parraine et ne reçoit pas son crédit devient un ex-ambassadeur actif négatif.
+**Fix :**
+- Créer un coupon Stripe `REFERRAL_CREDIT_1MONTH`
+- Sur `referrals` : ajouter colonne `rewarded_at`
+- Dans le webhook `customer.subscription.updated` : si le filleul passe en `active`, appliquer le crédit au parrain via `stripe.customers.createBalanceTransaction`
 
 ---
 
-### ✅ P1-2 · Re-engagement email (inactive users)
+## N1 — Viral loop : résumés partageables
 
-**Trigger:** Pro user with `telegram_connected = true`, active channel, but 0 deliveries in 7 days.
-**Signal:** The channels they follow haven't posted, or something broke silently.
-**Email:** "Your channels haven't had new videos — here's how to add more active ones"
-- Show top 5 most-followed channels on BriefTube (from admin data)
-- CTA → dashboard to add channels
+> **Impact estimé : +30–50% acquisitions organiques**
+> C'est le levier le plus sous-exploité du produit. Chaque résumé livré est une opportunité d'acquisition qui part à la poubelle.
 
 ---
 
-### ✅ P1-3 · SEO — Channel discovery pages
+### N1-1 · Lien public par résumé ❌
 
-**Why:** Zero organic acquisition currently. Google Ads is the only channel.
-**Opportunity:** Long-tail searches like "MrBeast summaries", "podcast summaries Telegram", "YouTube audio digest".
-**Implementation:**
-- `/channels/[channelId]` — public page showing channel stats + "Get audio summaries" CTA
-- Sitemap with top 100 followed channels
-- Each page: channel name, subscriber count on BriefTube, latest summary date
-- No auth required to view
-
----
-
-### ✅ P1-4 · In-app upsell at channel limit
-
-**Current behavior:** When free user hits 3 channels, they see an error toast.
-**Better:** Show a modal "You've reached your 3-channel limit — upgrade to Pro for unlimited channels" with upgrade button directly inline.
-**Also:** Trial countdown banner is passive — make it proactive. At day 5, replace with "2 days left — upgrade now and keep all your summaries"
+**Problème :** Quand un user reçoit un résumé dans Telegram, il ne peut pas le partager. Pourtant il voudrait dire "j'ai écouté ça ce matin" sur Twitter/LinkedIn.
+**Opportunité :** Les fichiers audio sont déjà uploadés sur Supabase Storage avec une URL. Il suffit d'une page web légère qui les lit.
+**Implementation :**
+- Route `/s/[videoId]` — page publique, sans auth requise
+- Affiche : titre de la vidéo, chaîne, lecteur audio, résumé texte (optionnel)
+- CTA : "Get your own AI audio summaries → BriefTube"
+- Le bot Telegram envoie le lien après chaque audio : "Listen on web → brief-tube.com/s/abc123"
+- Effet de bord : indexé par Google → SEO bonus sur chaque vidéo populaire
 
 ---
 
-### ✅ P1-5 · Upgrade email to referred users
+### N1-2 · "Powered by BriefTube" watermark sur audio partagé ❌
 
-**When a referred user is on trial and nearing expiry:**
-Special email variant: "Your friend [referrer first name] uses BriefTube Pro — join them"
-- Social proof from a known connection
-- Higher CVR than generic trial expiry emails
-
----
-
-### ❌ P1-6 · Summary quality controls
-
-**User-facing settings:**
-- Summary length: Short / Standard / Detailed
-- Summary language: independent from TTS voice (summarize in French, even if video is English)
-- These map to Gemini prompt parameters already controlled in worker
+**Quand un user partage le lien, BriefTube est visible.**
+- Chaque écoute sur `/s/[videoId]` = impression de marque
+- "Powered by BriefTube" en footer + CTA signup
+- Objectif : 5% des visiteurs de pages partagées s'inscrivent
 
 ---
 
-## P2 — Polish (ship when P0+P1 are done)
+## N2 — Activation : réduire le Time to First Value
 
-> Nice to have. Improve experience at the margins.
-
----
-
-### P2-1 · User dashboard metrics
-
-**What users want to see:**
-- Total summaries received this month
-- Hours of YouTube "saved" (video duration vs audio duration)
-- Channels ranked by how often they post
-- Personal listening streak
+> **Impact estimé : +20–30% trial conversion**
+> "Si un user n'est pas activé à J+1, il ne convertira probablement jamais." — benchmark SaaS
 
 ---
 
-### P2-2 · Email delivery as fallback
+### N2-1 · Résumé de bienvenue immédiat ❌
 
-**Problem:** Some users don't use Telegram. They still want summaries.
-**Solution:** Optional daily email digest — "Here are your 3 new summaries from today" with audio links.
-**Note:** This is a significant worker change. Don't build until Telegram delivery is rock-solid.
-
----
-
-### P2-3 · Public roadmap / changelog
-
-**Why:** Builds trust, reduces churn ("they're still building"), generates organic SEO.
-**Implementation:** Simple `/changelog` page pulling from `CHANGELOG.md` or a Notion page.
+**Problème :** L'user ajoute sa première chaîne, et attend. Si la chaîne n'a pas posté depuis 2 jours, il attend encore. Ce vide tue la motivation.
+**Fix :** Quand un user ajoute sa première chaîne, déclencher immédiatement le traitement de la **dernière vidéo disponible** (même si déjà traitée pour d'autres users). Le livrer dans Telegram dans les 5 minutes.
+- Signal clair : "Bienvenue ! Voici un exemple de ce que tu recevras."
+- Worker : exposer un endpoint `/process-now?channel_id=X&user_id=Y`
+- Ne pas attendre le prochain cycle RSS
 
 ---
 
-### P2-4 · PWA / mobile homescreen
+### N2-2 · Prévisualisation sans Telegram ❌
 
-**Quick win:** `manifest.json` + service worker for "Add to homescreen" on mobile.
-**Value:** Users can open BriefTube from their phone homescreen to manage channels.
-
----
-
-### P2-5 · Webhook notifications
-
-**For power users:** HTTP webhook when a new summary is ready.
-**Use case:** Zapier integration, custom Telegram bots, Slack channels.
+**Problème :** L'user s'inscrit mais ne connecte pas Telegram. Il ne voit jamais le produit.
+**Fix :** Après onboarding sans Telegram, montrer dans le dashboard un **résumé exemple** (hardcodé ou d'une chaîne populaire) avec le lecteur audio. Message : "Voici ce que tu recevras dans Telegram — connecte-le pour le recevoir automatiquement."
 
 ---
 
-## Execution Order
+### N2-3 · Améliorer l'email d'activation (plus de contexte) ⚠️
+
+**Actuellement :** Email envoyé à J+1 si Telegram non connecté.
+**Amélioration :** Inclure dans l'email un lien audio d'exemple jouable directement ("Écoute ce résumé dans ton navigateur"). L'AHA moment arrive par email, sans Telegram.
+
+---
+
+## N3 — Retention : réduire la dépendance à Telegram
+
+> **Impact estimé : -30% churn, +40% addressable market**
+
+---
+
+### N3-1 · Web player & bibliothèque complète ❌
+
+**Actuellement :** Les résumés audio ne sont accessibles que via Telegram. Si l'user manque la notif, il doit scroller dans son historique Telegram.
+**Fix :** Le dashboard affiche tous les résumés comme une bibliothèque permanente et jouable.
+- Tri par chaîne, par date, par durée
+- Lecteur audio inline (déjà fait dans SummariesFeed — à étendre)
+- "Continue listening" — reprendre là où on s'est arrêté (localStorage)
+- Valeur : BriefTube devient une app à part entière, pas juste un bot
+
+---
+
+### N3-2 · Email digest hebdomadaire (alternative à Telegram) ❌
+
+**Cible :** Users sans Telegram ou qui veulent une alternative.
+**Format :** Email hebdomadaire (lundi 8h) listant les 5-10 nouveaux résumés de la semaine avec un lecteur audio inline dans l'email.
+**Valeur :** Supprime la barrière Telegram pour les nouveaux marchés (US, UK, utilisateurs corporate).
+**Note :** Changement worker significatif — livrer après que Telegram soit 100% stable.
+
+---
+
+### N3-3 · Découverte de chaînes (trending, suggestions) ❌
+
+**Problème :** Un user avec 1-2 chaînes peu actives reçoit peu de résumés → perd la valeur → churn.
+**Fix :** Section "Découvrir" dans le dashboard :
+- "Top 10 chaînes les plus suivies sur BriefTube" (données déjà en DB)
+- "Tes chaînes similaires" (basé sur catégorie YouTube de ses chaînes actuelles)
+- "Chaîne active de la semaine" (celle qui a posté le plus)
+- Ajouter en 1 clic → engagement → rétention
+
+---
+
+### N3-4 · Notification push web ❌
+
+**Quand un nouveau résumé arrive :** Envoyer une notification push dans le navigateur (Web Push API).
+- Opt-in lors du premier résumé
+- "MrBeast vient de sortir une vidéo — ton résumé est prêt"
+- Alternative légère à Telegram pour les users desktop
+
+---
+
+## N4 — Revenue : maximiser la valeur par user
+
+---
+
+### N4-1 · Lifetime Deal ❌
+
+**Pourquoi :** Injection de cash immédiate, base de fans engagés, parfait pour launch sur Product Hunt / Indie Hackers.
+**Prix cible :** $149–179 (équivaut à 16-20 mois d'abonnement mensuel)
+**Timing :** Après avoir un solide produit (maintenant). Limiter à 200 places pour créer la rareté.
+**Channels :** AppSumo, Deals for Founders, Indie Hackers, Twitter/X
+
+---
+
+### N4-2 · Plan famille / groupe (2-5 users) ❌
+
+**Pourquoi :** Un seul user qui aime le produit peut convaincre son cercle. Pricing groupé = barrière de sortie plus haute.
+**Prix cible :** $14/mois pour 3 users (vs $27 séparément)
+**Note :** Nécessite multi-user sur un même compte ou une table `invitations`.
+
+---
+
+### N4-3 · Upgrade en cours de trial (offre urgente à J+5) ❌
+
+**Actuellement :** Email J-3 et J-1. Mais aucun incentive fort à convertir avant l'expiration.
+**Fix :** À J+5 du trial (2 jours avant la fin), envoyer un email avec une **offre limitée 48h** : "-20% sur le premier mois si tu upgrades maintenant". Stripe coupon à durée limitée.
+**Benchmark :** Les triggers comportementaux convertissent 67% mieux que les triggers calendaires.
+
+---
+
+### N4-4 · Upsell annuel post-conversion ❌
+
+**Quand un user passe en Pro mensuel :** Après 30 jours (à la première renewal), envoyer un email : "Passe à l'annuel et économise $28/an". Moment optimal : juste après avoir payé son premier mois = prouvé qu'il garde l'abonnement.
+
+---
+
+## N5 — Referral : activer le bouche-à-oreille
+
+---
+
+### N5-1 · Corriger P0-4 (reward Stripe) ⚠️
+
+Voir P0-4 ci-dessus — priorité absolue avant de pousser le referral.
+
+---
+
+### N5-2 · Referral via Telegram bot ❌
+
+**Après chaque résumé livré :** Le bot inclut occasionnellement (1 fois par semaine) : "Tu aimes BriefTube ? Partage ce lien et gagne 1 mois gratuit : brief-tube.com/r/[code]"
+**Timing :** Seulement après 3+ résumés reçus (user établi, pas au premier).
+
+---
+
+### N5-3 · Referral public — "Écoute ce que j'ai écouté" ❌
+
+**Avec N1-1 (lien public par résumé) :** Ajouter dans Telegram un bouton "Partager" qui génère un tweet pré-rempli : "Je viens d'écouter le résumé de [vidéo] en 3 min grâce à @BriefTube — brief-tube.com/s/[id]".
+**Twitter/X Cards :** La page `/s/[videoId]` doit avoir des meta OG cards pour un aperçu riche.
+
+---
+
+## N6 — Acquisition : diversifier les canaux
+
+---
+
+### N6-1 · Product Hunt launch ❌
+
+**Quand :** Préparer un launch structuré. BriefTube a suffisamment de features pour un launch complet.
+**Préparation :**
+- Trailer vidéo 60s
+- GIF animé du flow (signup → résumé dans Telegram en 3 étapes)
+- 20+ reviews de beta users
+- Hunter influent
+
+---
+
+### N6-2 · Content marketing (blog + SEO) ❌
+
+**Strategy :**
+- Articles "Les 10 meilleures chaînes YouTube sur [niche]" → capturer intent long-tail
+- "Comment écouter YouTube en voiture" → intent très fort
+- "Résumés YouTube en français" → niche FR forte
+- Chaque article contient un CTA vers la page chaîne correspondante sur BriefTube
+
+---
+
+### N6-3 · Distribution via communautés Telegram ❌
+
+**Opportunité :** Des milliers de groupes Telegram sur la tech, la finance, l'entrepreneuriat. Les admins cherchent du contenu.
+**Approche :** Partenariat avec des groupes Telegram — offrir BriefTube Pro gratuit à l'admin en échange d'un post présentant le bot.
+
+---
+
+## Ordre d'exécution recommandé
 
 ```
-✅ P0 — DONE:
-  ├── ✅ P0-3 Posthog — product analytics
-  ├── ✅ P0-1 Trial email sequence (J-3, J-1, expired)
-  ├── ✅ P0-2 Activation email (Telegram not connected after 24h)
-  └── ⚠️  P0-4 Referral reward — UI + emails done, Stripe credit TODO
+IMMÉDIAT (semaine courante) :
+  ├── ⚠️  P0-4  Stripe referral reward (promesse non tenue → urgence)
+  └── ❌  P1-6  Summary quality controls (dernier P1 restant)
 
-✅ P1 — 5/6 DONE:
-  ├── ✅ P1-1 Annual plan ($79/year, toggle landing + pricing + checkout)
-  ├── ✅ P1-2 Re-engagement email (Pro · 0 delivery in 7 days)
-  ├── ✅ P1-3 SEO channel pages (/channels + /channels/[id] + sitemap)
-  ├── ✅ P1-4 In-app upsell modal at channel limit
-  ├── ✅ P1-5 Referral trial emails (J-3/J-1 with referrer first name)
-  └── ❌ P1-6 Summary quality controls ← NEXT
+COURT TERME (2-4 semaines) :
+  ├── ❌  N2-1  Résumé de bienvenue immédiat (time to value)
+  ├── ❌  N1-1  Lien public par résumé (viral loop)
+  └── ❌  N3-3  Découverte de chaînes dans le dashboard
 
-Next (P2):
-  └── Everything else, prioritized by user feedback
+MOYEN TERME (1-2 mois) :
+  ├── ❌  N3-1  Web player & bibliothèque complète
+  ├── ❌  N4-1  Lifetime Deal (Product Hunt prep)
+  ├── ❌  N4-3  Offre urgente J+5 pendant trial
+  └── ❌  N6-1  Product Hunt launch
+
+LONG TERME (2-3 mois) :
+  ├── ❌  N3-2  Email digest hebdomadaire (alternative Telegram)
+  ├── ❌  N4-2  Plan famille / groupe
+  └── ❌  N6-2  Content marketing + blog
 ```
 
 ---
 
 ## Success Metrics
 
-| Metric | Baseline (unknown) | Target after P0 |
-|--------|-------------------|-----------------|
-| Onboarding completion rate | ? (need Posthog) | > 70% |
-| Telegram connection rate | ? (need Posthog) | > 80% of onboarded |
-| Trial → Paid CVR | ? (need Posthog) | > 15% |
-| Churn rate (monthly) | ? | < 5%/month |
-| MRR growth | current | +20%/month |
-
-**The first thing to do is install Posthog (P0-3) so you have real baselines before optimizing anything.**
+| Métrique | Objectif 30j | Objectif 90j |
+|----------|-------------|-------------|
+| Trial → Paid CVR | > 8% | > 12% |
+| Activation J+1 (1er résumé reçu) | > 50% | > 65% |
+| Churn mensuel | < 6% | < 4% |
+| Résumés partagés / résumés livrés | > 5% | > 15% |
+| % signups via referral/viral | > 10% | > 25% |
+| MRR growth | +15%/mois | +25%/mois |

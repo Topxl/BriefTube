@@ -93,9 +93,9 @@ export const landing = {
           "Most summaries arrive within a few minutes of a video going live. Sometimes faster.",
       },
       {
-        title: "French and English (more coming)",
+        title: "55 languages supported",
         description:
-          "Pick the language that works for you. Pro users can also choose the specific voice.",
+          "English, French, Spanish, German, Japanese, Arabic and 49 more. Pick the one that works for you — Pro users can also choose the specific voice.",
       },
       {
         title: "No channel limit on Pro",

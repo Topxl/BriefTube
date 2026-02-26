@@ -8,8 +8,10 @@ import { FAQ } from "@/components/landing/faq";
 import { FinalCTA } from "@/components/landing/final-cta";
 import { Footer } from "@/components/landing/footer";
 import { Navbar } from "@/components/landing/navbar";
+import { SocialProof } from "@/components/landing/social-proof";
 import type { Metadata } from "next";
 import { SiteConfig } from "@/site-config";
+import { Suspense } from "react";
 
 export const metadata: Metadata = {
   alternates: {
@@ -102,6 +104,9 @@ export default function Home() {
       ))}
       <Navbar />
       <Hero />
+      <Suspense fallback={null}>
+        <SocialProof />
+      </Suspense>
       <div className="section-divider" />
       <Problem />
       <HowItWorks />
