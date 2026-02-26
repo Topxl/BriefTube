@@ -2,6 +2,7 @@
 
 ## 2026-02-26
 
+FIX: Referral callback OAuth — use admin client to bypass RLS when reading referrer profile and inserting into referrals table
 FIX: site-config freeChannelsLimit 3→5 (cohérent avec l'UI "5 YouTube channels")
 FIX: Webhooks stripe cancel/updated/deleted — max_channels hardcodé 3 remplacé par SiteConfig.freeChannelsLimit
 FEATURE: pricing-cards — prix dynamiques via /api/stripe/price (plus de hardcoding $9/$79)

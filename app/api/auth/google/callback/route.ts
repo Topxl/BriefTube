@@ -124,20 +124,22 @@ export async function GET(request: Request) {
       const refCode = cookieStore.get(REFERRAL_COOKIE)?.value;
 
       if (refCode) {
-        const { data: referrer } = await supabase
+        const admin = createAdminClient();
+
+        const { data: referrer } = await admin
           .from("profiles")
           .select("id, telegram_chat_id")
           .eq("referral_code", refCode)
           .single();
 
         if (referrer && referrer.id !== user.id) {
-          await supabase
+          await admin
             .from("profiles")
             .update({ referred_by: referrer.id })
             .eq("id", user.id)
             .is("referred_by", null);
 
-          const { error: insertError } = await supabase
+          const { error: insertError } = await admin
             .from("referrals")
             .insert({ referrer_id: referrer.id, referee_id: user.id });
 
