@@ -43,6 +43,7 @@ type Props = {
   referralCode?: string;
   referralStats?: ReferralStats;
   isAdmin?: boolean;
+  defaultInterval?: Interval;
   paymentSuccess?: boolean;
 };
 
@@ -59,12 +60,15 @@ export function ProfileContent({
   referralCode,
   referralStats,
   isAdmin,
+  defaultInterval,
   paymentSuccess,
 }: Props) {
   const router = useRouter();
 
   const [retryCount, setRetryCount] = useState(0);
-  const [upgradeInterval, setUpgradeInterval] = useState<Interval>("year");
+  const [upgradeInterval, setUpgradeInterval] = useState<Interval>(
+    defaultInterval ?? "year",
+  );
   const [prices, setPrices] = useState<PricesData | null>(null);
 
   const isActivating = !!paymentSuccess && !isActivePro && retryCount < 10;

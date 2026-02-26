@@ -22,8 +22,6 @@ import { ActivationEmailsButton } from "@/components/admin/activation-emails-but
 import { ReengagementEmailsButton } from "@/components/admin/reengagement-emails-button";
 import { ReferralTrialEmailsButton } from "@/components/admin/referral-trial-emails-button";
 
-const ADMIN_USER_ID = "67320a39-948c-44d2-98e3-c0de49af1ec6";
-
 // ---------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------
@@ -124,7 +122,7 @@ export default async function AdminPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (user?.id !== ADMIN_USER_ID) {
+  if (!env.ADMIN_USER_ID || user?.id !== env.ADMIN_USER_ID) {
     redirect("/dashboard");
   }
 

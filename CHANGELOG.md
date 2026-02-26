@@ -2,6 +2,14 @@
 
 ## 2026-02-26
 
+FIX: Worker — ne pas appeler mark_video_failed si mark_video_completed a déjà réussi (évite d'écraser status='completed' en 'failed' sur erreur DB post-traitement)
+FIX: Worker — passer language au mark_video_failed dans le handler timeout de _do (évitait d'écraser la mauvaise langue)
+
+FIX: Propager ?annual=true de billing → profile → ProfileContent (defaultInterval prop)
+FIX: ADMIN_USER_ID déplacé dans env.ts (suppression constante hardcodée dans profile et admin pages)
+FIX: Summaries feed — remplacer Suspense fallback={null} par SummariesFeedSkeleton (3 cartes)
+FIX: Onboarding — ajouter error.tsx pour éviter la page Next.js brute en cas d'erreur
+
 FIX: Webhook Stripe — utiliser createAdminClient() pour bypasser RLS (évite silent failures)
 FIX: Subscriptions / onboarding — remplacer language "fr" hardcodé par preferred_language du profil
 FIX: API lists — retirer created_by (UUID utilisateur) de la réponse publique
