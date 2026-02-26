@@ -25,12 +25,14 @@ const DEMO_CARDS = [
     title: tl.mockupVideo1Title,
     videoId: "qp0HIF3SfI4",
     src: `${R2}/audio/qp0HIF3SfI4_fr.mp3`,
+    fallbackDuration: 167, // 2:47
   },
   {
     channel: tl.mockupVideo2Channel,
     title: tl.mockupVideo2Title,
     videoId: "nm1TxQj9IsQ",
-    src: `${R2}/audio/nm1TxQj9IsQ_fr.mp3`,
+    src: `${R2}/audio/nm1TxQj9IsQ_en.mp3`,
+    fallbackDuration: 203, // 3:23
   },
 ] as const;
 
@@ -42,8 +44,18 @@ function formatTime(s: number) {
 
 export function Hero() {
   const [cards, setCards] = useState<[CardState, CardState]>([
-    { playing: false, currentTime: 0, duration: 0, speed: 1 },
-    { playing: false, currentTime: 0, duration: 0, speed: 1 },
+    {
+      playing: false,
+      currentTime: 0,
+      duration: DEMO_CARDS[0].fallbackDuration,
+      speed: 1,
+    },
+    {
+      playing: false,
+      currentTime: 0,
+      duration: DEMO_CARDS[1].fallbackDuration,
+      speed: 1,
+    },
   ]);
 
   // Single stable ref holding both audio elements — never goes in hook deps
@@ -265,11 +277,11 @@ export function Hero() {
                           />
                         </div>
 
-                        {/* Current time */}
+                        {/* Current time / total duration */}
                         <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
-                          {card.duration > 0
+                          {card.playing
                             ? formatTime(card.currentTime)
-                            : "--:--"}
+                            : formatTime(card.duration)}
                         </span>
 
                         {/* Speed cycling */}

@@ -8,7 +8,10 @@ import { logger } from "@/lib/logger";
 
 const tl = t.landing.faq;
 
-type PriceData = { amount: number; currency: string };
+type PricesData = {
+  monthly: { amount: number; currency: string };
+  annual: { amount: number; currency: string };
+};
 
 export function FAQ() {
   const [open, setOpen] = useState<number | null>(null);
@@ -17,11 +20,11 @@ export function FAQ() {
   useEffect(() => {
     fetch("/api/stripe/price")
       .then(async (res) => res.json())
-      .then((data: PriceData) => {
-        if (data.amount) {
+      .then((data: PricesData) => {
+        if (data.monthly.amount) {
           const { formatted, symbol } = formatCurrency(
-            data.amount,
-            data.currency,
+            data.monthly.amount,
+            data.monthly.currency,
           );
           setProPrice(
             symbol === "$" ? `${symbol}${formatted}` : `${formatted}${symbol}`,
