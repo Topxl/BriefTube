@@ -34,6 +34,9 @@ jobs:
             cd /home/brieftube/app
 
             echo "→ Pulling latest code..."
+            # Remove runtime files that are now gitignored (worker.pid, log_bot.lock)
+            # to prevent git from blocking the merge when they exist as untracked files
+            git clean -f -- worker/worker.pid worker/log_bot.lock 2>/dev/null || true
             git pull origin main
 
             echo "→ Updating dependencies..."
