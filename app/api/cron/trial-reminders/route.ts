@@ -1,5 +1,6 @@
 import { env } from "@/lib/env";
 import { runTrialReminders } from "@/lib/cron/trial-reminders";
+import { runActivationEmails } from "@/lib/cron/activation-emails";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
@@ -13,7 +14,10 @@ export const GET = async (req: NextRequest) => {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const result = await runTrialReminders();
+  const [trialResult, activationResult] = await Promise.all([
+    runTrialReminders(),
+    runActivationEmails(),
+  ]);
 
-  return NextResponse.json({ ok: true, result });
+  return NextResponse.json({ ok: true, trialResult, activationResult });
 };

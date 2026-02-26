@@ -4,6 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { runTrialReminders } from "@/lib/cron/trial-reminders";
 import type { TrialRemindersResult } from "@/lib/cron/trial-reminders";
+import { runActivationEmails } from "@/lib/cron/activation-emails";
+
+type RunResult = { sent: number; skipped: number; errors: number };
 
 const ADMIN_USER_ID = "67320a39-948c-44d2-98e3-c0de49af1ec6";
 
@@ -21,4 +24,9 @@ async function requireAdmin() {
 export async function triggerTrialReminders(): Promise<TrialRemindersResult> {
   await requireAdmin();
   return runTrialReminders();
+}
+
+export async function triggerActivationEmails(): Promise<RunResult> {
+  await requireAdmin();
+  return runActivationEmails();
 }
