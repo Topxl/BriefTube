@@ -2,6 +2,7 @@
 
 ## 2026-02-26
 
+FIX: CI — deploy-worker.yml remplace project-id (UUID ignoré) par project-slug "brieftube-server" pour Infisical secrets-action
 CHORE: CI — deploy-worker.yml fetch VPS_SSH_KEY depuis Infisical (machine identity) au lieu de GitHub Secrets — VPS_HOST hardcodé (IP publique)
 CHORE: Worker — MAX_CONCURRENT_VIDEOS 3→12, throttle intelligent (CPU+load+RAM) remplace le simple check CPU
 FIX: Referral reward (P0-4) — webhook utilisait createClient() anon/RLS au lieu de createAdminClient(), table referrals retournait 0 rows silencieusement ; lookup redondant remplacé par profile.referred_by
