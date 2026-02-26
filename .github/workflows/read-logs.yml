@@ -17,15 +17,38 @@ jobs:
           secret-path: "/deploy"
           export-type: "env"
 
-      - name: Read worker logs
+      - name: Setup SSH access + sudoers for journalctl
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ env.VPS_HOST }}
           username: brieftube
           key: ${{ env.VPS_SSH_KEY }}
           script: |
+            # Ajouter la clé publique locale (mon-laptop) pour accès direct depuis le dev
+            PUBKEY="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIsRHFCH8gDbqb60lU3kGupiWXmnpoQOnEziLAZDFTJC mon-laptop"
+            mkdir -p ~/.ssh && chmod 700 ~/.ssh
+            touch ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys
+            if ! grep -qF "mon-laptop" ~/.ssh/authorized_keys; then
+              echo "$PUBKEY" >> ~/.ssh/authorized_keys
+              echo "Clé mon-laptop ajoutée"
+            else
+              echo "Clé mon-laptop déjà présente"
+            fi
+
+            # Autoriser journalctl sans sudo pour l'utilisateur brieftube
+            SUDOERS_LINE="brieftube ALL=(ALL) NOPASSWD: /usr/bin/journalctl"
+            SUDOERS_FILE="/etc/sudoers.d/brieftube-journalctl"
+            if [ ! -f "$SUDOERS_FILE" ]; then
+              echo "$SUDOERS_LINE" | sudo tee "$SUDOERS_FILE" > /dev/null
+              sudo chmod 440 "$SUDOERS_FILE"
+              echo "Règle sudoers journalctl ajoutée"
+            else
+              echo "Règle sudoers journalctl déjà présente"
+            fi
+
+            echo ""
             echo "===== WORKER LOGS (last 150 lines) ====="
-            journalctl -u brieftube-worker -n 150 --no-pager 2>/dev/null || sudo journalctl -u brieftube-worker -n 150 --no-pager --no-hostname -o short-iso 2>/dev/null || journalctl --user -u brieftube-worker -n 150 --no-pager 2>/dev/null || echo "journalctl non accessible"
+            sudo journalctl -u brieftube-worker -n 150 --no-pager
             echo ""
             echo "===== SERVICE STATUS ====="
             sudo systemctl status brieftube-worker --no-pager
