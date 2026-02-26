@@ -19,6 +19,7 @@ import {
 import { NewsletterSeedButton } from "@/components/admin/newsletter-seed-button";
 import { TrialRemindersButton } from "@/components/admin/trial-reminders-button";
 import { ActivationEmailsButton } from "@/components/admin/activation-emails-button";
+import { ReengagementEmailsButton } from "@/components/admin/reengagement-emails-button";
 
 const ADMIN_USER_ID = "67320a39-948c-44d2-98e3-c0de49af1ec6";
 
@@ -908,6 +909,13 @@ export default async function AdminPage() {
             Send activation emails (Telegram not connected after 24h)
           </p>
           <ActivationEmailsButton />
+        </div>
+        <div className="nm-raised flex flex-col gap-2 rounded-xl px-4 py-3">
+          <p className="text-muted-foreground text-sm">
+            Send re-engagement emails (Pro · Telegram connected · 0 delivery in
+            7 days)
+          </p>
+          <ReengagementEmailsButton />
         </div>
       </div>
 

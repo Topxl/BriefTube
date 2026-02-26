@@ -2,6 +2,7 @@
 
 ## 2026-02-26
 
+FEATURE: Re-engagement email (P1-2) — email fondateur aux Pro sans livraison depuis 7 jours, déduplication email_logs, bouton admin
 FEATURE: Upsell modal in-app — modal avec toggle Monthly/Annual + checkout direct, déclenché au palier de canaux (activation, bannière amber, ajout en pause)
 FEATURE: Plan annuel $79/an — toggle Monthly/Annual sur landing et /pricing, checkout accepte interval, -27% vs mensuel
 

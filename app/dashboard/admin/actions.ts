@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { runTrialReminders } from "@/lib/cron/trial-reminders";
 import type { TrialRemindersResult } from "@/lib/cron/trial-reminders";
 import { runActivationEmails } from "@/lib/cron/activation-emails";
+import { runReengagementEmails } from "@/lib/cron/reengagement-emails";
 
 type RunResult = { sent: number; skipped: number; errors: number };
 
@@ -29,4 +30,9 @@ export async function triggerTrialReminders(): Promise<TrialRemindersResult> {
 export async function triggerActivationEmails(): Promise<RunResult> {
   await requireAdmin();
   return runActivationEmails();
+}
+
+export async function triggerReengagementEmails(): Promise<RunResult> {
+  await requireAdmin();
+  return runReengagementEmails();
 }
