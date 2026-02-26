@@ -7,7 +7,16 @@ import { DeliverySection } from "@/components/dashboard/delivery-section";
 import { ReferralSection } from "@/components/dashboard/referral-section";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { LogOut, Trash2, ShieldAlert } from "@/lib/icons";
+import { LogOut, Trash2, ShieldAlert, Loader2 } from "@/lib/icons";
+import { formatCurrency } from "@/lib/format";
+import { logger } from "@/lib/logger";
+
+type Interval = "month" | "year";
+
+type PricesData = {
+  monthly: { amount: number; currency: string };
+  annual: { amount: number; currency: string };
+};
 
 import { dialogManager } from "@/features/dialog-manager/dialog-manager";
 import { openCancelSubscriptionModal } from "@/components/dashboard/cancel-subscription-modal";
@@ -56,6 +65,19 @@ export function ProfileContent({
   const router = useRouter();
 
   const [retryCount, setRetryCount] = useState(0);
+  const [upgradeInterval, setUpgradeInterval] = useState<Interval>("year");
+  const [prices, setPrices] = useState<PricesData | null>(null);
+
+  const isActivating = !!paymentSuccess && !isActivePro && retryCount < 10;
+
+  useEffect(() => {
+    fetch("/api/stripe/price")
+      .then(async (res) => res.json())
+      .then((data: PricesData) => {
+        if (data.monthly.amount) setPrices(data);
+      })
+      .catch((err) => logger.error("Failed to fetch price:", err));
+  }, []);
 
   useEffect(() => {
     if (!paymentSuccess) return;
@@ -76,6 +98,17 @@ export function ProfileContent({
     }, 3000);
     return () => clearTimeout(timer);
   }, [paymentSuccess, isActivePro, router, retryCount]);
+
+  const priceData = prices
+    ? upgradeInterval === "year"
+      ? prices.annual
+      : prices.monthly
+    : null;
+
+  const displayUpgradePrice = priceData
+    ? formatCurrency(priceData.amount, priceData.currency)
+    : null;
+
   const supabase = createClient();
 
   const handleLogout = async () => {
@@ -169,6 +202,14 @@ export function ProfileContent({
           Subscription
         </h2>
         <div className="nm-raised overflow-hidden rounded-2xl">
+          {isActivating && (
+            <div className="flex items-center gap-2 border-b border-white/[0.04] px-4 py-2.5">
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-amber-400" />
+              <p className="text-xs text-amber-400">
+                Activating your subscription…
+              </p>
+            </div>
+          )}
           {isActivePro ? (
             <>
               <div className="flex items-center justify-between px-4 py-3">
@@ -192,32 +233,77 @@ export function ProfileContent({
               </div>
             </>
           ) : (
-            <div className="flex items-center justify-between gap-4 px-4 py-3.5">
-              <div className="min-w-0">
-                <p className="text-sm font-medium">
-                  {isTrial
-                    ? `${trialDaysLeft} day${trialDaysLeft !== 1 ? "s" : ""} left on your trial`
-                    : "Upgrade to Pro"}
-                </p>
-                <p className="text-muted-foreground mt-0.5 text-[11px]">
-                  Unlimited channels, lists, and priority processing.
-                </p>
+            <div className="px-4 py-3.5">
+              <p className="text-sm font-medium">
+                {isTrial
+                  ? `${trialDaysLeft} day${trialDaysLeft !== 1 ? "s" : ""} left on your trial`
+                  : "Upgrade to Pro"}
+              </p>
+              <p className="text-muted-foreground mt-0.5 text-[11px]">
+                Unlimited channels and priority processing.
+              </p>
+              <div className="mt-3 flex items-center gap-2">
+                <div className="nm-raised flex rounded-full p-0.5">
+                  <button
+                    onClick={() => setUpgradeInterval("month")}
+                    className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                      upgradeInterval === "month"
+                        ? "bg-red-600 text-white"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    Monthly
+                  </button>
+                  <button
+                    onClick={() => setUpgradeInterval("year")}
+                    className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                      upgradeInterval === "year"
+                        ? "bg-red-600 text-white"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    Annual
+                  </button>
+                </div>
+                {upgradeInterval === "month" ? (
+                  <button
+                    onClick={() => setUpgradeInterval("year")}
+                    className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-400 transition-colors hover:bg-amber-500/20"
+                  >
+                    Save 27%
+                  </button>
+                ) : (
+                  <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
+                    You save 27%
+                  </span>
+                )}
               </div>
-              <form
-                action="/api/stripe/checkout"
-                method="POST"
-                data-form-type="other"
-                suppressHydrationWarning
-                className="shrink-0"
-              >
-                <Button
-                  type="submit"
-                  size="sm"
-                  className="rounded-full bg-red-600 hover:bg-red-500"
+              <div className="mt-3 flex items-center justify-between">
+                <p className="text-sm font-semibold">
+                  {displayUpgradePrice
+                    ? `${displayUpgradePrice.symbol}${displayUpgradePrice.formatted}/${upgradeInterval === "year" ? "yr" : "mo"}`
+                    : "—"}
+                </p>
+                <form
+                  action="/api/stripe/checkout"
+                  method="POST"
+                  data-form-type="other"
+                  suppressHydrationWarning
                 >
-                  Upgrade
-                </Button>
-              </form>
+                  <input
+                    type="hidden"
+                    name="interval"
+                    value={upgradeInterval}
+                  />
+                  <Button
+                    type="submit"
+                    size="sm"
+                    className="rounded-full bg-red-600 hover:bg-red-500"
+                  >
+                    Upgrade
+                  </Button>
+                </form>
+              </div>
             </div>
           )}
           {(hasStripeCustomer || isActivePro) && (

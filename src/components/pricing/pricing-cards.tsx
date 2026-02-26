@@ -1,10 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2 } from "@/lib/icons";
+import { formatCurrency } from "@/lib/format";
+import { logger } from "@/lib/logger";
 
 type Interval = "month" | "year";
+
+type PricesData = {
+  monthly: { amount: number; currency: string };
+  annual: { amount: number; currency: string };
+};
 
 type Props = {
   isLoggedIn: boolean;
@@ -26,11 +33,32 @@ const PRO_FEATURES = [
 ];
 
 export function PricingCards({ isLoggedIn, isPro }: Props) {
-  const [interval, setInterval] = useState<Interval>("month");
+  const [interval, setInterval] = useState<Interval>("year");
+  const [prices, setPrices] = useState<PricesData | null>(null);
 
-  const monthlyPrice = "$9";
-  const annualPrice = "$79";
-  const annualMonthlyEquiv = "$6.58";
+  useEffect(() => {
+    fetch("/api/stripe/price")
+      .then(async (res) => res.json())
+      .then((data: PricesData) => {
+        if (data.monthly.amount) setPrices(data);
+      })
+      .catch((err) => logger.error("Failed to fetch price:", err));
+  }, []);
+
+  const priceData = prices
+    ? interval === "year"
+      ? prices.annual
+      : prices.monthly
+    : null;
+
+  const displayPrice = priceData
+    ? formatCurrency(priceData.amount, priceData.currency)
+    : null;
+
+  const annualMonthlyEquiv =
+    prices && interval === "year"
+      ? Math.round(prices.annual.amount / 12 / 100)
+      : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -58,9 +86,16 @@ export function PricingCards({ isLoggedIn, isPro }: Props) {
             Annual
           </button>
         </div>
-        {interval === "year" && (
+        {interval === "month" ? (
+          <button
+            onClick={() => setInterval("year")}
+            className="rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold text-amber-400 transition-colors hover:bg-amber-500/20"
+          >
+            Save 27% with Annual
+          </button>
+        ) : (
           <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-400">
-            Save 27%
+            You save 27%
           </span>
         )}
       </div>
@@ -113,16 +148,23 @@ export function PricingCards({ isLoggedIn, isPro }: Props) {
           <div className="border-b border-white/[0.04] px-5 pt-7 pb-5">
             <p className="text-sm font-semibold tracking-wide uppercase">Pro</p>
             <div className="mt-3 flex items-baseline gap-1">
-              <span className="text-4xl font-bold">
-                {interval === "year" ? annualPrice : monthlyPrice}
-              </span>
-              <span className="text-muted-foreground text-sm">
-                /{interval === "year" ? "year" : "month"}
-              </span>
+              {displayPrice ? (
+                <>
+                  <span className="text-4xl font-bold">
+                    {displayPrice.symbol}
+                    {displayPrice.formatted}
+                  </span>
+                  <span className="text-muted-foreground text-sm">
+                    /{interval === "year" ? "year" : "month"}
+                  </span>
+                </>
+              ) : (
+                <span className="text-muted-foreground text-sm">Loading…</span>
+              )}
             </div>
-            {interval === "year" && (
+            {annualMonthlyEquiv !== null && (
               <p className="text-muted-foreground mt-1 text-xs">
-                Billed annually — equivalent to {annualMonthlyEquiv}/month
+                Billed annually — equivalent to ${annualMonthlyEquiv}/month
               </p>
             )}
           </div>

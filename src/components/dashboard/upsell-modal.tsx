@@ -25,7 +25,7 @@ type Props = {
   defaultInterval?: Interval;
 };
 
-export function UpsellModal({ defaultInterval = "month" }: Props) {
+export function UpsellModal({ defaultInterval = "year" }: Props) {
   const [interval, setInterval] = useState<Interval>(defaultInterval);
   const [prices, setPrices] = useState<PricesData | null>(null);
 
@@ -79,9 +79,16 @@ export function UpsellModal({ defaultInterval = "month" }: Props) {
             Annual
           </button>
         </div>
-        {interval === "year" && (
+        {interval === "month" ? (
+          <button
+            onClick={() => setInterval("year")}
+            className="rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold text-amber-400 transition-colors hover:bg-amber-500/20"
+          >
+            Save 27% with Annual
+          </button>
+        ) : (
           <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-400">
-            Save 27%
+            You save 27%
           </span>
         )}
       </div>
@@ -139,7 +146,7 @@ export function UpsellModal({ defaultInterval = "month" }: Props) {
   );
 }
 
-export function openUpsellModal(defaultInterval: Interval = "month") {
+export function openUpsellModal(defaultInterval: Interval = "year") {
   dialogManager.custom({
     title: "Upgrade to Pro",
     size: "sm",

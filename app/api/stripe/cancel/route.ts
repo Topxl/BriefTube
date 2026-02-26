@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getStripe } from "@/lib/stripe";
 import { logger } from "@/lib/logger";
+import { SiteConfig } from "@/site-config";
 
 const COUPON_ID = "RETENTION_50_3M";
 
@@ -107,7 +108,7 @@ export async function POST(req: Request) {
     .update({
       subscription_status: "cancelled",
       stripe_subscription_id: null,
-      max_channels: 3,
+      max_channels: SiteConfig.freeChannelsLimit,
     })
     .eq("id", userId);
 
