@@ -2,6 +2,8 @@
 
 ## 2026-02-26
 
+FEATURE: Onboarding wizard — visuels par catégorie (Business/Education/Finance/Science/Tech) : fond dégradé, icône SVG watermark, barre accent colorée
+
 FIX: Sécurité — supprimer /api/admin/debug (exposait l'ID admin publiquement sans auth)
 FIX: Sécurité — /api/test/auth bloquer en production sans exception CI
 FIX: Sécurité — /api/newsletter ajouter rate limiting IP (3 req / 10 min)
