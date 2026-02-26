@@ -10,23 +10,22 @@ import { t } from "@/locales";
 
 const tl = t.landing.pricing;
 
-type PriceData = {
-  amount: number;
-  currency: string;
-  interval: string;
+type PricesData = {
+  monthly: { amount: number; currency: string };
+  annual: { amount: number; currency: string };
 };
+
+type Interval = "month" | "year";
 
 const plans = [
   {
     key: "free" as const,
-    price: "0",
     isPro: false,
     highlighted: false,
     href: "/login",
   },
   {
     key: "pro" as const,
-    price: "9",
     isPro: true,
     highlighted: true,
     href: "/login",
@@ -34,18 +33,23 @@ const plans = [
 ];
 
 export function Pricing() {
-  const [proPriceData, setProPriceData] = useState<PriceData | null>(null);
+  const [prices, setPrices] = useState<PricesData | null>(null);
+  const [interval, setInterval] = useState<Interval>("month");
 
   useEffect(() => {
     fetch("/api/stripe/price")
       .then(async (res) => res.json())
-      .then((data: PriceData) => {
-        if (data.amount) {
-          setProPriceData(data);
-        }
+      .then((data: PricesData) => {
+        if (data.monthly.amount) setPrices(data);
       })
       .catch((err) => logger.error("Failed to fetch price:", err));
   }, []);
+
+  const priceData = prices
+    ? interval === "year"
+      ? prices.annual
+      : prices.monthly
+    : null;
 
   return (
     <section id="pricing" className="py-14 md:py-20">
@@ -59,19 +63,48 @@ export function Pricing() {
           </p>
         </ScrollReveal>
 
+        {/* Billing toggle */}
+        <ScrollReveal delay={100}>
+          <div className="mt-8 flex items-center justify-center gap-3">
+            <div className="nm-raised flex rounded-full p-1">
+              <button
+                onClick={() => setInterval("month")}
+                className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                  interval === "month"
+                    ? "bg-red-600 text-white"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Monthly
+              </button>
+              <button
+                onClick={() => setInterval("year")}
+                className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                  interval === "year"
+                    ? "bg-red-600 text-white"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Annual
+              </button>
+            </div>
+            {interval === "year" && (
+              <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-400">
+                Save 27%
+              </span>
+            )}
+          </div>
+        </ScrollReveal>
+
         <ScrollReveal delay={150}>
-          <div className="mt-12 grid gap-6 md:grid-cols-2">
+          <div className="mt-8 grid gap-6 md:grid-cols-2">
             {plans.map((plan) => {
               const planData = tl.plans[plan.key];
-              const displayPrice =
-                plan.isPro && proPriceData
-                  ? formatCurrency(proPriceData.amount, proPriceData.currency)
-                  : { formatted: plan.price, symbol: "" };
 
-              const interval =
-                plan.isPro && proPriceData
-                  ? proPriceData.interval
-                  : tl.perMonth;
+              const displayPrice =
+                plan.isPro && priceData
+                  ? formatCurrency(priceData.amount, priceData.currency)
+                  : { formatted: "0", symbol: "$" };
 
               return (
                 <div
@@ -94,28 +127,32 @@ export function Pricing() {
                       {planData.name}
                     </p>
                     <div className="mt-3 flex items-baseline gap-1">
-                      {displayPrice.symbol === "$" ? (
+                      {plan.isPro ? (
                         <>
                           <span className="text-4xl font-bold">
                             {displayPrice.symbol}
                             {displayPrice.formatted}
                           </span>
                           <span className="text-muted-foreground">
-                            /{interval}
+                            /{interval === "year" ? "year" : "month"}
                           </span>
                         </>
                       ) : (
                         <>
-                          <span className="text-4xl font-bold">
-                            {displayPrice.formatted}
-                            {displayPrice.symbol}
-                          </span>
-                          <span className="text-muted-foreground">
-                            /{interval}
-                          </span>
+                          <span className="text-4xl font-bold">$0</span>
+                          <span className="text-muted-foreground">/month</span>
                         </>
                       )}
                     </div>
+                    {plan.isPro && interval === "year" && (
+                      <p className="text-muted-foreground mt-1 text-xs">
+                        Billed annually — equivalent to $
+                        {priceData
+                          ? Math.round(priceData.amount / 12 / 100)
+                          : "7"}
+                        /month
+                      </p>
+                    )}
                     <p className="text-muted-foreground mt-1 text-sm">
                       {planData.description}
                     </p>

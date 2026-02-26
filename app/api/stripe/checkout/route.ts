@@ -2,8 +2,9 @@ import { createClient } from "@/lib/supabase/server";
 import { stripe } from "@/lib/stripe";
 import { env } from "@/lib/env";
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
-export async function POST() {
+export async function POST(req: NextRequest) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -12,6 +13,14 @@ export async function POST() {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  // Read interval from form body (month | year), default to month
+  const formData = await req.formData().catch(() => null);
+  const interval = formData?.get("interval") === "year" ? "year" : "month";
+  const priceId =
+    interval === "year"
+      ? env.STRIPE_PRO_ANNUAL_PRICE_ID
+      : env.STRIPE_PRO_PRICE_ID;
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -32,28 +41,26 @@ export async function POST() {
 
     customerId = customer.id;
 
-    // Save customer ID
     await supabase
       .from("profiles")
       .update({ stripe_customer_id: customerId })
       .eq("id", user.id);
   }
 
-  // Carry over remaining trial days so the user doesn't lose them
+  // Carry over remaining trial days
   const trialEndsAt = profile?.trial_ends_at;
   const trialEnd =
     trialEndsAt && new Date(trialEndsAt) > new Date()
       ? Math.floor(new Date(trialEndsAt).getTime() / 1000)
       : undefined;
 
-  // Create checkout session
   const session = await stripe.checkout.sessions.create({
     customer: customerId,
     mode: "subscription",
     payment_method_types: ["card"],
     line_items: [
       {
-        price: env.STRIPE_PRO_PRICE_ID,
+        price: priceId,
         quantity: 1,
       },
     ],
