@@ -53,7 +53,7 @@ export function TrialExpiredEmail() {
             }}
           >
             Your BriefTube trial is over. Your Telegram audio deliveries have
-            been paused — but all your channels and settings are still saved.
+            been paused, but all your channels and settings are still saved.
           </Text>
           <Text
             style={{
