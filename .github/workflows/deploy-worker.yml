@@ -43,11 +43,12 @@ jobs:
             worker/venv/bin/pip install -r worker/requirements.txt -q
 
             echo "→ Restarting services..."
+            chmod +x vps/*.sh 2>/dev/null || true
             sudo systemctl daemon-reload
             sudo systemctl restart brieftube-worker
             sudo systemctl restart brieftube-log-bot
             sleep 2
 
             echo "→ Status:"
-            sudo systemctl status brieftube-worker --no-pager
-            sudo systemctl status brieftube-log-bot --no-pager
+            sudo systemctl status brieftube-worker --no-pager || true
+            sudo systemctl status brieftube-log-bot --no-pager || true
