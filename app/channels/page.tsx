@@ -7,9 +7,6 @@ import { Typography } from "@/components/nowts/typography";
 import { Button } from "@/components/ui/button";
 import { Users } from "lucide-react";
 
-// Regenerate at most once per day — channel rankings change slowly
-export const revalidate = 86400;
-
 export const metadata: Metadata = {
   title: "YouTube Channels with AI Audio Summaries",
   description:

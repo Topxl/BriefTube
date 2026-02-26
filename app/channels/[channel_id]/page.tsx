@@ -8,9 +8,6 @@ import { SiteConfig } from "@/site-config";
 import { Typography } from "@/components/nowts/typography";
 import { Button } from "@/components/ui/button";
 
-// Regenerate at most once per day — new summaries are added daily
-export const revalidate = 86400;
-
 type Props = {
   params: Promise<{ channel_id: string }>;
 };
