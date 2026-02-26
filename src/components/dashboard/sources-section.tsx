@@ -16,6 +16,7 @@ import {
   Loader2,
 } from "@/lib/icons";
 import { dialogManager } from "@/features/dialog-manager/dialog-manager";
+import { openUpsellModal } from "@/components/dashboard/upsell-modal";
 import type { Tables } from "@/types/supabase";
 
 type Subscription = Tables<"subscriptions">;
@@ -172,17 +173,7 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
     const newActive = !source.active;
 
     if (newActive && atActiveLimit) {
-      dialogManager.confirm({
-        title: "Upgrade to Pro",
-        description: `You've reached the limit of ${maxChannels} active channels. Upgrade to Pro for unlimited active channels.`,
-        variant: "default",
-        action: {
-          label: "Upgrade to Pro",
-          onClick: async () => {
-            window.location.href = "/dashboard/billing";
-          },
-        },
-      });
+      openUpsellModal();
       return;
     }
 
@@ -379,9 +370,9 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
                 <Button
                   size="sm"
                   className="shrink-0 bg-red-600 hover:bg-red-500"
-                  asChild
+                  onClick={() => openUpsellModal()}
                 >
-                  <a href="/dashboard/billing">Upgrade to Pro</a>
+                  Upgrade to Pro
                 </Button>
               </div>
             </div>

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Youtube, X, Plus, Loader2 } from "@/lib/icons";
 import { toast } from "sonner";
+import { openUpsellModal } from "@/components/dashboard/upsell-modal";
 
 function isYouTubeInput(val: string): boolean {
   const v = val.trim();
@@ -41,11 +42,12 @@ export function ChannelSearchBar() {
         toast.error(data.error ?? "Failed to add channel");
         return;
       }
-      toast.success(
-        data.active
-          ? "Channel added and active"
-          : "Channel added (paused — active limit reached)",
-      );
+      if (data.active) {
+        toast.success("Channel added and active");
+      } else {
+        openUpsellModal();
+        toast.info("Channel added but paused — upgrade to activate it");
+      }
       await setQ(null);
       router.refresh();
     } catch {
