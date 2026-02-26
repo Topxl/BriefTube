@@ -1,6 +1,5 @@
 "use client";
 
-import { Card, CardContent } from "@/components/ui/card";
 import { ScrollReveal } from "@/components/ui/scroll-reveal";
 import { t } from "@/locales";
 
@@ -53,7 +52,7 @@ const painIcons = [
 
 export function Problem() {
   return (
-    <section className="py-14 md:py-20">
+    <section className="py-8 md:py-12">
       <div className="mx-auto max-w-6xl px-6">
         <ScrollReveal>
           <h2 className="font-display text-center text-2xl font-bold md:text-3xl">
@@ -64,22 +63,24 @@ export function Problem() {
         </ScrollReveal>
 
         <ScrollReveal delay={150}>
-          <div className="mt-12 grid gap-6 md:grid-cols-3">
+          <div className="mt-6 grid gap-3 md:grid-cols-3">
             {tl.items.map((item, i) => (
-              <Card
+              <div
                 key={item.title}
-                className="hover:-translate-y-0.5 hover:border-white/[0.12] hover:shadow-[0_12px_40px_rgba(0,0,0,0.35)]"
+                style={{ display: "flex", flexDirection: "column", padding: "20px" }}
+                className="rounded-2xl border border-white/[0.08] border-t-white/[0.15] bg-white/[0.04] shadow-[0_8px_32px_rgba(0,0,0,0.3)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:border-white/[0.12] hover:shadow-[0_12px_40px_rgba(0,0,0,0.35)]"
               >
-                <CardContent className="pt-6">
-                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.06] text-red-500 backdrop-blur-sm">
-                    {painIcons[i]}
-                  </div>
-                  <h3 className="mb-2 text-lg font-semibold">{item.title}</h3>
-                  <p className="text-muted-foreground text-sm">
-                    {item.description}
-                  </p>
-                </CardContent>
-              </Card>
+                <div
+                  style={{ width: "40px", height: "40px", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "12px" }}
+                  className="rounded-xl border border-white/[0.08] bg-white/[0.06] text-red-500 backdrop-blur-sm"
+                >
+                  {painIcons[i]}
+                </div>
+                <h3 style={{ marginBottom: "6px" }} className="text-base font-semibold">{item.title}</h3>
+                <p className="text-muted-foreground text-sm leading-relaxed">
+                  {item.description}
+                </p>
+              </div>
             ))}
           </div>
         </ScrollReveal>
