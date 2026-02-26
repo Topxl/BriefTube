@@ -144,7 +144,9 @@ sed -i "/^Environment=PYTHONUNBUFFERED/a Environment=INFISICAL_UNIVERSAL_AUTH_CL
 mkdir -p /etc/systemd/system/brieftube-worker.service.d
 cat > /etc/systemd/system/brieftube-worker.service.d/override.conf << EOF
 [Service]
-Environment="MAX_CONCURRENT_VIDEOS=3"
+Environment="MAX_CONCURRENT_VIDEOS=12"
+Environment="MAX_CPU_PERCENT=80"
+Environment="MIN_FREE_RAM_MB=512"
 EOF
 
 systemctl daemon-reload

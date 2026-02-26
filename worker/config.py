@@ -42,7 +42,7 @@ DEFAULT_TTS_VOICE = os.getenv("TTS_VOICE", "fr-FR-DeniseNeural")
 RSS_CHECK_INTERVAL = int(os.getenv("RSS_CHECK_INTERVAL", "1800"))  # 30 minutes (WebSub handles real-time)
 
 # Concurrent video processing (how many videos to process simultaneously)
-MAX_CONCURRENT_VIDEOS = int(os.getenv("MAX_CONCURRENT_VIDEOS", "3"))
+MAX_CONCURRENT_VIDEOS = int(os.getenv("MAX_CONCURRENT_VIDEOS", "12"))
 
 # Worker mode — "full" (scanner + processor + deliverer) or "processor" (processor only)
 # Multiple "processor" instances can run in parallel on the same machine or different VPS.
@@ -55,12 +55,17 @@ WORKER_INSTANCE = int(os.getenv("WORKER_INSTANCE", "0"))
 # Health check HTTP port (default 8080; processor instances use 8081, 8082, …)
 HEALTH_PORT = int(os.getenv("HEALTH_PORT", "8080"))
 
-# CPU throttling — worker pauses before starting a new video job when system
-# CPU usage (all cores, 1-second sample) is above this threshold.
-# Set to 100 to disable. Recommended: 60-75 on a personal machine.
-MAX_CPU_PERCENT = int(os.getenv("MAX_CPU_PERCENT", "75"))
+# Resource throttling — worker pauses before starting a new video job when the
+# system is under pressure. Three independent checks:
+#   - CPU usage (1-second sample across all cores) > MAX_CPU_PERCENT
+#   - 1-minute load average > CPU count × MAX_LOAD_PER_CPU  (default 0.9 = 90%)
+#   - Available RAM < MIN_FREE_RAM_MB
+# Set MAX_CPU_PERCENT=100 to disable CPU/load checks.
+MAX_CPU_PERCENT    = int(os.getenv("MAX_CPU_PERCENT",    "80"))
+MAX_LOAD_PER_CPU   = float(os.getenv("MAX_LOAD_PER_CPU", "0.9"))
+MIN_FREE_RAM_MB    = int(os.getenv("MIN_FREE_RAM_MB",    "512"))
 
-# How long (seconds) to wait between CPU checks when throttling
+# How long (seconds) to wait between resource checks when throttling
 CPU_CHECK_INTERVAL = float(os.getenv("CPU_CHECK_INTERVAL", "5.0"))
 
 # Worker HTTP API — secret token protecting the /logs endpoint (admin panel remote access)

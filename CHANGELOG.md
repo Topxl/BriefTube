@@ -2,6 +2,7 @@
 
 ## 2026-02-26
 
+CHORE: Worker — MAX_CONCURRENT_VIDEOS 3→12, throttle intelligent (CPU+load+RAM) remplace le simple check CPU
 FIX: Referral reward (P0-4) — webhook utilisait createClient() anon/RLS au lieu de createAdminClient(), table referrals retournait 0 rows silencieusement ; lookup redondant remplacé par profile.referred_by
 FIX: Landing problem cards — padding équilibré (20px), layout vertical cohérent, inline styles pour contourner le bug Tailwind v4 sur Card py-6/gap-6
 FIX: Landing features — "French and English (more coming)" → "55 languages supported" avec liste des principales langues

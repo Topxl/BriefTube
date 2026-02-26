@@ -21,7 +21,7 @@ from pathlib import Path
 import aiohttp
 import psutil
 
-from config import RSS_CHECK_INTERVAL, TELEGRAM_BOT_TOKEN, SUPABASE_URL, ADMIN_TELEGRAM_CHAT_ID, MAX_CONCURRENT_VIDEOS, MAX_CPU_PERCENT, CPU_CHECK_INTERVAL, HEALTH_PORT, WORKER_INSTANCE, APP_URL, WORKER_API_SECRET
+from config import RSS_CHECK_INTERVAL, TELEGRAM_BOT_TOKEN, SUPABASE_URL, ADMIN_TELEGRAM_CHAT_ID, MAX_CONCURRENT_VIDEOS, MAX_CPU_PERCENT, MAX_LOAD_PER_CPU, MIN_FREE_RAM_MB, CPU_CHECK_INTERVAL, HEALTH_PORT, WORKER_INSTANCE, APP_URL, WORKER_API_SECRET
 from transcript_extractor import TranscriptExtractor
 from gemini_api import GeminiSummarizer
 from text_cleaner import clean_for_tts
@@ -483,25 +483,45 @@ async def _process_video(
         )
 
 
-# ── CPU throttle helper ───────────────────────────────────────
+# ── Resource throttle helper ──────────────────────────────────
 
-async def _wait_for_cpu_headroom() -> None:
-    """Pause before starting a new video job if CPU usage is above MAX_CPU_PERCENT.
+_CPU_COUNT = psutil.cpu_count(logical=True) or 1
 
-    Samples CPU every CPU_CHECK_INTERVAL seconds until it drops below the
-    threshold, then returns. This prevents the worker from saturating the machine
-    while other applications are running.
+async def _wait_for_headroom() -> None:
+    """Pause before starting a new video job if the system is under pressure.
+
+    Three independent checks run in a thread to keep the event loop free:
+      1. CPU usage (1-second sample) > MAX_CPU_PERCENT
+      2. 1-minute load average > CPU_COUNT × MAX_LOAD_PER_CPU
+      3. Available RAM < MIN_FREE_RAM_MB
+
+    All three must be satisfied simultaneously before a new slot is granted.
+    Set MAX_CPU_PERCENT=100 to disable all checks.
     """
     if MAX_CPU_PERCENT >= 100:
         return  # Throttling disabled
 
     while True:
-        # Run the blocking 1-second CPU measurement in a thread so the event
-        # loop stays free to handle bot callbacks during the measurement.
-        cpu = await asyncio.to_thread(psutil.cpu_percent, 1)
-        if cpu < MAX_CPU_PERCENT:
+        def _check() -> tuple[float, float, int]:
+            cpu  = psutil.cpu_percent(1)
+            load = os.getloadavg()[0]          # 1-minute load average
+            ram  = psutil.virtual_memory().available // (1024 * 1024)  # MB
+            return cpu, load, ram
+
+        cpu, load, ram = await asyncio.to_thread(_check)
+        load_limit = _CPU_COUNT * MAX_LOAD_PER_CPU
+
+        reasons = []
+        if cpu >= MAX_CPU_PERCENT:
+            reasons.append(f"CPU {cpu:.0f}%>{MAX_CPU_PERCENT}%")
+        if load >= load_limit:
+            reasons.append(f"load {load:.2f}>{load_limit:.2f}")
+        if ram < MIN_FREE_RAM_MB:
+            reasons.append(f"RAM {ram}MB<{MIN_FREE_RAM_MB}MB")
+
+        if not reasons:
             return
-        logger.info(f"CPU at {cpu:.0f}% (limit {MAX_CPU_PERCENT}%) — waiting {CPU_CHECK_INTERVAL:.0f}s before next job")
+        logger.info(f"Throttle ({', '.join(reasons)}) — waiting {CPU_CHECK_INTERVAL:.0f}s before next job")
         await asyncio.sleep(CPU_CHECK_INTERVAL)
 
 
@@ -561,8 +581,8 @@ async def processor_loop(alert_system: MonitoringAlert):
             # Block here until a processing slot is free
             await semaphore.acquire()
 
-            # Throttle: wait until CPU drops below MAX_CPU_PERCENT before picking a job
-            await _wait_for_cpu_headroom()
+            # Throttle: wait until CPU/load/RAM are within limits before picking a job
+            await _wait_for_headroom()
 
             # Serialize job picking — prevents two concurrent tasks picking the same row
             async with _pick_lock:
@@ -1030,7 +1050,7 @@ async def main():
     except OSError as e:
         logger.warning(f"Could not set nice value: {e}")
 
-    logger.info(f"CPU throttle: pause before new jobs when CPU > {MAX_CPU_PERCENT}%")
+    logger.info(f"Resource throttle: CPU>{MAX_CPU_PERCENT}% | load>{_CPU_COUNT * MAX_LOAD_PER_CPU:.1f} | RAM<{MIN_FREE_RAM_MB}MB → pause before next job")
 
     # Validate config
     if not SUPABASE_URL:
@@ -1144,7 +1164,7 @@ async def processor_main():
     except OSError:
         pass
 
-    logger.info(f"[{label}] CPU throttle: pause when CPU > {MAX_CPU_PERCENT}%")
+    logger.info(f"[{label}] Resource throttle: CPU>{MAX_CPU_PERCENT}% | load>{_CPU_COUNT * MAX_LOAD_PER_CPU:.1f} | RAM<{MIN_FREE_RAM_MB}MB")
     logger.info(f"[{label}] Concurrent slots: {MAX_CONCURRENT_VIDEOS}")
 
     # No Telegram bot, no scanner, no deliverer — null alert system is sufficient.
