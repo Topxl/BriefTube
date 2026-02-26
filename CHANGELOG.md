@@ -2,6 +2,12 @@
 
 ## 2026-02-26
 
+FIX: Landing problem cards — padding équilibré (20px), layout vertical cohérent, inline styles pour contourner le bug Tailwind v4 sur Card py-6/gap-6
+FIX: Landing features — "French and English (more coming)" → "55 languages supported" avec liste des principales langues
+FEATURE: Landing social proof — barre de stats dynamique (summaries delivered + channels tracked) depuis Supabase, s'affiche uniquement si seuils atteints
+FIX: Landing FAQ — prix Pro affichait toujours "…/month?" (data.amount → data.monthly.amount)
+FIX: Landing hero — durées audio affichées immédiatement (fallback hardcodé), affiche la durée totale au repos et le temps courant pendant la lecture
+
 FEATURE: Personal stats dashboard (P2-1) — this month, all time, time saved estimate, streak, top channels par activité
 FIX: SEO sitemap — supprime doublon sitemap.ts, retire /login (noindex) du sitemap.tsx, ajoute /support manquant
 FIX: SEO metadataBase — fixé sur SiteConfig.prodUrl (www.brief-tube.com) au lieu de getServerUrl() qui retournait le domaine Vercel interne, corrige "Google n'a pas choisi la même URL canonique"

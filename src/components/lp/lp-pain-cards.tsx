@@ -1,6 +1,5 @@
 "use client";
 
-import { Card, CardContent } from "@/components/ui/card";
 import { ScrollReveal } from "@/components/ui/scroll-reveal";
 
 type PainPoint = {
@@ -15,7 +14,7 @@ type LpPainCardsProps = {
 const painIcons = [
   <svg
     key="clock"
-    className="h-6 w-6"
+    className="h-5 w-5"
     fill="none"
     stroke="currentColor"
     viewBox="0 0 24 24"
@@ -29,7 +28,7 @@ const painIcons = [
   </svg>,
   <svg
     key="inbox"
-    className="h-6 w-6"
+    className="h-5 w-5"
     fill="none"
     stroke="currentColor"
     viewBox="0 0 24 24"
@@ -43,7 +42,7 @@ const painIcons = [
   </svg>,
   <svg
     key="bolt"
-    className="h-6 w-6"
+    className="h-5 w-5"
     fill="none"
     stroke="currentColor"
     viewBox="0 0 24 24"
@@ -59,7 +58,7 @@ const painIcons = [
 
 export function LpPainCards({ painPoints }: LpPainCardsProps) {
   return (
-    <section className="py-14 md:py-20">
+    <section style={{ paddingTop: "2rem", paddingBottom: "2rem" }}>
       <div className="mx-auto max-w-6xl px-6">
         <ScrollReveal>
           <h2 className="font-display text-center text-2xl font-bold md:text-3xl">
@@ -72,22 +71,49 @@ export function LpPainCards({ painPoints }: LpPainCardsProps) {
         </ScrollReveal>
 
         <ScrollReveal delay={150}>
-          <div className="mt-12 grid gap-6 md:grid-cols-3">
+          <div
+            style={{
+              marginTop: "1.5rem",
+              display: "grid",
+              gap: "0.75rem",
+            }}
+            className="md:grid-cols-3"
+          >
             {painPoints.map((point, i) => (
-              <Card
+              <div
                 key={point.title}
-                className="hover:-translate-y-0.5 hover:border-white/[0.12] hover:shadow-[0_12px_40px_rgba(0,0,0,0.35)]"
+                style={{
+                  display: "flex",
+                  flexDirection: "row",
+                  alignItems: "flex-start",
+                  gap: "12px",
+                  padding: "12px",
+                }}
+                className="rounded-2xl border border-white/[0.08] border-t-white/[0.15] bg-white/[0.04] shadow-[0_8px_32px_rgba(0,0,0,0.3)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:border-white/[0.12] hover:shadow-[0_12px_40px_rgba(0,0,0,0.35)]"
               >
-                <CardContent className="pt-6">
-                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.06] text-red-500 backdrop-blur-sm">
-                    {painIcons[i]}
-                  </div>
-                  <h3 className="mb-2 text-lg font-semibold">{point.title}</h3>
-                  <p className="text-muted-foreground text-sm">
+                <div
+                  style={{
+                    flexShrink: 0,
+                    width: "32px",
+                    height: "32px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginTop: "2px",
+                  }}
+                  className="rounded-xl border border-white/[0.08] bg-white/[0.06] text-red-500 backdrop-blur-sm"
+                >
+                  {painIcons[i]}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <h3 style={{ marginBottom: "2px" }} className="text-sm font-semibold">
+                    {point.title}
+                  </h3>
+                  <p className="text-muted-foreground text-xs leading-snug">
                     {point.description}
                   </p>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             ))}
           </div>
         </ScrollReveal>
