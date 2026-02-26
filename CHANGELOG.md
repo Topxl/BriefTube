@@ -2,6 +2,11 @@
 
 ## 2026-02-27
 
+FIX: Worker delivery_loop — ne pas appeler mirror_delivery si mark_delivery_sent a échoué (évite faux positif admin + risque de doublon Telegram au restart)
+FIX: Worker whisper_transcriber — try/except sur int(split(":")[1]) pour éviter ValueError/IndexError si premiere_hours manquant
+FIX: Worker bot_handler — asyncio.wait_for(timeout=15s) sur les 4 asyncio.gather() pour éviter freeze infini si Supabase hang
+FIX: Worker main — audio_url None guard (or "") et voice.split guard si format sans tiret
+
 FEATURE: Admin — funnel d'acquisition visuel (visiteurs→inscrits→trial→pro) + graphiques tendances 30j (visiteurs/inscrits/trials par jour) + intégration PostHog API (POSTHOG_PERSONAL_API_KEY + POSTHOG_PROJECT_ID)
 FEATURE: Onboarding wizard — visuels par catégorie (Business/Education/Finance/Science/Tech) : fond dégradé, icône SVG watermark, barre accent colorée
 

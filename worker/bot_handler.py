@@ -843,10 +843,17 @@ async def handle_options_callback(update: Update, context: ContextTypes.DEFAULT_
         return
 
     # Fetch profile and channel info in parallel
-    profile, channel_info = await asyncio.gather(
-        asyncio.to_thread(db.get_profile_by_telegram, str(query.from_user.id)),
-        asyncio.to_thread(db.get_video_channel, video_id),
-    )
+    try:
+        profile, channel_info = await asyncio.wait_for(
+            asyncio.gather(
+                asyncio.to_thread(db.get_profile_by_telegram, str(query.from_user.id)),
+                asyncio.to_thread(db.get_video_channel, video_id),
+            ),
+            timeout=15.0,
+        )
+    except asyncio.TimeoutError:
+        logger.warning(f"Timeout fetching profile/channel for options menu (video={video_id})")
+        return
 
     # Fallback for on-demand videos (channel_id="" in DB) — scrape YouTube
     if not channel_info:
@@ -922,10 +929,17 @@ async def handle_share_callback(update: Update, context: ContextTypes.DEFAULT_TY
         return
 
     # Fetch profile and video metadata in parallel — independent queries
-    profile, pv = await asyncio.gather(
-        asyncio.to_thread(db.get_profile_by_telegram, str(query.from_user.id)),
-        asyncio.to_thread(db.get_processed_video, video_id, language),
-    )
+    try:
+        profile, pv = await asyncio.wait_for(
+            asyncio.gather(
+                asyncio.to_thread(db.get_profile_by_telegram, str(query.from_user.id)),
+                asyncio.to_thread(db.get_processed_video, video_id, language),
+            ),
+            timeout=15.0,
+        )
+    except asyncio.TimeoutError:
+        logger.warning(f"Timeout fetching profile/video for share (video={video_id})")
+        return
     if not profile:
         await query.message.reply_text("Connect your BriefTube account first (/start).")
         return
@@ -991,10 +1005,17 @@ async def handle_share_set_lang_callback(update: Update, context: ContextTypes.D
         return
 
     # Fetch profile and processed video in parallel — independent reads
-    profile, pv = await asyncio.gather(
-        asyncio.to_thread(db.get_profile_by_telegram, str(query.from_user.id)),
-        asyncio.to_thread(db.get_processed_video, video_id, new_lang),
-    )
+    try:
+        profile, pv = await asyncio.wait_for(
+            asyncio.gather(
+                asyncio.to_thread(db.get_profile_by_telegram, str(query.from_user.id)),
+                asyncio.to_thread(db.get_processed_video, video_id, new_lang),
+            ),
+            timeout=15.0,
+        )
+    except asyncio.TimeoutError:
+        logger.warning(f"Timeout fetching profile/video for shareSetLang (video={video_id})")
+        return
     if not profile:
         await query.message.reply_text("Connect your BriefTube account first (/start).")
         return
@@ -1229,10 +1250,17 @@ async def handle_confirm_unsub_callback(update: Update, context: ContextTypes.DE
 
     channel_id = query.data[len("confirmUnsub_"):]
 
-    profile, channel_name = await asyncio.gather(
-        asyncio.to_thread(db.get_profile_by_telegram, str(query.from_user.id)),
-        asyncio.to_thread(_get_channel_name_from_subscription, channel_id),
-    )
+    try:
+        profile, channel_name = await asyncio.wait_for(
+            asyncio.gather(
+                asyncio.to_thread(db.get_profile_by_telegram, str(query.from_user.id)),
+                asyncio.to_thread(_get_channel_name_from_subscription, channel_id),
+            ),
+            timeout=15.0,
+        )
+    except asyncio.TimeoutError:
+        logger.warning(f"Timeout fetching profile/channel for confirmUnsub (channel={channel_id})")
+        return
     if not profile:
         await query.message.edit_text("Connect your BriefTube account first (/start).")
         return

@@ -188,7 +188,7 @@ def _resolve_tts_voice(voice: str | None, language: str) -> str | None:
     if not voice:
         return default
     # Voice IDs are formatted as "{lang}-{region}-{Name}Neural"
-    voice_lang = voice.split("-")[0]
+    voice_lang = voice.split("-")[0] if "-" in voice else ""
     if voice_lang == language:
         return voice  # Voice already matches target language
     # Mismatch — override with language-appropriate default
@@ -707,7 +707,7 @@ async def delivery_loop(alert_system: MonitoringAlert):
                 # bring it back to 'pending' for a retry.
                 try:
                     video_id = d["video_id"]
-                    audio_url = d.get("audio_url", "")
+                    audio_url = d.get("audio_url") or ""
                     delivery_language = d.get("language", "fr")
 
                     # Get or download audio file (one file per video+language)
@@ -743,10 +743,12 @@ async def delivery_loop(alert_system: MonitoringAlert):
 
                     if success:
                         # Retry marking as sent to survive transient Supabase errors.
+                        _sent_marked = False
                         for _attempt in range(3):
                             try:
                                 await asyncio.to_thread(db.mark_delivery_sent, d["delivery_id"])
                                 stats.record_delivery_sent()
+                                _sent_marked = True
                                 break
                             except Exception as mark_err:
                                 if _attempt < 2:
@@ -760,13 +762,17 @@ async def delivery_loop(alert_system: MonitoringAlert):
                                         f"Could not mark delivery {d['delivery_id']} as sent "
                                         f"after 3 attempts — audio was already sent to user"
                                     )
-                        # Mirror to admin log bot (fire-and-forget, once per video)
-                        asyncio.create_task(alert_system.mirror_delivery(
-                            video_id=video_id,
-                            video_title=d["video_title"],
-                            channel_id=d["channel_id"],
-                            audio_path=audio_path,
-                        ))
+                        # Mirror to admin log bot only if DB update succeeded.
+                        # If mark_delivery_sent failed, delivery stays 'sending' and
+                        # will be reset to 'pending' on next restart — skip mirror to
+                        # avoid a false-positive success signal in the admin logs.
+                        if _sent_marked:
+                            asyncio.create_task(alert_system.mirror_delivery(
+                                video_id=video_id,
+                                video_title=d["video_title"],
+                                channel_id=d["channel_id"],
+                                audio_path=audio_path,
+                            ))
                     else:
                         # send_audio_to_user returned False: Telegram permanently
                         # rejected the send (user blocked bot, invalid chat, etc.).

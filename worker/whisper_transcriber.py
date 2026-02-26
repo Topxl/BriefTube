@@ -299,7 +299,10 @@ class WhisperTranscriber:
             logger.info(f"Downloading audio from YouTube: {youtube_url}")
             dl_result = self._download_audio(youtube_url, audio_path)
             if isinstance(dl_result, str) and dl_result.startswith("premiere:"):
-                hours = int(dl_result.split(":")[1])
+                try:
+                    hours = int(dl_result.split(":")[1])
+                except (ValueError, IndexError):
+                    hours = 2  # default fallback
                 return None, None, f"premiere_not_available_yet:{hours}", 0.0
             if dl_result == "live":
                 return None, None, "video_is_live", 0.0
