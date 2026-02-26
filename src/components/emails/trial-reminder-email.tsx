@@ -65,7 +65,7 @@ export function TrialReminderEmail({ daysLeft }: Props) {
             }}
           >
             {isLastDay
-              ? "This is your last chance to keep getting AI-powered audio summaries from your YouTube channels delivered to Telegram — every day, automatically."
+              ? "This is your last chance to keep getting AI-powered audio summaries from your YouTube channels delivered to Telegram, every day, automatically."
               : "You still have time to keep enjoying AI-powered audio summaries from your YouTube channels. After your trial, your Telegram deliveries will stop."}
           </Text>
           <Text

@@ -18,7 +18,7 @@ export function WelcomeEmail({ trialDays = 7 }: Props) {
   return (
     <Html>
       <Head />
-      <Preview>{`Welcome to BriefTube — your ${trialDays}-day trial starts now`}</Preview>
+      <Preview>{`Welcome to BriefTube. Your ${trialDays}-day trial starts now`}</Preview>
       <Body
         style={{
           backgroundColor: "#0a0a0a",
@@ -58,7 +58,7 @@ export function WelcomeEmail({ trialDays = 7 }: Props) {
           >
             Your {trialDays}-day trial is now active. Subscribe to YouTube
             channels and receive AI-powered audio summaries directly in your
-            Telegram — automatically.
+            Telegram, automatically.
           </Text>
           <Button
             href="https://www.brief-tube.com/dashboard"

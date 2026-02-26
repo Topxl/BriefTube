@@ -14,7 +14,7 @@ export function PaymentFailedEmail() {
   return (
     <Html>
       <Head />
-      <Preview>Action required — your BriefTube payment failed</Preview>
+      <Preview>Action required: your BriefTube payment failed</Preview>
       <Body
         style={{
           backgroundColor: "#0a0a0a",
