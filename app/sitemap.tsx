@@ -6,21 +6,38 @@ import { comparisons } from "@/content/comparisons";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const supabase = createAdminClient();
-  const [{ data: publicLists }, { data: channelRows }] = await Promise.all([
-    supabase
-      .from("channel_lists")
-      .select("id, created_at")
-      .eq("is_public", true),
-    supabase
-      .from("subscriptions")
-      .select("channel_id")
-      .eq("active", true)
-      .limit(500),
-  ]);
+  const [{ data: publicLists }, { data: channelRows }, { data: lastVideos }] =
+    await Promise.all([
+      supabase
+        .from("channel_lists")
+        .select("id, created_at")
+        .eq("is_public", true),
+      supabase
+        .from("subscriptions")
+        .select("channel_id")
+        .eq("active", true)
+        .limit(500),
+      supabase
+        .from("processed_videos")
+        .select("channel_id, created_at")
+        .eq("status", "completed")
+        .order("created_at", { ascending: false })
+        .limit(1000),
+    ]);
 
   const uniqueChannelIds = [
     ...new Set((channelRows ?? []).map((r) => r.channel_id)),
   ];
+
+  // Index of last summary date per channel
+  const lastSummaryByChannel = (lastVideos ?? []).reduce<
+    Record<string, string>
+  >((acc, v) => {
+    if (!acc[v.channel_id] && v.created_at) {
+      acc[v.channel_id] = v.created_at;
+    }
+    return acc;
+  }, {});
 
   return [
     {
@@ -86,10 +103,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "weekly" as const,
       priority: 0.6,
     })),
+    // Channel index
+    {
+      url: `${SiteConfig.prodUrl}/channels`,
+      lastModified: new Date(),
+      changeFrequency: "daily" as const,
+      priority: 0.7,
+    },
     // Programmatic channel pages
     ...uniqueChannelIds.map((channelId) => ({
       url: `${SiteConfig.prodUrl}/channels/${channelId}`,
-      lastModified: new Date("2026-02-24"),
+      lastModified: lastSummaryByChannel[channelId]
+        ? new Date(lastSummaryByChannel[channelId])
+        : new Date(),
       changeFrequency: "daily" as const,
       priority: 0.5,
     })),

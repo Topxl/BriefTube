@@ -58,13 +58,29 @@ export default async function ChannelPage({ params }: Props) {
 
   const supabase = createAdminClient();
 
-  // 1. Fetch channel info
-  const { data: channel } = await supabase
-    .from("subscriptions")
-    .select("channel_name, channel_avatar_url")
-    .eq("channel_id", channel_id)
-    .limit(1)
-    .single();
+  // 1. Fetch channel info + follower count in parallel
+  const [{ data: channel }, { count: followerCount }, { data: lastVideo }] =
+    await Promise.all([
+      supabase
+        .from("subscriptions")
+        .select("channel_name, channel_avatar_url")
+        .eq("channel_id", channel_id)
+        .limit(1)
+        .single(),
+      supabase
+        .from("subscriptions")
+        .select("*", { count: "exact", head: true })
+        .eq("channel_id", channel_id)
+        .eq("active", true),
+      supabase
+        .from("processed_videos")
+        .select("created_at")
+        .eq("channel_id", channel_id)
+        .eq("status", "completed")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
 
   if (!channel) notFound();
 
@@ -72,6 +88,14 @@ export default async function ChannelPage({ params }: Props) {
   const channelAvatarUrl =
     channel.channel_avatar_url ||
     "https://img.youtube.com/vi/default/hqdefault.jpg";
+
+  const lastSummaryDate = lastVideo?.created_at
+    ? new Date(lastVideo.created_at).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
+    : null;
 
   // 2. Fetch summaries in English first
   let { data: videos } = await supabase
@@ -156,12 +180,27 @@ export default async function ChannelPage({ params }: Props) {
         </div>
 
         {/* Stats */}
-        <div className="mb-8">
-          <div className="inline-block rounded-full bg-white/5 px-4 py-2">
+        <div className="mb-8 flex flex-wrap gap-2">
+          <div className="rounded-full bg-white/5 px-4 py-2">
             <Typography variant="muted" className="text-sm">
               {videos.length} videos summarized
             </Typography>
           </div>
+          {(followerCount ?? 0) > 0 && (
+            <div className="rounded-full bg-white/5 px-4 py-2">
+              <Typography variant="muted" className="text-sm">
+                {followerCount} follower{followerCount === 1 ? "" : "s"} on
+                BriefTube
+              </Typography>
+            </div>
+          )}
+          {lastSummaryDate && (
+            <div className="rounded-full bg-white/5 px-4 py-2">
+              <Typography variant="muted" className="text-sm">
+                Last summary: {lastSummaryDate}
+              </Typography>
+            </div>
+          )}
         </div>
 
         {/* Videos grid */}
