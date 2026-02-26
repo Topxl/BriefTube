@@ -2,6 +2,7 @@
 
 ## 2026-02-26
 
+FEATURE: Upsell modal in-app — modal avec toggle Monthly/Annual + checkout direct, déclenché au palier de canaux (activation, bannière amber, ajout en pause)
 FEATURE: Plan annuel $79/an — toggle Monthly/Annual sur landing et /pricing, checkout accepte interval, -27% vs mensuel
 
 FEATURE: Activation email — email fondateur personnalisé 24h après signup si Telegram non connecté, question ouverte sur la plateforme préférée
