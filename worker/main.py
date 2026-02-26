@@ -276,6 +276,12 @@ async def _process_video(
     if tts_voice != (job.get("tts_voice") or None):
         logger.info(f"[{video_id}] Voice overridden: '{job.get('tts_voice')}' → '{tts_voice}' (language: {user_language})")
 
+    # Flag set to True once mark_video_completed succeeds.
+    # Prevents the exception handlers from overwriting a successfully completed
+    # video with status='failed' when a bookkeeping call (complete_job,
+    # get_next_pending_language_for_video, etc.) raises a transient DB error.
+    _video_completed = False
+
     try:
 
         # Step 1: Extract transcript
@@ -429,6 +435,7 @@ async def _process_video(
             language=user_language,
             video_title=video_title or None,
         )
+        _video_completed = True  # Do not call mark_video_failed after this point
         db.complete_job(job["id"])
 
         # Chain: re-queue for the next pending language (e.g. "en" after "fr").
@@ -464,9 +471,12 @@ async def _process_video(
     except asyncio.TimeoutError:
         logger.error(f"[{video_id}] Timeout")
         permanent = db.fail_job(job["id"])
-        db.mark_video_failed(video_id, language=user_language)
-        if permanent:
-            await _notify_video_failure(video_id, alert_system)
+        if not _video_completed:
+            db.mark_video_failed(video_id, language=user_language)
+            if permanent:
+                await _notify_video_failure(video_id, alert_system)
+        else:
+            logger.warning(f"[{video_id}] Timeout after successful completion — not marking as failed")
         stats.record_video_failed("Timeout", f"Timeout: {video_title}")
         await alert_system.send_alert(f"⏱️ **Timeout**\n\n{video_title[:80]}", level="WARNING")
 
@@ -474,9 +484,12 @@ async def _process_video(
         error_msg = str(e)
         logger.error(f"[{video_id}] Error: {error_msg}")
         permanent = db.fail_job(job["id"])
-        db.mark_video_failed(video_id, language=user_language)
-        if permanent:
-            await _notify_video_failure(video_id, alert_system)
+        if not _video_completed:
+            db.mark_video_failed(video_id, language=user_language)
+            if permanent:
+                await _notify_video_failure(video_id, alert_system)
+        else:
+            logger.warning(f"[{video_id}] Post-completion error (bookkeeping) — not marking as failed: {error_msg}")
         stats.record_video_failed(type(e).__name__, error_msg)
         await alert_system.send_alert(
             f"🔴 **Error**\n\nVideo: {video_title[:60]}\nError: {error_msg[:100]}",
@@ -606,7 +619,7 @@ async def processor_loop(alert_system: MonitoringAlert):
                     logger.error(f"[{j['video_id']}] Timed out after {VIDEO_TIMEOUT}s — marking failed")
                     try:
                         permanent = db.fail_job(j["id"])
-                        db.mark_video_failed(j["video_id"])
+                        db.mark_video_failed(j["video_id"], language=j.get("user_language", "fr"))
                         if permanent:
                             await _notify_video_failure(j["video_id"], alert_system)
                     except Exception:

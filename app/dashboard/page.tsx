@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { SummariesFeed } from "@/components/dashboard/summaries-feed";
+import { SummariesFeedSkeleton } from "@/components/dashboard/summaries-feed-skeleton";
 import { TrialBanner } from "@/components/dashboard/trial-banner";
 import { SourcesSection } from "@/components/dashboard/sources-section";
 import { SectionErrorBoundary } from "@/components/nowts/section-error-boundary";
@@ -75,7 +76,7 @@ export default async function DashboardPage() {
       <div className="space-y-3">
         <h2 className="text-sm font-semibold">Recent summaries</h2>
         <SectionErrorBoundary>
-          <Suspense fallback={null}>
+          <Suspense fallback={<SummariesFeedSkeleton />}>
             <SummariesFeed />
           </Suspense>
         </SectionErrorBoundary>

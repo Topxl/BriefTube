@@ -2,14 +2,15 @@ import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { ProfileContent } from "@/components/dashboard/profile-content";
 import { SiteConfig } from "@/site-config";
-
-const ADMIN_USER_ID = "67320a39-948c-44d2-98e3-c0de49af1ec6";
+import { env } from "@/lib/env";
 
 export default async function ProfilePage(props: {
-  searchParams: Promise<{ success?: string }>;
+  searchParams: Promise<{ success?: string; annual?: string }>;
 }) {
   const searchParams = await props.searchParams;
   const paymentSuccess = searchParams.success === "true";
+  const defaultInterval =
+    searchParams.annual === "true" ? ("year" as const) : undefined;
   const supabase = await createClient();
   const {
     data: { user },
@@ -90,7 +91,8 @@ export default async function ProfilePage(props: {
       maxChannels={profile?.max_channels ?? SiteConfig.freeChannelsLimit}
       referralCode={profile?.referral_code ?? ""}
       referralStats={referralStats}
-      isAdmin={user.id === ADMIN_USER_ID}
+      isAdmin={!!env.ADMIN_USER_ID && user.id === env.ADMIN_USER_ID}
+      defaultInterval={defaultInterval}
       paymentSuccess={paymentSuccess}
     />
   );
