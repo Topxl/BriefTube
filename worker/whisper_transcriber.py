@@ -24,7 +24,7 @@ import urllib.request
 from pathlib import Path
 from typing import Optional, Tuple
 import yt_dlp
-from groq import Groq, APIStatusError
+from groq import Groq
 
 from youtube_utils import (
     _PREMIERE_RE,
@@ -418,40 +418,18 @@ class WhisperTranscriber:
 
         return chunks
 
-    # Flex tier: retry up to 3 times on 498 capacity_exceeded with exponential backoff
-    _FLEX_MAX_RETRIES = 3
-    _FLEX_RETRY_BASE_S = 30  # 30s → 60s → 120s
-
     def _transcribe_chunk(
         self, chunk_path: Path, language: Optional[str]
     ) -> Tuple[str, str, float]:
-        """Send one audio chunk to Groq Whisper (Flex tier). Returns (text, lang, cost_usd).
-
-        Uses service_tier="flex" (10x higher daily limits vs on_demand).
-        Retries automatically on 498 capacity_exceeded with exponential backoff.
-        """
+        """Send one audio chunk to Groq Whisper. Returns (text, lang, cost_usd)."""
         chunk_size_mb = chunk_path.stat().st_size / (1024 * 1024)
-        for attempt in range(self._FLEX_MAX_RETRIES + 1):
-            try:
-                with open(chunk_path, "rb") as f:
-                    response = self.client.audio.transcriptions.create(
-                        model="whisper-large-v3-turbo",
-                        file=f,
-                        language=language,
-                        response_format="verbose_json",
-                        extra_body={"service_tier": "flex"},
-                    )
-                break  # success
-            except APIStatusError as e:
-                if e.status_code == 498 and attempt < self._FLEX_MAX_RETRIES:
-                    wait = self._FLEX_RETRY_BASE_S * (2 ** attempt)
-                    logger.warning(
-                        f"Groq Flex capacity_exceeded (498) — retry {attempt + 1}/{self._FLEX_MAX_RETRIES} "
-                        f"in {wait}s"
-                    )
-                    time.sleep(wait)
-                else:
-                    raise
+        with open(chunk_path, "rb") as f:
+            response = self.client.audio.transcriptions.create(
+                model="whisper-large-v3-turbo",
+                file=f,
+                language=language,
+                response_format="verbose_json",
+            )
         detected_lang = getattr(response, "language", None) or language or "unknown"
         duration_min = getattr(response, "duration", chunk_size_mb * 3 * 60) / 60
         cost = duration_min * 0.00067  # Groq pricing: $0.04/h = $0.00067/min

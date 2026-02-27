@@ -2,6 +2,9 @@
 
 ## 2026-02-28
 
+FIX: Worker whisper_transcriber — supprime extra_body service_tier (paramètre non supporté par l'API Groq Whisper → 400 error → 21+ échecs production) ; supprime aussi APIStatusError devenu inutilisé
+FEATURE: Worker tests — suite de 123 tests unitaires pytest (test_youtube_utils, test_rss_scanner, test_transcript_extractor) + runner d'intégration run_integration.py avec 16 cas couvrant tous les edge cases (court, long, musique, live, multilingue, vidéos échouées en prod)
+
 REFACTOR: Worker — centralise constantes/helpers YouTube dans youtube_utils.py (_PREMIERE_RE, hours_until_premiere, PLAYER_CLIENTS_FULL/SHORT, BOT_DETECTION_KEYWORDS, INVIDIOUS_INSTANCES, PIPED_INSTANCES, extract_video_id) → supprime duplication entre transcript_extractor, whisper_transcriber et rss_scanner
 FEATURE: Worker — ajoute Piped comme second proxy gratuit fallback pour subtitles (transcript_extractor._piped_subtitles) et audio Whisper (whisper_transcriber._download_audio_via_piped) : chaîne yt-dlp → Invidious → Piped → proxy payant
 PERF: Worker whisper_transcriber — réduit PLAYER_CLIENTS à 2 (ios → tv_embedded) pour les téléchargements audio Whisper : fail-fast vers les proxies gratuits, évite 2 clients redondants (android ≈ ios sur datacenter IP)
