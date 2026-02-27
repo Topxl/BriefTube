@@ -46,7 +46,10 @@ async def subscribe_channel(channel_id: str, session: aiohttp.ClientSession) -> 
                 return True
             body = await resp.text()
             logger.warning(f"[WebSub] Subscribe failed for {channel_id}: HTTP {resp.status} — {body[:100]}")
-            db.upsert_websub_subscription(channel_id, status="failed")
+            # On 429 (throttled), don't mark as failed — keep current status so
+            # the channel isn't immediately re-queued for the next sync cycle.
+            if resp.status != 429:
+                db.upsert_websub_subscription(channel_id, status="failed")
             return False
     except Exception as e:
         logger.warning(f"[WebSub] Subscribe error for {channel_id}: {e}")
@@ -103,12 +106,16 @@ async def sync_subscriptions(session: aiohttp.ClientSession) -> tuple[int, int]:
     if not to_subscribe and not to_renew:
         return 0, 0
 
-    # Process both lists in parallel batches of 50
-    semaphore = asyncio.Semaphore(50)
+    # Process both lists with limited concurrency to avoid 429 from the hub.
+    # Google PubSubHubbub throttles aggressively — keep concurrency very low
+    # and add a small inter-request delay.
+    semaphore = asyncio.Semaphore(2)
 
     async def _sub(channel_id: str) -> bool:
         async with semaphore:
-            return await subscribe_channel(channel_id, session)
+            result = await subscribe_channel(channel_id, session)
+            await asyncio.sleep(0.5)  # 500 ms between requests per slot
+            return result
 
     new_results = await asyncio.gather(*[_sub(ch) for ch in to_subscribe])
     renewed_results = await asyncio.gather(*[_sub(ch) for ch in to_renew])

@@ -9,7 +9,7 @@ export const SiteConfig = {
   prodUrl: "https://www.brief-tube.com",
   appId: "brieftube",
   domain: "brief-tube.com",
-  appIcon: "/images/icon.png",
+  appIcon: "/logo-120.png",
   company: {
     name: "BriefTube",
   },
