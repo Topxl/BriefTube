@@ -3,6 +3,7 @@
 ## 2026-02-27
 
 FEATURE: Worker — fallback chain ios→android→tv_embedded→mweb dans _download_audio et _ytdlp_subtitles + Invidious API comme proxy YouTube gratuit (contourne bot-detection VPS) + proxy HTTP (YOUTUBE_PROXY_HTTP) en dernier recours pour yt-dlp et Whisper + force-update yt-dlp à chaque déploiement
+FIX: Worker whisper_transcriber — détecter géo-restriction ("your country") tôt dans _download_audio pour abandonner immédiatement sans tester tous les clients → retourne "audio_geo_restricted" (fail permanent, pas de retry)
 FIX: Worker — désactive aiohttp access_log (access_log=None) pour éviter boucle de rétroaction : chaque poll /logs écrivait dans worker.log et noyait les vraies infos
 FIX: WebSub — réduit concurrence 50→2 + délai 500ms entre requêtes pour éviter HTTP 429 du hub PubSubHubbub, ne marque plus "failed" sur 429 pour éviter re-soumission immédiate
 FIX: PostHog — identify() : supprime guard posthog.__loaded (silencieux), re-capture $pageview après identify pour lier la première page au profil utilisateur
