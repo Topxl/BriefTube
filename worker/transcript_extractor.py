@@ -7,10 +7,14 @@ Strategy:
 2. If not available, fallback to Whisper API (paid, guaranteed)
 """
 
+import json
 import logging
 import os
+import random
 import re
 import threading
+import urllib.parse
+import urllib.request
 from pathlib import Path
 from typing import Optional, Tuple
 from youtube_transcript_api import YouTubeTranscriptApi
@@ -18,6 +22,16 @@ from youtube_transcript_api._errors import (
     TranscriptsDisabled,
     NoTranscriptFound,
     VideoUnavailable
+)
+
+from youtube_utils import (
+    _PREMIERE_RE,
+    hours_until_premiere as _hours_until_premiere,
+    PLAYER_CLIENTS_FULL as _PLAYER_CLIENTS,
+    BOT_DETECTION_KEYWORDS as _BOT_KW,
+    INVIDIOUS_INSTANCES as _INVIDIOUS_INSTANCES,
+    PIPED_INSTANCES as _PIPED_INSTANCES,
+    extract_video_id as _extract_video_id,
 )
 
 logger = logging.getLogger(__name__)
@@ -40,52 +54,6 @@ _MUSIC_TITLE_RE = re.compile(
     r'|meditation\s+(music|sounds?|frequency|frequencies)',
     re.IGNORECASE,
 )
-
-# Patterns that indicate a video is a premiere / scheduled live stream not yet started.
-# Covers both "premiere will begin in X hours" AND "Premieres in X hours" (yt-dlp verb form).
-_PREMIERE_RE = re.compile(
-    r"live event will begin"
-    r"|premiere will begin"
-    r"|this event will begin"
-    r"|scheduled to begin"
-    r"|upcoming premiere"
-    r"|premieres? in \d+",  # "Premieres in 5 hours" / "Premiere in 2 days"
-    re.IGNORECASE,
-)
-
-# yt-dlp player clients tried in order to bypass YouTube bot-detection.
-# ios is fastest; android, tv_embedded and mweb are fallbacks for datacenter IPs.
-_PLAYER_CLIENTS = [["ios"], ["android"], ["tv_embedded"], ["mweb"]]
-
-# Public Invidious instances used as a free YouTube proxy for caption fetching.
-# These instances are not subject to the bot-detection that blocks datacenter IPs.
-# Shuffled per call for load balancing. Falls through gracefully if all are down.
-_INVIDIOUS_INSTANCES = [
-    "https://invidious.privacydev.net",
-    "https://inv.tux.pizza",
-    "https://invidious.nerdvpn.de",
-    "https://iv.datura.network",
-    "https://invidious.lunar.icu",
-]
-
-
-def _hours_until_premiere(err: str) -> int:
-    """Parse premiere delay from yt-dlp error message. Default 2h.
-
-    Handles both:
-    - "will begin in X days/hours/minutes" (scheduled live)
-    - "Premieres in X days/hours/minutes"  (premiere video)
-    """
-    m = re.search(r"(?:begin|premieres?) in (\d+) days?", err, re.IGNORECASE)
-    if m:
-        return max(1, int(m.group(1)) * 24)
-    m = re.search(r"(?:begin|premieres?) in (\d+) hours?", err, re.IGNORECASE)
-    if m:
-        return max(1, int(m.group(1)))
-    m = re.search(r"(?:begin|premieres?) in (\d+) minutes?", err, re.IGNORECASE)
-    if m:
-        return max(1, (int(m.group(1)) + 59) // 60)
-    return 2  # safe default
 
 
 # Path to YouTube cookies file (Netscape format).
@@ -185,26 +153,8 @@ class TranscriptExtractor:
 
     @staticmethod
     def extract_video_id(url: str) -> Optional[str]:
-        """
-        Extract video ID from YouTube URL
-
-        Supports formats:
-        - https://www.youtube.com/watch?v=VIDEO_ID
-        - https://youtu.be/VIDEO_ID
-        - https://www.youtube.com/embed/VIDEO_ID
-        """
-        import re
-        patterns = [
-            r'(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)',
-        ]
-
-        for pattern in patterns:
-            match = re.search(pattern, url)
-            if match:
-                return match.group(1)
-
-        logger.error(f"Could not extract video ID from URL: {url}")
-        return None
+        """Extract video ID from a YouTube URL (delegates to youtube_utils)."""
+        return _extract_video_id(url)
 
     @staticmethod
     def _is_music_video(title: str) -> bool:
@@ -306,6 +256,11 @@ class TranscriptExtractor:
                 inv_text, inv_lang, _ = self._invidious_subtitles(video_id, preferred_languages)
                 if inv_text:
                     return inv_text, inv_lang, None, 0.0
+
+                # Step 2d: Try Piped (second free proxy, different infrastructure)
+                piped_text, piped_lang, _ = self._piped_subtitles(video_id, preferred_languages)
+                if piped_text:
+                    return piped_text, piped_lang, None, 0.0
 
                 # Step 3: Whisper API fallback (paid, uses Groq quota)
                 if self.enable_whisper_fallback and self.whisper_transcriber:
@@ -464,9 +419,7 @@ class TranscriptExtractor:
                 elif "429" in err or "Too Many Requests" in err:
                     logger.warning("yt-dlp subtitle: rate-limited (429) — will try Invidious")
                     break  # rate limit applies to all clients, no point retrying
-                elif any(kw in err.lower() for kw in (
-                    "sign in", "not a bot", "confirm you", "please sign",
-                )):
+                elif any(kw in err.lower() for kw in _BOT_KW):
                     logger.warning(
                         f"yt-dlp subtitle: bot detection with {client_name} — trying next client"
                     )
@@ -565,10 +518,6 @@ class TranscriptExtractor:
 
         Returns (text, language, error_code) or (None, None, None) on failure.
         """
-        import urllib.request
-        import urllib.parse
-        import json
-        import random
 
         instances = list(_INVIDIOUS_INSTANCES)
         random.shuffle(instances)
@@ -629,6 +578,77 @@ class TranscriptExtractor:
 
             except Exception as e:
                 logger.debug(f"Invidious {instance} failed: {str(e)[:80]}")
+                continue
+
+        return None, None, None
+
+    def _piped_subtitles(
+        self,
+        video_id: str,
+        preferred_languages: list[str],
+    ) -> tuple[Optional[str], Optional[str], Optional[str]]:
+        """Fetch captions via public Piped API — alternative free proxy to Invidious.
+
+        Piped /streams/{id} returns audioStreams and subtitles in one call.
+        Multiple instances are tried in random order for load balancing.
+
+        Returns (text, language, error_code) or (None, None, None) on failure.
+        """
+        instances = list(_PIPED_INSTANCES)
+        random.shuffle(instances)
+
+        for instance in instances:
+            try:
+                api_url = f"{instance}/streams/{urllib.parse.quote(video_id, safe='')}"
+                req = urllib.request.Request(
+                    api_url, headers={"User-Agent": "Mozilla/5.0"}
+                )
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    data = json.loads(resp.read().decode())
+
+                subtitles = data.get("subtitles", [])
+                if not subtitles:
+                    # No subtitles for this video — consistent across instances
+                    return None, None, None
+
+                # Pick the best language match
+                selected = None
+                detected_lang = "auto"
+                for lang in preferred_languages:
+                    for sub in subtitles:
+                        code = sub.get("code", "") or sub.get("language", "")
+                        if code == lang or code.startswith(f"{lang}-"):
+                            selected = sub
+                            detected_lang = lang
+                            break
+                    if selected:
+                        break
+                if not selected:
+                    selected = subtitles[0]
+                    detected_lang = (
+                        selected.get("code") or selected.get("language") or "auto"
+                    )
+
+                vtt_url = selected.get("url", "")
+                if not vtt_url:
+                    continue
+
+                req2 = urllib.request.Request(
+                    vtt_url, headers={"User-Agent": "Mozilla/5.0"}
+                )
+                with urllib.request.urlopen(req2, timeout=15) as resp2:
+                    vtt_content = resp2.read().decode("utf-8", errors="replace")
+
+                text = self._parse_vtt_text(vtt_content)
+                if text:
+                    logger.info(
+                        f"✅ Piped subtitle fetched ({len(text)} chars) "
+                        f"lang: {detected_lang} via {instance} [FREE]"
+                    )
+                    return text, detected_lang, None
+
+            except Exception as e:
+                logger.debug(f"Piped {instance} failed: {str(e)[:80]}")
                 continue
 
         return None, None, None
