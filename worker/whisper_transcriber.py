@@ -120,6 +120,9 @@ class WhisperTranscriber:
                         "is a live stream", "live event", "no video formats found",
                     )):
                         return "live"
+                    if "your country" in pre_err.lower():
+                        logger.warning("Audio pre-check: video geo-restricted — skipping permanently")
+                        return "geo_restricted"
                     if any(kw in pre_err.lower() for kw in (
                         "sign in", "not a bot", "confirm you", "please sign",
                     )):
@@ -178,6 +181,9 @@ class WhisperTranscriber:
                 if "error opening output files" in err.lower() or "invalid argument" in err.lower():
                     logger.warning("Audio download: ffmpeg output error (live stream or unsupported format) — skipping permanently")
                     return "unsupported"
+                if "your country" in err.lower():
+                    logger.warning("Audio download: video geo-restricted — skipping permanently")
+                    return "geo_restricted"
                 if any(kw in err.lower() for kw in (
                     "sign in", "not a bot", "confirm you", "please sign",
                 )):
@@ -353,6 +359,8 @@ class WhisperTranscriber:
                 return None, None, "music_content", 0.0
             if dl_result == "unsupported":
                 return None, None, "audio_unsupported_format", 0.0
+            if dl_result == "geo_restricted":
+                return None, None, "audio_geo_restricted", 0.0
             if dl_result == "auth_required":
                 return None, None, "youtube_auth_required", 0.0
             if not dl_result:
