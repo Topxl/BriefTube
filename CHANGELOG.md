@@ -7,6 +7,7 @@ FIX: PostHog — identify() : supprime guard posthog.__loaded (silencieux), re-c
 CHORE: Supprime public/images/icon.png (ancienne icône) — remplace par /logo-120.png dans site-config.ts appIcon
 
 FEATURE: Générateurs d'images Google Ads — /api/og/ads/telegram, /api/og/ads/before-after, /api/og/ads/stat (formats square/portrait/landscape)
+FIX: OG/before-after — Satori crash corrigé (div sans display:flex + textTransform:undefined incompatibles avec moteur next/og)
 
 FIX: Worker delivery_loop — ne pas appeler mirror_delivery si mark_delivery_sent a échoué (évite faux positif admin + risque de doublon Telegram au restart)
 FIX: Worker whisper_transcriber — try/except sur int(split(":")[1]) pour éviter ValueError/IndexError si premiere_hours manquant
