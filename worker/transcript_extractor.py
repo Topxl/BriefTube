@@ -53,6 +53,21 @@ _PREMIERE_RE = re.compile(
     re.IGNORECASE,
 )
 
+# yt-dlp player clients tried in order to bypass YouTube bot-detection.
+# ios is fastest; android, tv_embedded and mweb are fallbacks for datacenter IPs.
+_PLAYER_CLIENTS = [["ios"], ["android"], ["tv_embedded"], ["mweb"]]
+
+# Public Invidious instances used as a free YouTube proxy for caption fetching.
+# These instances are not subject to the bot-detection that blocks datacenter IPs.
+# Shuffled per call for load balancing. Falls through gracefully if all are down.
+_INVIDIOUS_INSTANCES = [
+    "https://invidious.privacydev.net",
+    "https://inv.tux.pizza",
+    "https://invidious.nerdvpn.de",
+    "https://iv.datura.network",
+    "https://invidious.lunar.icu",
+]
+
 
 def _hours_until_premiere(err: str) -> int:
     """Parse premiere delay from yt-dlp error message. Default 2h.
@@ -276,7 +291,7 @@ class TranscriptExtractor:
                 self.last_ip_blocked = ip_blocked
 
             if transcript_data is None:
-                # Step 2b: Try yt-dlp subtitle download before Whisper (free, no quota)
+                # Step 2b: Try yt-dlp subtitle download (free, no quota)
                 vtt_text, vtt_lang, vtt_error = self._ytdlp_subtitles(youtube_url, preferred_languages)
                 if vtt_text:
                     return vtt_text, vtt_lang, None, 0.0
@@ -286,6 +301,11 @@ class TranscriptExtractor:
                 if vtt_error == "video_is_live":
                     # Live stream in progress — no captions yet, skip Whisper entirely
                     return None, None, "video_is_live", 0.0
+
+                # Step 2c: Try Invidious (free YouTube proxy — bypasses datacenter IP blocks)
+                inv_text, inv_lang, _ = self._invidious_subtitles(video_id, preferred_languages)
+                if inv_text:
+                    return inv_text, inv_lang, None, 0.0
 
                 # Step 3: Whisper API fallback (paid, uses Groq quota)
                 if self.enable_whisper_fallback and self.whisper_transcriber:
@@ -353,103 +373,154 @@ class TranscriptExtractor:
         cookies_file = str(_COOKIES_FILE) if _COOKIES_FILE.exists() else None
         deno_path = Path.home() / ".deno" / "bin" / "deno"
 
-        ydl_opts: dict = {
-            "skip_download": True,
-            "writesubtitles": True,
-            "writeautomaticsub": True,
-            "subtitleslangs": list(dict.fromkeys(preferred_languages)),
-            "subtitlesformat": "vtt",
-            "quiet": True,
-            "no_warnings": True,
-            "noprogress": True,
-            "nocheckcertificate": True,
-            # iOS client bypasses YouTube bot-detection on datacenter IPs
-            "extractor_args": {"youtube": {"player_client": ["ios"]}},
-        }
-        if cookies_file:
-            ydl_opts["cookiefile"] = cookies_file
-        if deno_path.exists():
-            ydl_opts["js_runtimes"] = {"deno": {"path": str(deno_path)}}
+        for player_client in _PLAYER_CLIENTS:
+            client_name = player_client[0]
+            ydl_opts: dict = {
+                "skip_download": True,
+                "writesubtitles": True,
+                "writeautomaticsub": True,
+                "subtitleslangs": list(dict.fromkeys(preferred_languages)),
+                "subtitlesformat": "vtt",
+                "quiet": True,
+                "no_warnings": True,
+                "noprogress": True,
+                "nocheckcertificate": True,
+                "extractor_args": {"youtube": {"player_client": player_client}},
+            }
+            if cookies_file:
+                ydl_opts["cookiefile"] = cookies_file
+            if deno_path.exists():
+                ydl_opts["js_runtimes"] = {"deno": {"path": str(deno_path)}}
 
-        try:
-            with tempfile.TemporaryDirectory(prefix="brieftube_vtt_") as tmp:
-                ydl_opts["outtmpl"] = os.path.join(tmp, "%(id)s")
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    # extract_info(download=True) respects skip_download=True:
-                    # skips the media download, still writes subtitle files,
-                    # and returns the info dict so we can check is_live.
-                    info = ydl.extract_info(youtube_url, download=True)
+            try:
+                with tempfile.TemporaryDirectory(prefix="brieftube_vtt_") as tmp:
+                    ydl_opts["outtmpl"] = os.path.join(tmp, "%(id)s")
+                    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                        # extract_info(download=True) respects skip_download=True:
+                        # skips the media download, still writes subtitle files,
+                        # and returns the info dict so we can check is_live.
+                        info = ydl.extract_info(youtube_url, download=True)
 
-                    if info:
-                        live_status = info.get("live_status")
-                        # Scheduled/upcoming live — not started yet
-                        if live_status == "is_upcoming":
-                            scheduled = info.get("scheduled_start_time")
-                            if scheduled:
-                                import time as _time
-                                hours = max(1, int((scheduled - _time.time()) / 3600) + 1)
-                            else:
-                                hours = 24
-                            logger.info(f"yt-dlp: upcoming live — snooze {hours}h")
-                            return None, None, f"premiere_not_available_yet:{hours}"
-                        # Live stream currently broadcasting — no captions yet
-                        if live_status == "is_live" or info.get("is_live"):
-                            logger.info("yt-dlp: video is currently live — snooze 2h")
-                            return None, None, "video_is_live"
+                        if info:
+                            live_status = info.get("live_status")
+                            # Scheduled/upcoming live — not started yet
+                            if live_status == "is_upcoming":
+                                scheduled = info.get("scheduled_start_time")
+                                if scheduled:
+                                    import time as _time
+                                    hours = max(1, int((scheduled - _time.time()) / 3600) + 1)
+                                else:
+                                    hours = 24
+                                logger.info(f"yt-dlp: upcoming live — snooze {hours}h")
+                                return None, None, f"premiere_not_available_yet:{hours}"
+                            # Live stream currently broadcasting — no captions yet
+                            if live_status == "is_live" or info.get("is_live"):
+                                logger.info("yt-dlp: video is currently live — snooze 2h")
+                                return None, None, "video_is_live"
 
-                vtt_files = glob.glob(os.path.join(tmp, "*.vtt"))
-                if not vtt_files:
-                    return None, None, None
+                    vtt_files = glob.glob(os.path.join(tmp, "*.vtt"))
+                    if not vtt_files:
+                        # No subtitles available — another client won't change that
+                        return None, None, None
 
-                # Pick file matching preferred language
-                selected = vtt_files[0]
-                detected_lang = "auto"
-                for lang in preferred_languages:
-                    matches = [f for f in vtt_files if f".{lang}." in f]
-                    if matches:
-                        selected = matches[0]
-                        detected_lang = lang
-                        break
+                    # Pick file matching preferred language
+                    selected = vtt_files[0]
+                    detected_lang = "auto"
+                    for lang in preferred_languages:
+                        matches = [f for f in vtt_files if f".{lang}." in f]
+                        if matches:
+                            selected = matches[0]
+                            detected_lang = lang
+                            break
 
-                text = self._parse_vtt(selected)
-                if text:
+                    text = self._parse_vtt(selected)
+                    if text:
+                        logger.info(
+                            f"✅ yt-dlp subtitle extracted ({len(text)} chars) "
+                            f"lang: {detected_lang} [FREE]"
+                        )
+                        return text, detected_lang, None
+                    return None, None, None  # VTT file present but unparseable
+
+            except Exception as e:
+                err = str(e)
+                if _PREMIERE_RE.search(err):
+                    hours = _hours_until_premiere(err)
                     logger.info(
-                        f"✅ yt-dlp subtitle extracted ({len(text)} chars) "
-                        f"lang: {detected_lang} [FREE]"
+                        f"yt-dlp subtitle: premiere/scheduled video — retry in {hours}h"
                     )
-                    return text, detected_lang, None
+                    return None, None, f"premiere_not_available_yet:{hours}"
+                elif any(kw in err.lower() for kw in (
+                    "is a live stream", "currently broadcasting",
+                    "is a live event", "live event",
+                    "this is a live stream", "cannot download live",
+                    "no video formats found",  # live stream currently broadcasting
+                )):
+                    logger.info("yt-dlp subtitle: live stream detected — snooze 2h")
+                    return None, None, "video_is_live"
+                elif "429" in err or "Too Many Requests" in err:
+                    logger.warning("yt-dlp subtitle: rate-limited (429) — will try Whisper")
+                    break  # rate limit applies to all clients, no point retrying
+                elif any(kw in err.lower() for kw in (
+                    "sign in", "not a bot", "confirm you", "please sign",
+                )):
+                    logger.warning(
+                        f"yt-dlp subtitle: bot detection with {client_name} — trying next client"
+                    )
+                    continue
+                else:
+                    logger.warning(f"yt-dlp subtitle failed: {err[:120]}")
+                    return None, None, None  # unknown error, stop trying
 
-        except Exception as e:
-            err = str(e)
-            if _PREMIERE_RE.search(err):
-                hours = _hours_until_premiere(err)
-                logger.info(
-                    f"yt-dlp subtitle: premiere/scheduled video — retry in {hours}h"
-                )
-                return None, None, f"premiere_not_available_yet:{hours}"
-            elif any(kw in err.lower() for kw in (
-                "is a live stream", "currently broadcasting",
-                "is a live event", "live event",
-                "this is a live stream", "cannot download live",
-                "no video formats found",  # live stream currently broadcasting
-            )):
-                logger.info("yt-dlp subtitle: live stream detected — snooze 2h")
-                return None, None, "video_is_live"
-            elif "429" in err or "Too Many Requests" in err:
-                logger.warning("yt-dlp subtitle: rate-limited (429) — will try Whisper")
-            elif "Sign in" in err or "bot" in err.lower():
-                logger.warning("yt-dlp subtitle: auth required — will try Whisper")
-            else:
-                logger.warning(f"yt-dlp subtitle failed: {err[:120]}")
+        # All player clients failed — try with proxy as last yt-dlp attempt
+        http_proxy = os.environ.get("YOUTUBE_PROXY_HTTP", "")
+        if http_proxy:
+            logger.info("yt-dlp subtitle: all clients blocked, retrying with proxy...")
+            proxy_opts: dict = {
+                "skip_download": True,
+                "writesubtitles": True,
+                "writeautomaticsub": True,
+                "subtitleslangs": list(dict.fromkeys(preferred_languages)),
+                "subtitlesformat": "vtt",
+                "quiet": True,
+                "no_warnings": True,
+                "noprogress": True,
+                "nocheckcertificate": True,
+                "extractor_args": {"youtube": {"player_client": ["ios"]}},
+                "proxy": http_proxy,
+            }
+            if cookies_file:
+                proxy_opts["cookiefile"] = cookies_file
+            try:
+                with tempfile.TemporaryDirectory(prefix="brieftube_vtt_") as tmp:
+                    proxy_opts["outtmpl"] = os.path.join(tmp, "%(id)s")
+                    with yt_dlp.YoutubeDL(proxy_opts) as ydl:
+                        ydl.extract_info(youtube_url, download=True)
+                    vtt_files = glob.glob(os.path.join(tmp, "*.vtt"))
+                    if vtt_files:
+                        selected = vtt_files[0]
+                        detected_lang = "auto"
+                        for lang in preferred_languages:
+                            matches = [f for f in vtt_files if f".{lang}." in f]
+                            if matches:
+                                selected = matches[0]
+                                detected_lang = lang
+                                break
+                        text = self._parse_vtt(selected)
+                        if text:
+                            logger.info(
+                                f"✅ yt-dlp subtitle (proxy) {len(text)} chars lang: {detected_lang}"
+                            )
+                            return text, detected_lang, None
+            except Exception as e:
+                logger.warning(f"yt-dlp subtitle (proxy) failed: {str(e)[:120]}")
 
         return None, None, None
 
     @staticmethod
-    def _parse_vtt(filepath: str) -> Optional[str]:
-        """Parse a WebVTT subtitle file and return deduplicated plain text."""
+    def _parse_vtt_text(content: str) -> Optional[str]:
+        """Parse WebVTT content string and return deduplicated plain text."""
         try:
-            with open(filepath, "r", encoding="utf-8", errors="replace") as f:
-                content = f.read()
             texts: list[str] = []
             in_cue = False
             for line in content.splitlines():
@@ -467,6 +538,97 @@ class TranscriptExtractor:
             return " ".join(texts) if texts else None
         except Exception:
             return None
+
+    @staticmethod
+    def _parse_vtt(filepath: str) -> Optional[str]:
+        """Parse a WebVTT subtitle file and return deduplicated plain text."""
+        try:
+            with open(filepath, "r", encoding="utf-8", errors="replace") as f:
+                content = f.read()
+            return TranscriptExtractor._parse_vtt_text(content)
+        except Exception:
+            return None
+
+    def _invidious_subtitles(
+        self,
+        video_id: str,
+        preferred_languages: list[str],
+    ) -> tuple[Optional[str], Optional[str], Optional[str]]:
+        """Fetch captions via public Invidious API — works from any datacenter IP.
+
+        Invidious is an open-source YouTube proxy whose public instances are not
+        subject to the bot-detection that blocks direct YouTube API calls from VPS IPs.
+        Multiple instances are tried in random order for load balancing.
+
+        Returns (text, language, error_code) or (None, None, None) on failure.
+        """
+        import urllib.request
+        import urllib.parse
+        import json
+        import random
+
+        instances = list(_INVIDIOUS_INSTANCES)
+        random.shuffle(instances)
+
+        for instance in instances:
+            try:
+                # Step 1: get the list of available captions for this video
+                api_url = (
+                    f"{instance}/api/v1/captions/"
+                    f"{urllib.parse.quote(video_id, safe='')}"
+                )
+                req = urllib.request.Request(
+                    api_url, headers={"User-Agent": "Mozilla/5.0"}
+                )
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    data = json.loads(resp.read().decode())
+
+                captions = data.get("captions", [])
+                if not captions:
+                    # No captions for this video — consistent across all instances
+                    return None, None, None
+
+                # Step 2: pick the best language match
+                selected_cap = None
+                detected_lang = "auto"
+                for lang in preferred_languages:
+                    for cap in captions:
+                        lang_code = cap.get("languageCode", "")
+                        if lang_code == lang or lang_code.startswith(f"{lang}-"):
+                            selected_cap = cap
+                            detected_lang = lang
+                            break
+                    if selected_cap:
+                        break
+                if not selected_cap:
+                    selected_cap = captions[0]
+                    detected_lang = selected_cap.get("languageCode", "auto")
+
+                # Step 3: fetch the VTT content
+                label = urllib.parse.quote(selected_cap.get("label", ""), safe="")
+                vtt_url = (
+                    f"{instance}/api/v1/captions/"
+                    f"{urllib.parse.quote(video_id, safe='')}?label={label}"
+                )
+                req2 = urllib.request.Request(
+                    vtt_url, headers={"User-Agent": "Mozilla/5.0"}
+                )
+                with urllib.request.urlopen(req2, timeout=15) as resp2:
+                    vtt_content = resp2.read().decode("utf-8", errors="replace")
+
+                text = self._parse_vtt_text(vtt_content)
+                if text:
+                    logger.info(
+                        f"✅ Invidious subtitle fetched ({len(text)} chars) "
+                        f"lang: {detected_lang} via {instance} [FREE]"
+                    )
+                    return text, detected_lang, None
+
+            except Exception as e:
+                logger.debug(f"Invidious {instance} failed: {str(e)[:80]}")
+                continue
+
+        return None, None, None
 
     def _whisper_fallback(
         self,

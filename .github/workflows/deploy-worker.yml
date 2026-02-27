@@ -41,6 +41,7 @@ jobs:
 
             echo "→ Updating dependencies..."
             worker/venv/bin/pip install -r worker/requirements.txt -q
+            worker/venv/bin/pip install -U yt-dlp -q
 
             echo "→ Restarting services..."
             chmod +x vps/*.sh 2>/dev/null || true
