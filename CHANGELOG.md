@@ -2,6 +2,7 @@
 
 ## 2026-02-27
 
+FEATURE: Whisper — téléchargement audio via Invidious API (gratuit) avant fallback proxy payant : résout l'URL stream depuis instances publiques + ffmpeg, économise le proxy payant
 FEATURE: Worker — fallback chain ios→android→tv_embedded→mweb dans _download_audio et _ytdlp_subtitles + Invidious API comme proxy YouTube gratuit (contourne bot-detection VPS) + proxy HTTP (YOUTUBE_PROXY_HTTP) en dernier recours pour yt-dlp et Whisper + force-update yt-dlp à chaque déploiement
 FIX: Worker whisper_transcriber — détecter géo-restriction ("your country") tôt dans _download_audio pour abandonner immédiatement sans tester tous les clients → retourne "audio_geo_restricted" (fail permanent, pas de retry)
 FIX: Worker — désactive aiohttp access_log (access_log=None) pour éviter boucle de rétroaction : chaque poll /logs écrivait dans worker.log et noyait les vraies infos

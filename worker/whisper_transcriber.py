@@ -9,14 +9,18 @@ Groq advantages:
 - Same Whisper Large V3 model quality
 """
 
+import json
 import math
 import os
+import random
 import re
 import logging
 import shutil
 import subprocess
 import tempfile
 import time
+import urllib.parse
+import urllib.request
 from pathlib import Path
 from typing import Optional, Tuple
 import yt_dlp
@@ -53,6 +57,16 @@ logger = logging.getLogger(__name__)
 # yt-dlp player clients tried in order to bypass YouTube bot-detection.
 # ios is fastest; android, tv_embedded and mweb are fallbacks for datacenter IPs.
 _PLAYER_CLIENTS = [["ios"], ["android"], ["tv_embedded"], ["mweb"]]
+
+# Public Invidious instances used as a free YouTube proxy for audio resolution.
+# Shuffled per call for load balancing. Falls through gracefully if all are down.
+_INVIDIOUS_INSTANCES = [
+    "https://invidious.privacydev.net",
+    "https://inv.tux.pizza",
+    "https://invidious.nerdvpn.de",
+    "https://iv.datura.network",
+    "https://invidious.lunar.icu",
+]
 
 
 class WhisperTranscriber:
@@ -194,7 +208,18 @@ class WhisperTranscriber:
                 logger.error(f"Error downloading audio: {e}")
                 return False
 
-        # All player clients exhausted — try with proxy as last resort
+        # All player clients exhausted — try Invidious (free) before paid proxy
+        video_id = urllib.parse.parse_qs(urllib.parse.urlparse(youtube_url).query).get("v", [""])[0]
+        if not video_id and "youtu.be/" in youtube_url:
+            video_id = youtube_url.split("youtu.be/")[-1].split("?")[0]
+        if video_id:
+            inv_result = self._download_audio_via_invidious(video_id, output_path)
+            if inv_result is True:
+                return True
+            if inv_result == "live":
+                return "live"
+
+        # Last resort: paid proxy (bandwidth cost)
         http_proxy = os.environ.get("YOUTUBE_PROXY_HTTP", "")
         if http_proxy:
             logger.info(
@@ -228,6 +253,77 @@ class WhisperTranscriber:
             "Audio download: bot detection on all clients + proxy — will retry later"
         )
         return "auth_required"
+
+    def _download_audio_via_invidious(self, video_id: str, output_path: Path):
+        """Download audio via Invidious public API — free, no proxy bandwidth cost.
+
+        Calls /api/v1/videos/{id} on a public Invidious instance to resolve the
+        audio stream URL, then downloads it directly with ffmpeg. Returns True on
+        success, "live" for live streams, or False if all instances fail.
+        """
+        instances = list(_INVIDIOUS_INSTANCES)
+        random.shuffle(instances)
+
+        for instance in instances:
+            try:
+                api_url = (
+                    f"{instance}/api/v1/videos/"
+                    f"{urllib.parse.quote(video_id, safe='')}"
+                    f"?fields=adaptiveFormats,liveNow"
+                )
+                req = urllib.request.Request(
+                    api_url, headers={"User-Agent": "Mozilla/5.0"}
+                )
+                with urllib.request.urlopen(req, timeout=15) as resp:
+                    data = json.loads(resp.read().decode())
+
+                if data.get("liveNow"):
+                    return "live"
+
+                adaptive = data.get("adaptiveFormats", [])
+                audio_fmts = [
+                    f for f in adaptive
+                    if f.get("type", "").startswith("audio/") and f.get("url")
+                ]
+                if not audio_fmts:
+                    logger.debug(f"Invidious {instance}: no audio formats for {video_id}")
+                    continue
+
+                # Prefer lowest bitrate (smallest download, sufficient for Whisper)
+                audio_fmts.sort(key=lambda f: f.get("bitrate", 999_999))
+                stream_url = audio_fmts[0]["url"]
+
+                # Download + re-encode to opus 64k with ffmpeg
+                opus_path = output_path.with_suffix(".opus")
+                result = subprocess.run(
+                    [
+                        "ffmpeg", "-y",
+                        "-i", stream_url,
+                        "-vn",
+                        "-c:a", "libopus",
+                        "-b:a", "64k",
+                        str(opus_path),
+                    ],
+                    capture_output=True,
+                    timeout=600,
+                )
+                if result.returncode == 0 and opus_path.exists() and opus_path.stat().st_size > 0:
+                    size_mb = opus_path.stat().st_size / 1024 / 1024
+                    logger.info(
+                        f"✅ Audio via Invidious ({instance}): {size_mb:.1f} MB [FREE]"
+                    )
+                    return True
+                logger.debug(
+                    f"Invidious {instance} ffmpeg failed: "
+                    f"{result.stderr[-200:].decode(errors='replace')}"
+                )
+
+            except Exception as e:
+                logger.debug(f"Invidious audio {instance} failed: {str(e)[:80]}")
+                continue
+
+        logger.debug("All Invidious instances failed for audio download")
+        return False
 
     # Groq hard limit: 25 MB per request. Use 15 MB chunks to leave margin
     # for HTTP multipart overhead and audio encoding variance.
