@@ -2,6 +2,8 @@
 
 ## 2026-02-27
 
+FEATURE: Worker — fallback chain ios→android→tv_embedded dans _download_audio (whisper_transcriber) et _ytdlp_subtitles (transcript_extractor) pour contourner la bot-detection YouTube sur toutes les IPs datacenter
+FIX: Worker — désactive aiohttp access_log (access_log=None) pour éviter boucle de rétroaction : chaque poll /logs écrivait dans worker.log et noyait les vraies infos
 FIX: WebSub — réduit concurrence 50→2 + délai 500ms entre requêtes pour éviter HTTP 429 du hub PubSubHubbub, ne marque plus "failed" sur 429 pour éviter re-soumission immédiate
 FIX: PostHog — identify() : supprime guard posthog.__loaded (silencieux), re-capture $pageview après identify pour lier la première page au profil utilisateur
 CHORE: Supprime public/images/icon.png (ancienne icône) — remplace par /logo-120.png dans site-config.ts appIcon

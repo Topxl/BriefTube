@@ -983,7 +983,9 @@ async def health_loop():
     app = web.Application()
     app.router.add_get("/health", handle_health)
     app.router.add_get("/logs", handle_logs)
-    runner = web.AppRunner(app)
+    # Disable HTTP access logging — every /logs poll would otherwise write
+    # a line into worker.log, creating a feedback loop that drowns real logs.
+    runner = web.AppRunner(app, access_log=None)
     await runner.setup()
     site = web.TCPSite(runner, "0.0.0.0", port)
     await site.start()
