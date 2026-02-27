@@ -50,6 +50,10 @@ def _hours_until_premiere(err: str) -> int:
 
 logger = logging.getLogger(__name__)
 
+# yt-dlp player clients tried in order to bypass YouTube bot-detection.
+# ios is fastest; android, tv_embedded and mweb are fallbacks for datacenter IPs.
+_PLAYER_CLIENTS = [["ios"], ["android"], ["tv_embedded"], ["mweb"]]
+
 
 class WhisperTranscriber:
     """Transcribes YouTube videos using Groq Whisper Large V3 Turbo"""
@@ -81,104 +85,143 @@ class WhisperTranscriber:
         """
         _cookies_file = Path(__file__).parent / "cookies" / "youtube.txt"
 
-        try:
-            # Pre-check: detect live/upcoming streams before attempting download.
-            # Avoids downloading an infinite HLS stream for 10+ minutes.
+        for player_client in _PLAYER_CLIENTS:
+            client_name = player_client[0]
             try:
-                pre_opts: dict = {
-                    "quiet": True,
-                    "no_warnings": True,
-                    "nocheckcertificate": True,
-                    "skip_download": True,
-                    # iOS client bypasses YouTube bot-detection on datacenter IPs
-                    "extractor_args": {"youtube": {"player_client": ["ios"]}},
+                # Pre-check: detect live/upcoming streams before attempting download.
+                # Avoids downloading an infinite HLS stream for 10+ minutes.
+                try:
+                    pre_opts: dict = {
+                        "quiet": True,
+                        "no_warnings": True,
+                        "nocheckcertificate": True,
+                        "skip_download": True,
+                        "extractor_args": {"youtube": {"player_client": player_client}},
+                    }
+                    if _cookies_file.exists():
+                        pre_opts["cookiefile"] = str(_cookies_file)
+                    with yt_dlp.YoutubeDL(pre_opts) as ydl_info:
+                        pre_info = ydl_info.extract_info(youtube_url, download=False)
+                    if pre_info:
+                        live_status = pre_info.get("live_status")
+                        if live_status in ("is_live", "is_upcoming") or pre_info.get("is_live"):
+                            logger.info(f"Audio pre-check: live stream detected (live_status={live_status}) — skip download")
+                            return "live"
+                        categories = pre_info.get("categories") or []
+                        if "Music" in categories:
+                            logger.info("Audio pre-check: YouTube category=Music — skip Whisper")
+                            return "music"
+                except Exception as pre_e:
+                    pre_err = str(pre_e)
+                    if _PREMIERE_RE.search(pre_err):
+                        hours = _hours_until_premiere(pre_err)
+                        return f"premiere:{hours}"
+                    if any(kw in pre_err.lower() for kw in (
+                        "is a live stream", "live event", "no video formats found",
+                    )):
+                        return "live"
+                    if any(kw in pre_err.lower() for kw in (
+                        "sign in", "not a bot", "confirm you", "please sign",
+                    )):
+                        logger.info(
+                            f"Audio pre-check: bot detection with {client_name} — trying next client"
+                        )
+                        continue
+                    # Other pre-check errors: proceed to actual download
+
+                # 64kbps is more than sufficient for Whisper speech recognition and
+                # keeps file size well under Groq's 25 MB limit (~54 min max at 64kbps).
+                # 192kbps would exceed the limit for any video longer than ~15 min.
+                # max_filesize: abort if raw audio exceeds 150 MB (≈ ~5h at 64kbps)
+                # before postprocessing — prevents infinite HLS live downloads.
+                ydl_opts: dict = {
+                    'format': 'bestaudio/best',
+                    'postprocessors': [{
+                        'key': 'FFmpegExtractAudio',
+                        'preferredcodec': 'opus',  # libopus: 2-3x faster than libmp3lame
+                    }],
+                    'outtmpl': str(output_path.with_suffix('')),  # yt-dlp adds .opus
+                    'quiet': True,
+                    'no_warnings': True,
+                    'noprogress': True,
+                    'nocheckcertificate': True,
+                    'max_filesize': 150 * 1024 * 1024,  # 150 MB hard cap
+                    'extractor_args': {'youtube': {'player_client': player_client}},
                 }
                 if _cookies_file.exists():
-                    pre_opts["cookiefile"] = str(_cookies_file)
-                with yt_dlp.YoutubeDL(pre_opts) as ydl_info:
-                    pre_info = ydl_info.extract_info(youtube_url, download=False)
-                if pre_info:
-                    live_status = pre_info.get("live_status")
-                    if live_status in ("is_live", "is_upcoming") or pre_info.get("is_live"):
-                        logger.info(f"Audio pre-check: live stream detected (live_status={live_status}) — skip download")
-                        return "live"
-                    categories = pre_info.get("categories") or []
-                    if "Music" in categories:
-                        logger.info("Audio pre-check: YouTube category=Music — skip Whisper")
-                        return "music"
-            except Exception as pre_e:
-                pre_err = str(pre_e)
-                if _PREMIERE_RE.search(pre_err):
-                    hours = _hours_until_premiere(pre_err)
+                    ydl_opts['cookiefile'] = str(_cookies_file)
+
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    ydl.download([youtube_url])
+
+                # Check if file was created
+                opus_path = output_path.with_suffix('.opus')
+                if opus_path.exists():
+                    return True
+
+                logger.error(f"Audio file not created: {opus_path}")
+                return False
+
+            except Exception as e:
+                err = str(e)
+                if _PREMIERE_RE.search(err):
+                    hours = _hours_until_premiere(err)
+                    logger.info(f"Audio download: premiere/scheduled — retry in {hours}h")
                     return f"premiere:{hours}"
-                if any(kw in pre_err.lower() for kw in (
-                    "is a live stream", "live event", "no video formats found",
+                if any(kw in err.lower() for kw in (
+                    "is a live stream", "currently broadcasting",
+                    "is a live event", "live event",
+                    "no video formats found",  # live stream currently broadcasting
                 )):
+                    logger.info("Audio download: live stream detected — no audio to download")
                     return "live"
-                if any(kw in pre_err.lower() for kw in (
+                if "error opening output files" in err.lower() or "invalid argument" in err.lower():
+                    logger.warning("Audio download: ffmpeg output error (live stream or unsupported format) — skipping permanently")
+                    return "unsupported"
+                if any(kw in err.lower() for kw in (
                     "sign in", "not a bot", "confirm you", "please sign",
                 )):
-                    logger.info("Audio pre-check: YouTube bot detection / auth required — will retry later")
-                    return "auth_required"
-                # Other pre-check errors: proceed to actual download
+                    logger.info(
+                        f"Audio download: bot detection with {client_name} — trying next client"
+                    )
+                    continue
+                logger.error(f"Error downloading audio: {e}")
+                return False
 
-            # 64kbps is more than sufficient for Whisper speech recognition and
-            # keeps file size well under Groq's 25 MB limit (~54 min max at 64kbps).
-            # 192kbps would exceed the limit for any video longer than ~15 min.
-            # max_filesize: abort if raw audio exceeds 150 MB (≈ ~5h at 64kbps)
-            # before postprocessing — prevents infinite HLS live downloads.
-            ydl_opts: dict = {
+        # All player clients exhausted — try with proxy as last resort
+        http_proxy = os.environ.get("YOUTUBE_PROXY_HTTP", "")
+        if http_proxy:
+            logger.info(
+                "Audio download: all clients blocked, retrying with proxy (bandwidth cost)..."
+            )
+            proxy_opts: dict = {
                 'format': 'bestaudio/best',
-                'postprocessors': [{
-                    'key': 'FFmpegExtractAudio',
-                    'preferredcodec': 'opus',  # libopus: 2-3x faster than libmp3lame
-                }],
-                'outtmpl': str(output_path.with_suffix('')),  # yt-dlp adds .opus
+                'postprocessors': [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'opus'}],
+                'outtmpl': str(output_path.with_suffix('')),
                 'quiet': True,
                 'no_warnings': True,
                 'noprogress': True,
                 'nocheckcertificate': True,
-                'max_filesize': 150 * 1024 * 1024,  # 150 MB hard cap
-                # iOS client bypasses YouTube bot-detection on datacenter IPs
+                'max_filesize': 150 * 1024 * 1024,
                 'extractor_args': {'youtube': {'player_client': ['ios']}},
+                'proxy': http_proxy,
             }
             if _cookies_file.exists():
-                ydl_opts['cookiefile'] = str(_cookies_file)
+                proxy_opts['cookiefile'] = str(_cookies_file)
+            try:
+                with yt_dlp.YoutubeDL(proxy_opts) as ydl:
+                    ydl.download([youtube_url])
+                opus_path = output_path.with_suffix('.opus')
+                if opus_path.exists():
+                    logger.info("Audio download: proxy successful")
+                    return True
+            except Exception as e:
+                logger.warning(f"Audio download (proxy) failed: {str(e)[:120]}")
 
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                ydl.download([youtube_url])
-
-            # Check if file was created
-            opus_path = output_path.with_suffix('.opus')
-            if opus_path.exists():
-                return True
-
-            logger.error(f"Audio file not created: {opus_path}")
-            return False
-
-        except Exception as e:
-            err = str(e)
-            if _PREMIERE_RE.search(err):
-                hours = _hours_until_premiere(err)
-                logger.info(f"Audio download: premiere/scheduled — retry in {hours}h")
-                return f"premiere:{hours}"
-            if any(kw in err.lower() for kw in (
-                "is a live stream", "currently broadcasting",
-                "is a live event", "live event",
-                "no video formats found",  # live stream currently broadcasting
-            )):
-                logger.info("Audio download: live stream detected — no audio to download")
-                return "live"
-            if "error opening output files" in err.lower() or "invalid argument" in err.lower():
-                logger.warning("Audio download: ffmpeg output error (live stream or unsupported format) — skipping permanently")
-                return "unsupported"
-            if any(kw in err.lower() for kw in (
-                "sign in", "not a bot", "confirm you", "please sign",
-            )):
-                logger.info("Audio download: YouTube bot detection / auth required — will retry later")
-                return "auth_required"
-            logger.error(f"Error downloading audio: {e}")
-            return False
+        logger.warning(
+            "Audio download: bot detection on all clients + proxy — will retry later"
+        )
+        return "auth_required"
 
     # Groq hard limit: 25 MB per request. Use 15 MB chunks to leave margin
     # for HTTP multipart overhead and audio encoding variance.
