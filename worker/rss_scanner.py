@@ -8,6 +8,7 @@ import feedparser
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import db
+from youtube_utils import extract_video_id as _yt_extract_video_id
 
 logger = logging.getLogger(__name__)
 
@@ -37,13 +38,8 @@ def get_rss_url(channel_id: str) -> str:
 
 
 def extract_video_id(url: str) -> str | None:
-    match = re.search(r"youtube\.com/watch\?[^\s]*v=([\w-]+)", url)
-    if match:
-        return match.group(1)
-    match = re.search(r"youtu\.be/([\w-]+)", url)
-    if match:
-        return match.group(1)
-    return None
+    """Delegate to the shared youtube_utils implementation."""
+    return _yt_extract_video_id(url)
 
 
 def is_youtube_short(url: str) -> bool:

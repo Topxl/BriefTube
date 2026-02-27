@@ -26,47 +26,16 @@ from typing import Optional, Tuple
 import yt_dlp
 from groq import Groq, APIStatusError
 
-_PREMIERE_RE = re.compile(
-    r"live event will begin|premiere will begin|this event will begin"
-    r"|scheduled to begin|upcoming premiere"
-    r"|premieres? in \d+",  # "Premieres in 5 hours" / "Premiere in 2 days"
-    re.IGNORECASE,
+from youtube_utils import (
+    _PREMIERE_RE,
+    hours_until_premiere as _hours_until_premiere,
+    PLAYER_CLIENTS_SHORT as _PLAYER_CLIENTS,
+    BOT_DETECTION_KEYWORDS as _BOT_KW,
+    INVIDIOUS_INSTANCES as _INVIDIOUS_INSTANCES,
+    PIPED_INSTANCES as _PIPED_INSTANCES,
 )
 
-
-def _hours_until_premiere(err: str) -> int:
-    """Parse premiere delay from yt-dlp error message. Default 2h.
-
-    Handles both:
-    - "will begin in X days/hours/minutes" (scheduled live)
-    - "Premieres in X days/hours/minutes"  (premiere video)
-    """
-    m = re.search(r"(?:begin|premieres?) in (\d+) days?", err, re.IGNORECASE)
-    if m:
-        return max(1, int(m.group(1)) * 24)
-    m = re.search(r"(?:begin|premieres?) in (\d+) hours?", err, re.IGNORECASE)
-    if m:
-        return max(1, int(m.group(1)))
-    m = re.search(r"(?:begin|premieres?) in (\d+) minutes?", err, re.IGNORECASE)
-    if m:
-        return max(1, (int(m.group(1)) + 59) // 60)
-    return 2
-
 logger = logging.getLogger(__name__)
-
-# yt-dlp player clients tried in order to bypass YouTube bot-detection.
-# ios is fastest; android, tv_embedded and mweb are fallbacks for datacenter IPs.
-_PLAYER_CLIENTS = [["ios"], ["android"], ["tv_embedded"], ["mweb"]]
-
-# Public Invidious instances used as a free YouTube proxy for audio resolution.
-# Shuffled per call for load balancing. Falls through gracefully if all are down.
-_INVIDIOUS_INSTANCES = [
-    "https://invidious.privacydev.net",
-    "https://inv.tux.pizza",
-    "https://invidious.nerdvpn.de",
-    "https://iv.datura.network",
-    "https://invidious.lunar.icu",
-]
 
 
 class WhisperTranscriber:
@@ -137,9 +106,7 @@ class WhisperTranscriber:
                     if "your country" in pre_err.lower():
                         logger.warning("Audio pre-check: video geo-restricted — skipping permanently")
                         return "geo_restricted"
-                    if any(kw in pre_err.lower() for kw in (
-                        "sign in", "not a bot", "confirm you", "please sign",
-                    )):
+                    if any(kw in pre_err.lower() for kw in _BOT_KW):
                         logger.info(
                             f"Audio pre-check: bot detection with {client_name} — trying next client"
                         )
@@ -198,9 +165,7 @@ class WhisperTranscriber:
                 if "your country" in err.lower():
                     logger.warning("Audio download: video geo-restricted — skipping permanently")
                     return "geo_restricted"
-                if any(kw in err.lower() for kw in (
-                    "sign in", "not a bot", "confirm you", "please sign",
-                )):
+                if any(kw in err.lower() for kw in _BOT_KW):
                     logger.info(
                         f"Audio download: bot detection with {client_name} — trying next client"
                     )
@@ -208,15 +173,23 @@ class WhisperTranscriber:
                 logger.error(f"Error downloading audio: {e}")
                 return False
 
-        # All player clients exhausted — try Invidious (free) before paid proxy
+        # All player clients exhausted — try free proxies before paid proxy
         video_id = urllib.parse.parse_qs(urllib.parse.urlparse(youtube_url).query).get("v", [""])[0]
         if not video_id and "youtu.be/" in youtube_url:
             video_id = youtube_url.split("youtu.be/")[-1].split("?")[0]
         if video_id:
+            # Try Invidious first (free YouTube proxy)
             inv_result = self._download_audio_via_invidious(video_id, output_path)
             if inv_result is True:
                 return True
             if inv_result == "live":
+                return "live"
+
+            # Try Piped as second free proxy
+            piped_result = self._download_audio_via_piped(video_id, output_path)
+            if piped_result is True:
+                return True
+            if piped_result == "live":
                 return "live"
 
         # Last resort: paid proxy (bandwidth cost)
@@ -323,6 +296,71 @@ class WhisperTranscriber:
                 continue
 
         logger.debug("All Invidious instances failed for audio download")
+        return False
+
+    def _download_audio_via_piped(self, video_id: str, output_path: Path):
+        """Download audio via Piped public API — free, no proxy bandwidth cost.
+
+        Calls /streams/{id} on a public Piped instance to resolve the audio
+        stream URL, then downloads it directly with ffmpeg. Returns True on
+        success, "live" for live streams, or False if all instances fail.
+        """
+        instances = list(_PIPED_INSTANCES)
+        random.shuffle(instances)
+
+        for instance in instances:
+            try:
+                api_url = f"{instance}/streams/{urllib.parse.quote(video_id, safe='')}"
+                req = urllib.request.Request(
+                    api_url, headers={"User-Agent": "Mozilla/5.0"}
+                )
+                with urllib.request.urlopen(req, timeout=15) as resp:
+                    data = json.loads(resp.read().decode())
+
+                if data.get("livestreamed") or data.get("livestream"):
+                    return "live"
+
+                audio_streams = data.get("audioStreams", [])
+                if not audio_streams:
+                    logger.debug(f"Piped {instance}: no audio streams for {video_id}")
+                    continue
+
+                # Prefer lowest bitrate (smallest download, sufficient for Whisper)
+                audio_streams.sort(key=lambda f: f.get("bitrate", 999_999))
+                stream_url = audio_streams[0].get("url", "")
+                if not stream_url:
+                    continue
+
+                # Download + re-encode to opus 64k with ffmpeg
+                opus_path = output_path.with_suffix(".opus")
+                result = subprocess.run(
+                    [
+                        "ffmpeg", "-y",
+                        "-i", stream_url,
+                        "-vn",
+                        "-c:a", "libopus",
+                        "-b:a", "64k",
+                        str(opus_path),
+                    ],
+                    capture_output=True,
+                    timeout=600,
+                )
+                if result.returncode == 0 and opus_path.exists() and opus_path.stat().st_size > 0:
+                    size_mb = opus_path.stat().st_size / 1024 / 1024
+                    logger.info(
+                        f"✅ Audio via Piped ({instance}): {size_mb:.1f} MB [FREE]"
+                    )
+                    return True
+                logger.debug(
+                    f"Piped {instance} ffmpeg failed: "
+                    f"{result.stderr[-200:].decode(errors='replace')}"
+                )
+
+            except Exception as e:
+                logger.debug(f"Piped audio {instance} failed: {str(e)[:80]}")
+                continue
+
+        logger.debug("All Piped instances failed for audio download")
         return False
 
     # Groq hard limit: 25 MB per request. Use 15 MB chunks to leave margin

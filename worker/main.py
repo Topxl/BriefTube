@@ -648,6 +648,12 @@ async def delivery_loop(alert_system: MonitoringAlert):
     _recover_counter = 0       # Run delivery recovery every N cycles
     _audio_cleanup_counter = 0  # Run audio file cleanup every N cycles
 
+    # Persistent HTTP session for audio downloads — reused across all deliveries
+    # to avoid the overhead of a new TCP+TLS handshake per audio file.
+    _http_session = aiohttp.ClientSession(
+        timeout=aiohttp.ClientTimeout(total=120),
+    )
+
     while True:
         try:
             # Periodically clean up undeliverable deliveries (failed videos /
@@ -714,12 +720,11 @@ async def delivery_loop(alert_system: MonitoringAlert):
                     audio_path = Path(__file__).parent / "audio" / f"video_{video_id}_{delivery_language}.mp3"
 
                     if not audio_path.exists() and audio_url and audio_url.startswith("http"):
-                        async with aiohttp.ClientSession() as session:
-                            async with session.get(audio_url) as resp:
-                                if resp.status == 200:
-                                    audio_path.parent.mkdir(exist_ok=True)
-                                    with open(audio_path, "wb") as f:
-                                        f.write(await resp.read())
+                        async with _http_session.get(audio_url) as resp:
+                            if resp.status == 200:
+                                audio_path.parent.mkdir(exist_ok=True)
+                                with open(audio_path, "wb") as f:
+                                    f.write(await resp.read())
 
                     if not audio_path.exists():
                         if d.get("summary"):

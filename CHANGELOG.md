@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-02-28
+
+REFACTOR: Worker — centralise constantes/helpers YouTube dans youtube_utils.py (_PREMIERE_RE, hours_until_premiere, PLAYER_CLIENTS_FULL/SHORT, BOT_DETECTION_KEYWORDS, INVIDIOUS_INSTANCES, PIPED_INSTANCES, extract_video_id) → supprime duplication entre transcript_extractor, whisper_transcriber et rss_scanner
+FEATURE: Worker — ajoute Piped comme second proxy gratuit fallback pour subtitles (transcript_extractor._piped_subtitles) et audio Whisper (whisper_transcriber._download_audio_via_piped) : chaîne yt-dlp → Invidious → Piped → proxy payant
+PERF: Worker whisper_transcriber — réduit PLAYER_CLIENTS à 2 (ios → tv_embedded) pour les téléchargements audio Whisper : fail-fast vers les proxies gratuits, évite 2 clients redondants (android ≈ ios sur datacenter IP)
+PERF: Worker delivery_loop — session aiohttp persistante pour les téléchargements audio (reusée entre livraisons, évite TCP+TLS handshake par livraison)
+
 ## 2026-02-27
 
 FEATURE: Whisper — téléchargement audio via Invidious API (gratuit) avant fallback proxy payant : résout l'URL stream depuis instances publiques + ffmpeg, économise le proxy payant
