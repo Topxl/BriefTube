@@ -137,6 +137,13 @@ TEST_CASES: list[TestCase] = [
         expected="live",
         note="Live stream institutionnel — doit retourner video_is_live",
     ),
+    TestCase(
+        category="live",
+        description="Live bot-detected via proxy — 'No video formats found' doit → live",
+        video_id="alSyMiZvsO8",
+        expected="live",
+        note="Bot detection sur tous les clients + proxy 'No video formats found' → video_is_live (pas youtube_auth_required)",
+    ),
 
     # ── Multilingual ──────────────────────────────────────────────────────────
     # Note: multilang videos may be geo-restricted or bot-blocked from server IPs.
