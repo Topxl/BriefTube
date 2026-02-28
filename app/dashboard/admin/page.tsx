@@ -580,6 +580,12 @@ export default async function AdminPage() {
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (!acc[s.channel_id]) {
       acc[s.channel_id] = { name: s.channel_name, count: 0 };
+    } else if (
+      acc[s.channel_id].name === s.channel_id &&
+      s.channel_name !== s.channel_id
+    ) {
+      // Remplace un ID stocké comme nom par un vrai nom si on en trouve un
+      acc[s.channel_id].name = s.channel_name;
     }
     acc[s.channel_id].count++;
     return acc;

@@ -4,7 +4,7 @@ import crypto from "crypto";
 
 const STATE_COOKIE = "google_oauth_state";
 
-export async function GET() {
+export async function GET(request: Request) {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   if (!clientId) {
     return NextResponse.json(
@@ -23,11 +23,12 @@ export async function GET() {
     path: "/",
   });
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  // Use the request origin so local dev redirects to localhost, not production
+  const { origin } = new URL(request.url);
 
   const params = new URLSearchParams({
     client_id: clientId,
-    redirect_uri: `${baseUrl}/api/auth/google/callback`,
+    redirect_uri: `${origin}/api/auth/google/callback`,
     response_type: "code",
     scope: "openid email profile",
     access_type: "offline",

@@ -53,12 +53,11 @@ export async function PersonalStats({ userId }: Props) {
 
   if (!deliveries || deliveries.length === 0) return null;
 
-  // 2. User's active subscriptions (for channel names)
+  // 2. All user subscriptions (for channel names — includes inactive to avoid falling back to ID)
   const { data: subscriptions } = await supabase
     .from("subscriptions")
     .select("channel_id, channel_name")
-    .eq("user_id", userId)
-    .eq("active", true);
+    .eq("user_id", userId);
 
   // 3. Map video_id → channel_id via processed_videos
   const videoIds = [...new Set(deliveries.map((d) => d.video_id))];

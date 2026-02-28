@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 
 export async function completeOnboarding() {
@@ -16,4 +17,7 @@ export async function completeOnboarding() {
     .from("profiles")
     .update({ onboarding_completed: true })
     .eq("id", user.id);
+
+  // Invalidate dashboard cache so the next navigation picks up the fresh value
+  revalidatePath("/dashboard");
 }

@@ -1,37 +1,39 @@
 "use client";
 
-import { useState } from "react";
-import { Check, Search } from "@/lib/icons";
-import { Input } from "@/components/ui/input";
+import Image from "next/image";
+import { Check } from "@/lib/icons";
 
+// Representative YouTube video thumbnails + accent color per category
+// Videos: Simon Sinek TEDx · 3Blue1Brown neural nets · Ray Dalio economic machine · Kurzgesagt Fermi Paradox · Unsplash circuit board
 const CATEGORY_VISUALS: Record<
   string,
-  { gradient: string; accent: string; icon: string }
+  { image: string; accent: string; fallback: string }
 > = {
   Business: {
-    gradient: "linear-gradient(145deg, #0c1e4a 0%, #09090b 55%)",
+    image: "https://img.youtube.com/vi/UF8uR6Z6KLc/hqdefault.jpg",
     accent: "#3b82f6",
-    icon: "M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2zm0 0V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v2",
+    fallback: "#0c1e4a",
   },
   Education: {
-    gradient: "linear-gradient(145deg, #3b1000 0%, #09090b 55%)",
+    image: "https://img.youtube.com/vi/aircAruvnKk/hqdefault.jpg",
     accent: "#f97316",
-    icon: "M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5",
+    fallback: "#3b1000",
   },
   Finance: {
-    gradient: "linear-gradient(145deg, #052e16 0%, #09090b 55%)",
+    image: "https://img.youtube.com/vi/PHe0bXAIuk0/hqdefault.jpg",
     accent: "#22c55e",
-    icon: "M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6",
+    fallback: "#052e16",
   },
   Science: {
-    gradient: "linear-gradient(145deg, #1e0a4a 0%, #09090b 55%)",
+    image: "https://img.youtube.com/vi/sNhhvQGsMEc/hqdefault.jpg",
     accent: "#a855f7",
-    icon: "M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18",
+    fallback: "#1e0a4a",
   },
   Tech: {
-    gradient: "linear-gradient(145deg, #031f20 0%, #09090b 55%)",
+    image:
+      "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=400&q=80",
     accent: "#14b8a6",
-    icon: "M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18",
+    fallback: "#031f20",
   },
 };
 
@@ -51,99 +53,72 @@ type Props = {
 };
 
 export function ListPicker({ lists, selectedIds, onToggle }: Props) {
-  const [search, setSearch] = useState("");
-
   const filtered = lists
-    .filter((l) => {
-      const q = search.toLowerCase();
-      return (
-        l.name.toLowerCase().includes(q) ||
-        (l.category ?? "").toLowerCase().includes(q) ||
-        (l.description ?? "").toLowerCase().includes(q)
-      );
-    })
+    .filter((l) => l.category !== null && l.category !== "Other")
     .sort((a, b) => b.followerCount - a.followerCount);
 
+  if (filtered.length === 0) return null;
+
   return (
-    <div suppressHydrationWarning className="flex flex-col gap-3">
-      <div className="relative">
-        <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-        <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search playlists..."
-          className="nm-inset border-transparent bg-transparent pl-9 focus-visible:ring-0"
-          suppressHydrationWarning
-        />
-      </div>
+    <div suppressHydrationWarning className="grid grid-cols-2 gap-2">
+      {filtered.map((list) => {
+        const isSelected = selectedIds.includes(list.id);
+        const visual = list.category
+          ? CATEGORY_VISUALS[list.category]
+          : undefined;
 
-      {filtered.length === 0 ? (
-        <p className="text-muted-foreground py-6 text-center text-sm">
-          No playlists found.
-        </p>
-      ) : (
-        <div className="grid grid-cols-2 gap-2">
-          {filtered.map((list) => {
-            const isSelected = selectedIds.includes(list.id);
-            const visual = list.category
-              ? CATEGORY_VISUALS[list.category]
-              : undefined;
+        return (
+          <button
+            key={list.id}
+            type="button"
+            onClick={() => onToggle(list.id)}
+            suppressHydrationWarning
+            className={`relative h-24 overflow-hidden rounded-xl text-left transition-all ${
+              isSelected ? "ring-2 ring-red-500" : "hover:brightness-110"
+            }`}
+            style={{ background: visual?.fallback ?? "#09090b" }}
+          >
+            {/* Background image */}
+            {visual && (
+              <Image
+                src={visual.image}
+                alt={list.category ?? ""}
+                fill
+                sizes="250px"
+                className="object-cover opacity-55"
+              />
+            )}
 
-            return (
-              <button
-                key={list.id}
-                type="button"
-                onClick={() => onToggle(list.id)}
-                suppressHydrationWarning
-                className={`relative flex flex-col gap-1 overflow-hidden rounded-xl p-3 text-left transition-all ${
-                  isSelected ? "nm-inset" : "nm-raised-sm hover:text-foreground"
-                }`}
-                style={visual ? { background: visual.gradient } : undefined}
-              >
-                {/* Category icon watermark */}
-                {visual && (
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke={visual.accent}
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="absolute right-2 bottom-2 h-10 w-10 opacity-15"
-                    aria-hidden
-                  >
-                    <path d={visual.icon} />
-                  </svg>
-                )}
+            {/* Bottom gradient for text legibility */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
 
-                {/* Accent dot */}
-                {visual && (
-                  <div
-                    className="absolute top-0 left-0 h-0.5 w-full rounded-t-xl"
-                    style={{ background: visual.accent }}
-                  />
-                )}
+            {/* Accent stripe at top */}
+            {visual && (
+              <div
+                className="absolute top-0 left-0 h-[2px] w-full"
+                style={{ background: visual.accent }}
+              />
+            )}
 
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-sm leading-snug font-medium">
-                    {list.name.replace("Best of ", "")}
-                  </p>
-                  <div className="flex shrink-0 items-center gap-1.5">
-                    <span className="text-muted-foreground/50 text-[10px]">
-                      {list.followerCount} subs
-                    </span>
-                    {isSelected && <Check className="h-3 w-3 text-red-400" />}
-                  </div>
-                </div>
-                <p className="text-muted-foreground text-[10px]">
-                  {list.channelCount} channels
-                  {list.category ? ` · ${list.category}` : ""}
-                </p>
-              </button>
-            );
-          })}
-        </div>
-      )}
+            {/* Selected checkmark */}
+            {isSelected && (
+              <div className="absolute top-2 right-2 flex h-4 w-4 items-center justify-center rounded-full bg-red-500">
+                <Check className="h-2.5 w-2.5 text-white" />
+              </div>
+            )}
+
+            {/* Text overlay */}
+            <div className="absolute right-0 bottom-0 left-0 p-2.5">
+              <p className="text-[13px] leading-tight font-semibold text-white">
+                {list.name.replace("Best of ", "")}
+              </p>
+              <p className="mt-0.5 text-[10px] text-white/55">
+                {list.channelCount} channels
+              </p>
+            </div>
+          </button>
+        );
+      })}
     </div>
   );
 }
