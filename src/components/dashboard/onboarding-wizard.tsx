@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -11,51 +11,37 @@ import { toast } from "sonner";
 import { Loader2, ArrowRight, ArrowLeft, Youtube, Check } from "@/lib/icons";
 import type { Tables } from "@/types/supabase";
 import { SiteConfig } from "@/site-config";
-import { languages } from "@/lib/languages";
-import type { Language } from "@/lib/languages";
-import { ListPicker } from "@/components/lists/list-picker";
-import type { ListPickerItem } from "@/components/lists/list-picker";
+// import { ListPicker } from "@/components/lists/list-picker";
+// import type { ListPickerItem } from "@/components/lists/list-picker";
 import { completeOnboarding } from "@app/onboarding/actions";
 import { capture } from "@/lib/posthog/client";
 
 type Subscription = Tables<"subscriptions">;
 
-type CuratedList = ListPickerItem;
+// type CuratedList = ListPickerItem;
 
-type Step = 1 | 2 | 3;
+type Step = 1 | 2;
 
 type Props = {
-  initialVoice: string;
   referralCode?: string;
-  curatedLists: CuratedList[];
+  // curatedLists: CuratedList[];
 };
 
-export function OnboardingWizard({
-  initialVoice,
-  referralCode,
-  curatedLists,
-}: Props) {
-  const router = useRouter();
+export function OnboardingWizard({ referralCode }: Props) {
   const searchParams = useSearchParams();
   const supabase = createClient();
 
   const [step, setStep] = useState<Step>(1);
-  const [selectedListIds, setSelectedListIds] = useState<string[]>([]);
-  const [followingList, setFollowingList] = useState(false);
+  // const [selectedListIds, setSelectedListIds] = useState<string[]>([]);
+  // const [followingList, setFollowingList] = useState(false);
 
   // Step 1 — manual add (secondary)
   const [sources, setSources] = useState<Subscription[]>([]);
   const [url, setUrl] = useState("");
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState("");
-  const [showManualAdd, setShowManualAdd] = useState(false);
 
-  // Step 2 — language
-  const [voice, setVoice] = useState(initialVoice);
-  const [savingVoice, setSavingVoice] = useState(false);
-  const [langSearch, setLangSearch] = useState("");
-
-  // Step 3 — Telegram
+  // Step 2 — Telegram
   const [connectToken, setConnectToken] = useState("");
   const [telegramConnected, setTelegramConnected] = useState(false);
   const [completing, setCompleting] = useState(false);
@@ -116,13 +102,13 @@ export function OnboardingWizard({
   }, [supabase]);
 
   useEffect(() => {
-    if (step === 3 && !connectToken) {
+    if (step === 2 && !connectToken) {
       void generateTelegramToken();
     }
   }, [step, connectToken, generateTelegramToken]);
 
   useEffect(() => {
-    if (step !== 3 || telegramConnected) return;
+    if (step !== 2 || telegramConnected) return;
 
     const interval = setInterval(async () => {
       const {
@@ -151,36 +137,9 @@ export function OnboardingWizard({
     }
   }, [telegramConnected]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // followListAndAdvance — disabled with curated lists
   const followListAndAdvance = async () => {
-    if (selectedListIds.length === 0) {
-      capture("onboarding_step_completed", { step: 1, method: "skipped" });
-      setStep(2);
-      return;
-    }
-    setFollowingList(true);
-    try {
-      const res = await fetch("/api/onboarding/follow-list", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ listIds: selectedListIds }),
-      });
-      if (res.ok) {
-        const data = (await res.json()) as { subscribed: number };
-        if (data.subscribed > 0) {
-          toast.success(`${data.subscribed} channels added!`);
-        }
-        capture("onboarding_step_completed", {
-          step: 1,
-          method: "curated_list",
-          channels_count: data.subscribed,
-        });
-      }
-    } catch {
-      toast.error("Failed to subscribe. Please try again.");
-      setFollowingList(false);
-      return;
-    }
-    setFollowingList(false);
+    capture("onboarding_step_completed", { step: 1, method: "skipped" });
     setStep(2);
   };
 
@@ -209,31 +168,15 @@ export function OnboardingWizard({
     }
   };
 
-  const saveLang = async (lang: Language) => {
-    setVoice(lang.voice);
-    setSavingVoice(true);
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return;
-    await supabase
-      .from("profiles")
-      .update({ tts_voice: lang.voice, preferred_language: lang.code })
-      .eq("id", user.id);
-    setSavingVoice(false);
-  };
-
   const complete = async () => {
     setCompleting(true);
     capture("onboarding_completed", {
       telegram_connected: telegramConnected,
       channels_count: sources.length,
     });
-    try {
-      await completeOnboarding();
-    } finally {
-      router.push("/dashboard");
-    }
+    await completeOnboarding();
+    // Hard navigation to bypass Next.js router cache and guarantee a fresh dashboard load
+    window.location.href = "/dashboard";
   };
 
   return (
@@ -251,7 +194,7 @@ export function OnboardingWizard({
           <span className="text-sm font-semibold">BriefTube</span>
         </Link>
         <div className="flex items-center gap-2">
-          {([1, 2, 3] as Step[]).map((s) => (
+          {([1, 2] as Step[]).map((s) => (
             <div
               key={s}
               className={`h-1.5 rounded-full transition-all duration-500 ${
@@ -262,102 +205,97 @@ export function OnboardingWizard({
         </div>
       </div>
 
-      {/* Step 1: Pick a curated playlist */}
+      {/* Step 1: Add channels */}
       {step === 1 && (
         <div className="space-y-6">
           <div>
             <p className="text-muted-foreground mb-1 text-sm font-medium">
-              Step 1 of 3
+              Step 1 of 2
             </p>
-            <h1 className="text-2xl font-bold">
-              What do you want to listen to?
-            </h1>
+            <h1 className="text-2xl font-bold">Add your YouTube channels</h1>
             <p className="text-muted-foreground mt-1.5 text-sm">
-              Pick a playlist and get audio summaries delivered automatically to
-              your Telegram.
+              Import the channels you already follow on YouTube — BriefTube will
+              send you audio summaries for each new video.
             </p>
           </div>
 
-          <ListPicker
-            lists={curatedLists}
-            selectedIds={selectedListIds}
-            onToggle={(id) =>
-              setSelectedListIds((prev) =>
-                prev.includes(id)
-                  ? prev.filter((x) => x !== id)
-                  : [...prev, id],
-              )
-            }
-          />
-
-          {/* Secondary options */}
+          {/* Primary action: Import from YouTube */}
           <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <div className="h-px flex-1 bg-white/[0.06]" />
-              <span className="text-muted-foreground text-[11px]">or</span>
-              <div className="h-px flex-1 bg-white/[0.06]" />
-            </div>
-
             <a
               href="/api/youtube/auth"
-              className="nm-raised-sm flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium text-white/60 transition-all hover:text-white/90"
+              className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white transition-all hover:bg-red-500"
             >
-              <Youtube className="h-4 w-4 text-red-400" />
+              <Youtube className="h-4 w-4" />
               Import from YouTube
             </a>
 
-            <button
-              type="button"
-              onClick={() => setShowManualAdd((v) => !v)}
+            {/* Manual add — visible by default */}
+            <form
+              onSubmit={(e) => void addSource(e)}
+              className="flex gap-2"
+              data-form-type="other"
               suppressHydrationWarning
-              className="text-muted-foreground hover:text-foreground w-full text-center text-xs transition-colors"
             >
-              {showManualAdd ? "Hide manual add" : "Add a channel manually"}
-            </button>
-
-            {showManualAdd && (
-              <form
-                onSubmit={(e) => void addSource(e)}
-                className="flex gap-2"
-                data-form-type="other"
+              <Input
+                type="text"
+                value={url}
+                onChange={(e) => {
+                  setUrl(e.target.value);
+                  setAddError("");
+                }}
+                placeholder="Or paste a channel URL — youtube.com/@mkbhd"
+                className="nm-inset flex-1 border-transparent bg-transparent focus-visible:ring-0"
+                autoComplete="off"
+                data-1p-ignore
+                data-lpignore="true"
+                suppressHydrationWarning
+              />
+              <Button
+                type="submit"
+                disabled={adding || !url.trim()}
+                variant="outline"
+                className="shrink-0"
                 suppressHydrationWarning
               >
-                <Input
-                  type="text"
-                  value={url}
-                  onChange={(e) => {
-                    setUrl(e.target.value);
-                    setAddError("");
-                  }}
-                  placeholder="youtube.com/@mkbhd"
-                  className="nm-inset flex-1 border-transparent bg-transparent focus-visible:ring-0"
-                  autoComplete="off"
-                  data-1p-ignore
-                  data-lpignore="true"
-                  suppressHydrationWarning
-                />
-                <Button
-                  type="submit"
-                  disabled={adding || !url.trim()}
-                  className="shrink-0 bg-red-600 hover:bg-red-500"
-                  suppressHydrationWarning
-                >
-                  {adding ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    "Add"
-                  )}
-                </Button>
-              </form>
-            )}
+                {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : "Add"}
+              </Button>
+            </form>
             {addError && <p className="text-xs text-red-400">{addError}</p>}
             {sources.length > 0 && (
-              <p className="text-muted-foreground text-xs">
-                {sources.length} channel{sources.length > 1 ? "s" : ""} added
-                manually.
-              </p>
+              <div className="nm-inset flex items-center gap-2 rounded-lg px-3 py-2">
+                <Check className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
+                <p className="text-muted-foreground text-xs">
+                  <span className="text-foreground font-medium">
+                    {sources.length} channel{sources.length > 1 ? "s" : ""}
+                  </span>{" "}
+                  added
+                </p>
+              </div>
             )}
           </div>
+
+          {/* Secondary option: curated playlists — disabled for now, available from dashboard */}
+          {/* <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="h-px flex-1 bg-white/[0.06]" />
+              <span className="text-muted-foreground text-[11px]">
+                or discover channels by topic
+              </span>
+              <div className="h-px flex-1 bg-white/[0.06]" />
+            </div>
+
+            <ListPicker
+              lists={curatedLists}
+              selectedIds={selectedListIds}
+              onToggle={(id) =>
+                setSelectedListIds((prev) =>
+                  prev.includes(id)
+                    ? prev.filter((x) => x !== id)
+                    : [...prev, id],
+                )
+              }
+            />
+          </div> */}
 
           <div className="flex items-center justify-between pt-2">
             <button
@@ -370,91 +308,6 @@ export function OnboardingWizard({
             </button>
             <Button
               onClick={() => void followListAndAdvance()}
-              disabled={followingList}
-              className="bg-red-600 hover:bg-red-500"
-            >
-              {followingList ? (
-                <>
-                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-                  Subscribing…
-                </>
-              ) : (
-                <>
-                  Continue
-                  <ArrowRight className="ml-1.5 h-4 w-4" />
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Step 2: Choose language */}
-      {step === 2 && (
-        <div className="space-y-6">
-          <div>
-            <p className="text-muted-foreground mb-1 text-sm font-medium">
-              Step 2 of 3
-            </p>
-            <h1 className="text-2xl font-bold">Select your language</h1>
-            <p className="text-muted-foreground mt-1.5 text-sm">
-              Your audio summaries will be delivered in this language.
-            </p>
-          </div>
-
-          <Input
-            type="text"
-            value={langSearch}
-            onChange={(e) => setLangSearch(e.target.value)}
-            placeholder="Search a language..."
-            className="nm-inset w-full border-transparent bg-transparent focus-visible:ring-0"
-            suppressHydrationWarning
-          />
-
-          <div className="grid max-h-72 grid-cols-2 gap-1.5 overflow-y-auto sm:grid-cols-3">
-            {languages
-              .filter(
-                (l) =>
-                  l.name.toLowerCase().includes(langSearch.toLowerCase()) ||
-                  l.nativeName.toLowerCase().includes(langSearch.toLowerCase()),
-              )
-              .map((l) => {
-                const isSelected = voice === l.voice;
-                return (
-                  <button
-                    key={l.code}
-                    onClick={() => void saveLang(l)}
-                    disabled={savingVoice}
-                    className={`flex flex-col rounded-lg px-3 py-2.5 text-left text-sm transition-all duration-150 ${
-                      isSelected
-                        ? "nm-inset text-foreground"
-                        : "nm-raised-sm text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    <span className="truncate text-[13px] leading-none font-medium">
-                      {l.name}
-                    </span>
-                    <span className="text-muted-foreground mt-0.5 truncate text-[11px]">
-                      {l.nativeName}
-                    </span>
-                  </button>
-                );
-              })}
-          </div>
-
-          <div className="flex items-center justify-between pt-2">
-            <button
-              onClick={() => setStep(1)}
-              className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-xs transition-colors"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              Back
-            </button>
-            <Button
-              onClick={() => {
-                capture("onboarding_step_completed", { step: 2, voice });
-                setStep(3);
-              }}
               className="bg-red-600 hover:bg-red-500"
             >
               Continue
@@ -464,12 +317,12 @@ export function OnboardingWizard({
         </div>
       )}
 
-      {/* Step 3: Link Telegram */}
-      {step === 3 && (
+      {/* Step 2: Link Telegram */}
+      {step === 2 && (
         <div className="space-y-6">
           <div>
             <p className="text-muted-foreground mb-1 text-sm font-medium">
-              Step 3 of 3
+              Step 2 of 2
             </p>
             <h1 className="text-2xl font-bold">Link Telegram</h1>
             <p className="text-muted-foreground mt-1.5 text-sm">
@@ -593,7 +446,7 @@ export function OnboardingWizard({
 
           <div className="flex items-center justify-between pt-2">
             <button
-              onClick={() => setStep(2)}
+              onClick={() => setStep(1)}
               className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-xs transition-colors"
             >
               <ArrowLeft className="h-3.5 w-3.5" />

@@ -2,11 +2,17 @@
 
 ## 2026-02-28
 
+REFACTOR: Onboarding wizard — remove language selection step (3 steps to 2 steps), language now auto-detected server-side
 FIX: OG/stat portrait — chiffres "47 min → 4 min" empilés verticalement (↓) pour éviter le débordement horizontal à 160px
 FIX: OG/telegram portrait — justifyContent:center pour éviter le grand vide au milieu (space-between trop agressif sur 1350px de haut)
 FIX: OG/before-after square+portrait — layout vertical (colonne) avec chiffres à droite et flèche ↓ ; OG/stat square+portrait — structure 3 zones (header + center + brand badge) ; OG/telegram square — gap réduit, no flex-grow sur colonne texte
 FIX: OG/before-after landscape — crash Satori silencieux (div sans display:flex + textTransform:undefined incompatibles avec next/og streaming render)
 
+FIX: Onboarding step 2 — sélection de langue trop subtile ; ajout fond rouge teinté + ring rouge + icône check pour rendre l'état sélectionné clairement visible
+FEATURE: Onboarding — détection automatique de la langue via Accept-Language header ; pré-sélectionne et sauvegarde la voix TTS correspondante si le profil a encore la voix par défaut
+FIX: Google OAuth local dev — redirect_uri pointait vers la prod (NEXT_PUBLIC_SITE_URL) au lieu de localhost ; utilise maintenant new URL(request.url).origin pour dériver le bon baseUrl automatiquement
+FIX: Onboarding "Skip for now" step 3 — navigation vers /dashboard bloquée en boucle ; remplace router.push (cache Next.js) par window.location.href + revalidatePath("/dashboard") dans completeOnboarding()
+REFACTOR: ListPicker — supprime barre de recherche, filtre catégorie "Other", remplace fonds colorés+icônes par vraies images (thumbnails YouTube representatifs par catégorie + gradient overlay)
 REFACTOR: Onboarding step 1 — "Import from YouTube" devient l'action principale (bouton rouge prominent), formulaire d'ajout manuel visible par défaut, playlists curées déplacées en option secondaire sous un séparateur "or discover channels by topic"
 FIX: Dashboard personal-stats — "Most active channels" affichait l'ID YouTube au lieu du nom pour les chaînes désinscrites (fetch toutes les souscriptions pour le channelNameMap, pas seulement active=true)
 FIX: Admin — Top chaînes préfère un vrai nom au channel ID si plusieurs rows contradictoires
