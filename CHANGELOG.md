@@ -2,7 +2,18 @@
 
 ## 2026-02-28
 
+FIX: OG/stat portrait — chiffres "47 min → 4 min" empilés verticalement (↓) pour éviter le débordement horizontal à 160px
+FIX: OG/telegram portrait — justifyContent:center pour éviter le grand vide au milieu (space-between trop agressif sur 1350px de haut)
+FIX: OG/before-after square+portrait — layout vertical (colonne) avec chiffres à droite et flèche ↓ ; OG/stat square+portrait — structure 3 zones (header + center + brand badge) ; OG/telegram square — gap réduit, no flex-grow sur colonne texte
+FIX: OG/before-after landscape — crash Satori silencieux (div sans display:flex + textTransform:undefined incompatibles avec next/og streaming render)
+
+REFACTOR: Onboarding step 1 — "Import from YouTube" devient l'action principale (bouton rouge prominent), formulaire d'ajout manuel visible par défaut, playlists curées déplacées en option secondaire sous un séparateur "or discover channels by topic"
+FIX: Dashboard personal-stats — "Most active channels" affichait l'ID YouTube au lieu du nom pour les chaînes désinscrites (fetch toutes les souscriptions pour le channelNameMap, pas seulement active=true)
+FIX: Admin — Top chaînes préfère un vrai nom au channel ID si plusieurs rows contradictoires
+
+FIX: Worker — live stream détecté via proxy : "No video formats found" dans le handler proxy de transcript_extractor._ytdlp_subtitles et whisper_transcriber._download_audio retourne maintenant video_is_live (snooze 2h) au lieu de youtube_auth_required (3 retries inutiles)
 FIX: Worker whisper_transcriber — supprime extra_body service_tier (paramètre non supporté par l'API Groq Whisper → 400 error → 21+ échecs production) ; supprime aussi APIStatusError devenu inutilisé
+CHORE: Tests intégration — remplace IDs vidéos multilang instables (France24, TED español géo-bloqués) par IDs plus stables + expected="any" car disponibilité multilingue dépend de l'IP réseau
 FEATURE: Worker tests — suite de 123 tests unitaires pytest (test_youtube_utils, test_rss_scanner, test_transcript_extractor) + runner d'intégration run_integration.py avec 16 cas couvrant tous les edge cases (court, long, musique, live, multilingue, vidéos échouées en prod)
 
 REFACTOR: Worker — centralise constantes/helpers YouTube dans youtube_utils.py (_PREMIERE_RE, hours_until_premiere, PLAYER_CLIENTS_FULL/SHORT, BOT_DETECTION_KEYWORDS, INVIDIOUS_INSTANCES, PIPED_INSTANCES, extract_video_id) → supprime duplication entre transcript_extractor, whisper_transcriber et rss_scanner

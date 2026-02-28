@@ -16,6 +16,7 @@ export async function GET(req: Request) {
   const fmt = (searchParams.get("format") ?? "square") as Format;
   const { width, height } = DIMS[fmt];
   const isLandscape = fmt === "landscape";
+  const isPortrait = fmt === "portrait";
 
   const logoPath = path.join(process.cwd(), "public/logo-hd.png");
   const logoFallback = path.join(process.cwd(), "public/logo-120.png");
@@ -24,11 +25,11 @@ export async function GET(req: Request) {
     : fs.readFileSync(logoFallback);
   const logoSrc = `data:image/png;base64,${logoBuffer.toString("base64")}`;
 
-  const headlinePx = isLandscape ? 64 : 80;
-  const subtitlePx = isLandscape ? 28 : 34;
-  const cardPad = isLandscape ? "28px 36px" : "36px 44px";
+  const headlinePx = isLandscape ? 64 : 76;
+  const subtitlePx = isLandscape ? 28 : 30;
   const topPad = isLandscape ? 52 : 72;
-  const gap = isLandscape ? 32 : 52;
+  const sidePad = isLandscape ? 56 : 72;
+  const sectionGap = isLandscape ? 32 : 24;
 
   // Waveform bar heights — alternating pattern
   const bars = [18, 32, 48, 60, 42, 54, 36, 50, 28, 40, 56, 34, 46, 30, 52];
@@ -41,12 +42,17 @@ export async function GET(req: Request) {
         height: "100%",
         display: "flex",
         flexDirection: isLandscape ? "row" : "column",
+        justifyContent: isLandscape
+          ? "flex-start"
+          : isPortrait
+            ? "center"
+            : "space-between",
         fontFamily: "system-ui, sans-serif",
         position: "relative",
         overflow: "hidden",
       }}
     >
-      {/* Background glow */}
+      {/* Background glows */}
       <div
         style={{
           position: "absolute",
@@ -84,28 +90,32 @@ export async function GET(req: Request) {
         }}
       />
 
-      {/* Left / main column */}
+      {/* Top / left content column */}
       <div
         style={{
           display: "flex",
           flexDirection: "column",
-          flex: 1,
-          padding: isLandscape ? `${topPad}px 56px` : `${topPad}px 72px`,
-          gap: `${gap}px`,
-          justifyContent: isLandscape ? "center" : "flex-start",
+          flexShrink: isLandscape ? 0 : 0,
+          flexGrow: isLandscape ? 1 : 0,
+          paddingTop: topPad,
+          paddingLeft: sidePad,
+          paddingRight: isLandscape ? sidePad : sidePad,
+          paddingBottom: isLandscape ? topPad : 0,
+          gap: `${sectionGap}px`,
+          justifyContent: "center",
         }}
       >
         {/* Logo + brand */}
         <div style={{ display: "flex", alignItems: "center", gap: "18px" }}>
           <img
             src={logoSrc}
-            width={isLandscape ? 48 : 58}
-            height={isLandscape ? 48 : 58}
+            width={isLandscape ? 48 : 52}
+            height={isLandscape ? 48 : 52}
             style={{ borderRadius: "12px" }}
           />
           <span
             style={{
-              fontSize: isLandscape ? 30 : 36,
+              fontSize: isLandscape ? 30 : 34,
               fontWeight: 800,
               color: "#ffffff",
               letterSpacing: "-0.5px",
@@ -116,13 +126,7 @@ export async function GET(req: Request) {
         </div>
 
         {/* Headline */}
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "8px",
-          }}
-        >
+        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
           <div
             style={{
               fontSize: headlinePx,
@@ -150,10 +154,11 @@ export async function GET(req: Request) {
         {/* Subtitle */}
         <div
           style={{
+            display: "flex",
             fontSize: subtitlePx,
             color: "#71717a",
             lineHeight: 1.5,
-            maxWidth: isLandscape ? "440px" : "800px",
+            maxWidth: isLandscape ? "440px" : "860px",
           }}
         >
           AI audio summaries of your YouTube channels, delivered straight to
@@ -161,7 +166,7 @@ export async function GET(req: Request) {
         </div>
 
         {/* Stats pills */}
-        <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: "12px" }}>
           {[
             { label: "47 min video", accent: false },
             { label: "→", accent: false },
@@ -177,12 +182,15 @@ export async function GET(req: Request) {
                   : "rgba(255,255,255,0.06)",
                 border: `1px solid ${item.accent ? "rgba(220,38,38,0.3)" : "rgba(255,255,255,0.08)"}`,
                 borderRadius: "100px",
-                padding: "10px 22px",
+                paddingTop: 8,
+                paddingBottom: 8,
+                paddingLeft: 20,
+                paddingRight: 20,
               }}
             >
               <span
                 style={{
-                  fontSize: isLandscape ? 22 : 26,
+                  fontSize: isLandscape ? 22 : 24,
                   fontWeight: 700,
                   color: item.accent ? "#f87171" : "#a1a1aa",
                 }}
@@ -193,22 +201,32 @@ export async function GET(req: Request) {
           ))}
         </div>
 
-        {/* Domain */}
+        {/* Domain — landscape only */}
         {isLandscape && (
-          <div style={{ fontSize: 22, color: "#52525b", fontWeight: 500 }}>
+          <div
+            style={{
+              display: "flex",
+              fontSize: 22,
+              color: "#52525b",
+              fontWeight: 500,
+            }}
+          >
             {SiteConfig.domain}
           </div>
         )}
       </div>
 
-      {/* Right column / audio card */}
+      {/* Bottom / right: audio card + trial badge */}
       <div
         style={{
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
           alignItems: isLandscape ? "center" : "flex-start",
-          padding: isLandscape ? "52px 56px 52px 0" : "0 72px 72px",
+          paddingTop: isLandscape ? topPad : isPortrait ? 60 : 32,
+          paddingLeft: isLandscape ? 0 : sidePad,
+          paddingRight: isLandscape ? sidePad : sidePad,
+          paddingBottom: isLandscape ? topPad : 64,
           gap: "20px",
         }}
       >
@@ -221,13 +239,15 @@ export async function GET(req: Request) {
             background: "rgba(255,255,255,0.06)",
             border: "1px solid rgba(255,255,255,0.1)",
             borderRadius: "24px",
-            padding: cardPad,
+            paddingTop: isLandscape ? 28 : 32,
+            paddingBottom: isLandscape ? 28 : 32,
+            paddingLeft: isLandscape ? 36 : 40,
+            paddingRight: isLandscape ? 36 : 40,
             width: isLandscape ? "360px" : "100%",
           }}
         >
           {/* Header row */}
           <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-            {/* Telegram icon placeholder */}
             <div
               style={{
                 width: "48px",
@@ -261,7 +281,10 @@ export async function GET(req: Request) {
               display: "flex",
               flexDirection: "column",
               gap: "6px",
-              padding: "16px 20px",
+              paddingTop: 16,
+              paddingBottom: 16,
+              paddingLeft: 20,
+              paddingRight: 20,
               background: "rgba(255,255,255,0.04)",
               borderRadius: "14px",
               borderLeft: "3px solid #dc2626",
@@ -283,13 +306,7 @@ export async function GET(req: Request) {
           </div>
 
           {/* Audio player */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "16px",
-            }}
-          >
+          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
             {/* Play button */}
             <div
               style={{
@@ -321,7 +338,7 @@ export async function GET(req: Request) {
                 display: "flex",
                 alignItems: "center",
                 gap: "3px",
-                flex: 1,
+                flexGrow: 1,
               }}
             >
               {bars.map((h, i) => (
@@ -360,13 +377,16 @@ export async function GET(req: Request) {
             background: "rgba(220,38,38,0.12)",
             border: "1px solid rgba(220,38,38,0.25)",
             borderRadius: "100px",
-            padding: "10px 24px",
+            paddingTop: 10,
+            paddingBottom: 10,
+            paddingLeft: 24,
+            paddingRight: 24,
             alignSelf: "flex-start",
           }}
         >
-          <span style={{ fontSize: 18, color: "#f87171", fontWeight: 700 }}>
-            Free {SiteConfig.trialDays}-day trial
-          </span>
+          <span
+            style={{ fontSize: 18, color: "#f87171", fontWeight: 700 }}
+          >{`Free ${SiteConfig.trialDays}-day trial`}</span>
           <span style={{ fontSize: 16, color: "#71717a" }}>·</span>
           <span style={{ fontSize: 18, color: "#71717a", fontWeight: 500 }}>
             {SiteConfig.domain}
