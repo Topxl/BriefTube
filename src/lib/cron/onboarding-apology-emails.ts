@@ -55,7 +55,7 @@ export async function runOnboardingApologyEmails(): Promise<RunResult> {
       const html = founderEmail(
         p("Hey,") +
           p(
-            "I wanted to personally apologize. If you signed up for BriefTube recently and felt stuck — being redirected in a loop and unable to reach your dashboard — that was our fault.",
+            "I wanted to personally apologize. If you signed up for BriefTube recently and felt stuck, being redirected in a loop and unable to reach your dashboard, that was our fault.",
           ) +
           p(
             "A bug in our onboarding flow was silently preventing accounts from being properly activated. It affected a number of users who signed up over the past week, including you.",
@@ -64,7 +64,7 @@ export async function runOnboardingApologyEmails(): Promise<RunResult> {
             "<strong>We've fixed it.</strong> Your account is now fully unlocked and you can access your dashboard normally at <a href='https://www.brief-tube.com/dashboard' style='color:#1a1a1a;'>brief-tube.com/dashboard</a>",
           ) +
           p(
-            "If you get a chance to try it and have any feedback — good or bad — I'd genuinely love to hear it. Just hit reply.",
+            "If you get a chance to try it and have any feedback, good or bad, I'd genuinely love to hear it. Just hit reply.",
           ) +
           p("Thank you for signing up, and sorry again for the trouble.") +
           signature(),
@@ -75,7 +75,7 @@ export async function runOnboardingApologyEmails(): Promise<RunResult> {
         from: "Vin from BriefTube <vin@brief-tube.com>",
         to: user.email,
         replyTo: env.NEXT_PUBLIC_EMAIL_CONTACT ?? "contact@brief-tube.com",
-        subject: "Sorry — your BriefTube account is now working",
+        subject: "Sorry, your BriefTube account is now working",
         html,
       });
 

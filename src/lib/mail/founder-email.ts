@@ -22,5 +22,5 @@ export function p(text: string): string {
 }
 
 export function signature(name = "Vin"): string {
-  return `<p style="margin:24px 0 0;color:#1a1a1a;">${name}<br><span style="color:#6b7280;font-size:13px;">Founder, BriefTube</span></p>`;
+  return `<p style="margin:24px 0 0;">${name}<br>Founder, BriefTube</p>`;
 }
