@@ -220,7 +220,11 @@ class WhisperTranscriber:
                     logger.info("Audio download: proxy successful")
                     return True
             except Exception as e:
-                logger.warning(f"Audio download (proxy) failed: {str(e)[:120]}")
+                err = str(e)
+                if "no video formats found" in err.lower():
+                    logger.info("Audio download (proxy): live stream — no formats available")
+                    return "live"
+                logger.warning(f"Audio download (proxy) failed: {err[:120]}")
 
         logger.warning(
             "Audio download: bot detection on all clients + proxy — will retry later"
