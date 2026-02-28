@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
   const ip = getIp(req);
   if (isRateLimited(ip)) {
     return NextResponse.json(
-      { error: "Trop de requêtes. Réessaie dans quelques minutes." },
+      { error: "Too many requests. Please wait a few minutes and try again." },
       { status: 429 },
     );
   }
@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
   const url = body.url?.trim() ?? "";
 
   if (!url) {
-    return NextResponse.json({ error: "URL manquante" }, { status: 400 });
+    return NextResponse.json({ error: "Missing URL" }, { status: 400 });
   }
 
   const videoId = extractVideoId(url);
@@ -121,7 +121,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         error:
-          "URL YouTube invalide. Exemples : youtube.com/watch?v=... ou youtu.be/...",
+          "Invalid YouTube URL. Try: youtube.com/watch?v=... or youtu.be/...",
       },
       { status: 400 },
     );
@@ -130,7 +130,7 @@ export async function POST(req: NextRequest) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
-      { error: "Service temporairement indisponible" },
+      { error: "Demo temporarily unavailable. Please try again later." },
       { status: 503 },
     );
   }
@@ -145,7 +145,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         error:
-          "Pas de sous-titres disponibles pour cette vidéo. Essaie une vidéo avec des sous-titres activés.",
+          "No subtitles found for this video. Try a video with captions enabled.",
       },
       { status: 422 },
     );
@@ -154,15 +154,15 @@ export async function POST(req: NextRequest) {
   // Summarize with Gemini
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-    const prompt = `Tu es un assistant qui résume des vidéos YouTube de manière concise et engageante.
+    const prompt = `You are an assistant that summarizes YouTube videos concisely and engagingly.
 
-Voici la transcription d'une vidéo YouTube intitulée "${videoInfo?.title ?? ""}".
-Génère un résumé en français de 3 à 5 phrases qui capture les points clés.
-Le résumé doit être direct, sans introduction ("Dans cette vidéo..."), et facile à lire.
+Here is the transcript of a YouTube video titled "${videoInfo?.title ?? ""}".
+Write a 3-to-5 sentence summary in English that captures the key points.
+Be direct, skip any intro phrase like "In this video...", and keep it easy to read.
 
-Transcription :
+Transcript:
 ${transcript.slice(0, 8000)}`;
 
     const result = await model.generateContent(prompt);
@@ -176,7 +176,7 @@ ${transcript.slice(0, 8000)}`;
     });
   } catch {
     return NextResponse.json(
-      { error: "Erreur lors de la génération du résumé. Réessaie." },
+      { error: "Failed to generate summary. Please try again." },
       { status: 500 },
     );
   }
