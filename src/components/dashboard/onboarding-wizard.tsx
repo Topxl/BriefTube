@@ -13,7 +13,6 @@ import type { Tables } from "@/types/supabase";
 import { SiteConfig } from "@/site-config";
 // import { ListPicker } from "@/components/lists/list-picker";
 // import type { ListPickerItem } from "@/components/lists/list-picker";
-import { completeOnboarding } from "@app/onboarding/actions";
 import { capture } from "@/lib/posthog/client";
 import { subscribeToPush } from "@/lib/push/use-push-subscription";
 
@@ -189,8 +188,18 @@ export function OnboardingWizard({ referralCode }: Props) {
       telegram_connected: telegramConnected,
       channels_count: sources.length,
     });
-    await completeOnboarding();
-    // Hard navigation to bypass Next.js router cache and guarantee a fresh dashboard load
+    // Update onboarding_completed directly from the browser session.
+    // The admin-client server action was silently failing (no error surfaced before redirect).
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user) {
+      await supabase
+        .from("profiles")
+        .update({ onboarding_completed: true })
+        .eq("id", user.id);
+    }
+    // Hard navigation — forces a fresh server render of /dashboard, bypassing any router cache.
     window.location.href = "/dashboard";
   };
 
