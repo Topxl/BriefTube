@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { DeliverySection } from "@/components/dashboard/delivery-section";
+import { NotificationsSection } from "@/components/dashboard/notifications-section";
 import { ReferralSection } from "@/components/dashboard/referral-section";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -45,6 +46,9 @@ type Props = {
   isAdmin?: boolean;
   defaultInterval?: Interval;
   paymentSuccess?: boolean;
+  initialPushEnabled: boolean;
+  initialNewsletter: boolean;
+  initialAnnouncements: boolean;
 };
 
 export function ProfileContent({
@@ -62,6 +66,9 @@ export function ProfileContent({
   isAdmin,
   defaultInterval,
   paymentSuccess,
+  initialPushEnabled,
+  initialNewsletter,
+  initialAnnouncements,
 }: Props) {
   const router = useRouter();
 
@@ -197,6 +204,13 @@ export function ProfileContent({
         initialTelegramConnected={initialTelegramConnected}
         initialVoice={initialVoice}
         initialLanguage={initialLanguage}
+      />
+
+      {/* Notifications */}
+      <NotificationsSection
+        initialPushEnabled={initialPushEnabled}
+        initialNewsletter={initialNewsletter}
+        initialAnnouncements={initialAnnouncements}
       />
 
       {/* Subscription */}

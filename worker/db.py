@@ -468,6 +468,7 @@ def get_pending_deliveries(limit: int = 20) -> list[dict]:
             continue
         results.append({
             "delivery_id": d["id"],
+            "user_id": d["user_id"],
             "chat_id": profile["telegram_chat_id"],
             "tts_voice": profile.get("tts_voice"),
             "video_id": v["video_id"],
