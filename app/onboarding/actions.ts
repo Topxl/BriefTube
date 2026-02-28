@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 
 export async function completeOnboarding() {
@@ -18,6 +19,7 @@ export async function completeOnboarding() {
     .update({ onboarding_completed: true })
     .eq("id", user.id);
 
-  // Invalidate dashboard cache so the next navigation picks up the fresh value
-  revalidatePath("/dashboard");
+  // Invalidate dashboard cache then redirect server-side to guarantee fresh data
+  revalidatePath("/dashboard", "page");
+  redirect("/dashboard");
 }
