@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
+import { connection } from "next/server";
 import { getStripe } from "@/lib/stripe";
 import { env } from "@/lib/env";
 
-export const dynamic = "force-dynamic";
-
 export async function GET() {
+  await connection();
   const stripe = getStripe();
 
   const [monthly, annual] = await Promise.all([
