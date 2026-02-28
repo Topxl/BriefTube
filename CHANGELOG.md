@@ -2,6 +2,7 @@
 
 ## 2026-02-28
 
+FIX: Onboarding — boucle de redirection infinie résolue : redirect() server-side dans completeOnboarding() + revalidatePath("page") garantissent des données fraîches à l'arrivée sur /dashboard
 FEATURE: Web Push Notifications — service worker, VAPID infra, /api/push/subscribe|unsubscribe|send routes, prompt discret dans l'onboarding step 2
 FEATURE: Section Notifications dans /dashboard/profile — 3 toggles : push navigateur, newsletter, annonces (colonnes DB + composant NotificationsSection)
 FEATURE: Worker Python déclenche une web push après chaque livraison Telegram réussie (_notify_push via aiohttp, best-effort)
