@@ -2,6 +2,13 @@
 
 ## 2026-02-28
 
+FIX: CI — playwright.yml : fallbacks pour les secrets Supabase/Stripe/Google non configurés dans GitHub Actions, évite l'erreur "Missing Supabase environment variables" au prerender
+FIX: Demo landing — messages d'erreur traduits en anglais, modèle Gemini mis à jour gemini-1.5-flash → gemini-2.0-flash, résumé généré en anglais
+FIX: /api/stripe/price — remplace export const dynamic par connection() (incompatible avec cacheComponents:true)
+FIX: Onboarding page — supprime la prop curatedLists plus utilisée par OnboardingWizard
+FIX: Worker — détection des live streams via proxy : "no video formats found" → video_is_live (pas youtube_auth_required)
+FIX: Worker integration tests — remplacement des vidéos géo-bloquées (multilang) par des IDs accessibles, ajout test live alSyMiZvsO8
+
 FEATURE: Admin — bouton "Send apology emails" pour notifier les utilisateurs bloqués (Feb 22–28) que le service est rétabli et demander du feedback
 FIX: Onboarding — boucle de redirection infinie résolue : mise à jour onboarding_completed directement via le client Supabase navigateur (admin-client server action échouait silencieusement)
 FIX: Dashboard — ajout de connection() pour forcer un rendu live et éviter qu'un cache stale serve onboarding_completed=false après le fix
