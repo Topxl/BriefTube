@@ -75,6 +75,9 @@ WORKER_API_SECRET = os.getenv("WORKER_API_SECRET", "")
 # App
 APP_URL = os.getenv("APP_URL", "https://brief-tube.com")
 
+# Web Push — shared secret with the Next.js /api/push/send endpoint
+PUSH_NOTIFY_SECRET = os.getenv("PUSH_NOTIFY_SECRET", "")
+
 # WebSub (YouTube Push Notifications)
 WEBSUB_SECRET = os.getenv("WEBSUB_SECRET", "")
 

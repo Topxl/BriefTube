@@ -415,8 +415,11 @@ export type Database = {
         Row: {
           created_at: string | null;
           email: string;
+          email_announcements: boolean | null;
+          email_newsletter: boolean | null;
           id: string;
           max_channels: number | null;
+          notify_new_summaries_push: boolean | null;
           onboarding_completed: boolean | null;
           preferred_language: string | null;
           referral_code: string | null;
@@ -434,8 +437,11 @@ export type Database = {
         Insert: {
           created_at?: string | null;
           email: string;
+          email_announcements?: boolean | null;
+          email_newsletter?: boolean | null;
           id: string;
           max_channels?: number | null;
+          notify_new_summaries_push?: boolean | null;
           onboarding_completed?: boolean | null;
           preferred_language?: string | null;
           referral_code?: string | null;
@@ -453,8 +459,11 @@ export type Database = {
         Update: {
           created_at?: string | null;
           email?: string;
+          email_announcements?: boolean | null;
+          email_newsletter?: boolean | null;
           id?: string;
           max_channels?: number | null;
+          notify_new_summaries_push?: boolean | null;
           onboarding_completed?: boolean | null;
           preferred_language?: string | null;
           referral_code?: string | null;
@@ -473,6 +482,44 @@ export type Database = {
           {
             foreignKeyName: "profiles_referred_by_fkey";
             columns: ["referred_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      push_subscriptions: {
+        Row: {
+          created_at: string | null;
+          endpoint: string;
+          id: string;
+          keys_auth: string;
+          keys_p256dh: string;
+          user_agent: string | null;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string | null;
+          endpoint: string;
+          id?: string;
+          keys_auth: string;
+          keys_p256dh: string;
+          user_agent?: string | null;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string | null;
+          endpoint?: string;
+          id?: string;
+          keys_auth?: string;
+          keys_p256dh?: string;
+          user_agent?: string | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "push_subscriptions_user_id_fkey";
+            columns: ["user_id"];
             isOneToOne: false;
             referencedRelation: "profiles";
             referencedColumns: ["id"];

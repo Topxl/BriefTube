@@ -21,7 +21,7 @@ from pathlib import Path
 import aiohttp
 import psutil
 
-from config import RSS_CHECK_INTERVAL, TELEGRAM_BOT_TOKEN, SUPABASE_URL, ADMIN_TELEGRAM_CHAT_ID, MAX_CONCURRENT_VIDEOS, MAX_CPU_PERCENT, MAX_LOAD_PER_CPU, MIN_FREE_RAM_MB, CPU_CHECK_INTERVAL, HEALTH_PORT, WORKER_INSTANCE, APP_URL, WORKER_API_SECRET
+from config import RSS_CHECK_INTERVAL, TELEGRAM_BOT_TOKEN, SUPABASE_URL, ADMIN_TELEGRAM_CHAT_ID, MAX_CONCURRENT_VIDEOS, MAX_CPU_PERCENT, MAX_LOAD_PER_CPU, MIN_FREE_RAM_MB, CPU_CHECK_INTERVAL, HEALTH_PORT, WORKER_INSTANCE, APP_URL, WORKER_API_SECRET, PUSH_NOTIFY_SECRET
 from transcript_extractor import TranscriptExtractor
 from gemini_api import GeminiSummarizer
 from text_cleaner import clean_for_tts
@@ -220,6 +220,29 @@ async def _notify_video_failure(video_id: str, alert_system) -> None:
             )
         except Exception as e:
             logger.warning(f"[{video_id}] Failed to notify user {chat_id} of failure: {e}")
+
+
+async def _notify_push(
+    session: aiohttp.ClientSession,
+    user_id: str,
+    video_id: str,
+    video_title: str,
+) -> None:
+    """Best-effort web push notification after a successful Telegram delivery."""
+    try:
+        await session.post(
+            f"{APP_URL}/api/push/send",
+            json={
+                "userId": user_id,
+                "title": "New summary available",
+                "body": video_title,
+                "url": f"https://youtu.be/{video_id}",
+            },
+            headers={"x-push-secret": PUSH_NOTIFY_SECRET},
+            timeout=aiohttp.ClientTimeout(total=5),
+        )
+    except Exception as e:
+        logger.debug(f"Push notify failed for user {user_id}: {e}")
 
 
 # ── Loop 1: RSS Scanner ───────────────────────────────────────
@@ -778,6 +801,14 @@ async def delivery_loop(alert_system: MonitoringAlert):
                                 channel_id=d["channel_id"],
                                 audio_path=audio_path,
                             ))
+                            # Best-effort web push notification (non-blocking)
+                            if PUSH_NOTIFY_SECRET and APP_URL:
+                                asyncio.create_task(_notify_push(
+                                    session=_http_session,
+                                    user_id=d["user_id"],
+                                    video_id=video_id,
+                                    video_title=d["video_title"],
+                                ))
                     else:
                         # send_audio_to_user returned False: Telegram permanently
                         # rejected the send (user blocked bot, invalid chat, etc.).

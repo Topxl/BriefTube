@@ -21,7 +21,7 @@ export default async function ProfilePage(props: {
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "subscription_status, trial_ends_at, stripe_customer_id, telegram_connected, tts_voice, preferred_language, max_channels, referral_code",
+      "subscription_status, trial_ends_at, stripe_customer_id, telegram_connected, tts_voice, preferred_language, max_channels, referral_code, notify_new_summaries_push, email_newsletter, email_announcements",
     )
     .eq("id", user.id)
     .single();
@@ -94,6 +94,9 @@ export default async function ProfilePage(props: {
       isAdmin={!!env.ADMIN_USER_ID && user.id === env.ADMIN_USER_ID}
       defaultInterval={defaultInterval}
       paymentSuccess={paymentSuccess}
+      initialPushEnabled={profile?.notify_new_summaries_push ?? true}
+      initialNewsletter={profile?.email_newsletter ?? true}
+      initialAnnouncements={profile?.email_announcements ?? true}
     />
   );
 }

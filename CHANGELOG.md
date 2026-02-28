@@ -2,6 +2,9 @@
 
 ## 2026-02-28
 
+FEATURE: Web Push Notifications — service worker, VAPID infra, /api/push/subscribe|unsubscribe|send routes, prompt discret dans l'onboarding step 2
+FEATURE: Section Notifications dans /dashboard/profile — 3 toggles : push navigateur, newsletter, annonces (colonnes DB + composant NotificationsSection)
+FEATURE: Worker Python déclenche une web push après chaque livraison Telegram réussie (_notify_push via aiohttp, best-effort)
 REFACTOR: Onboarding wizard — remove language selection step (3 steps to 2 steps), language now auto-detected server-side
 FIX: OG/stat portrait — chiffres "47 min → 4 min" empilés verticalement (↓) pour éviter le débordement horizontal à 160px
 FIX: OG/telegram portrait — justifyContent:center pour éviter le grand vide au milieu (space-between trop agressif sur 1350px de haut)

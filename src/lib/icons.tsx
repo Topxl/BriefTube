@@ -78,6 +78,9 @@ import {
   BarChart2 as _BarChart2,
   Flame as _Flame,
   Inbox as _Inbox,
+  Bell as _Bell,
+  BellOff as _BellOff,
+  Megaphone as _Megaphone,
 } from "lucide-react";
 
 export type { LucideIcon, LucideProps } from "lucide-react";
@@ -160,3 +163,6 @@ export const TrendingUp = wrap(_TrendingUp);
 export const BarChart2 = wrap(_BarChart2);
 export const Flame = wrap(_Flame);
 export const Inbox = wrap(_Inbox);
+export const Bell = wrap(_Bell);
+export const BellOff = wrap(_BellOff);
+export const Megaphone = wrap(_Megaphone);

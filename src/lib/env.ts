@@ -25,6 +25,11 @@ export const env = createEnv({
     // VPS worker remote API (admin panel logs)
     VPS_WORKER_URL: z.string().url().optional(),
     WORKER_API_SECRET: z.string().optional(),
+    // Web Push (VAPID)
+    VAPID_PRIVATE_KEY: z.string().optional(),
+    VAPID_SUBJECT: z.string().optional(),
+    // Push endpoint auth (shared secret with worker)
+    PUSH_NOTIFY_SECRET: z.string().optional(),
     // PostHog analytics (admin panel — visitor data)
     POSTHOG_PERSONAL_API_KEY: z.string().optional(),
     POSTHOG_PROJECT_ID: z.string().optional(),
@@ -34,10 +39,12 @@ export const env = createEnv({
   client: {
     NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().optional(),
     NEXT_PUBLIC_EMAIL_CONTACT: z.string().optional(),
+    NEXT_PUBLIC_VAPID_PUBLIC_KEY: z.string().optional(),
   },
   experimental__runtimeEnv: {
     NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:
       process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
     NEXT_PUBLIC_EMAIL_CONTACT: process.env.NEXT_PUBLIC_EMAIL_CONTACT,
+    NEXT_PUBLIC_VAPID_PUBLIC_KEY: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
   },
 });
