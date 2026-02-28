@@ -16,7 +16,7 @@ export async function GET(req: Request) {
   const fmt = (searchParams.get("format") ?? "landscape") as Format;
   const { width, height } = DIMS[fmt];
   const isLandscape = fmt === "landscape";
-  const pad = isLandscape ? 52 : 72;
+  const isVertical = !isLandscape;
 
   const logoPath = path.join(process.cwd(), "public/logo-hd.png");
   const logoFallback = path.join(process.cwd(), "public/logo-120.png");
@@ -24,6 +24,11 @@ export async function GET(req: Request) {
     ? fs.readFileSync(logoPath)
     : fs.readFileSync(logoFallback);
   const logoSrc = `data:image/png;base64,${logoBuffer.toString("base64")}`;
+
+  const timePx = isLandscape ? 96 : 108;
+  const labelPx = isLandscape ? 24 : 28;
+  const descPx = isLandscape ? 20 : 24;
+  const pad = isLandscape ? 52 : 72;
 
   return new ImageResponse(
     <div
@@ -37,6 +42,7 @@ export async function GET(req: Request) {
         position: "relative",
       }}
     >
+      {/* Background glow */}
       <div
         style={{
           position: "absolute",
@@ -49,6 +55,7 @@ export async function GET(req: Request) {
           filter: "blur(160px)",
         }}
       />
+      {/* Red top bar */}
       <div
         style={{
           position: "absolute",
@@ -75,67 +82,139 @@ export async function GET(req: Request) {
         <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
           <img
             src={logoSrc}
-            width={40}
-            height={40}
+            width={isLandscape ? 40 : 48}
+            height={isLandscape ? 40 : 48}
             style={{ borderRadius: "10px" }}
           />
-          <span style={{ fontSize: 26, fontWeight: 800, color: "#ffffff" }}>
+          <span
+            style={{
+              fontSize: isLandscape ? 26 : 32,
+              fontWeight: 800,
+              color: "#ffffff",
+              letterSpacing: "-0.5px",
+            }}
+          >
             BriefTube
           </span>
         </div>
-        <div style={{ fontSize: 18, color: "#52525b" }}>
+        <div
+          style={{
+            fontSize: isLandscape ? 18 : 22,
+            color: "#52525b",
+            fontWeight: 500,
+          }}
+        >
           {SiteConfig.domain}
         </div>
       </div>
 
-      {/* Split panels */}
+      {/* Split panels — row for landscape, column for square/portrait */}
       <div
         style={{
           display: "flex",
+          flexDirection: isLandscape ? "row" : "column",
           flexGrow: 1,
           paddingTop: 0,
           paddingLeft: pad,
           paddingRight: pad,
           paddingBottom: isLandscape ? 40 : 60,
-          gap: "24px",
+          gap: isLandscape ? "24px" : "20px",
         }}
       >
+        {/* BEFORE panel */}
         <div
           style={{
             flexGrow: 1,
             flexShrink: 1,
             flexBasis: 0,
             display: "flex",
-            flexDirection: "column",
-            justifyContent: "center",
+            /* landscape: column (badge top, number, label bottom) */
+            /* vertical: row (text left, number right) */
+            flexDirection: isLandscape ? "column" : "row",
+            alignItems: "center",
+            justifyContent: isLandscape ? "center" : "space-between",
             background: "rgba(255,255,255,0.03)",
             border: "1px solid rgba(255,255,255,0.07)",
             borderRadius: "20px",
-            paddingTop: 32,
-            paddingLeft: 36,
-            paddingRight: 36,
-            paddingBottom: 32,
-            gap: "20px",
+            paddingTop: isLandscape ? 32 : 36,
+            paddingLeft: isLandscape ? 36 : 48,
+            paddingRight: isLandscape ? 36 : 48,
+            paddingBottom: isLandscape ? 32 : 36,
+            gap: isLandscape ? "20px" : "0px",
           }}
         >
-          <span style={{ fontSize: 20, color: "#71717a", fontWeight: 700 }}>
-            BEFORE
-          </span>
+          {/* Left text block (landscape: stacked; vertical: left side) */}
           <div
             style={{
-              fontSize: 96,
-              fontWeight: 900,
-              color: "#52525b",
-              lineHeight: 1,
+              display: "flex",
+              flexDirection: "column",
+              gap: isLandscape ? "0px" : "10px",
+              alignItems: isLandscape ? "flex-start" : "flex-start",
             }}
           >
-            47 min
+            <span
+              style={{
+                fontSize: labelPx - 4,
+                color: "#71717a",
+                fontWeight: 700,
+                letterSpacing: "1px",
+              }}
+            >
+              BEFORE
+            </span>
+            {isLandscape && (
+              <div
+                style={{
+                  display: "flex",
+                  marginTop: 16,
+                  fontSize: timePx,
+                  fontWeight: 900,
+                  color: "#52525b",
+                  letterSpacing: "-3px",
+                  lineHeight: 1,
+                }}
+              >
+                47 min
+              </div>
+            )}
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "4px",
+                marginTop: isLandscape ? 16 : 0,
+              }}
+            >
+              <span
+                style={{ fontSize: labelPx, color: "#71717a", fontWeight: 700 }}
+              >
+                Watching the video
+              </span>
+              <span style={{ fontSize: descPx, color: "#3f3f46" }}>
+                Sitting through ads, intros, padding...
+              </span>
+            </div>
           </div>
-          <span style={{ fontSize: 22, color: "#71717a", fontWeight: 700 }}>
-            Watching the video
-          </span>
+
+          {/* Large number — right side for vertical, below label for landscape */}
+          {isVertical && (
+            <div
+              style={{
+                display: "flex",
+                fontSize: timePx,
+                fontWeight: 900,
+                color: "#52525b",
+                letterSpacing: "-3px",
+                lineHeight: 1,
+                flexShrink: 0,
+              }}
+            >
+              47 min
+            </div>
+          )}
         </div>
 
+        {/* Arrow */}
         <div
           style={{
             display: "flex",
@@ -144,45 +223,106 @@ export async function GET(req: Request) {
             flexShrink: 0,
           }}
         >
-          <div style={{ fontSize: 32, color: "#dc2626", fontWeight: 900 }}>
-            →
+          <div
+            style={{
+              fontSize: isLandscape ? 32 : 40,
+              color: "#dc2626",
+              fontWeight: 900,
+            }}
+          >
+            {isLandscape ? "→" : "↓"}
           </div>
         </div>
 
+        {/* AFTER panel */}
         <div
           style={{
             flexGrow: 1,
             flexShrink: 1,
             flexBasis: 0,
             display: "flex",
-            flexDirection: "column",
-            justifyContent: "center",
+            flexDirection: isLandscape ? "column" : "row",
+            alignItems: "center",
+            justifyContent: isLandscape ? "center" : "space-between",
             background: "rgba(220,38,38,0.06)",
             border: "1px solid rgba(220,38,38,0.2)",
             borderRadius: "20px",
-            paddingTop: 32,
-            paddingLeft: 36,
-            paddingRight: 36,
-            paddingBottom: 32,
-            gap: "20px",
+            paddingTop: isLandscape ? 32 : 36,
+            paddingLeft: isLandscape ? 36 : 48,
+            paddingRight: isLandscape ? 36 : 48,
+            paddingBottom: isLandscape ? 32 : 36,
+            gap: isLandscape ? "20px" : "0px",
           }}
         >
-          <span style={{ fontSize: 20, color: "#f87171", fontWeight: 700 }}>
-            AFTER
-          </span>
+          {/* Left text block */}
           <div
             style={{
-              fontSize: 96,
-              fontWeight: 900,
-              color: "#ffffff",
-              lineHeight: 1,
+              display: "flex",
+              flexDirection: "column",
+              gap: isLandscape ? "0px" : "10px",
+              alignItems: "flex-start",
             }}
           >
-            4 min
+            <span
+              style={{
+                fontSize: labelPx - 4,
+                color: "#f87171",
+                fontWeight: 700,
+                letterSpacing: "1px",
+              }}
+            >
+              AFTER
+            </span>
+            {isLandscape && (
+              <div
+                style={{
+                  display: "flex",
+                  marginTop: 16,
+                  fontSize: timePx,
+                  fontWeight: 900,
+                  color: "#ffffff",
+                  letterSpacing: "-3px",
+                  lineHeight: 1,
+                }}
+              >
+                4 min
+              </div>
+            )}
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "4px",
+                marginTop: isLandscape ? 16 : 0,
+              }}
+            >
+              <span
+                style={{ fontSize: labelPx, color: "#e4e4e7", fontWeight: 700 }}
+              >
+                Listening in Telegram
+              </span>
+              <span style={{ fontSize: descPx, color: "#71717a" }}>
+                AI summary delivered automatically
+              </span>
+            </div>
           </div>
-          <span style={{ fontSize: 22, color: "#e4e4e7", fontWeight: 700 }}>
-            Listening in Telegram
-          </span>
+
+          {/* Large number — right side for vertical */}
+          {isVertical && (
+            <div
+              style={{
+                display: "flex",
+                fontSize: timePx,
+                fontWeight: 900,
+                color: "#ffffff",
+                letterSpacing: "-3px",
+                lineHeight: 1,
+                flexShrink: 0,
+              }}
+            >
+              4 min
+            </div>
+          )}
         </div>
       </div>
 
