@@ -1,6 +1,7 @@
 import { SiteConfig } from "@/site-config";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { SummariesFeed } from "@/components/dashboard/summaries-feed";
 import { SummariesFeedSkeleton } from "@/components/dashboard/summaries-feed-skeleton";
@@ -10,6 +11,10 @@ import { SectionErrorBoundary } from "@/components/nowts/section-error-boundary"
 import { PersonalStats } from "@/components/dashboard/personal-stats";
 
 export default async function DashboardPage() {
+  // Force a live DB read — prevents any component/CDN cache from serving a
+  // stale onboarding_completed=false value and causing a redirect loop.
+  await connection();
+
   const supabase = await createClient();
   const {
     data: { user },
