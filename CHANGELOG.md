@@ -2,6 +2,7 @@
 
 ## 2026-02-28
 
+FEATURE: Admin — bouton "Send apology emails" pour notifier les utilisateurs bloqués (Feb 22–28) que le service est rétabli et demander du feedback
 FIX: Onboarding — boucle de redirection infinie résolue : mise à jour onboarding_completed directement via le client Supabase navigateur (admin-client server action échouait silencieusement)
 FIX: Dashboard — ajout de connection() pour forcer un rendu live et éviter qu'un cache stale serve onboarding_completed=false après le fix
 FEATURE: Web Push Notifications — service worker, VAPID infra, /api/push/subscribe|unsubscribe|send routes, prompt discret dans l'onboarding step 2

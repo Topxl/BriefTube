@@ -10,6 +10,7 @@ import {
   runReferralTrialEmails,
   type ReferralTrialResult,
 } from "@/lib/cron/referral-trial-emails";
+import { runOnboardingApologyEmails } from "@/lib/cron/onboarding-apology-emails";
 
 type RunResult = { sent: number; skipped: number; errors: number };
 
@@ -44,4 +45,9 @@ export async function triggerReengagementEmails(): Promise<RunResult> {
 export async function triggerReferralTrialEmails(): Promise<ReferralTrialResult> {
   await requireAdmin();
   return runReferralTrialEmails();
+}
+
+export async function triggerOnboardingApologyEmails(): Promise<RunResult> {
+  await requireAdmin();
+  return runOnboardingApologyEmails();
 }

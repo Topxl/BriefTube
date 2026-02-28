@@ -21,6 +21,7 @@ import { TrialRemindersButton } from "@/components/admin/trial-reminders-button"
 import { ActivationEmailsButton } from "@/components/admin/activation-emails-button";
 import { ReengagementEmailsButton } from "@/components/admin/reengagement-emails-button";
 import { ReferralTrialEmailsButton } from "@/components/admin/referral-trial-emails-button";
+import { OnboardingApologyButton } from "@/components/admin/onboarding-apology-button";
 import {
   getPostHogTotalVisitors,
   getPostHogDailyVisitors,
@@ -1246,6 +1247,12 @@ export default async function AdminPage() {
             J-1)
           </p>
           <ReferralTrialEmailsButton />
+        </div>
+        <div className="nm-raised flex flex-col gap-2 rounded-xl border border-yellow-500/20 px-4 py-3">
+          <p className="text-muted-foreground text-sm">
+            Send onboarding apology emails (Feb 22–28 · one-time · deduped)
+          </p>
+          <OnboardingApologyButton />
         </div>
       </div>
 
