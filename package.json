@@ -148,5 +148,15 @@
     "vitest": "^4.0.15",
     "vitest-mock-extended": "^3.0.1"
   },
-  "packageManager": "pnpm@10.14.0"
+  "packageManager": "pnpm@10.14.0",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@parcel/watcher",
+      "core-js",
+      "esbuild",
+      "msw",
+      "protobufjs",
+      "sharp"
+    ]
+  }
 }
