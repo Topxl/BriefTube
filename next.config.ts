@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
   experimental: {
     authInterrupts: true,
   },
-  cacheComponents: false,
+  cacheComponents: true,
   typedRoutes: true,
   images: {
     remotePatterns: [
