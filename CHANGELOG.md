@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-03-02
+
+FIX: Worker — live terminés : "This live event has ended" et "Requested format is not available" désormais détectés comme video_is_live (snooze 2h) au lieu de youtube_auth_required (3 retries inutiles) — dans transcript_extractor et whisper_transcriber (loop + proxy)
+
 ## 2026-02-28
 
 FIX: CI — playwright.yml : fallbacks pour les secrets Supabase/Stripe/Google non configurés dans GitHub Actions, évite l'erreur "Missing Supabase environment variables" au prerender

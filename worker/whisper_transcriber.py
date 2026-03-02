@@ -156,8 +156,10 @@ class WhisperTranscriber:
                     "is a live stream", "currently broadcasting",
                     "is a live event", "live event",
                     "no video formats found",  # live stream currently broadcasting
+                    "live event has ended",    # ended live replay not yet available
+                    "requested format is not available",  # ended live, no replay format yet
                 )):
-                    logger.info("Audio download: live stream detected — no audio to download")
+                    logger.info("Audio download: live/ended stream detected — no audio to download")
                     return "live"
                 if "error opening output files" in err.lower() or "invalid argument" in err.lower():
                     logger.warning("Audio download: ffmpeg output error (live stream or unsupported format) — skipping permanently")
@@ -221,8 +223,12 @@ class WhisperTranscriber:
                     return True
             except Exception as e:
                 err = str(e)
-                if "no video formats found" in err.lower():
-                    logger.info("Audio download (proxy): live stream — no formats available")
+                if any(kw in err.lower() for kw in (
+                    "no video formats found",
+                    "live event has ended",
+                    "requested format is not available",
+                )):
+                    logger.info(f"Audio download (proxy): live/ended stream — {err[:80]}")
                     return "live"
                 logger.warning(f"Audio download (proxy) failed: {err[:120]}")
 
