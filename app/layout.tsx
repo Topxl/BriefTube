@@ -108,8 +108,8 @@ export default function RootLayout({
             <Suspense>
               <ServerToaster />
             </Suspense>
-            <SpeedInsights />
-            <Analytics />
+            {/* <SpeedInsights /> */}
+            {/* <Analytics /> */}
           </Providers>
         </NuqsAdapter>
       </body>
