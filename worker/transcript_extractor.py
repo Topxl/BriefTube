@@ -470,8 +470,12 @@ class TranscriptExtractor:
                             return text, detected_lang, None
             except Exception as e:
                 err = str(e)
-                if "no video formats found" in err.lower():
-                    logger.info("yt-dlp subtitle (proxy): live stream — no formats available")
+                if any(kw in err.lower() for kw in (
+                    "no video formats found",
+                    "live event has ended",
+                    "requested format is not available",
+                )):
+                    logger.info(f"yt-dlp subtitle (proxy): live/ended stream — {err[:80]}")
                     return None, None, "video_is_live"
                 logger.warning(f"yt-dlp subtitle (proxy) failed: {err[:120]}")
 
