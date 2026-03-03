@@ -1,3 +1,4 @@
+import { cacheLife, cacheTag } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/server";
 
 function formatCount(n: number): string {
@@ -8,6 +9,10 @@ function formatCount(n: number): string {
 }
 
 export async function SocialProof() {
+  "use cache: remote";
+  cacheLife("hours");
+  cacheTag("social-proof");
+
   const supabase = createAdminClient();
 
   const [{ count: summaryCount }, { count: channelCount }] = await Promise.all([

@@ -1,17 +1,41 @@
+import type { Metadata } from "next";
+import dynamic from "next/dynamic";
+import { Suspense } from "react";
 import { Hero } from "@/components/landing/hero";
-import { Problem } from "@/components/landing/problem";
-import { HowItWorks } from "@/components/landing/how-it-works";
-import { Demo } from "@/components/landing/demo";
-import { Features } from "@/components/landing/features";
-import { Pricing } from "@/components/landing/pricing";
-import { FAQ } from "@/components/landing/faq";
-import { FinalCTA } from "@/components/landing/final-cta";
-import { Footer } from "@/components/landing/footer";
 import { Navbar } from "@/components/landing/navbar";
 import { SocialProof } from "@/components/landing/social-proof";
-import type { Metadata } from "next";
 import { SiteConfig } from "@/site-config";
-import { Suspense } from "react";
+
+const Problem = dynamic(async () =>
+  import("@/components/landing/problem").then((m) => ({ default: m.Problem })),
+);
+const HowItWorks = dynamic(async () =>
+  import("@/components/landing/how-it-works").then((m) => ({
+    default: m.HowItWorks,
+  })),
+);
+const Demo = dynamic(async () =>
+  import("@/components/landing/demo").then((m) => ({ default: m.Demo })),
+);
+const Features = dynamic(async () =>
+  import("@/components/landing/features").then((m) => ({
+    default: m.Features,
+  })),
+);
+const Pricing = dynamic(async () =>
+  import("@/components/landing/pricing").then((m) => ({ default: m.Pricing })),
+);
+const FAQ = dynamic(async () =>
+  import("@/components/landing/faq").then((m) => ({ default: m.FAQ })),
+);
+const FinalCTA = dynamic(async () =>
+  import("@/components/landing/final-cta").then((m) => ({
+    default: m.FinalCTA,
+  })),
+);
+const Footer = dynamic(async () =>
+  import("@/components/landing/footer").then((m) => ({ default: m.Footer })),
+);
 
 export const metadata: Metadata = {
   alternates: {

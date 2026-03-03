@@ -58,16 +58,19 @@ export const metadata: Metadata = {
 const CaptionFont = Space_Grotesk({
   subsets: ["latin"],
   variable: "--font-caption",
+  display: "swap",
 });
 
 const GeistSans = Inter({
   subsets: ["latin"],
   variable: "--font-geist-sans",
+  display: "swap",
 });
 
 const GeistMono = Geist_Mono({
   subsets: ["latin"],
   variable: "--font-geist-mono",
+  display: "swap",
 });
 
 export default function RootLayout({

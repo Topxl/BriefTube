@@ -2,6 +2,14 @@
 
 ## 2026-03-03
 
+PERF: Landing — cache "use cache: remote" + cacheLife("hours") sur SocialProof pour éviter les requêtes Supabase à chaque page load
+PERF: Landing — remplace <img> par Next.js <Image> dans Hero pour l'optimisation WebP et lazy loading
+PERF: Landing — dynamic() imports pour les sections below-fold (Problem, HowItWorks, Demo, Features, Pricing, FAQ, FinalCTA, Footer) pour réduire le JS initial
+PERF: Layout — ajout de display:"swap" aux 3 Google Fonts (Inter, Space_Grotesk, Geist_Mono) pour améliorer FCP
+
+FEATURE: Dashboard — bannière push notifications non-intrusive : apparaît uniquement si permission === "default" et non dismissée (localStorage), bouton Enable + dismiss X, disparaît automatiquement après activation
+FIX: Onboarding — supprime le prompt de notifications push (causait le warning spam Chrome), remplacé par le banner dashboard ci-dessus
+
 UX: Onboarding wizard — sélection de méthode de livraison plus visible : fond coloré + scale + checkmark en coin + texte/badge actifs selon la couleur de chaque plateforme
 
 PERF: noembed API — ajout AbortController 3s timeout + catch silencieux pour éviter que l'UI se bloque sur les titres manquants
