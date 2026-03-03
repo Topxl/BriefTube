@@ -8,6 +8,7 @@ import { TrialBanner } from "@/components/dashboard/trial-banner";
 import { SourcesSection } from "@/components/dashboard/sources-section";
 import { SectionErrorBoundary } from "@/components/nowts/section-error-boundary";
 import { PersonalStats } from "@/components/dashboard/personal-stats";
+import { PushNotificationBanner } from "@/components/dashboard/push-notification-banner";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -55,6 +56,11 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-5">
+      {/* Push notification banner */}
+      <Suspense fallback={null}>
+        <PushNotificationBanner />
+      </Suspense>
+
       {/* Sources */}
       <SectionErrorBoundary>
         <SourcesSection

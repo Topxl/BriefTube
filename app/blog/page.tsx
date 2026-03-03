@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { SiteConfig } from "@/site-config";
 import { articles } from "@/content/blog";
 import Link from "next/link";
-import { Typography } from "@/components/nowts/typography";
+import { Navbar } from "@/components/landing/navbar";
+import { Footer } from "@/components/landing/footer";
 
 export const metadata: Metadata = {
   title: "Blog",
@@ -14,58 +15,56 @@ export const metadata: Metadata = {
 export default function BlogPage() {
   return (
     <div className="bg-background min-h-screen">
-      <header className="bg-background/95 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10 border-b border-white/[0.08] backdrop-blur">
-        <div className="container flex h-16 items-center justify-between">
-          <Link href="/" className="text-lg font-semibold">
-            {SiteConfig.title}
-          </Link>
-          <Link
-            href="/login"
-            className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors"
-          >
-            Sign in
-          </Link>
-        </div>
-      </header>
+      <Navbar />
 
-      <main className="container py-12">
-        <div className="mb-12 flex flex-col gap-4">
-          <Typography variant="h1">Blog</Typography>
-          <Typography variant="lead" className="text-muted-foreground">
-            Guides and thoughts on consuming YouTube smarter — productivity, AI
-            tools, and learning efficiently.
-          </Typography>
+      <main className="mx-auto max-w-6xl px-6 pt-32 pb-20">
+        {/* Header */}
+        <div className="mb-14 flex flex-col gap-3">
+          <p className="text-muted-foreground text-xs font-medium tracking-widest uppercase">
+            Blog
+          </p>
+          <h1 className="font-display text-3xl font-bold md:text-4xl">
+            Guides &amp; insights
+          </h1>
+          <p className="text-muted-foreground mt-1 max-w-xl text-base leading-relaxed">
+            Thoughts on consuming YouTube smarter, productivity, and AI tools.
+          </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {/* Grid */}
+        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           {articles.map((article) => (
-            <Link key={article.slug} href={`/blog/${article.slug}`}>
-              <div className="group flex h-full flex-col gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5 transition-all hover:border-white/[0.12] hover:bg-white/[0.05]">
-                <div className="flex items-start justify-between gap-2">
-                  <Typography variant="h3" className="line-clamp-2 text-lg">
-                    {article.title}
-                  </Typography>
-                </div>
+            <Link
+              key={article.slug}
+              href={`/blog/${article.slug}`}
+              className="nm-raised group flex flex-col gap-4 rounded-2xl p-5 transition-all duration-300 hover:-translate-y-1"
+            >
+              {/* Category */}
+              <span className="inline-flex w-fit items-center rounded-full bg-red-500/[0.1] px-2.5 py-0.5 text-[11px] font-medium text-red-400">
+                {article.category}
+              </span>
 
-                <Typography variant="muted" className="line-clamp-2 flex-1">
-                  {article.description}
-                </Typography>
+              {/* Title */}
+              <h2 className="font-display line-clamp-2 text-base leading-snug font-semibold">
+                {article.title}
+              </h2>
 
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-muted-foreground inline-block rounded-full bg-white/[0.08] px-2.5 py-1 text-xs font-medium">
-                    {article.category}
-                  </span>
-                </div>
+              {/* Description */}
+              <p className="text-muted-foreground line-clamp-2 flex-1 text-sm leading-relaxed">
+                {article.description}
+              </p>
 
-                <div className="text-muted-foreground flex items-center justify-between pt-2 text-xs">
-                  <span>{article.date}</span>
-                  <span>{article.readingTime}</span>
-                </div>
+              {/* Meta */}
+              <div className="text-muted-foreground flex items-center justify-between border-t border-white/[0.05] pt-3 text-xs">
+                <span>{article.date}</span>
+                <span>{article.readingTime}</span>
               </div>
             </Link>
           ))}
         </div>
       </main>
+
+      <Footer />
     </div>
   );
 }

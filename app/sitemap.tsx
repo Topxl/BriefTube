@@ -25,9 +25,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         .limit(1000),
     ]);
 
-  const uniqueChannelIds = [
-    ...new Set((channelRows ?? []).map((r) => r.channel_id)),
-  ];
+  const allChannelIds = new Set((channelRows ?? []).map((r) => r.channel_id));
 
   // Index of last summary date per channel
   const lastSummaryByChannel = (lastVideos ?? []).reduce<
@@ -110,14 +108,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "daily" as const,
       priority: 0.7,
     },
-    // Programmatic channel pages
-    ...uniqueChannelIds.map((channelId) => ({
-      url: `${SiteConfig.prodUrl}/channels/${channelId}`,
-      lastModified: lastSummaryByChannel[channelId]
-        ? new Date(lastSummaryByChannel[channelId])
-        : new Date(),
-      changeFrequency: "daily" as const,
-      priority: 0.5,
-    })),
+    // Programmatic channel pages — only channels with at least one completed summary
+    ...Object.keys(lastSummaryByChannel)
+      .filter((channelId) => allChannelIds.has(channelId))
+      .map((channelId) => ({
+        url: `${SiteConfig.prodUrl}/channels/${channelId}`,
+        lastModified: new Date(lastSummaryByChannel[channelId]),
+        changeFrequency: "daily" as const,
+        priority: 0.5,
+      })),
   ];
 }
