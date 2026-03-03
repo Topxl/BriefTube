@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -16,6 +16,8 @@ import {
   Check,
   Globe,
   Mail,
+  Play,
+  Pause,
 } from "@/lib/icons";
 import type { Tables } from "@/types/supabase";
 import { SiteConfig } from "@/site-config";
@@ -28,6 +30,87 @@ type Subscription = Tables<"subscriptions">;
 // type CuratedList = ListPickerItem;
 
 type Step = 1 | 2;
+
+type WowVideo = {
+  video_id: string;
+  video_title: string | null;
+  audio_url: string | null;
+};
+
+function WowAudioCard({ video }: { video: WowVideo }) {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [playing, setPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+
+  const toggle = () => {
+    const a = audioRef.current;
+    if (!a) return;
+    if (playing) {
+      a.pause();
+      setPlaying(false);
+    } else {
+      void a.play();
+      setPlaying(true);
+    }
+  };
+
+  return (
+    <div className="nm-raised overflow-hidden rounded-2xl p-3">
+      <div className="flex items-center gap-3">
+        <button
+          onClick={toggle}
+          className="group relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-black/30"
+        >
+          <Image
+            src={`https://img.youtube.com/vi/${video.video_id}/default.jpg`}
+            alt=""
+            fill
+            sizes="48px"
+            className="object-cover opacity-80 transition-opacity group-hover:opacity-100"
+          />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-black/60 backdrop-blur-sm">
+              {playing ? (
+                <Pause className="h-3 w-3 text-white" fill="white" />
+              ) : (
+                <Play className="ml-px h-3 w-3 text-white" fill="white" />
+              )}
+            </div>
+          </div>
+        </button>
+        <div className="min-w-0 flex-1">
+          <p className="line-clamp-1 text-sm font-medium">
+            {video.video_title ?? "Video summary"}
+          </p>
+          {video.audio_url && (
+            <>
+              <audio
+                ref={audioRef}
+                src={video.audio_url}
+                preload="metadata"
+                onTimeUpdate={(e) => {
+                  const a = e.currentTarget;
+                  if (a.duration)
+                    setProgress((a.currentTime / a.duration) * 100);
+                }}
+                onEnded={() => {
+                  setPlaying(false);
+                  setProgress(0);
+                }}
+              />
+              <div className="mt-2 h-1 w-full rounded-full bg-white/[0.08]">
+                <div
+                  className="h-full rounded-full bg-red-500 transition-[width] duration-100"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 type DeliveryMethod =
   | "telegram"
@@ -47,6 +130,8 @@ export function OnboardingWizard({ referralCode }: Props) {
   const supabase = createClient();
 
   const [step, setStep] = useState<Step>(1);
+  const [showWow, setShowWow] = useState(false);
+  const [wowVideos, setWowVideos] = useState<WowVideo[]>([]);
   // const [selectedListIds, setSelectedListIds] = useState<string[]>([]);
   // const [followingList, setFollowingList] = useState(false);
 
@@ -102,6 +187,24 @@ export function OnboardingWizard({ referralCode }: Props) {
           .order("created_at", { ascending: false });
         if (data && data.length > 0) {
           setSources(data);
+
+          // Fetch existing completed videos for the wow effect
+          const channelIds = data.map((s) => s.channel_id);
+          const { data: videos } = await supabase
+            .from("processed_videos")
+            .select("video_id, video_title, audio_url")
+            .in("channel_id", channelIds)
+            .eq("status", "completed")
+            .not("audio_url", "is", null)
+            .limit(5);
+
+          if (videos && videos.length > 0) {
+            setWowVideos(videos as WowVideo[]);
+            setShowWow(true);
+          } else {
+            setStep(2);
+          }
+        } else {
           setStep(2);
         }
       })();
@@ -243,8 +346,43 @@ export function OnboardingWizard({ referralCode }: Props) {
         </div>
       </div>
 
+      {/* Wow screen: shown after YouTube import if existing summaries exist */}
+      {showWow && (
+        <div className="space-y-6">
+          <div>
+            <p className="text-muted-foreground mb-1 text-sm font-medium">
+              Welcome to BriefTube
+            </p>
+            <h1 className="text-2xl font-bold">
+              Your channels already have summaries!
+            </h1>
+            <p className="text-muted-foreground mt-1.5 text-sm">
+              We&apos;ve already processed some videos from your channels. Try
+              listening to one.
+            </p>
+          </div>
+
+          <div className="space-y-2.5">
+            {wowVideos.map((video) => (
+              <WowAudioCard key={video.video_id} video={video} />
+            ))}
+          </div>
+
+          <Button
+            onClick={() => {
+              setShowWow(false);
+              setStep(2);
+            }}
+            className="w-full bg-red-600 hover:bg-red-500"
+          >
+            Continue
+            <ArrowRight className="ml-1.5 h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
       {/* Step 1: Add channels */}
-      {step === 1 && (
+      {!showWow && step === 1 && (
         <div className="space-y-6">
           <div>
             <p className="text-muted-foreground mb-1 text-sm font-medium">
@@ -356,7 +494,7 @@ export function OnboardingWizard({ referralCode }: Props) {
       )}
 
       {/* Step 2: Delivery method */}
-      {step === 2 && (
+      {!showWow && step === 2 && (
         <div className="space-y-6">
           <div>
             <p className="text-muted-foreground mb-1 text-sm font-medium">

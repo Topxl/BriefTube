@@ -14,6 +14,23 @@ const tl = t.dashboard.summaries;
 
 const PAGE_SIZE = 20;
 
+function SummaryRowSkeleton() {
+  return (
+    <div className="nm-raised animate-pulse overflow-hidden rounded-2xl">
+      <div className="flex items-center gap-3 p-3">
+        <div className="h-16 w-16 shrink-0 rounded-lg bg-white/[0.06] sm:h-[72px] sm:w-[72px]" />
+        <div className="flex-1 space-y-2">
+          <div className="h-3 w-3/4 rounded-full bg-white/[0.06]" />
+          <div className="h-3 w-1/2 rounded-full bg-white/[0.06]" />
+        </div>
+      </div>
+      <div className="px-3 pb-2.5">
+        <div className="h-1.5 w-full rounded-full bg-white/[0.06]" />
+      </div>
+    </div>
+  );
+}
+
 export function SummariesFeed() {
   const [deliveries, setDeliveries] = useState<EnrichedDelivery[]>([]);
   const [loading, setLoading] = useState(true);
@@ -126,13 +143,11 @@ export function SummariesFeed() {
             resolvedTitle={titles[delivery.video_id]}
           />
         ))}
+        {loading &&
+          Array.from({ length: 3 }).map((_, i) => (
+            <SummaryRowSkeleton key={i} />
+          ))}
       </div>
-
-      {loading && (
-        <p className="text-muted-foreground py-3 text-center text-xs">
-          {tl.loading}
-        </p>
-      )}
 
       {hasMore && !loading && (
         <div className="flex justify-center">
