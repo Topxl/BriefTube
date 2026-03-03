@@ -22,7 +22,6 @@ import { SiteConfig } from "@/site-config";
 // import { ListPicker } from "@/components/lists/list-picker";
 // import type { ListPickerItem } from "@/components/lists/list-picker";
 import { capture } from "@/lib/posthog/client";
-import { subscribeToPush } from "@/lib/push/use-push-subscription";
 
 type Subscription = Tables<"subscriptions">;
 
@@ -67,20 +66,6 @@ export function OnboardingWizard({ referralCode }: Props) {
   const [telegramConnected, setTelegramConnected] = useState(false);
   const [completing, setCompleting] = useState(false);
   const [hasClickedBot, setHasClickedBot] = useState(false);
-
-  // Step 2 — Push notifications
-  const [pushPermission, setPushPermission] = useState<
-    "default" | "granted" | "denied" | "unsupported"
-  >("unsupported");
-  const [enablingPush, setEnablingPush] = useState(false);
-
-  useEffect(() => {
-    if (typeof Notification !== "undefined") {
-      setPushPermission(
-        Notification.permission as "default" | "granted" | "denied",
-      );
-    }
-  }, []);
 
   // Handle return from YouTube OAuth import
   useEffect(() => {
@@ -727,46 +712,6 @@ export function OnboardingWizard({ referralCode }: Props) {
                     <div className="text-muted-foreground flex items-center justify-center gap-2 text-xs">
                       <Loader2 className="h-3 w-3 animate-spin" />
                       Waiting for connection...
-                    </div>
-                  )}
-                  {/* Push notification prompt */}
-                  {pushPermission === "default" && (
-                    <div className="nm-inset space-y-2 rounded-xl p-3">
-                      <p className="text-sm font-medium">
-                        Browser notifications
-                      </p>
-                      <p className="text-muted-foreground text-[11px]">
-                        Get notified the instant a new summary is ready
-                      </p>
-                      <button
-                        type="button"
-                        disabled={enablingPush}
-                        onClick={async () => {
-                          setEnablingPush(true);
-                          try {
-                            const permission =
-                              await Notification.requestPermission();
-                            if (permission === "granted") {
-                              await subscribeToPush();
-                              setPushPermission("granted");
-                              toast.success("Browser notifications enabled.");
-                            } else {
-                              setPushPermission(permission);
-                            }
-                          } catch {
-                            // ignore
-                          } finally {
-                            setEnablingPush(false);
-                          }
-                        }}
-                        className="nm-raised-sm hover:text-foreground flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all disabled:opacity-50"
-                        suppressHydrationWarning
-                      >
-                        {enablingPush ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : null}
-                        Enable notifications
-                      </button>
                     </div>
                   )}
                 </div>
