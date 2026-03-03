@@ -2,6 +2,12 @@
 
 ## 2026-03-03
 
+FEATURE: SEO — ajouter og:image + twitter:images dans blog article metadata pour le partage social
+FEATURE: SEO — ajouter BreadcrumbList schema JSON-LD sur /blog/[slug], /vs, /vs/[competitor]
+FEATURE: UX — remplacer header custom sticky par Navbar flottante partagée sur /vs et /vs/[competitor]
+FEATURE: UX — ajouter Footer sur /vs et /vs/[competitor] pour cohérence visuelle
+FEATURE: Content — ajouter 8 nouveaux pages de comparaison concurrents : Kagi Summarizer, Glasp, Merlin AI, TubeSummary, Mindgrasp, Tactiq, Podwise, Snipd
+FEATURE: SEO — ajouter JSON-LD ItemList et BreadcrumbList sur page channel et video pour améliorer la structuration des données
 FEATURE: Blog — ajouter 3 nouveaux articles : "summarize-youtube-videos-automatically", "youtube-as-podcast-audio-feed", "best-ai-tools-youtube-2026"
 FEATURE: Créer page publique /videos/[video_id] pour le SEO — affiche les résumés IA des vidéos YouTube avec métadonnées OpenGraph + JSON-LD VideoObject
 FEATURE: Mettre à jour sitemap.tsx — ajoute les 1000 dernières vidéos traitées à la génération du sitemap pour une meilleure indexation Google

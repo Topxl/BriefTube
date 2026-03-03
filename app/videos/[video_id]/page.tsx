@@ -104,11 +104,46 @@ export default async function VideoPage({ params }: Props) {
     embedUrl: `https://www.youtube.com/embed/${video_id}`,
   };
 
+  const breadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Home",
+        item: SiteConfig.prodUrl,
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Channels",
+        item: `${SiteConfig.prodUrl}/channels`,
+      },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name: channelName,
+        item: `${SiteConfig.prodUrl}/channels/${video.channel_id}`,
+      },
+      {
+        "@type": "ListItem",
+        position: 4,
+        name: video.video_title ?? "Video",
+        item: `${SiteConfig.prodUrl}/videos/${video_id}`,
+      },
+    ],
+  };
+
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
       />
 
       <div className="bg-background min-h-screen">
