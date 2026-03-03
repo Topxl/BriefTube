@@ -211,11 +211,9 @@ export default async function ChannelPage({ params }: Props) {
             const truncatedSummary = truncateSummary(video.summary);
 
             return (
-              <a
+              <Link
                 key={video.video_id}
-                href={youtubeUrl}
-                target="_blank"
-                rel="noopener noreferrer"
+                href={`/videos/${video.video_id}`}
                 className="nm-raised group overflow-hidden rounded-2xl p-4 transition-transform hover:scale-[1.02]"
               >
                 <div className="flex items-start gap-4">
@@ -239,12 +237,24 @@ export default async function ChannelPage({ params }: Props) {
                     <Typography variant="p" className="line-clamp-3 text-sm">
                       {truncatedSummary || "No summary available"}
                     </Typography>
-                    <Typography variant="muted" className="text-xs">
-                      Watch on YouTube
-                    </Typography>
+                    <div className="flex items-center gap-3">
+                      <Typography variant="muted" className="text-xs">
+                        Read AI summary
+                      </Typography>
+                      <a
+                        href={youtubeUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-muted-foreground/50 hover:text-muted-foreground inline-flex items-center gap-1 text-xs transition-colors"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        YouTube
+                      </a>
+                    </div>
                   </div>
                 </div>
-              </a>
+              </Link>
             );
           })}
         </div>
