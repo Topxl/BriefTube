@@ -15,11 +15,11 @@ export const landing = {
     menu: "Menu",
   },
   hero: {
-    badge: `Free up to ${FREE} channels — No credit card needed`,
+    badge: `Free up to ${FREE} channels. No credit card needed.`,
     heading: "Stay on top of your YouTube channels",
     headingHighlight: "without watching a single video",
     subtitle:
-      "Add your channels, connect your Telegram, and that's it. BriefTube tracks new uploads, summarizes them with AI, and sends you the audio — usually within a few minutes of the video going live.",
+      "Add your channels, connect your Telegram, and that's it. BriefTube tracks new uploads, summarizes them with AI, and sends you the audio, usually within a few minutes of the video going live.",
     ctaPrimary: "Get my summaries for free",
     ctaSecondary: "Try without signing up",
     socialProof: "No credit card · Cancel anytime · 7-day Pro trial",
@@ -41,7 +41,7 @@ export const landing = {
       {
         title: "Watching takes your full attention",
         description:
-          "On a commute, at the gym, cooking dinner — your ears are free but a 40-minute video isn't happening.",
+          "On a commute, at the gym, cooking dinner. Your ears are free but a 40-minute video isn't happening.",
       },
       {
         title: "You miss things that matter",
@@ -58,7 +58,7 @@ export const landing = {
       {
         title: "Add your channels",
         description:
-          "Paste a YouTube channel URL into the dashboard. That's all — no RSS setup, no API keys.",
+          "Paste a YouTube channel URL into the dashboard. That's all. No RSS setup, no API keys.",
       },
       {
         title: "AI reads each new video",
@@ -80,7 +80,7 @@ export const landing = {
       {
         title: "Summaries that go beyond the title",
         description:
-          "The AI covers the main arguments, examples, and takeaways — not just a rephrased headline.",
+          "The AI covers the main arguments, examples, and takeaways. Not just a rephrased headline.",
       },
       {
         title: "Audio that doesn't sound like a robot",
@@ -95,7 +95,7 @@ export const landing = {
       {
         title: "55 languages supported",
         description:
-          "English, French, Spanish, German, Japanese, Arabic and 49 more. Pick the one that works for you — Pro users can also choose the specific voice.",
+          "English, French, Spanish, German, Japanese, Arabic and 49 more. Pick the one that works for you. Pro users can also choose the specific voice.",
       },
       {
         title: "No channel limit on Pro",
@@ -117,7 +117,7 @@ export const landing = {
     submit: "Summarize",
     error: "An error occurred.",
     upsellText: "Want to receive this automatically as audio on Telegram?",
-    upsellCta: "Create a free account — 7-day Pro trial",
+    upsellCta: "Create a free account. 7-day Pro trial included.",
     hint: "3 free tries · Works on videos with subtitles",
   },
   pricing: {
@@ -160,7 +160,7 @@ export const landing = {
       {
         question: "How does it actually work?",
         answer:
-          "Each channel you follow gets checked automatically through YouTube's RSS feed. The moment a new video appears, BriefTube reads its transcript, generates a summary, converts it to audio, and sends it to your Telegram — usually within a few minutes. No manual steps on your end.",
+          "Each channel you follow gets checked automatically through YouTube's RSS feed. The moment a new video appears, BriefTube reads its transcript, generates a summary, converts it to audio, and sends it to your Telegram, usually within a few minutes. No manual steps on your end.",
       },
       {
         question: "",
@@ -170,17 +170,17 @@ export const landing = {
       {
         question: "Which languages work?",
         answer:
-          "French and English voices are available right now. More are in the pipeline. If you're on Pro, you can pick a specific voice — there are a few to choose from in each language.",
+          "French and English voices are available right now. More are in the pipeline. If you're on Pro, you can pick a specific voice. There are a few to choose from in each language.",
       },
       {
         question: "Do I need to set up a Telegram bot?",
         answer:
-          "No. You click a connect link, it opens @brief_tube_bot in Telegram, you send /start. That's the whole process — maybe 15 seconds if you type slowly.",
+          "No. You click a connect link, it opens @brief_tube_bot in Telegram, you send /start. That's the whole process, maybe 15 seconds if you type slowly.",
       },
       {
         question: "What happens if I cancel?",
         answer:
-          "You drop back to the free plan — your channels stay, your history stays, you just lose access to the Pro features. No cancellation fees, no awkward retention flows.",
+          "You drop back to the free plan. Your channels stay, your history stays, you just lose access to the Pro features. No cancellation fees, no awkward retention flows.",
       },
     ],
   },

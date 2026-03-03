@@ -153,7 +153,7 @@ export function Pricing() {
                     </div>
                     {plan.isPro && interval === "year" && (
                       <p className="text-muted-foreground mt-1 text-xs">
-                        Billed annually — equivalent to $
+                        Billed annually, equivalent to $
                         {priceData
                           ? Math.round(priceData.amount / 12 / 100)
                           : "7"}
