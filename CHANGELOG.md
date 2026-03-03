@@ -2,6 +2,8 @@
 
 ## 2026-03-03
 
+UX: Onboarding wizard — sélection de méthode de livraison plus visible : fond coloré + scale + checkmark en coin + texte/badge actifs selon la couleur de chaque plateforme
+
 PERF: noembed API — ajout AbortController 3s timeout + catch silencieux pour éviter que l'UI se bloque sur les titres manquants
 PERF: Onboarding Telegram polling — limite à 40 tentatives max (2 min) pour éviter les requêtes Supabase infinies
 PERF: lists/page — publicLists query intégrée dans Promise.all avec les 3 autres requêtes (4 requêtes parallèles au lieu de 3+1)
