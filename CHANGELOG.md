@@ -7,6 +7,8 @@ PERF: Landing — remplace <img> par Next.js <Image> dans Hero pour l'optimisati
 PERF: Landing — dynamic() imports pour les sections below-fold (Problem, HowItWorks, Demo, Features, Pricing, FAQ, FinalCTA, Footer) pour réduire le JS initial
 PERF: Layout — ajout de display:"swap" aux 3 Google Fonts (Inter, Space_Grotesk, Geist_Mono) pour améliorer FCP
 
+FIX: Sitemap — channels/ : ne liste plus que les channels avec au moins un résumé terminé (filtre sur lastSummaryByChannel), évite 400+ entrées 404 dans Google Search Console
+FEATURE: Blog — refonte style pour correspondre à l'identité visuelle du site : navbar flottante + footer partagés, cards nm-raised avec hover lift, badge catégorie rouge, article header nm-raised, CTA avec glow rouge, bouton retour avec ArrowLeft icon
 FEATURE: Dashboard — bannière push notifications non-intrusive : apparaît uniquement si permission === "default" et non dismissée (localStorage), bouton Enable + dismiss X, disparaît automatiquement après activation
 FIX: Onboarding — supprime le prompt de notifications push (causait le warning spam Chrome), remplacé par le banner dashboard ci-dessus
 
