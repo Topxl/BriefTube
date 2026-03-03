@@ -81,6 +81,7 @@ import {
   Bell as _Bell,
   BellOff as _BellOff,
   Megaphone as _Megaphone,
+  Globe as _Globe,
 } from "lucide-react";
 
 export type { LucideIcon, LucideProps } from "lucide-react";
@@ -166,3 +167,4 @@ export const Inbox = wrap(_Inbox);
 export const Bell = wrap(_Bell);
 export const BellOff = wrap(_BellOff);
 export const Megaphone = wrap(_Megaphone);
+export const Globe = wrap(_Globe);
