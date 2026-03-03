@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useCallback } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { t } from "@/locales";
@@ -201,11 +202,12 @@ export function Hero() {
                     className="nm-inset relative overflow-hidden rounded-xl p-3"
                   >
                     {/* Thumbnail background */}
-                    <img
+                    <Image
                       src={`https://img.youtube.com/vi/${demo.videoId}/hqdefault.jpg`}
                       alt=""
-                      aria-hidden
-                      className="absolute inset-0 h-full w-full object-cover opacity-[0.15]"
+                      fill
+                      sizes="384px"
+                      className="object-cover opacity-[0.15]"
                     />
 
                     {/* Hidden audio element — preload metadata for duration */}
