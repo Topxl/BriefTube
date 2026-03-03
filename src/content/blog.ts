@@ -206,4 +206,238 @@ export const articles: Article[] = [
 
 <p>Within a week, you'll see how much time this reclaims. And once you do, going back to checking YouTube manually feels impossible.</p>`,
   },
+
+  {
+    slug: "summarize-youtube-videos-automatically",
+    title: "How to Summarize YouTube Videos Automatically",
+    description:
+      "Watching every video from the channels you follow isn't realistic. Here's how to automatically generate AI summaries and get them delivered without lifting a finger.",
+    date: "2026-03-03",
+    readingTime: "5 min read",
+    category: "Guide",
+    content: `<p>You follow channels on YouTube because the content is valuable. But you don't follow them to spend eight hours a week watching. The math simply doesn't work — creators publish faster than you can consume.</p>
+
+<p>So what do you do? Most people create a backlog of unwatched videos, feel guilty about it, and end up watching nothing. Or they drift away from channels entirely, missing the content they actually cared about in the first place.</p>
+
+<p>The real solution isn't to watch less. It's to consume smarter. And the smartest way to consume YouTube without watching every minute is to summarize it automatically.</p>
+
+<h2>What "Automatic" Actually Means</h2>
+
+<p>There's a difference between on-demand summarization and true automation. On-demand is when you manually grab a video URL, paste it into a tool, and wait for a summary. That's helpful for one-off videos, but it doesn't solve the real problem: keeping up with channels you subscribe to.</p>
+
+<p>True automation means the system watches your subscribed channels, detects new videos the moment they drop, summarizes them without you doing anything, and delivers the summary somewhere you actually check — like Telegram or email.</p>
+
+<p>One requires you to remember. The other requires you to exist.</p>
+
+<h2>The Tools Worth Knowing</h2>
+
+<p>There are several approaches to YouTube summarization in 2026. Each has trade-offs.</p>
+
+<p><strong>Browser extensions</strong> like Eightify and Merlin let you summarize any video on demand. Click an icon, get a summary. Good for research and one-off videos, but they require you to remember to use them.</p>
+
+<p><strong>Web apps</strong> like NoteGPT let you paste URLs and get summaries plus notes. Better for organization, but still on-demand. You're still the trigger pulling the system.</p>
+
+<p><strong>Dedicated monitoring services</strong> like BriefTube sit in the background and watch your subscribed channels. New video? Automatic summary. Delivered to Telegram, waiting for you. No action required on your part.</p>
+
+<p>For actually keeping up with channels, the monitoring approach is the only one that works at scale.</p>
+
+<h2>The Fully Automated Approach</h2>
+
+<p>Here's how proper automation works: the system monitors RSS feeds for every channel you subscribe to. Every 5 minutes, it checks for new videos. When it finds one, it downloads it and extracts the audio — either from the YouTube caption track or by running speech-to-text if captions don't exist.</p>
+
+<p>Next, an AI model reads the transcript and generates a summary. Not a collection of bullet points, but a coherent summary that preserves the key ideas and the narrative flow. This summary gets converted into natural-sounding audio using neural text-to-speech voices.</p>
+
+<p>Finally, that audio file gets delivered to you — in your Telegram, as a voice message, waiting for you to tap play whenever you have 3-5 minutes.</p>
+
+<p>From video upload to summary in your Telegram: usually less than 30 minutes. Completely hands-off.</p>
+
+<h2>What to Expect</h2>
+
+<p>The quality of AI-generated summaries has gotten genuinely good. A Gemini-powered summary captures the essential insights, the supporting evidence, and the conclusion. It's not a substitution for watching the full video if you want every detail, but it's far better than watching nothing because you're overwhelmed.</p>
+
+<p>The audio quality depends on the TTS voice you choose. Modern neural voices sound natural — not robotic. You get to pick from 40+ voices across multiple languages. Listen to the actual summary while making breakfast, commuting, or folding laundry.</p>
+
+<p>Processing time is fast. Most summaries are ready within 20-30 minutes of a video going live. For educational and business content, that means you could know what a new Fireship tutorial or Y Combinator video is about before you've finished your morning coffee.</p>
+
+<p>Language support is extensive. If you follow English channels but want summaries in French? That works. Follow channels in multiple languages? Each can have its own summary language.</p>
+
+<h2>Setting It Up in 5 Minutes</h2>
+
+<p>The actual setup is trivial. Sign up with your Google account. Connect your Telegram. Add channels. That's it.</p>
+
+<p>Free accounts get 5 channels. Start with your absolute favorite creators — the ones you actually want to keep up with. See how the system works, whether the summaries match your expectations, whether the audio voices sound good to you.</p>
+
+<p>If it works (and it does), upgrade to Pro for unlimited channels. Then add everyone else.</p>
+
+<p>The entire setup takes five minutes. The understanding of how much time it saves takes a week.</p>
+
+<h2>Why This Works</h2>
+
+<p>The system works because it removes friction at every step. You don't need to remember to check channels. You don't need to open YouTube and hunt through your subscriptions. You don't need to sit and watch for 20 minutes. The system finds the content, makes it consumable, and delivers it to an app you already use constantly.</p>
+
+<p>That's the only way to keep up with dozens of channels at scale. Not by watching more. By making content consumption compatible with actual human life.</p>`,
+  },
+
+  {
+    slug: "youtube-as-podcast-audio-feed",
+    title:
+      "Treating YouTube Like a Podcast: How to Build an Audio Feed From Your Subscriptions",
+    description:
+      "The channels you follow on YouTube produce more valuable content than most podcasts. Here's how to consume them like one — automatically, as audio, without watching.",
+    date: "2026-03-06",
+    readingTime: "5 min read",
+    category: "Productivity",
+    content: `<p>Think about the YouTube channels you actually subscribe to. Huberman Lab. Fireship. Patrick Boyle. Lex Fridman. Y Combinator. Cold Fusion.</p>
+
+<p>Now think about the podcasts you listen to. Joe Rogan. Tim Ferriss. Naval Ravikant's interviews. The standard podcast lineup.</p>
+
+<p>Here's the uncomfortable truth: the YouTube channels are better. They have more rigorous information, deeper expertise, better production quality, and more interesting guests. So why are you listening to podcasts?</p>
+
+<p>Because the format works. Podcasts are passive. You hit play while commuting, cooking, running — and you consume value without staring at a screen. YouTube forces the screen. YouTube wins on quality and loses on format.</p>
+
+<h2>Why YouTube Channels Aren't Podcasts (But Should Be)</h2>
+
+<p>Andrew Huberman could be a podcast. His content is pure conversation and explanation — no visuals required. Fireship could be a podcast. Patrick Boyle on macroeconomics? Perfect podcast material. Lex Fridman's interviews are already practically podcasts.</p>
+
+<p>The creators of these channels would probably be thrilled if they could reach the podcast-listening audience. But they publish on YouTube because that's where the discovery is, where the algorithm rewards them, where the audience expects them to be.</p>
+
+<p>So the format constraint isn't a choice. It's a market reality.</p>
+
+<p>But you don't need to accept that constraint as a viewer. You can take the content you actually care about and consume it in the format that fits your life.</p>
+
+<h2>The Problem With YouTube's Native Audio Features</h2>
+
+<p>YouTube Premium lets you play videos with the screen off. It's supposed to be the "podcast mode" solution. But it's genuinely limited.</p>
+
+<p>First, you need a YouTube Premium subscription. Second, you still need to manually open the app, find the channel, wait for the video to load, and tap play. It's not push-based. It's still pull-based, on YouTube's schedule, requiring your active participation.</p>
+
+<p>Third, there's no curation. You get the full video. A 2-hour Huberman episode. A 40-minute Lex Fridman interview. You're still consuming the entire thing, just without the visual component. The length problem doesn't go away.</p>
+
+<p>And fourth, most importantly: there's no way to batch this. No way to subscribe to a feed of summaries. No way to have your Telegram fill up with audio summaries the moment new content drops. YouTube's audio-only mode is just video consumption with your eyes closed.</p>
+
+<h2>How to Build Your Own YouTube Audio Feed</h2>
+
+<p>The solution is to build a system that treats YouTube like a podcast platform. Here's how it works:</p>
+
+<p>You subscribe to channels in a monitoring service. The service watches for new uploads. When a video drops, it extracts the key ideas into a summary — short enough to listen to while commuting (3-5 minutes), comprehensive enough to actually understand what the video was about. It converts that summary to audio. And it delivers the audio to you via Telegram.</p>
+
+<p>Suddenly, your YouTube subscriptions behave like a podcast feed. New episodes arrive in Telegram as voice messages. You tap play during your commute or workout. You catch up on valuable content without the time investment of watching.</p>
+
+<p>The system learns your preferences. Your TTS voice. Your summary length. Your preferred language. Over time, it becomes personalized to how you like to consume information.</p>
+
+<h2>Which Channels Work Best for This Format</h2>
+
+<p>Not every YouTube channel works well as an audio-only experience. Visual channels like filmmaking tutorials or travel vlogs lose most of their value without the video component.</p>
+
+<p>But educational channels? They're perfect. Huberman Lab. 3Blue1Brown. Kurzgesagt (concepts are more important than the animation). Thomas Frank on productivity. Ali Abdaal. Cold Fusion. Patrick Boyle. Fireship. Y Combinator.</p>
+
+<p>These channels are built on information and explanation, not visuals. The audio alone carries 90% of the value.</p>
+
+<p>Business and research channels work even better. A researcher explaining their findings doesn't need video. An entrepreneur talking about fundraising doesn't need slides. The conversation is the content.</p>
+
+<p>What doesn't work: channels where the visual component is essential. Gaming streams. Music videos. Vlogs where the visuals are the attraction. But for the knowledge-focused channels that probably make up 80% of your subscriptions? The audio format actually improves the experience.</p>
+
+<h2>The Real Shift: From Viewer to Listener</h2>
+
+<p>This isn't just a format change. It's a fundamental shift in your relationship to content. You're no longer "watching YouTube." You're listening to an audio feed of valuable information. It becomes part of your routine, like podcasts, because it works like podcasts.</p>
+
+<p>You don't need to block out 20 minutes to start a Huberman episode. You tap play while making breakfast and absorb the summary. If it's interesting, you can watch the full video later. If it's not, you've saved an hour and forty minutes.</p>
+
+<p>That shift in power — from the creator controlling your time to you controlling the consumption format — is everything.</p>
+
+<h2>Why This Is the Future of Content Consumption</h2>
+
+<p>The creators you follow are producing better content than traditional media. But traditional media won (for now) in one dimension: format flexibility. Podcasts beat YouTube on consumption convenience.</p>
+
+<p>The internet is slowly collapsing that difference. Services that monitor YouTube channels, summarize content, and deliver it in accessible formats are the missing link. They're not stealing from creators or devaluing content. They're removing the friction between great content and people who want to consume it in a format that fits their actual lives.</p>`,
+  },
+
+  {
+    slug: "best-ai-tools-youtube-2026",
+    title: "7 AI Tools That Change How You Use YouTube in 2026",
+    description:
+      "Whether you create, consume, or research YouTube content, AI has transformed what's possible. These are the tools actually worth using.",
+    date: "2026-03-10",
+    readingTime: "6 min read",
+    category: "AI Tools",
+    content: `<p>YouTube is the largest library of free knowledge ever created. And AI has turned it from an overwhelming archive into an actually usable resource.</p>
+
+<p>Whether you're a creator optimizing your workflow, a consumer drowning in content, or a researcher trying to extract signal from noise, AI tools have changed what's possible. But not all of them are worth your time.</p>
+
+<p>Here are seven that actually deliver value.</p>
+
+<h2>1. BriefTube — Automatic Monitoring and Audio Delivery</h2>
+
+<p>BriefTube solves the core problem: keeping up with dozens of YouTube channels. It monitors RSS feeds for your subscribed channels, summarizes new videos with AI, converts summaries to natural-sounding audio, and delivers everything to Telegram automatically.</p>
+
+<p>The key phrase: you don't do anything. The system watches your channels and delivers summaries as they appear. Free tier gets you 5 channels. Pro tier gives unlimited channels, multi-language support, and customizable TTS voices.</p>
+
+<p>For anyone following more than 3 YouTube channels seriously, this tool is a time reclamation device. It turns video consumption from a 20-minute commitment into a 4-minute audio summary you can consume while doing literally anything else.</p>
+
+<h2>2. Eightify — On-Demand Summaries for Individual Videos</h2>
+
+<p>Eightify is a Chrome extension that gives you a summary button on every YouTube video. Click it, wait 30 seconds, get a summary with key points. Simple, immediate, no friction.</p>
+
+<p>It's best for: one-off research. You find a video that might be useful, want to know if it's worth 20 minutes of your time, and get the answer in seconds. Works great for due diligence before diving deep.</p>
+
+<p>The limitation: you need to remember to use it. It's pull-based, not push-based. Good for supplementing your main consumption, not for keeping up with channels at scale.</p>
+
+<h2>3. OpenAI Whisper — Transcription at Scale</h2>
+
+<p>Whisper is open-source speech-to-text that's genuinely good. For creators and researchers, this is invaluable: you can generate precise transcripts of your own content or of videos you're analyzing.</p>
+
+<p>Use cases: creators needing accurate captions for videos, researchers who want searchable transcripts of interviews, people building their own content analysis systems.</p>
+
+<p>Limitation: you need to know how to run it. It's not a web app with a button. But for technical users, it's the most accurate transcription tool available.</p>
+
+<h2>4. NoteGPT — Summaries Plus Personal Knowledge Base</h2>
+
+<p>NoteGPT lets you summarize YouTube videos, web articles, and PDFs — then organize those summaries into a personal knowledge base. It's designed for students and researchers who need to extract, organize, and retrieve information.</p>
+
+<p>Strength: organization. You can build project-specific knowledge bases, link related summaries, and actually retrieve them later. Great for research projects or deep learning initiatives.</p>
+
+<p>Limitation: still on-demand. You're still doing the work of pasting URLs and organizing content. It's a better filing system, not an automated pipeline.</p>
+
+<h2>5. Descript — Video Editing Via Transcription</h2>
+
+<p>Descript is for creators. Record a video, Descript transcribes it, you edit the video by editing text, and the final output is your edited video.</p>
+
+<p>For YouTube creators, this changes the edit workflow entirely. A 30-minute recording takes 5 minutes to edit — just delete the transcribed words you don't want, and the video cuts itself.</p>
+
+<p>It also works on other people's videos if you've downloaded them. Useful for creating clips or breakdowns of existing content for your own channel.</p>
+
+<h2>6. Kagi Universal Summarizer — Fast, Clean Summaries of Anything</h2>
+
+<p>Kagi's summarizer works on YouTube videos, articles, PDFs — any URL. Unlike Chrome extensions, it's a standalone service. Paste a URL, get a clean summary in seconds.</p>
+
+<p>Strength: speed and simplicity. No setup, no extensions, just a single tool that works on anything. Cleaner interface than most competitors.</p>
+
+<p>Works especially well for: researchers and people doing one-off research. Not designed for monitoring channels, but perfect for investigation mode.</p>
+
+<h2>7. YouTube's Native AI Features — Chapters and Auto-Generated Summaries</h2>
+
+<p>YouTube has started rolling out auto-generated chapters and summaries directly in the app. When a video drops, YouTube automatically generates sections and (in some regions) a text summary of key points.</p>
+
+<p>Strength: always available, built-in, no third-party tool required. As YouTube refines this, it becomes faster and more useful.</p>
+
+<p>Limitation: text-based summaries only, not audio. Available only in certain regions. And they're not personalized — you get YouTube's summary, not your preferred format or voice.</p>
+
+<h2>How to Choose: A Simple Matrix</h2>
+
+<p>Creators need Descript and Whisper. They're workflow tools, not consumption tools. They change how you make content.</p>
+
+<p>Casual YouTube watchers need Eightify and native YouTube summaries. Low friction, on-demand, good enough for occasional deep dives.</p>
+
+<p>Serious channel followers need BriefTube. You're following channels because the content matters. BriefTube's fully automated approach is the only way to keep up without dedicating hours to YouTube.</p>
+
+<p>Researchers need NoteGPT or Kagi depending on how much organization you need. If it's one-off research, Kagi. If you're building a knowledge base, NoteGPT.</p>
+
+<h2>The Age of Intelligent Consumption</h2>
+
+<p>Five years ago, YouTube was overwhelming because there was too much content and no way to filter it. Now, AI handles the filtering. The bottleneck has shifted from "finding the good stuff" to "consuming at human speed."</p>
+
+<p>Tools that solve that consumption bottleneck — tools that let you consume valuable content in a format that fits your life — are genuinely transformative. They're not magic. They're practical engineering. But they free up time, reduce anxiety about missing out, and make it possible to stay informed without it becoming a job.</p>
+
+<p>The creators making valuable content are still making it at the same rate. But you can now consume it at the pace that matches your actual life, not YouTube's designed-for-engagement pace. That shift — from passive overwhelm to active choice — is what AI-powered tools have delivered to YouTube consumption in 2026.</p>`,
+  },
 ];

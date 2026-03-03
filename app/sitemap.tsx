@@ -19,7 +19,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         .limit(500),
       supabase
         .from("processed_videos")
-        .select("channel_id, created_at")
+        .select("video_id, channel_id, created_at")
         .eq("status", "completed")
         .order("created_at", { ascending: false })
         .limit(1000),
@@ -116,6 +116,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         lastModified: new Date(lastSummaryByChannel[channelId]),
         changeFrequency: "daily" as const,
         priority: 0.5,
+      })),
+    // Programmatic video summary pages
+    ...(lastVideos ?? [])
+      .filter((v) => v.video_id)
+      .map((v) => ({
+        url: `${SiteConfig.prodUrl}/videos/${v.video_id}`,
+        lastModified: new Date(v.created_at ?? Date.now()),
+        changeFrequency: "never" as const,
+        priority: 0.6,
       })),
   ];
 }
