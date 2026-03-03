@@ -34,7 +34,7 @@ const plans = [
 
 export function Pricing() {
   const [prices, setPrices] = useState<PricesData | null>(null);
-  const [interval, setInterval] = useState<Interval>("year");
+  const [interval, setInterval] = useState<Interval>("month");
 
   useEffect(() => {
     fetch("/api/stripe/price")
