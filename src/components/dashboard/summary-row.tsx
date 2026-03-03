@@ -3,7 +3,7 @@
 import { useRef, useState, useCallback } from "react";
 import Image from "next/image";
 import { formatDate } from "@/lib/format";
-import { ChevronDown, ExternalLink, Play, Pause } from "@/lib/icons";
+import { ChevronDown, ExternalLink, Play } from "@/lib/icons";
 import { t } from "@/locales";
 
 const tl = t.dashboard.summaries;
@@ -36,6 +36,30 @@ function formatTime(seconds: number) {
   const m = Math.floor(seconds / 60);
   const s = Math.floor(seconds % 60);
   return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+const WAVEFORM_HEIGHTS = [0.5, 0.9, 0.65, 1, 0.55, 0.8, 0.4, 0.75, 0.6, 0.95];
+
+function AudioWaveform() {
+  return (
+    <div
+      className="flex items-center gap-[2px]"
+      style={{ height: "14px", width: "22px" }}
+    >
+      {WAVEFORM_HEIGHTS.map((h, i) => (
+        <div
+          key={i}
+          className="w-[2px] rounded-full bg-white"
+          style={{
+            height: `${h * 100}%`,
+            animation: "waveform 0.7s ease-in-out infinite",
+            animationDelay: `${i * 0.07}s`,
+            transformOrigin: "center",
+          }}
+        />
+      ))}
+    </div>
+  );
 }
 
 export function SummaryRow({
@@ -104,7 +128,11 @@ export function SummaryRow({
   }, []);
 
   return (
-    <div className="nm-raised overflow-hidden rounded-2xl">
+    <div
+      className={`nm-raised overflow-hidden rounded-2xl transition-all duration-200 hover:scale-[1.005] hover:shadow-md ${
+        playing ? "ring-1 ring-red-500/25" : ""
+      }`}
+    >
       {/* Main row: thumbnail + title + controls */}
       <div className="flex items-center gap-3 p-3">
         {/* Thumbnail with play overlay */}
@@ -121,9 +149,15 @@ export function SummaryRow({
             sizes="72px"
           />
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full border border-white/[0.1] bg-black/50 backdrop-blur-sm">
+            <div
+              className={`flex h-8 w-8 items-center justify-center rounded-full border border-white/[0.1] backdrop-blur-sm transition-all duration-200 ${
+                playing
+                  ? "bg-red-600/80 shadow-[0_0_12px_rgba(239,68,68,0.4)]"
+                  : "bg-black/50"
+              }`}
+            >
               {playing ? (
-                <Pause className="h-3 w-3 text-white" fill="white" />
+                <AudioWaveform />
               ) : (
                 <Play className="ml-px h-3 w-3 text-white" fill="white" />
               )}
@@ -208,7 +242,9 @@ export function SummaryRow({
             onClick={handleSeek}
           >
             <div
-              className="relative h-full rounded-full bg-red-500 transition-[width] duration-100"
+              className={`relative h-full rounded-full bg-red-500 transition-[width] duration-100 ${
+                playing ? "shadow-[0_0_8px_rgba(239,68,68,0.45)]" : ""
+              }`}
               style={{ width: `${progress}%` }}
             >
               <div className="absolute top-1/2 right-0 h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-white opacity-0 shadow-sm transition-opacity group-hover/bar:opacity-100" />

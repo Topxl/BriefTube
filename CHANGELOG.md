@@ -2,6 +2,13 @@
 
 ## 2026-03-03
 
+FEATURE: UX — effet wow post-import YouTube : afficher les résumés audio déjà traités avant de passer au step 2 de l'onboarding
+FEATURE: UX — waveform animée dans le player audio des summary-row (barres CSS keyframe)
+FEATURE: UX — skeleton loaders pulse sur les cards de résumés en cours de chargement
+FEATURE: UX — badge pulse rouge sur l'onglet Dashboard indiquant les nouveaux résumés des 24h
+
+FEATURE: Admin — section email analytics avec stat cards (total / 30j / campagnes), bar chart 14j et tableau breakdown par type de campagne (counts total + 30j + date dernier envoi)
+
 FEATURE: SEO — ajouter og:image + twitter:images dans blog article metadata pour le partage social
 FEATURE: SEO — ajouter BreadcrumbList schema JSON-LD sur /blog/[slug], /vs, /vs/[competitor]
 FEATURE: UX — remplacer header custom sticky par Navbar flottante partagée sur /vs et /vs/[competitor]
