@@ -131,8 +131,55 @@ export default async function ChannelPage({ params }: Props) {
     return text.split("\n").slice(0, lines).join("\n");
   };
 
+  const itemListLd = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: `${channelName} — AI Audio Summaries`,
+    description: `AI-generated summaries of ${channelName} videos, delivered as audio.`,
+    itemListElement: videos.map((v, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      url: `${SiteConfig.prodUrl}/videos/${v.video_id}`,
+      name: v.video_title ?? "Untitled Video",
+    })),
+  };
+
+  const breadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Home",
+        item: SiteConfig.prodUrl,
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Channels",
+        item: `${SiteConfig.prodUrl}/channels`,
+      },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name: channelName,
+        item: `${SiteConfig.prodUrl}/channels/${channel_id}`,
+      },
+    ],
+  };
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
+      />
+
       <header className="sticky top-0 z-40 border-b border-white/[0.06] backdrop-blur-2xl">
         <div className="mx-auto flex h-14 max-w-2xl items-center justify-between px-4">
           <Link href="/" className="flex items-center gap-2">
