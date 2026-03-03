@@ -15,7 +15,7 @@ export function GoogleLoginButton() {
     <Button
       onClick={handleGoogleLogin}
       disabled={isLoading}
-      className="w-full"
+      className="w-full bg-red-600 shadow-[0_0_24px_rgba(239,68,68,0.3)] hover:bg-red-500 active:bg-red-700"
       size="lg"
     >
       <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">
