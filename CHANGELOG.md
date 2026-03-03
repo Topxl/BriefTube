@@ -2,6 +2,9 @@
 
 ## 2026-03-03
 
+FEATURE: Blog — ajouter 3 nouveaux articles : "summarize-youtube-videos-automatically", "youtube-as-podcast-audio-feed", "best-ai-tools-youtube-2026"
+FEATURE: Créer page publique /videos/[video_id] pour le SEO — affiche les résumés IA des vidéos YouTube avec métadonnées OpenGraph + JSON-LD VideoObject
+FEATURE: Mettre à jour sitemap.tsx — ajoute les 1000 dernières vidéos traitées à la génération du sitemap pour une meilleure indexation Google
 PERF: Landing — cache "use cache: remote" + cacheLife("hours") sur SocialProof pour éviter les requêtes Supabase à chaque page load
 PERF: Landing — remplace <img> par Next.js <Image> dans Hero pour l'optimisation WebP et lazy loading
 PERF: Landing — dynamic() imports pour les sections below-fold (Problem, HowItWorks, Demo, Features, Pricing, FAQ, FinalCTA, Footer) pour réduire le JS initial
