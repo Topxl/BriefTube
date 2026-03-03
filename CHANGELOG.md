@@ -2,6 +2,10 @@
 
 ## 2026-03-03
 
+PERF: noembed API — ajout AbortController 3s timeout + catch silencieux pour éviter que l'UI se bloque sur les titres manquants
+PERF: Onboarding Telegram polling — limite à 40 tentatives max (2 min) pour éviter les requêtes Supabase infinies
+PERF: lists/page — publicLists query intégrée dans Promise.all avec les 3 autres requêtes (4 requêtes parallèles au lieu de 3+1)
+
 PERF: Navigation dashboard — supprime connection() (rendering dynamique forcé), ajoute staleTimes (dynamic:30s, static:180s) pour le router cache client, parallélise les requêtes Supabase avec Promise.all dans dashboard/page, profile/page et personal-stats
 
 ## 2026-03-02

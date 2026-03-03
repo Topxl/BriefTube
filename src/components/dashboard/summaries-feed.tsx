@@ -90,12 +90,21 @@ export function SummariesFeed() {
     const fetchTitle = async (videoId: string) => {
       const videoIdClean = videoId.replace(/[^a-zA-Z0-9_-]/g, "");
       if (!videoIdClean) return;
-      const res = await fetch(
-        `https://noembed.com/embed?url=https://www.youtube.com/watch?v=${videoIdClean}`,
-      );
-      const data = (await res.json()) as { title?: string };
-      if (data.title) {
-        setTitles((prev) => ({ ...prev, [videoId]: data.title ?? "" }));
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 3000);
+      try {
+        const res = await fetch(
+          `https://noembed.com/embed?url=https://www.youtube.com/watch?v=${videoIdClean}`,
+          { signal: controller.signal },
+        );
+        const data = (await res.json()) as { title?: string };
+        if (data.title) {
+          setTitles((prev) => ({ ...prev, [videoId]: data.title ?? "" }));
+        }
+      } catch {
+        // Timeout ou erreur réseau — on ignore silencieusement
+      } finally {
+        clearTimeout(timer);
       }
     };
 

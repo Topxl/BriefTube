@@ -43,34 +43,35 @@ export default async function DashboardListsPage({
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const [{ data: myLists }, { data: profileData }, { data: followedRaw }] =
-    await Promise.all([
-      supabase
+  const [
+    { data: myLists },
+    { data: profileData },
+    { data: followedRaw },
+    { data: publicLists },
+  ] = await Promise.all([
+    supabase
+      .from("channel_lists")
+      .select("id, name, category, list_channels(count)")
+      .eq("created_by", user.id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("profiles")
+      .select("referral_code")
+      .eq("id", user.id)
+      .single(),
+    supabase.from("list_follows").select("list_id").eq("user_id", user.id),
+    (() => {
+      const q = supabase
         .from("channel_lists")
-        .select("id, name, category, list_channels(count)")
-        .eq("created_by", user.id)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("profiles")
-        .select("referral_code")
-        .eq("id", user.id)
-        .single(),
-      supabase.from("list_follows").select("list_id").eq("user_id", user.id),
-    ]);
+        .select("id, name, category, list_channels(count), list_follows(count)")
+        .eq("is_public", true)
+        .neq("created_by", user.id);
+      return category ? q.eq("category", category) : q;
+    })(),
+  ]);
 
   const referralCode = profileData?.referral_code ?? null;
   const followedListIds = new Set((followedRaw ?? []).map((r) => r.list_id));
-
-  // Public discovery lists (excluding own)
-  const publicQuery = supabase
-    .from("channel_lists")
-    .select("id, name, category, list_channels(count), list_follows(count)")
-    .eq("is_public", true)
-    .neq("created_by", user.id);
-
-  const { data: publicLists } = category
-    ? await publicQuery.eq("category", category)
-    : await publicQuery;
 
   const allPublic = (publicLists ?? [])
     .map((l) => ({
