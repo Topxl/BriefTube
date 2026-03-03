@@ -43,23 +43,23 @@ function computeStreak(deliveryDays: Set<string>): number {
 export async function PersonalStats({ userId }: Props) {
   const supabase = await createClient();
 
-  // 1. All sent deliveries for this user
-  const { data: deliveries } = await supabase
-    .from("deliveries")
-    .select("sent_at, video_id")
-    .eq("user_id", userId)
-    .eq("status", "sent")
-    .order("sent_at", { ascending: false });
+  // 1+2. Fetch deliveries and subscriptions in parallel
+  const [{ data: deliveries }, { data: subscriptions }] = await Promise.all([
+    supabase
+      .from("deliveries")
+      .select("sent_at, video_id")
+      .eq("user_id", userId)
+      .eq("status", "sent")
+      .order("sent_at", { ascending: false }),
+    supabase
+      .from("subscriptions")
+      .select("channel_id, channel_name")
+      .eq("user_id", userId),
+  ]);
 
   if (!deliveries || deliveries.length === 0) return null;
 
-  // 2. All user subscriptions (for channel names — includes inactive to avoid falling back to ID)
-  const { data: subscriptions } = await supabase
-    .from("subscriptions")
-    .select("channel_id, channel_name")
-    .eq("user_id", userId);
-
-  // 3. Map video_id → channel_id via processed_videos
+  // 3. Map video_id → channel_id via processed_videos (needs deliveries first)
   const videoIds = [...new Set(deliveries.map((d) => d.video_id))];
   const { data: videos } = await supabase
     .from("processed_videos")

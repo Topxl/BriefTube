@@ -1,7 +1,14 @@
 # Changelog
 
+## 2026-03-03
+
+PERF: Navigation dashboard — supprime connection() (rendering dynamique forcé), ajoute staleTimes (dynamic:30s, static:180s) pour le router cache client, parallélise les requêtes Supabase avec Promise.all dans dashboard/page, profile/page et personal-stats
+
 ## 2026-03-02
 
+FIX: Deploy — pnpm onlyBuiltDependencies pour autoriser sharp/esbuild à compiler leurs bindings natifs (pnpm@10 les bloquait → crash Vercel à la phase "Deploying outputs")
+
+FEATURE: Onboarding wizard step 2 — replace mandatory Telegram with a delivery method picker (Telegram + Website available, Email/WhatsApp/Discord/Slack coming soon with PostHog vote tracking)
 FIX: Worker — live terminés : "This live event has ended" et "Requested format is not available" désormais détectés comme video_is_live (snooze 2h) au lieu de youtube_auth_required (3 retries inutiles) — dans transcript_extractor et whisper_transcriber (loop + proxy)
 
 ## 2026-02-28

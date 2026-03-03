@@ -18,13 +18,21 @@ export default async function ProfilePage(props: {
 
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select(
-      "subscription_status, trial_ends_at, stripe_customer_id, telegram_connected, tts_voice, preferred_language, max_channels, referral_code, notify_new_summaries_push, email_newsletter, email_announcements",
-    )
-    .eq("id", user.id)
-    .single();
+  const admin = createAdminClient();
+
+  const [{ data: profile }, { data: referralRows }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select(
+        "subscription_status, trial_ends_at, stripe_customer_id, telegram_connected, tts_voice, preferred_language, max_channels, referral_code, notify_new_summaries_push, email_newsletter, email_announcements",
+      )
+      .eq("id", user.id)
+      .single(),
+    supabase
+      .from("referrals")
+      .select("referee_id, status")
+      .eq("referrer_id", user.id),
+  ]);
 
   const isActivePro = profile?.subscription_status === "active";
 
@@ -39,14 +47,6 @@ export default async function ProfilePage(props: {
           (new Date(trialEndsAt).getTime() - new Date().getTime()) / 86400000,
         )
       : 0;
-
-  // Fetch referral stats (no personal data exposed)
-  const admin = createAdminClient();
-
-  const { data: referralRows } = await supabase
-    .from("referrals")
-    .select("referee_id, status")
-    .eq("referrer_id", user.id);
 
   const refereeIds = (referralRows ?? []).map((r) => r.referee_id);
 

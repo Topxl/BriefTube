@@ -1,7 +1,6 @@
 import { SiteConfig } from "@/site-config";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { connection } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { SummariesFeed } from "@/components/dashboard/summaries-feed";
 import { SummariesFeedSkeleton } from "@/components/dashboard/summaries-feed-skeleton";
@@ -11,10 +10,6 @@ import { SectionErrorBoundary } from "@/components/nowts/section-error-boundary"
 import { PersonalStats } from "@/components/dashboard/personal-stats";
 
 export default async function DashboardPage() {
-  // Force a live DB read — prevents any component/CDN cache from serving a
-  // stale onboarding_completed=false value and causing a redirect loop.
-  await connection();
-
   const supabase = await createClient();
   const {
     data: { user },
@@ -24,26 +19,26 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select(
-      "onboarding_completed, subscription_status, trial_ends_at, max_channels",
-    )
-    .eq("id", user.id)
-    .single();
+  const [{ data: profile }, { data: sources }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select(
+        "onboarding_completed, subscription_status, trial_ends_at, max_channels",
+      )
+      .eq("id", user.id)
+      .single(),
+    supabase
+      .from("subscriptions")
+      .select("*")
+      .eq("user_id", user.id)
+      .or("source_type.is.null,source_type.eq.youtube_channel")
+      .order("created_at", { ascending: false }),
+  ]);
 
   // Redirect new users to onboarding
   if (!profile?.onboarding_completed) {
     redirect("/onboarding");
   }
-
-  // Personal subscriptions only — exclude ghost subs from list follows
-  const { data: sources } = await supabase
-    .from("subscriptions")
-    .select("*")
-    .eq("user_id", user.id)
-    .or("source_type.is.null,source_type.eq.youtube_channel")
-    .order("created_at", { ascending: false });
 
   const isPro =
     profile.subscription_status === "active" ||

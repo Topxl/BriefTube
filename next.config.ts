@@ -4,6 +4,10 @@ const nextConfig: NextConfig = {
   trailingSlash: false,
   experimental: {
     authInterrupts: true,
+    staleTimes: {
+      dynamic: 30,
+      static: 180,
+    },
   },
   cacheComponents: true,
   typedRoutes: true,
