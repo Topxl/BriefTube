@@ -1,9 +1,8 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { X } from "@/lib/icons";
+import { Clock } from "@/lib/icons";
+import { Banner } from "@/components/nowts/banner";
 
 const STORAGE_KEY = "trial-banner-dismissed-at";
 const REDISPLAY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -56,40 +55,17 @@ export function TrialBanner({ daysLeft }: { daysLeft: number }) {
         : `${daysLeft} days left in your Pro trial`;
 
   return (
-    <div
-      className={`nm-raised flex items-center gap-2 rounded-2xl py-1.5 pr-1 pl-3 ${
-        isUrgent ? "bg-red-500/[0.08]" : "bg-amber-500/[0.05]"
-      }`}
-    >
-      <p
-        className={`min-w-0 flex-1 truncate text-xs ${isUrgent ? "text-muted-foreground" : "text-muted-foreground"}`}
-      >
-        <span
-          className={`font-medium ${isUrgent ? "text-red-400/90" : "text-amber-300/90"}`}
-        >
-          {isUrgent ? "Urgent:" : "Trial:"}
-        </span>{" "}
-        {message}
-      </p>
-      <Button
-        size="sm"
-        variant="ghost"
-        className={`h-6 shrink-0 px-2 text-xs ${
-          isUrgent
-            ? "text-red-400/80 hover:bg-red-500/10 hover:text-red-300"
-            : "text-amber-400/80 hover:bg-amber-500/10 hover:text-amber-300"
-        }`}
-        asChild
-      >
-        <Link href="/dashboard/billing?annual=true">Upgrade</Link>
-      </Button>
-      <button
-        onClick={dismiss}
-        className="text-muted-foreground/30 hover:text-muted-foreground flex h-6 w-6 shrink-0 items-center justify-center rounded transition-colors hover:bg-white/[0.06]"
-        title="Dismiss"
-      >
-        <X className="h-3 w-3" />
-      </button>
-    </div>
+    <Banner
+      variant={isUrgent ? "danger" : "warning"}
+      icon={
+        <Clock
+          className={`h-3.5 w-3.5 ${isUrgent ? "text-red-400/70" : "text-amber-300/70"}`}
+        />
+      }
+      title={isUrgent ? "Urgent:" : "Trial:"}
+      description={message}
+      action={{ label: "Upgrade", href: "/dashboard/billing?annual=true" }}
+      onDismiss={dismiss}
+    />
   );
 }

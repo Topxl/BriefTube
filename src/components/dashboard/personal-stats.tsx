@@ -57,7 +57,15 @@ export async function PersonalStats({ userId }: Props) {
       .eq("user_id", userId),
   ]);
 
-  if (!deliveries || deliveries.length === 0) return null;
+  if (!deliveries || deliveries.length === 0) {
+    return (
+      <div className="py-8 text-center">
+        <p className="text-muted-foreground text-xs">
+          Vos statistiques apparaîtront après vos premiers résumés.
+        </p>
+      </div>
+    );
+  }
 
   // 3. Map video_id → channel_id via processed_videos (needs deliveries first)
   const videoIds = [...new Set(deliveries.map((d) => d.video_id))];
@@ -117,7 +125,7 @@ export async function PersonalStats({ userId }: Props) {
 
   return (
     <div className="flex flex-col gap-3">
-      <h2 className="text-sm font-semibold">Your stats</h2>
+      <h2 className="text-base font-semibold">Your stats</h2>
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -127,7 +135,7 @@ export async function PersonalStats({ userId }: Props) {
             <Inbox className="text-muted-foreground/40 h-3.5 w-3.5" />
           </div>
           <p className="text-2xl font-bold tabular-nums">{thisMonth}</p>
-          <p className="text-muted-foreground text-[11px]">
+          <p className="text-muted-foreground text-xs">
             summaries received
           </p>
         </div>
@@ -138,7 +146,7 @@ export async function PersonalStats({ userId }: Props) {
             <TrendingUp className="text-muted-foreground/40 h-3.5 w-3.5" />
           </div>
           <p className="text-2xl font-bold tabular-nums">{total}</p>
-          <p className="text-muted-foreground text-[11px]">
+          <p className="text-muted-foreground text-xs">
             summaries received
           </p>
         </div>
@@ -149,7 +157,7 @@ export async function PersonalStats({ userId }: Props) {
             <Clock className="text-muted-foreground/40 h-3.5 w-3.5" />
           </div>
           <p className="text-2xl font-bold tabular-nums">{timeSaved}</p>
-          <p className="text-muted-foreground text-[11px]">
+          <p className="text-muted-foreground text-xs">
             vs watching in full
           </p>
         </div>
@@ -166,7 +174,7 @@ export async function PersonalStats({ userId }: Props) {
           >
             {streak}
           </p>
-          <p className="text-muted-foreground text-[11px]">
+          <p className="text-muted-foreground text-xs">
             {streak === 1 ? "day" : "days"} in a row
           </p>
         </div>
@@ -185,7 +193,7 @@ export async function PersonalStats({ userId }: Props) {
                 className="flex items-center justify-between px-4 py-2"
               >
                 <div className="flex min-w-0 items-center gap-2.5">
-                  <span className="text-muted-foreground/40 w-4 shrink-0 text-[11px] tabular-nums">
+                  <span className="text-muted-foreground/40 w-4 shrink-0 text-xs tabular-nums">
                     {i + 1}
                   </span>
                   <p className="truncate text-sm">{ch.name}</p>

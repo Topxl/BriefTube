@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/mail/send-email";
 import { ReferralTrialEmail } from "@/components/emails/referral-trial-email";
 import { logger } from "@/lib/logger";
+import { SiteConfig } from "@/site-config";
 
 export type RunResult = {
   sent: number;
@@ -124,16 +125,22 @@ async function processReferralEmailType(type: EmailType): Promise<RunResult> {
           : `${referrerName} is on BriefTube Pro. Your trial ends in ${daysLeft} days`;
 
       // eslint-disable-next-line no-await-in-loop
+      const { data: log } = await admin
+        .from("email_logs")
+        .insert({ user_id: user.id, email_type: type })
+        .select("id")
+        .single();
+
+      const trackingPixelUrl = log?.id
+        ? `${SiteConfig.prodUrl}/api/email/track/${log.id}`
+        : undefined;
+
+      // eslint-disable-next-line no-await-in-loop
       await sendEmail({
         to: user.email,
         subject,
-        html: ReferralTrialEmail({ daysLeft, referrerName }),
+        html: ReferralTrialEmail({ daysLeft, referrerName, trackingPixelUrl }),
       });
-
-      // eslint-disable-next-line no-await-in-loop
-      await admin
-        .from("email_logs")
-        .insert({ user_id: user.id, email_type: type });
 
       result.sent++;
       logger.info("Referral trial email sent", {

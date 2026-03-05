@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { runTrialReminders } from "@/lib/cron/trial-reminders";
 import type { TrialRemindersResult } from "@/lib/cron/trial-reminders";
@@ -50,4 +50,31 @@ export async function triggerReferralTrialEmails(): Promise<ReferralTrialResult>
 export async function triggerOnboardingApologyEmails(): Promise<RunResult> {
   await requireAdmin();
   return runOnboardingApologyEmails();
+}
+
+export async function extendAllTrialsTo30Days(): Promise<{ updated: number }> {
+  await requireAdmin();
+  const admin = createAdminClient();
+
+  const { data: profiles, error } = await admin
+    .from("profiles")
+    .select("id, created_at")
+    .not("trial_ends_at", "is", null);
+
+  if (error) throw new Error(error.message);
+
+  const toUpdate = profiles.filter((p) => p.created_at !== null);
+
+  await Promise.all(
+    toUpdate.map((profile) => {
+      const trialEnd = new Date(profile.created_at as string);
+      trialEnd.setDate(trialEnd.getDate() + 30);
+      return admin
+        .from("profiles")
+        .update({ trial_ends_at: trialEnd.toISOString() })
+        .eq("id", profile.id);
+    }),
+  );
+
+  return { updated: toUpdate.length };
 }

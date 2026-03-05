@@ -3,6 +3,7 @@ import { sendEmail } from "@/lib/mail/send-email";
 import { founderEmail, p, signature } from "@/lib/mail/founder-email";
 import { logger } from "@/lib/logger";
 import { env } from "@/lib/env";
+import { SiteConfig } from "@/site-config";
 
 // Detection window: signed up between 12h and 36h ago (center at 24h, ±12h)
 function getSignupWindow(): { from: Date; to: Date } {
@@ -57,6 +58,17 @@ export async function runActivationEmails(): Promise<RunResult> {
     }
 
     try {
+      // eslint-disable-next-line no-await-in-loop
+      const { data: log } = await admin
+        .from("email_logs")
+        .insert({ user_id: user.id, email_type: "activation_telegram" })
+        .select("id")
+        .single();
+
+      const trackingPixel = log?.id
+        ? `<img src="${SiteConfig.prodUrl}/api/email/track/${log.id}" width="1" height="1" style="display:none" />`
+        : "";
+
       const html = founderEmail(
         p("Hey,") +
           p(
@@ -74,7 +86,8 @@ export async function runActivationEmails(): Promise<RunResult> {
           p(
             "If you want to give it a try, connecting Telegram takes 30 seconds: <a href='https://www.brief-tube.com/dashboard' style='color:#1a1a1a;'>brief-tube.com/dashboard</a>",
           ) +
-          signature(),
+          signature() +
+          trackingPixel,
       );
 
       // eslint-disable-next-line no-await-in-loop
@@ -85,11 +98,6 @@ export async function runActivationEmails(): Promise<RunResult> {
         subject: "Quick question about your BriefTube account",
         html,
       });
-
-      // eslint-disable-next-line no-await-in-loop
-      await admin
-        .from("email_logs")
-        .insert({ user_id: user.id, email_type: "activation_telegram" });
 
       result.sent++;
       logger.info("Activation email sent", { userId: user.id });

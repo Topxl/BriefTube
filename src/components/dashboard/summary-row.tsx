@@ -174,12 +174,12 @@ export function SummaryRow({
             {title ?? tl.untitledVideo}
           </p>
           <div className="mt-1 flex items-center gap-2">
-            <span className="text-muted-foreground text-[11px]">
+            <span className="text-muted-foreground text-xs">
               {delivery.created_at ? formatDate(delivery.created_at) : ""}
             </span>
             {video && video.status !== "completed" && (
               <span
-                className={`rounded-full px-1.5 py-px text-[9px] font-medium ${
+                className={`rounded-full px-1.5 py-px text-[10px] font-medium ${
                   video.status === "failed"
                     ? "bg-red-500/20 text-red-400"
                     : "bg-yellow-500/20 text-yellow-400"
@@ -191,7 +191,7 @@ export function SummaryRow({
               </span>
             )}
             {!video && (
-              <span className="rounded-full bg-yellow-500/20 px-1.5 py-px text-[9px] font-medium text-yellow-400">
+              <span className="rounded-full bg-yellow-500/20 px-1.5 py-px text-[10px] font-medium text-yellow-400">
                 {tl.statusProcessing}
               </span>
             )}

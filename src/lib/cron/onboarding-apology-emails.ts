@@ -3,6 +3,7 @@ import { sendEmail } from "@/lib/mail/send-email";
 import { founderEmail, p, signature } from "@/lib/mail/founder-email";
 import { logger } from "@/lib/logger";
 import { env } from "@/lib/env";
+import { SiteConfig } from "@/site-config";
 
 const ADMIN_USER_ID = "67320a39-948c-44d2-98e3-c0de49af1ec6";
 
@@ -52,6 +53,17 @@ export async function runOnboardingApologyEmails(): Promise<RunResult> {
     }
 
     try {
+      // eslint-disable-next-line no-await-in-loop
+      const { data: log } = await admin
+        .from("email_logs")
+        .insert({ user_id: user.id, email_type: "onboarding_apology" })
+        .select("id")
+        .single();
+
+      const trackingPixel = log?.id
+        ? `<img src="${SiteConfig.prodUrl}/api/email/track/${log.id}" width="1" height="1" style="display:none" />`
+        : "";
+
       const html = founderEmail(
         p("Hey,") +
           p(
@@ -67,7 +79,8 @@ export async function runOnboardingApologyEmails(): Promise<RunResult> {
             "If you get a chance to try it and have any feedback, good or bad, I'd genuinely love to hear it. Just hit reply.",
           ) +
           p("Thank you for signing up, and sorry again for the trouble.") +
-          signature(),
+          signature() +
+          trackingPixel,
       );
 
       // eslint-disable-next-line no-await-in-loop
@@ -78,11 +91,6 @@ export async function runOnboardingApologyEmails(): Promise<RunResult> {
         subject: "Sorry, your BriefTube account is now working",
         html,
       });
-
-      // eslint-disable-next-line no-await-in-loop
-      await admin
-        .from("email_logs")
-        .insert({ user_id: user.id, email_type: "onboarding_apology" });
 
       result.sent++;
       logger.info("Onboarding apology email sent", { userId: user.id });

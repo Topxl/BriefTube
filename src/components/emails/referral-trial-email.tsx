@@ -6,6 +6,7 @@ import {
   Heading,
   Hr,
   Html,
+  Img,
   Preview,
   Text,
 } from "@react-email/components";
@@ -13,9 +14,14 @@ import {
 type Props = {
   daysLeft: number;
   referrerName: string;
+  trackingPixelUrl?: string;
 };
 
-export function ReferralTrialEmail({ daysLeft, referrerName }: Props) {
+export function ReferralTrialEmail({
+  daysLeft,
+  referrerName,
+  trackingPixelUrl,
+}: Props) {
   const isLastDay = daysLeft <= 1;
 
   const previewText = isLastDay
@@ -116,6 +122,9 @@ export function ReferralTrialEmail({ daysLeft, referrerName }: Props) {
             BriefTube · YouTube, summarized as audio
           </Text>
         </Container>
+        {trackingPixelUrl && (
+          <Img src={trackingPixelUrl} width={1} height={1} alt="" />
+        )}
       </Body>
     </Html>
   );
