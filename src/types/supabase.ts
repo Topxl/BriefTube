@@ -152,18 +152,21 @@ export type Database = {
           id: string;
           sent_at: string;
           user_id: string;
+          opened_at: string | null;
         };
         Insert: {
           email_type: string;
           id?: string;
           sent_at?: string;
           user_id: string;
+          opened_at?: string | null;
         };
         Update: {
           email_type?: string;
           id?: string;
           sent_at?: string;
           user_id?: string;
+          opened_at?: string | null;
         };
         Relationships: [
           {

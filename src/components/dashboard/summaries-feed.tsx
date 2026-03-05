@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Inbox } from "@/lib/icons";
 import { SummaryRow } from "@/components/dashboard/summary-row";
 import { t } from "@/locales";
 import type {
@@ -130,7 +131,17 @@ export function SummariesFeed() {
   }, [deliveries]);
 
   if (!loading && deliveries.length === 0) {
-    return null;
+    return (
+      <div className="py-12 text-center">
+        <div className="nm-inset mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl">
+          <Inbox className="text-muted-foreground/50 h-4 w-4" />
+        </div>
+        <p className="text-sm font-medium">Aucun résumé pour l'instant</p>
+        <p className="text-muted-foreground mt-1 text-xs">
+          Ajoutez des chaînes YouTube pour recevoir vos premiers résumés audio.
+        </p>
+      </div>
+    );
   }
 
   return (

@@ -14,7 +14,7 @@ type Props = {
   trialDays?: number;
 };
 
-export function WelcomeEmail({ trialDays = 7 }: Props) {
+export function WelcomeEmail({ trialDays = 30 }: Props) {
   return (
     <Html>
       <Head />

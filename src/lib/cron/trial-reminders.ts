@@ -3,6 +3,7 @@ import { sendEmail } from "@/lib/mail/send-email";
 import { TrialReminderEmail } from "@/components/emails/trial-reminder-email";
 import { TrialExpiredEmail } from "@/components/emails/trial-expired-email";
 import { logger } from "@/lib/logger";
+import { SiteConfig } from "@/site-config";
 
 type EmailType = "trial_reminder_j3" | "trial_reminder_j1" | "trial_expired";
 
@@ -77,15 +78,24 @@ async function getUsersInWindow(
   return { users, alreadySentIds };
 }
 
-async function recordEmailSent(userId: string, type: EmailType): Promise<void> {
+async function insertEmailLog(
+  userId: string,
+  type: EmailType,
+): Promise<string | null> {
   const admin = createAdminClient();
-  await admin
+  const { data } = await admin
     .from("email_logs")
     .insert({ user_id: userId, email_type: type })
-    .throwOnError();
+    .select("id")
+    .single();
+  return data?.id ?? null;
 }
 
-async function sendTrialEmail(user: TrialUser, type: EmailType): Promise<void> {
+async function sendTrialEmail(
+  user: TrialUser,
+  type: EmailType,
+  trackingPixelUrl?: string,
+): Promise<void> {
   const trialEndsAt = new Date(user.trial_ends_at);
   const daysLeft = Math.ceil((trialEndsAt.getTime() - Date.now()) / 86_400_000);
 
@@ -93,7 +103,7 @@ async function sendTrialEmail(user: TrialUser, type: EmailType): Promise<void> {
     await sendEmail({
       to: user.email,
       subject: "Your BriefTube trial has ended",
-      html: TrialExpiredEmail(),
+      html: TrialExpiredEmail({ trackingPixelUrl }),
     });
   } else {
     await sendEmail({
@@ -102,7 +112,7 @@ async function sendTrialEmail(user: TrialUser, type: EmailType): Promise<void> {
         daysLeft <= 1
           ? "Your BriefTube trial ends tomorrow"
           : `Your BriefTube trial ends in ${daysLeft} days`,
-      html: TrialReminderEmail({ daysLeft }),
+      html: TrialReminderEmail({ daysLeft, trackingPixelUrl }),
     });
   }
 }
@@ -118,11 +128,14 @@ async function processEmailType(type: EmailType): Promise<RunResult> {
     }
 
     try {
-      // Sequential: ensures send+record atomicity and respects Resend rate limits
+      // Insert log first to get tracking ID, then send
       // eslint-disable-next-line no-await-in-loop
-      await sendTrialEmail(user, type);
+      const logId = await insertEmailLog(user.id, type);
+      const trackingPixelUrl = logId
+        ? `${SiteConfig.prodUrl}/api/email/track/${logId}`
+        : undefined;
       // eslint-disable-next-line no-await-in-loop
-      await recordEmailSent(user.id, type);
+      await sendTrialEmail(user, type, trackingPixelUrl);
       result.sent++;
       logger.info(`Trial email sent`, { type, userId: user.id });
     } catch (err) {

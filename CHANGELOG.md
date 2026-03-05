@@ -2,6 +2,12 @@
 
 ## 2026-03-06
 
+FEATURE: Admin — ajout du proxy YouTube (Webshare) dans le health check des services (détecte quota épuisé 402)
+FIX: Lists — avatars manquants résolus via after() qui scrape YouTube et sauvegarde en base ; fallback immédiat ui-avatars.com (à la place du div rouge custom)
+FIX: Lists — avatars des chaînes résolus depuis la table subscriptions quand channel_avatar_url est null dans list_channels
+PERF: Import YouTube — pré-marquage RSS déplacé en tâche de fond via after() : redirect immédiate au lieu d'attendre 15-30s pour 100+ chaînes
+FEATURE: Onboarding — remplace le wizard pleine page par un module "Get started" inline dans le dashboard (disparaît automatiquement quand channel + Telegram sont configurés)
+REFACTOR: /onboarding redirige désormais vers /dashboard ; onboarding-wizard.tsx supprimé
 FIX: Worker — transcript_source, transcript_length, summary_length, source_language, processing_time_s correctement sauvegardés en base (étaient dans le JSON metadata au lieu des vraies colonnes)
 REFACTOR: Dashboard — Sources section simplifiée : pills All/Active/Paused toujours visibles dans le header, import YouTube réduit à une icône, boutons bulk supprimés, Trash visible au hover uniquement
 REFACTOR: Dashboard — bouton bulk unique intelligent : "Activate all" si des chaînes sont en pause, "Pause all" si toutes sont actives (remplace "All on" / "All off")

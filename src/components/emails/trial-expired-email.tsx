@@ -6,11 +6,16 @@ import {
   Heading,
   Hr,
   Html,
+  Img,
   Preview,
   Text,
 } from "@react-email/components";
 
-export function TrialExpiredEmail() {
+type Props = {
+  trackingPixelUrl?: string;
+};
+
+export function TrialExpiredEmail({ trackingPixelUrl }: Props = {}) {
   return (
     <Html>
       <Head />
@@ -98,6 +103,9 @@ export function TrialExpiredEmail() {
             BriefTube · YouTube, summarized as audio
           </Text>
         </Container>
+        {trackingPixelUrl && (
+          <Img src={trackingPixelUrl} width={1} height={1} alt="" />
+        )}
       </Body>
     </Html>
   );

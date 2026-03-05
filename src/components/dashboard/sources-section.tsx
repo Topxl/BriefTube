@@ -4,19 +4,11 @@ import { useState } from "react";
 import Image from "next/image";
 import { useQueryState } from "nuqs";
 import { createClient } from "@/lib/supabase/client";
-import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import {
-  Youtube,
-  Pause,
-  Play,
-  Trash2,
-  ChevronDown,
-  ListFilter,
-  Loader2,
-} from "@/lib/icons";
+import { Youtube, Trash2, ChevronDown, TriangleAlertIcon } from "@/lib/icons";
 import { dialogManager } from "@/features/dialog-manager/dialog-manager";
 import { openUpsellModal } from "@/components/dashboard/upsell-modal";
+import { Banner } from "@/components/nowts/banner";
 import type { Tables } from "@/types/supabase";
 
 type Subscription = Tables<"subscriptions">;
@@ -32,13 +24,15 @@ type Props = {
 
 function SourceRow({
   source,
+  selected,
+  onSelect,
   onToggle,
-  onRemove,
   searchQuery,
 }: {
   source: Subscription;
+  selected: boolean;
+  onSelect: (id: string) => void;
   onToggle: (source: Subscription) => void;
-  onRemove: (id: string, name: string) => void;
   searchQuery: string;
 }) {
   const name = source.channel_name;
@@ -61,85 +55,113 @@ function SourceRow({
 
   return (
     <div
-      className={`group flex items-center justify-between px-4 py-2.5 transition-colors hover:bg-white/[0.02] ${
-        !source.active ? "opacity-40" : ""
+      className={`group flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-white/[0.02] ${
+        selected ? "bg-white/[0.04]" : ""
       }`}
     >
-      <div className="flex min-w-0 items-center gap-3">
+      {/* Avatar — cliquable pour sélectionner */}
+      <button
+        onClick={() => onSelect(source.id)}
+        aria-label={selected ? "Deselect" : "Select"}
+        className="relative shrink-0 cursor-pointer rounded-full transition-all"
+      >
         {source.channel_avatar_url ? (
           <Image
             src={source.channel_avatar_url}
             alt={source.channel_name}
             width={32}
             height={32}
-            className="h-8 w-8 shrink-0 rounded-full"
+            className={`h-8 w-8 rounded-full transition-all ${
+              !source.active && !selected ? "opacity-35" : ""
+            } ${selected ? "opacity-50" : ""}`}
             suppressHydrationWarning
           />
         ) : (
-          <div className="bg-muted flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
+          <div
+            className={`bg-muted flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold transition-all ${
+              !source.active && !selected ? "opacity-35" : ""
+            } ${selected ? "opacity-50" : ""}`}
+          >
             {source.channel_name.charAt(0).toUpperCase()}
           </div>
         )}
-        <div className="min-w-0">
-          <p className="truncate text-sm font-medium">{nameEl}</p>
-          <a
-            href={`https://www.youtube.com/channel/${source.channel_id}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-muted-foreground/60 hover:text-muted-foreground text-[11px] transition-colors"
-          >
-            YouTube
-          </a>
-        </div>
+
+        {/* Overlay checkmark quand sélectionné */}
+        {selected ? (
+          <span className="bg-foreground/80 text-background absolute inset-0 flex items-center justify-center rounded-full text-[11px] font-bold">
+            ✓
+          </span>
+        ) : (
+          /* Hint hover — cercle subtil pour indiquer que c'est sélectionnable */
+          <span className="absolute inset-0 rounded-full bg-white/0 transition-colors group-hover:bg-white/10" />
+        )}
+      </button>
+
+      {/* Info */}
+      <div className="min-w-0 flex-1">
+        <p
+          className={`truncate text-sm font-medium ${
+            !source.active ? "text-muted-foreground/50" : ""
+          }`}
+        >
+          {nameEl}
+        </p>
+        <a
+          href={`https://www.youtube.com/channel/${source.channel_id}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-muted-foreground/40 hover:text-muted-foreground text-[11px] transition-colors"
+        >
+          YouTube
+        </a>
       </div>
 
-      <div className="ml-2 flex shrink-0 items-center gap-1">
-        <button
-          onClick={() => onToggle(source)}
-          className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
+      {/* Status toggle */}
+      <button
+        onClick={() => onToggle(source)}
+        className={`group/toggle flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-medium transition-all ${
+          source.active
+            ? "hover:text-muted-foreground/50 border-green-500/20 text-green-500/60 hover:border-white/10"
+            : "text-muted-foreground/40 hover:text-foreground/60 border-white/[0.07] hover:border-white/10"
+        }`}
+      >
+        <span
+          className={`h-1.5 w-1.5 rounded-full transition-colors ${
             source.active
-              ? "text-muted-foreground/50 hover:text-muted-foreground hover:bg-white/[0.06]"
-              : "text-muted-foreground/25 hover:text-muted-foreground/60 hover:bg-white/[0.06]"
+              ? "group-hover/toggle:bg-muted-foreground/40 bg-green-500/60"
+              : "bg-muted-foreground/25 group-hover/toggle:bg-green-500/50"
           }`}
-          title={source.active ? "Pause summaries" : "Activate summaries"}
-        >
-          {source.active ? (
-            <Pause className="h-3.5 w-3.5" />
-          ) : (
-            <Play className="h-3.5 w-3.5" />
-          )}
-        </button>
-        <button
-          className="text-muted-foreground/25 flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-red-500/10 hover:text-red-400"
-          onClick={() => onRemove(source.id, source.channel_name)}
-          title="Remove channel"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
-      </div>
+        />
+        <span className="group-hover/toggle:hidden">
+          {source.active ? "Active" : "Paused"}
+        </span>
+        <span className="hidden group-hover/toggle:inline">
+          {source.active ? "Pause" : "Activate"}
+        </span>
+      </button>
     </div>
   );
 }
 
 export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
   const [sources, setSources] = useState<Subscription[]>(initialSources);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
-  const [collapsed, setCollapsed] = useState(false);
-  const [showFilter, setShowFilter] = useState(false);
   const [filterStatus, setFilterStatus] = useState<"all" | "active" | "paused">(
     "all",
-  );
-  const [bulkLoading, setBulkLoading] = useState<"activate" | "pause" | null>(
-    null,
   );
   const [q] = useQueryState("q", { defaultValue: "", shallow: true });
   const supabase = createClient();
 
+  // Stable display order — active first, paused last — fixed at mount, never re-sorted
+  const [displayedIds] = useState<string[]>(() => [
+    ...initialSources.filter((s) => s.active).map((s) => s.id),
+    ...initialSources.filter((s) => !s.active).map((s) => s.id),
+  ]);
+
   const activeCount = sources.filter((s) => s.active).length;
-  const pausedCount = sources.length - activeCount;
   const atActiveLimit = !isPro && activeCount >= maxChannels;
 
-  // Ignore YouTube URLs in the search filter (they're handled by ChannelSearchBar)
   const isYouTubeQ =
     q.includes("youtube.com") ||
     q.includes("youtu.be") ||
@@ -147,16 +169,16 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
     /^UC[\w-]{10,}$/.test(q);
   const searchNorm = q.trim().length > 0 && !isYouTubeQ ? q.toLowerCase() : "";
 
-  // Active first, then paused — preserving insertion order within each group
-  const sortedSources = [
-    ...sources.filter((s) => s.active),
-    ...sources.filter((s) => !s.active),
-  ];
+  // Build ordered list using the stable display order
+  const sourcesMap = new Map(sources.map((s) => [s.id, s]));
+  const orderedSources = displayedIds
+    .map((id) => sourcesMap.get(id))
+    .filter((s): s is Subscription => s !== undefined);
 
   const filteredByStatus =
     filterStatus === "all"
-      ? sortedSources
-      : sortedSources.filter((s) =>
+      ? orderedSources
+      : orderedSources.filter((s) =>
           filterStatus === "active" ? s.active : !s.active,
         );
 
@@ -168,25 +190,33 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
 
   const remainingCount = filteredByStatus.length - visibleCount;
   const hasMore = !searchNorm && visibleCount < filteredByStatus.length;
+  const anySelected = selectedIds.size > 0;
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const clearSelection = () => setSelectedIds(new Set());
 
   const toggleActive = async (source: Subscription) => {
     const newActive = !source.active;
-
     if (newActive && atActiveLimit) {
       openUpsellModal();
       return;
     }
-
     setSources((prev) =>
       prev.map((s) => (s.id === source.id ? { ...s, active: newActive } : s)),
     );
-
     const res = await fetch("/api/subscriptions", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: source.id, active: newActive }),
     });
-
     if (!res.ok) {
       setSources((prev) =>
         prev.map((s) =>
@@ -197,244 +227,162 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
     }
   };
 
-  const removeSource = (id: string, name: string) => {
+  const handleBulkDelete = () => {
+    const count = selectedIds.size;
+    const ids = [...selectedIds];
     dialogManager.confirm({
-      title: "Remove source",
-      description: `Remove "${name}" from your sources?`,
+      title: "Remove sources",
+      description: `Remove ${count} channel${count > 1 ? "s" : ""} from your sources?`,
       variant: "destructive",
       action: {
-        label: "Remove",
+        label: `Remove ${count}`,
         onClick: async () => {
           const { error } = await supabase
             .from("subscriptions")
             .delete()
-            .eq("id", id);
+            .in("id", ids);
           if (error) {
-            toast.error("Failed to remove source");
+            toast.error("Failed to remove sources");
             return;
           }
-          setSources((prev) => prev.filter((s) => s.id !== id));
-          toast.success("Source removed");
+          setSources((prev) => prev.filter((s) => !selectedIds.has(s.id)));
+          setSelectedIds(new Set());
+          toast.success(`${count} source${count > 1 ? "s" : ""} removed`);
         },
       },
     });
-  };
-
-  const bulkToggle = async (action: "activate_all" | "pause_all") => {
-    const kind = action === "activate_all" ? "activate" : "pause";
-    setBulkLoading(kind);
-    const prevSources = sources;
-    // Optimistic update
-    setSources((prev) =>
-      prev.map((s) => ({
-        ...s,
-        active:
-          action === "pause_all"
-            ? false
-            : isPro || prev.filter((x) => x.active).length < maxChannels
-              ? true
-              : s.active,
-      })),
-    );
-    try {
-      const res = await fetch("/api/subscriptions", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action }),
-      });
-      if (!res.ok) {
-        setSources(prevSources);
-        toast.error("Failed to update channels");
-      }
-    } catch {
-      setSources(prevSources);
-      toast.error("Something went wrong");
-    } finally {
-      setBulkLoading(null);
-    }
-  };
-
-  const rowProps = {
-    onToggle: toggleActive,
-    onRemove: removeSource,
-    searchQuery: searchNorm,
   };
 
   return (
     <div className="space-y-2">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <button
-          onClick={() => setCollapsed((c) => !c)}
-          className="flex items-center gap-2"
-        >
-          <h2 className="text-sm font-semibold">Sources</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-base font-semibold">Sources</h2>
           <span className="text-muted-foreground/50 text-xs tabular-nums">
             {isPro ? sources.length : `${activeCount}/${maxChannels}`}
           </span>
-          <ChevronDown
-            className={`text-muted-foreground/40 h-3.5 w-3.5 transition-transform duration-200 ${collapsed ? "-rotate-90" : ""}`}
-          />
-        </button>
-        <div className="flex items-center gap-1.5">
-          {sources.length > 0 && !collapsed && (
-            <>
-              {pausedCount > 0 && (
-                <button
-                  onClick={() => void bulkToggle("activate_all")}
-                  disabled={bulkLoading !== null || atActiveLimit}
-                  title="Activate all"
-                  className="nm-raised-sm text-muted-foreground/50 hover:text-foreground flex h-6 items-center gap-1 rounded-full px-2 text-[10px] transition-colors disabled:opacity-40"
-                >
-                  {bulkLoading === "activate" ? (
-                    <Loader2 className="h-2.5 w-2.5 animate-spin" />
-                  ) : (
-                    <Play className="h-2.5 w-2.5" />
-                  )}
-                  All on
-                </button>
-              )}
-              {activeCount > 0 && (
-                <button
-                  onClick={() => void bulkToggle("pause_all")}
-                  disabled={bulkLoading !== null}
-                  title="Pause all"
-                  className="nm-raised-sm text-muted-foreground/50 hover:text-foreground flex h-6 items-center gap-1 rounded-full px-2 text-[10px] transition-colors disabled:opacity-40"
-                >
-                  {bulkLoading === "pause" ? (
-                    <Loader2 className="h-2.5 w-2.5 animate-spin" />
-                  ) : (
-                    <Pause className="h-2.5 w-2.5" />
-                  )}
-                  All off
-                </button>
-              )}
-            </>
-          )}
-          <button
-            onClick={() => setShowFilter((f) => !f)}
-            title="Filter"
-            className={`flex h-6 w-6 items-center justify-center rounded transition-colors ${
-              showFilter || filterStatus !== "all"
-                ? "nm-inset-sm text-foreground"
-                : "text-muted-foreground/40 hover:text-muted-foreground hover:bg-white/[0.04]"
-            }`}
-          >
-            <ListFilter className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      </div>
-
-      {/* Filter pills */}
-      {showFilter && !collapsed && (
-        <div className="flex items-center gap-1">
-          {(["all", "active", "paused"] as const).map((status) => (
-            <button
-              key={status}
-              onClick={() => setFilterStatus(status)}
-              className={`rounded-full px-2.5 py-1 text-xs font-medium capitalize transition-colors ${
-                filterStatus === status
-                  ? "nm-inset text-foreground"
-                  : "nm-raised-sm text-muted-foreground/60 hover:text-foreground"
-              }`}
-            >
-              {status}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {!collapsed && (
-        <>
-          {/* Import from YouTube */}
           <a
             href="/api/youtube/auth"
-            className="text-muted-foreground/60 hover:text-muted-foreground flex w-fit items-center gap-1.5 text-xs transition-colors"
+            className="nm-raised-sm text-muted-foreground/60 hover:text-foreground flex items-center gap-1 rounded-full px-2 py-1 text-[10px] transition-colors"
           >
-            <Youtube className="h-3.5 w-3.5" />
-            Import subscriptions from YouTube
+            <Youtube className="h-3 w-3" />
+            Import
           </a>
+        </div>
 
-          {/* Active limit banner */}
-          {atActiveLimit && (
-            <div className="nm-raised rounded-2xl bg-amber-500/[0.05] px-4 py-3">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm font-medium">
-                    {maxChannels} active channels reached
-                  </p>
-                  <p className="text-muted-foreground mt-0.5 text-xs">
-                    Pause a channel to swap, or upgrade to Pro for unlimited.
-                  </p>
-                </div>
-                <Button
-                  size="sm"
-                  className="shrink-0 bg-red-600 hover:bg-red-500"
-                  onClick={() => openUpsellModal()}
-                >
-                  Upgrade to Pro
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {sources.length === 0 ? (
-            <div className="py-10 text-center">
-              <div className="nm-inset mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl">
-                <svg
-                  className="text-muted-foreground h-5 w-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1.5}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z"
-                  />
-                </svg>
-              </div>
-              <p className="text-sm font-medium">No sources yet</p>
-              <p className="text-muted-foreground mt-0.5 text-xs">
-                Add a YouTube channel above to get started.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {/* Channel list */}
-              <div className="nm-raised overflow-hidden rounded-2xl">
-                {displayedSources.length > 0 ? (
-                  <div className="divide-y divide-white/[0.04]">
-                    {displayedSources.map((source) => (
-                      <SourceRow
-                        key={source.id}
-                        source={source}
-                        {...rowProps}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground px-4 py-6 text-center text-sm">
-                    No channel matching &ldquo;{q}&rdquo;
-                  </p>
-                )}
-              </div>
-
-              {/* Show more */}
-              {hasMore && (
+        {/* Selection controls OR filter tabs */}
+        {anySelected ? (
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground text-xs tabular-nums">
+              {selectedIds.size} selected
+            </span>
+            <button
+              onClick={handleBulkDelete}
+              className="nm-raised-sm flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-medium text-red-400 transition-colors hover:bg-red-500/10"
+            >
+              <Trash2 className="h-3 w-3" />
+              Delete
+            </button>
+            <button
+              onClick={clearSelection}
+              className="text-muted-foreground/40 hover:text-foreground text-xs transition-colors"
+            >
+              ✕
+            </button>
+          </div>
+        ) : (
+          sources.length > 0 && (
+            <div className="flex items-center gap-1">
+              {(["all", "active", "paused"] as const).map((status) => (
                 <button
-                  onClick={() => setVisibleCount((n) => n + LOAD_MORE_STEP)}
-                  className="text-muted-foreground/30 hover:text-muted-foreground flex w-full items-center justify-center py-1.5 transition-colors"
-                  title={`Show ${Math.min(LOAD_MORE_STEP, remainingCount)} more`}
+                  key={status}
+                  onClick={() => setFilterStatus(status)}
+                  className={`rounded-full px-2.5 py-1 text-xs font-medium capitalize transition-colors ${
+                    filterStatus === status
+                      ? "nm-inset text-foreground"
+                      : "nm-raised-sm text-muted-foreground/60 hover:text-foreground"
+                  }`}
                 >
-                  <ChevronDown className="h-4 w-4" />
+                  {status}
                 </button>
+              ))}
+            </div>
+          )
+        )}
+      </div>
+
+      <>
+        {/* Active limit banner */}
+        {atActiveLimit && (
+          <Banner
+            variant="warning"
+            icon={
+              <TriangleAlertIcon className="h-3.5 w-3.5 text-amber-300/70" />
+            }
+            title={`${maxChannels} channels reached`}
+            description="Pause a channel to swap, or upgrade to Pro for unlimited."
+            action={{ label: "Upgrade", onClick: () => openUpsellModal() }}
+          />
+        )}
+
+        {sources.length === 0 ? (
+          <div className="py-10 text-center">
+            <div className="nm-inset mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl">
+              <svg
+                className="text-muted-foreground h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z"
+                />
+              </svg>
+            </div>
+            <p className="text-sm font-medium">No sources yet</p>
+            <p className="text-muted-foreground mt-0.5 text-xs">
+              Add a YouTube channel above to get started.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <div className="nm-raised overflow-hidden rounded-2xl">
+              {displayedSources.length > 0 ? (
+                <div className="divide-y divide-white/[0.04]">
+                  {displayedSources.map((source) => (
+                    <SourceRow
+                      key={source.id}
+                      source={source}
+                      selected={selectedIds.has(source.id)}
+                      onSelect={toggleSelect}
+                      onToggle={toggleActive}
+                      searchQuery={searchNorm}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground px-4 py-6 text-center text-sm">
+                  No channel matching &ldquo;{q}&rdquo;
+                </p>
               )}
             </div>
-          )}
-        </>
-      )}
+
+            {hasMore && (
+              <button
+                onClick={() => setVisibleCount((n) => n + LOAD_MORE_STEP)}
+                className="text-muted-foreground/30 hover:text-muted-foreground flex w-full items-center justify-center py-1.5 transition-colors"
+                title={`Show ${Math.min(LOAD_MORE_STEP, remainingCount)} more`}
+              >
+                <ChevronDown className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        )}
+      </>
     </div>
   );
 }

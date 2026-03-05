@@ -9,6 +9,7 @@ import { SourcesSection } from "@/components/dashboard/sources-section";
 import { SectionErrorBoundary } from "@/components/nowts/section-error-boundary";
 import { PersonalStats } from "@/components/dashboard/personal-stats";
 import { PushNotificationBanner } from "@/components/dashboard/push-notification-banner";
+import { GettingStarted } from "@/components/dashboard/getting-started";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -24,7 +25,7 @@ export default async function DashboardPage() {
     supabase
       .from("profiles")
       .select(
-        "onboarding_completed, subscription_status, trial_ends_at, max_channels",
+        "subscription_status, trial_ends_at, max_channels, telegram_connected, preferred_language",
       )
       .eq("id", user.id)
       .single(),
@@ -36,9 +37,8 @@ export default async function DashboardPage() {
       .order("created_at", { ascending: false }),
   ]);
 
-  // Redirect new users to onboarding
-  if (!profile?.onboarding_completed) {
-    redirect("/onboarding");
+  if (!profile) {
+    redirect("/login");
   }
 
   const isPro =
@@ -55,7 +55,14 @@ export default async function DashboardPage() {
     : 0;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
+      {/* Getting started module */}
+      <GettingStarted
+        hasChannel={(sources ?? []).length > 0}
+        hasTelegram={profile.telegram_connected ?? false}
+        language={profile.preferred_language ?? "fr"}
+      />
+
       {/* Push notification banner */}
       <Suspense fallback={null}>
         <PushNotificationBanner />
@@ -80,7 +87,7 @@ export default async function DashboardPage() {
 
       {/* Recent summaries */}
       <div className="space-y-3">
-        <h2 className="text-sm font-semibold">Recent summaries</h2>
+        <h2 className="text-base font-semibold">Recent summaries</h2>
         <SectionErrorBoundary>
           <Suspense fallback={<SummariesFeedSkeleton />}>
             <SummariesFeed />

@@ -3,6 +3,7 @@ import { sendEmail } from "@/lib/mail/send-email";
 import { founderEmail, p, signature } from "@/lib/mail/founder-email";
 import { logger } from "@/lib/logger";
 import { env } from "@/lib/env";
+import { SiteConfig } from "@/site-config";
 
 export type RunResult = {
   sent: number;
@@ -94,6 +95,17 @@ export async function runReengagementEmails(): Promise<RunResult> {
     }
 
     try {
+      // eslint-disable-next-line no-await-in-loop
+      const { data: log } = await admin
+        .from("email_logs")
+        .insert({ user_id: user.id, email_type: EMAIL_TYPE })
+        .select("id")
+        .single();
+
+      const trackingPixel = log?.id
+        ? `<img src="${SiteConfig.prodUrl}/api/email/track/${log.id}" width="1" height="1" style="display:none" />`
+        : "";
+
       const html = founderEmail(
         p("Hey,") +
           p(
@@ -111,7 +123,8 @@ export async function runReengagementEmails(): Promise<RunResult> {
           p(
             "Also, is everything working fine on your end? If something broke or you're not getting summaries as expected, just reply and I'll look into it personally.",
           ) +
-          signature(),
+          signature() +
+          trackingPixel,
       );
 
       // eslint-disable-next-line no-await-in-loop
@@ -122,11 +135,6 @@ export async function runReengagementEmails(): Promise<RunResult> {
         subject: "Your BriefTube channels have been quiet this week",
         html,
       });
-
-      // eslint-disable-next-line no-await-in-loop
-      await admin
-        .from("email_logs")
-        .insert({ user_id: user.id, email_type: EMAIL_TYPE });
 
       result.sent++;
       logger.info("Reengagement email sent", { userId: user.id });

@@ -23,6 +23,7 @@ import { ActivationEmailsButton } from "@/components/admin/activation-emails-but
 import { ReengagementEmailsButton } from "@/components/admin/reengagement-emails-button";
 import { ReferralTrialEmailsButton } from "@/components/admin/referral-trial-emails-button";
 import { OnboardingApologyButton } from "@/components/admin/onboarding-apology-button";
+import { ExtendTrialsButton } from "@/components/admin/extend-trials-button";
 import { ServicesHealth } from "@/components/admin/services-health";
 import {
   getPostHogTotalVisitors,
@@ -392,14 +393,13 @@ export default async function AdminPage() {
     .gte("created_at", since24h)
     .not("transcript_source", "is", null);
 
-  const transcriptSources = (transcriptSourcesRaw ?? []).reduce<Record<string, number>>(
-    (acc, v) => {
-      const src = (v.transcript_source as string | null) ?? "unknown";
-      acc[src] = (acc[src] ?? 0) + 1;
-      return acc;
-    },
-    {},
-  );
+  const transcriptSources = (transcriptSourcesRaw ?? []).reduce<
+    Record<string, number>
+  >((acc, v) => {
+    const src = (v.transcript_source as string | null) ?? "unknown";
+    acc[src] = (acc[src] ?? 0) + 1;
+    return acc;
+  }, {});
   const transcriptSourceEntries = Object.entries(transcriptSources).sort(
     ([, a], [, b]) => b - a,
   );
@@ -503,7 +503,6 @@ export default async function AdminPage() {
   const videosSkipped24h = videosByStatus.skipped ?? 0;
   const deliveriesSent24h = deliveriesByStatus.sent ?? 0;
   const deliveriesFailed24h = deliveriesByStatus.failed ?? 0;
-  const deliveriesPending = deliveriesByStatus.pending ?? 0;
 
   const total = totalUsers ?? 0;
   const connected = telegramConnected ?? 0;
@@ -1116,8 +1115,13 @@ export default async function AdminPage() {
                 </div>
                 <div className="divide-y divide-white/[0.04]">
                   {transcriptSourceEntries.map(([src, count]) => (
-                    <div key={src} className="flex items-center justify-between px-4 py-2">
-                      <p className="font-mono text-[11px] text-white/70">{src}</p>
+                    <div
+                      key={src}
+                      className="flex items-center justify-between px-4 py-2"
+                    >
+                      <p className="font-mono text-[11px] text-white/70">
+                        {src}
+                      </p>
                       <span className="text-muted-foreground text-[11px] tabular-nums">
                         {count}
                       </span>
@@ -1131,7 +1135,10 @@ export default async function AdminPage() {
           {/* Queue */}
           <div className="flex flex-col gap-2">
             <SectionTitle>
-              File de traitement {pendingQueue && pendingQueue.length > 0 ? `(${pendingQueue.length})` : ""}
+              File de traitement{" "}
+              {pendingQueue && pendingQueue.length > 0
+                ? `(${pendingQueue.length})`
+                : ""}
             </SectionTitle>
             <div className="nm-raised max-h-96 overflow-y-auto rounded-xl">
               {!pendingQueue || pendingQueue.length === 0 ? (
@@ -1180,7 +1187,10 @@ export default async function AdminPage() {
           {/* Failed videos */}
           <div className="flex flex-col gap-2">
             <SectionTitle>
-              Vidéos échouées {recentFailed && recentFailed.length > 0 ? `(${recentFailed.length})` : ""}
+              Vidéos échouées{" "}
+              {recentFailed && recentFailed.length > 0
+                ? `(${recentFailed.length})`
+                : ""}
             </SectionTitle>
             <div className="nm-raised max-h-96 overflow-y-auto rounded-xl">
               {!recentFailed || recentFailed.length === 0 ? (
@@ -1439,6 +1449,13 @@ export default async function AdminPage() {
             Send trial expiry reminders (J-3, J-1, expired)
           </p>
           <TrialRemindersButton />
+        </div>
+        <div className="nm-raised flex flex-col gap-2 rounded-xl px-4 py-3">
+          <p className="text-muted-foreground text-sm">
+            Recalculate all trials to 30 days from signup date (one-time
+            migration)
+          </p>
+          <ExtendTrialsButton />
         </div>
         <div className="nm-raised flex flex-col gap-2 rounded-xl px-4 py-3">
           <p className="text-muted-foreground text-sm">

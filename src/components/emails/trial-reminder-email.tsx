@@ -6,15 +6,17 @@ import {
   Heading,
   Hr,
   Html,
+  Img,
   Preview,
   Text,
 } from "@react-email/components";
 
 type Props = {
   daysLeft: number;
+  trackingPixelUrl?: string;
 };
 
-export function TrialReminderEmail({ daysLeft }: Props) {
+export function TrialReminderEmail({ daysLeft, trackingPixelUrl }: Props) {
   const isLastDay = daysLeft <= 1;
 
   return (
@@ -116,6 +118,9 @@ export function TrialReminderEmail({ daysLeft }: Props) {
             BriefTube · YouTube, summarized as audio
           </Text>
         </Container>
+        {trackingPixelUrl && (
+          <Img src={trackingPixelUrl} width={1} height={1} alt="" />
+        )}
       </Body>
     </Html>
   );
