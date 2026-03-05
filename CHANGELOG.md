@@ -2,6 +2,16 @@
 
 ## 2026-03-05
 
+FEATURE: Admin — section "Services" avec health check en temps réel (Gemini, Groq/Whisper, Telegram, Invidious) + sources de transcripts 24h
+FIX: Worker — "Requested format is not available" ne déclenche plus un snooze live infini dans _ytdlp_subtitles proxy — la vidéo passe maintenant à Whisper ou échoue proprement
+FEATURE: Dashboard — composant Banner unifié (warning/danger/info/success) pour trial-banner, push-notification-banner et limite sources
+FEATURE: Dashboard — empty states pour summaries-feed (icône Inbox + message) et personal-stats (message discret)
+REFACTOR: Dashboard — titres sections en text-base (Sources, Your stats, Recent summaries) pour hiérarchie visuelle
+REFACTOR: Dashboard — boutons Play/Pause/Delete dans sources-section toujours visibles (opacity /60 vs /25)
+REFACTOR: Dashboard — typographie standardisée : text-[11px]→text-xs (dates, labels), text-[9px]→text-[10px] (badges)
+FIX: Worker — marquer telegram_connected=false quand Telegram rejette définitivement (bot bloqué), et filtrer ces utilisateurs dès la création des livraisons
+FIX: Admin — "Livraisons échouées" renommé en "Non délivrés" avec variant warning (bot bloqué / injoignable n'est pas une vraie erreur technique)
+FEATURE: Admin — section "Vidéos échouées" remplace "Derniers échecs" : liste toutes les vidéos failed avec lien YouTube cliquable, channel_id, nombre de tentatives (failure_count)
 REFACTOR: Worker transcript_extractor — Invidious/Piped EN PREMIER dans la chaîne de fallback (avant yt-dlp) : évite 4s de latence inutile sur IPs VPS bloquées par YouTube
 
 ## 2026-03-04

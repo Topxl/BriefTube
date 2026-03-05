@@ -317,6 +317,9 @@ def get_subscriber_languages(channel_id: str) -> list[dict]:
 def create_deliveries_for_video(video_id: str, channel_id: str, language: str = "fr"):
     """Create delivery entries for all users subscribed to this channel with the given language.
 
+    Only creates deliveries for users with Telegram connected — bot-blocked users
+    are excluded here (telegram_connected is set to false when Telegram rejects).
+
     Uses a single bulk check + single batch insert instead of N individual
     SELECT+INSERT calls — reduces DB round-trips from O(users) to O(1).
     """
@@ -335,11 +338,12 @@ def create_deliveries_for_video(video_id: str, channel_id: str, language: str = 
     # Deduplicate user_ids
     user_ids = list({s["user_id"] for s in subs.data})
 
-    # Only users whose preferred_language matches
+    # Only users with Telegram connected and matching language
     profiles = (
         sb.table("profiles")
         .select("id, preferred_language")
         .in_("id", user_ids)
+        .eq("telegram_connected", True)
         .execute()
     )
     matching_ids = [
@@ -571,6 +575,21 @@ def mark_delivery_sent(delivery_id: str):
 def mark_delivery_failed(delivery_id: str):
     sb = get_client()
     sb.table("deliveries").update({"status": "failed"}).eq("id", delivery_id).execute()
+
+
+def mark_user_telegram_disconnected(user_id: str) -> None:
+    """Mark a user's Telegram as disconnected after a permanent send failure.
+
+    Called when Telegram permanently rejects a message (user blocked bot,
+    invalid chat ID, etc.). Prevents future deliveries from being created
+    for this user until they reconnect Telegram in the app.
+    """
+    sb = get_client()
+    try:
+        sb.table("profiles").update({"telegram_connected": False}).eq("id", user_id).execute()
+        logger.info(f"Marked user {user_id[:8]}… as Telegram disconnected (bot blocked)")
+    except Exception as e:
+        logger.warning(f"Could not mark user {user_id[:8]}… as disconnected: {e}")
 
 
 def recover_failed_deliveries() -> int:
