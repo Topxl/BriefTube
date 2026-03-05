@@ -15,6 +15,7 @@ import {
   AlertCircle,
   Clock,
   TrendingUp,
+  Mail,
 } from "@/lib/icons";
 import { NewsletterSeedButton } from "@/components/admin/newsletter-seed-button";
 import { TrialRemindersButton } from "@/components/admin/trial-reminders-button";
@@ -22,6 +23,7 @@ import { ActivationEmailsButton } from "@/components/admin/activation-emails-but
 import { ReengagementEmailsButton } from "@/components/admin/reengagement-emails-button";
 import { ReferralTrialEmailsButton } from "@/components/admin/referral-trial-emails-button";
 import { OnboardingApologyButton } from "@/components/admin/onboarding-apology-button";
+import { ServicesHealth } from "@/components/admin/services-health";
 import {
   getPostHogTotalVisitors,
   getPostHogDailyVisitors,
@@ -94,8 +96,10 @@ type PendingVideo = {
 
 type FailedVideo = {
   video_id: string;
+  channel_id: string;
   language: string;
   created_at: string;
+  failure_count: number;
 };
 
 type ExpiringTrial = {
@@ -115,6 +119,24 @@ type CancellationFeedbackRow = {
   custom_message: string | null;
   offer_accepted: boolean;
   created_at: string;
+};
+
+type EmailLogRow = { email_type: string | null; created_at: string | null };
+type EmailTypeStats = {
+  total: number;
+  last30d: number;
+  lastSentAt: string | null;
+};
+
+const EMAIL_TYPE_LABELS: Record<string, string> = {
+  trial_reminder_j3: "Trial reminder J-3",
+  trial_reminder_j1: "Trial reminder J-1",
+  trial_expired: "Trial expiré",
+  activation_telegram: "Activation Telegram",
+  reengagement_7d: "Re-engagement 7j",
+  referral_trial_j3: "Parrainage J-3",
+  referral_trial_j1: "Parrainage J-1",
+  onboarding_apology: "Onboarding apology",
 };
 
 // ---------------------------------------------------------------
@@ -357,11 +379,30 @@ export default async function AdminPage() {
 
   const { data: recentFailedRaw } = await admin
     .from("processed_videos")
-    .select("video_id, language, created_at")
+    .select("video_id, channel_id, language, created_at, failure_count")
     .eq("status", "failed")
-    .order("created_at", { ascending: false })
-    .limit(5);
+    .order("created_at", { ascending: false });
   const recentFailed = recentFailedRaw as unknown as FailedVideo[] | null;
+
+  // ── Sources de transcripts (24h) ──────────────────────────────
+  const { data: transcriptSourcesRaw } = await admin
+    .from("processed_videos")
+    .select("transcript_source")
+    .eq("status", "completed")
+    .gte("created_at", since24h)
+    .not("transcript_source", "is", null);
+
+  const transcriptSources = (transcriptSourcesRaw ?? []).reduce<Record<string, number>>(
+    (acc, v) => {
+      const src = (v.transcript_source as string | null) ?? "unknown";
+      acc[src] = (acc[src] ?? 0) + 1;
+      return acc;
+    },
+    {},
+  );
+  const transcriptSourceEntries = Object.entries(transcriptSources).sort(
+    ([, a], [, b]) => b - a,
+  );
 
   // ── Funnel de conversion ──────────────────────────────────────
   const now = new Date().toISOString();
@@ -639,6 +680,44 @@ export default async function AdminPage() {
   const trialStartDays30d = buildDailyArray(trialStartsRaw30d ?? [], 30);
   const newSignups30d = signupDays30d.reduce((s, d) => s + d.count, 0);
   const newTrials30d = trialStartDays30d.reduce((s, d) => s + d.count, 0);
+
+  // ── Email analytics ───────────────────────────────────────────
+  const { data: emailLogsRaw } = await admin
+    .from("email_logs")
+    .select("email_type, created_at");
+  const emailLogs = (emailLogsRaw as unknown as EmailLogRow[] | null) ?? [];
+  const totalEmailsSent = emailLogs.length;
+  const thirtyDaysAgoTs = thirtyDaysAgo.toISOString();
+
+  const emailTypeStatsPartial: Partial<Record<string, EmailTypeStats>> = {};
+  for (const log of emailLogs) {
+    const type = log.email_type ?? "unknown";
+    const inLast30d = !!(log.created_at && log.created_at >= thirtyDaysAgoTs);
+    const entry = emailTypeStatsPartial[type];
+    if (entry === undefined) {
+      emailTypeStatsPartial[type] = {
+        total: 1,
+        last30d: inLast30d ? 1 : 0,
+        lastSentAt: log.created_at,
+      };
+    } else {
+      entry.total++;
+      if (inLast30d) entry.last30d++;
+      const curr = log.created_at;
+      if (curr && (!entry.lastSentAt || curr > entry.lastSentAt)) {
+        entry.lastSentAt = curr;
+      }
+    }
+  }
+  const emailTypeStats = emailTypeStatsPartial as Record<
+    string,
+    EmailTypeStats
+  >;
+  const totalEmailsSent30d = Object.values(emailTypeStats).reduce(
+    (s, v) => s + v.last30d,
+    0,
+  );
+  const emailDays14d = buildDailyArray(emailLogs, 14);
 
   // ── Taux de conversion funnel ─────────────────────────────────
   const allTrialUsers = (trialActive ?? 0) + trialExpiredCount + proCount;
@@ -940,11 +1019,11 @@ export default async function AdminPage() {
             variant={deliveriesSent24h > 0 ? "success" : "default"}
           />
           <StatCard
-            label="Livraisons échouées"
+            label="Non délivrés"
             value={deliveriesFailed24h}
-            sub={`${deliveriesPending} en attente`}
+            sub="bot bloqué / injoignable"
             icon={<MessageCircle className="h-4 w-4" />}
-            variant={deliveriesFailed24h > 0 ? "danger" : "default"}
+            variant={deliveriesFailed24h > 0 ? "warning" : "default"}
           />
         </div>
       </div>
@@ -1025,10 +1104,36 @@ export default async function AdminPage() {
 
         {/* Sidebar — right */}
         <div className="flex flex-col gap-4 lg:col-span-2">
+          {/* Services health */}
+          <div className="flex flex-col gap-2">
+            <SectionTitle>Services</SectionTitle>
+            <ServicesHealth />
+            {/* Transcript sources breakdown (24h) */}
+            {transcriptSourceEntries.length > 0 && (
+              <div className="nm-raised overflow-hidden rounded-xl">
+                <div className="border-b border-white/[0.04] px-4 py-2.5">
+                  <p className="text-xs font-medium">Sources transcripts 24h</p>
+                </div>
+                <div className="divide-y divide-white/[0.04]">
+                  {transcriptSourceEntries.map(([src, count]) => (
+                    <div key={src} className="flex items-center justify-between px-4 py-2">
+                      <p className="font-mono text-[11px] text-white/70">{src}</p>
+                      <span className="text-muted-foreground text-[11px] tabular-nums">
+                        {count}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Queue */}
           <div className="flex flex-col gap-2">
-            <SectionTitle>File de traitement</SectionTitle>
-            <div className="nm-raised rounded-xl">
+            <SectionTitle>
+              File de traitement {pendingQueue && pendingQueue.length > 0 ? `(${pendingQueue.length})` : ""}
+            </SectionTitle>
+            <div className="nm-raised max-h-96 overflow-y-auto rounded-xl">
               {!pendingQueue || pendingQueue.length === 0 ? (
                 <div className="flex items-center gap-2 px-4 py-4">
                   <CheckCircle className="h-4 w-4 text-emerald-400" />
@@ -1072,15 +1177,17 @@ export default async function AdminPage() {
             </div>
           </div>
 
-          {/* Recent failures */}
+          {/* Failed videos */}
           <div className="flex flex-col gap-2">
-            <SectionTitle>Derniers échecs</SectionTitle>
-            <div className="nm-raised rounded-xl">
+            <SectionTitle>
+              Vidéos échouées {recentFailed && recentFailed.length > 0 ? `(${recentFailed.length})` : ""}
+            </SectionTitle>
+            <div className="nm-raised max-h-96 overflow-y-auto rounded-xl">
               {!recentFailed || recentFailed.length === 0 ? (
                 <div className="flex items-center gap-2 px-4 py-4">
                   <CheckCircle className="h-4 w-4 text-emerald-400" />
                   <p className="text-muted-foreground text-sm">
-                    Aucun échec récent
+                    Aucune vidéo échouée
                   </p>
                 </div>
               ) : (
@@ -1088,20 +1195,30 @@ export default async function AdminPage() {
                   {recentFailed.map((v) => (
                     <div
                       key={`${v.video_id}-${v.language}`}
-                      className="px-4 py-2.5"
+                      className="flex items-center justify-between gap-3 px-4 py-2.5"
                     >
-                      <p className="font-mono text-[11px] text-red-400">
-                        {v.video_id}
-                      </p>
-                      <p className="text-muted-foreground mt-0.5 text-[10px]">
-                        {v.language} ·{" "}
-                        {new Date(v.created_at).toLocaleString("fr-FR", {
-                          day: "2-digit",
-                          month: "2-digit",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </p>
+                      <div className="min-w-0">
+                        <a
+                          href={`https://www.youtube.com/watch?v=${v.video_id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-mono text-[11px] text-red-400 underline-offset-2 hover:underline"
+                        >
+                          {v.video_id}
+                        </a>
+                        <p className="text-muted-foreground mt-0.5 text-[10px]">
+                          {v.channel_id} · {v.language} ·{" "}
+                          {new Date(v.created_at).toLocaleString("fr-FR", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      </div>
+                      <span className="shrink-0 rounded-full bg-red-500/10 px-2 py-0.5 font-mono text-[10px] text-red-400">
+                        ×{v.failure_count}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -1213,9 +1330,104 @@ export default async function AdminPage() {
         </div>
       </div>
 
-      {/* Newsletter */}
+      {/* Emails */}
       <div className="flex flex-col gap-2">
-        <SectionTitle>Newsletter</SectionTitle>
+        <SectionTitle>Emails</SectionTitle>
+
+        {/* Stats cards */}
+        <div className="grid grid-cols-3 gap-2">
+          <StatCard
+            label="Total envoyés"
+            value={totalEmailsSent}
+            icon={<Mail className="h-4 w-4" />}
+            variant={totalEmailsSent > 0 ? "success" : "default"}
+          />
+          <StatCard
+            label="30 derniers jours"
+            value={totalEmailsSent30d}
+            icon={<Send className="h-4 w-4" />}
+            variant={totalEmailsSent30d > 0 ? "success" : "default"}
+          />
+          <StatCard
+            label="Campagnes"
+            value={Object.keys(emailTypeStats).length}
+            sub="types distincts"
+            icon={<Activity className="h-4 w-4" />}
+          />
+        </div>
+
+        {/* Mini bar chart */}
+        <MiniBarChart
+          title="Emails / jour — 14 jours"
+          days={emailDays14d}
+          total={totalEmailsSent}
+          accentColor="bg-sky-500/50"
+          hoverColor="group-hover:bg-sky-500/80"
+        />
+
+        {/* Campaign breakdown */}
+        <div className="nm-raised overflow-hidden rounded-xl">
+          <div className="flex items-center border-b border-white/[0.04] px-4 py-2">
+            <p className="text-muted-foreground flex-1 text-xs font-medium">
+              Campagne
+            </p>
+            <p className="text-muted-foreground w-10 text-right text-[10px]">
+              30j
+            </p>
+            <p className="text-muted-foreground w-12 text-right text-[10px]">
+              total
+            </p>
+          </div>
+          {Object.keys(emailTypeStats).length === 0 ? (
+            <p className="text-muted-foreground px-4 py-4 text-sm">
+              Aucun email envoyé
+            </p>
+          ) : (
+            <div className="divide-y divide-white/[0.04]">
+              {Object.entries(emailTypeStats)
+                .sort((a, b) => b[1].total - a[1].total)
+                .map(([type, stats]) => (
+                  <div
+                    key={type}
+                    className="flex items-center gap-2 px-4 py-2.5"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm">
+                        {EMAIL_TYPE_LABELS[type] ?? type}
+                      </p>
+                      {stats.lastSentAt && (
+                        <p className="text-muted-foreground text-[11px]">
+                          Dernier :{" "}
+                          {new Date(stats.lastSentAt).toLocaleDateString(
+                            "fr-FR",
+                            {
+                              day: "2-digit",
+                              month: "2-digit",
+                              year: "2-digit",
+                            },
+                          )}
+                        </p>
+                      )}
+                    </div>
+                    <span
+                      className={`w-10 text-right text-sm tabular-nums ${
+                        stats.last30d > 0
+                          ? "text-emerald-400"
+                          : "text-muted-foreground/30"
+                      }`}
+                    >
+                      {stats.last30d}
+                    </span>
+                    <span className="w-12 text-right text-sm font-medium tabular-nums">
+                      {stats.total}
+                    </span>
+                  </div>
+                ))}
+            </div>
+          )}
+        </div>
+
+        {/* Action buttons */}
         <div className="nm-raised flex items-center justify-between rounded-xl px-4 py-3">
           <p className="text-muted-foreground text-sm">
             Sync all existing users to Resend audience

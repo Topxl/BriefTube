@@ -813,6 +813,7 @@ async def delivery_loop(alert_system: MonitoringAlert):
                         # send_audio_to_user returned False: Telegram permanently
                         # rejected the send (user blocked bot, invalid chat, etc.).
                         await asyncio.to_thread(db.mark_delivery_failed, d["delivery_id"])
+                        await asyncio.to_thread(db.mark_user_telegram_disconnected, d["user_id"])
                         stats.record_delivery_failed()
 
                     await asyncio.sleep(0.05)
@@ -1015,10 +1016,90 @@ async def health_loop():
             "timestamp": datetime.now(timezone.utc).isoformat(),
         })
 
+    async def handle_services(request):
+        """Ping each external service and return their status."""
+        token = request.rel_url.query.get("token", "")
+        if WORKER_API_SECRET and token != WORKER_API_SECRET:
+            return web.json_response({"error": "Unauthorized"}, status=401)
+
+        gemini_key = os.environ.get("GEMINI_API_KEY", "")
+        groq_key = os.environ.get("GROQ_API_KEY", "")
+
+        from youtube_utils import INVIDIOUS_INSTANCES
+
+        async def _check(name, coro):
+            try:
+                return await coro
+            except Exception as e:
+                return {"name": name, "status": "error", "detail": str(e)[:80]}
+
+        async def check_gemini():
+            if not gemini_key:
+                return {"name": "Gemini", "status": "not_configured"}
+            async with aiohttp.ClientSession() as s:
+                async with s.get(
+                    f"https://generativelanguage.googleapis.com/v1beta/models?key={gemini_key}",
+                    timeout=aiohttp.ClientTimeout(total=6),
+                ) as r:
+                    return {"name": "Gemini", "status": "ok" if r.status == 200 else "error", "code": r.status}
+
+        async def check_groq():
+            if not groq_key:
+                return {"name": "Groq / Whisper", "status": "not_configured"}
+            async with aiohttp.ClientSession() as s:
+                async with s.get(
+                    "https://api.groq.com/openai/v1/models",
+                    headers={"Authorization": f"Bearer {groq_key}"},
+                    timeout=aiohttp.ClientTimeout(total=6),
+                ) as r:
+                    return {"name": "Groq / Whisper", "status": "ok" if r.status == 200 else "error", "code": r.status}
+
+        async def check_telegram():
+            if not TELEGRAM_BOT_TOKEN:
+                return {"name": "Telegram", "status": "not_configured"}
+            async with aiohttp.ClientSession() as s:
+                async with s.get(
+                    f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getMe",
+                    timeout=aiohttp.ClientTimeout(total=6),
+                ) as r:
+                    data = await r.json()
+                    if data.get("ok"):
+                        username = data.get("result", {}).get("username", "")
+                        return {"name": "Telegram", "status": "ok", "detail": f"@{username}"}
+                    return {"name": "Telegram", "status": "error", "detail": str(data.get("description", ""))}
+
+        async def check_invidious():
+            async with aiohttp.ClientSession() as s:
+                for instance in INVIDIOUS_INSTANCES[:4]:
+                    try:
+                        async with s.get(
+                            f"{instance}/api/v1/stats",
+                            timeout=aiohttp.ClientTimeout(total=5),
+                        ) as r:
+                            if r.status == 200:
+                                host = instance.replace("https://", "").replace("http://", "")
+                                return {"name": "Invidious", "status": "ok", "detail": host}
+                    except Exception:
+                        continue
+            return {"name": "Invidious", "status": "error", "detail": "All instances unreachable"}
+
+        results = await asyncio.gather(
+            _check("Gemini", check_gemini()),
+            _check("Groq / Whisper", check_groq()),
+            _check("Telegram", check_telegram()),
+            _check("Invidious", check_invidious()),
+        )
+
+        return web.json_response({
+            "services": list(results),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        })
+
     port = HEALTH_PORT + WORKER_INSTANCE  # Instance 0→8080, 1→8081, 2→8082, …
     app = web.Application()
     app.router.add_get("/health", handle_health)
     app.router.add_get("/logs", handle_logs)
+    app.router.add_get("/services", handle_services)
     # Disable HTTP access logging — every /logs poll would otherwise write
     # a line into worker.log, creating a feedback loop that drowns real logs.
     runner = web.AppRunner(app, access_log=None)
