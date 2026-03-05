@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-03-06
+
+FIX: Worker — transcript_source, transcript_length, summary_length, source_language, processing_time_s correctement sauvegardés en base (étaient dans le JSON metadata au lieu des vraies colonnes)
+REFACTOR: Dashboard — Sources section simplifiée : pills All/Active/Paused toujours visibles dans le header, import YouTube réduit à une icône, boutons bulk supprimés, Trash visible au hover uniquement
+REFACTOR: Dashboard — bouton bulk unique intelligent : "Activate all" si des chaînes sont en pause, "Pause all" si toutes sont actives (remplace "All on" / "All off")
+REFACTOR: Dashboard — statut actif/pausé des chaînes plus visible : point vert/gris sur l'avatar, texte "Paused", bouton Play en vert pour les chaînes en pause
+
 ## 2026-03-05
 
 FEATURE: Admin — section "Services" avec health check en temps réel (Gemini, Groq/Whisper, Telegram, Invidious) + sources de transcripts 24h

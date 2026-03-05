@@ -91,6 +91,8 @@ class TranscriptExtractor:
         # Read this after get_transcript() returns to detect IP bans.
         self._ip_blocked_lock = threading.Lock()
         self.last_ip_blocked = False
+        # Which extraction method was used last (youtube_api, invidious, piped, yt-dlp, whisper).
+        self.last_transcript_source: str = ""
 
         if self.enable_whisper_fallback:
             try:
@@ -245,17 +247,20 @@ class TranscriptExtractor:
                 # Tried first: faster than yt-dlp and works regardless of VPS IP
                 inv_text, inv_lang, _ = self._invidious_subtitles(video_id, preferred_languages)
                 if inv_text:
+                    self.last_transcript_source = "invidious"
                     return inv_text, inv_lang, None, 0.0
 
                 # Step 2c: Try Piped (second free proxy, different infrastructure)
                 piped_text, piped_lang, _ = self._piped_subtitles(video_id, preferred_languages)
                 if piped_text:
+                    self.last_transcript_source = "piped"
                     return piped_text, piped_lang, None, 0.0
 
                 # Step 2d: Try yt-dlp (detects live/premiere, player_client fallbacks)
                 # Tried after proxies: slower on bot-detected IPs but catches edge cases
                 vtt_text, vtt_lang, vtt_error = self._ytdlp_subtitles(youtube_url, preferred_languages)
                 if vtt_text:
+                    self.last_transcript_source = "yt-dlp"
                     return vtt_text, vtt_lang, None, 0.0
                 if vtt_error and vtt_error.startswith("premiere_not_available_yet"):
                     # Scheduled/premiere video — skip Whisper, snooze until it starts
@@ -267,6 +272,7 @@ class TranscriptExtractor:
                 # Step 3: Whisper API fallback (paid, uses Groq quota)
                 if self.enable_whisper_fallback and self.whisper_transcriber:
                     logger.warning("YouTube transcripts not available, trying Whisper API fallback...")
+                    self.last_transcript_source = "whisper"
                     return self._whisper_fallback(youtube_url, preferred_languages, video_title)
                 else:
                     return None, None, "no_transcript_available", 0.0
@@ -276,6 +282,7 @@ class TranscriptExtractor:
 
             logger.info(f"✅ YouTube transcript extracted ({len(full_text)} chars) in language: {detected_lang} [FREE]")
 
+            self.last_transcript_source = "youtube_api"
             return full_text, detected_lang, None, 0.0  # YouTube transcripts are free
 
         except TranscriptsDisabled:
@@ -284,6 +291,7 @@ class TranscriptExtractor:
                 self.last_ip_blocked = False
             if self.enable_whisper_fallback and self.whisper_transcriber:
                 logger.info("Trying Whisper API fallback...")
+                self.last_transcript_source = "whisper"
                 return self._whisper_fallback(youtube_url, preferred_languages, video_title)
             return None, None, "transcripts_disabled", 0.0
 
@@ -293,6 +301,7 @@ class TranscriptExtractor:
             # Try yt-dlp first here: it can detect live/premiere status reliably.
             vtt_text, vtt_lang, vtt_error = self._ytdlp_subtitles(youtube_url, preferred_languages)
             if vtt_text:
+                self.last_transcript_source = "yt-dlp"
                 return vtt_text, vtt_lang, None, 0.0
             if vtt_error == "video_is_live":
                 return None, None, "video_is_live", 0.0
