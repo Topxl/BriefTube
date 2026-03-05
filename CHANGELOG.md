@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-03-05
+
+REFACTOR: Worker transcript_extractor — Invidious/Piped EN PREMIER dans la chaîne de fallback (avant yt-dlp) : évite 4s de latence inutile sur IPs VPS bloquées par YouTube
+
+## 2026-03-04
+
+FEATURE: Admin — bouton "Copier" les logs dans le panel worker (copie dans le presse-papier avec retour visuel)
+FEATURE: Admin — bouton "Copier" les erreurs récentes dans le panel worker
+
 ## 2026-03-03
 
 FEATURE: UX — effet wow post-import YouTube : afficher les résumés audio déjà traités avant de passer au step 2 de l'onboarding
