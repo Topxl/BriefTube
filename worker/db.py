@@ -90,7 +90,16 @@ def get_all_known_video_ids(days: int = 30) -> set[str]:
     return known
 
 
-def mark_video_completed(video_id: str, summary: str, audio_url: str, metadata: dict = None, language: str = "fr", video_title: str | None = None):
+def mark_video_completed(
+    video_id: str,
+    summary: str,
+    audio_url: str,
+    metadata: dict = None,
+    language: str = "fr",
+    video_title: str | None = None,
+    transcript_source: str | None = None,
+    processing_time_s: float | None = None,
+):
     sb = get_client()
     update_data = {
         "summary": summary,
@@ -99,7 +108,16 @@ def mark_video_completed(video_id: str, summary: str, audio_url: str, metadata: 
         "processed_at": datetime.now(timezone.utc).isoformat(),
     }
     if metadata:
+        # Save to proper columns (not only to the metadata JSON blob)
+        update_data["transcript_cost"] = metadata.get("transcript_cost", 0)
+        update_data["transcript_length"] = metadata.get("transcript_length", 0)
+        update_data["source_language"] = metadata.get("source_language", "")
+        update_data["summary_length"] = metadata.get("summary_length", 0)
         update_data["metadata"] = metadata
+    if transcript_source:
+        update_data["transcript_source"] = transcript_source
+    if processing_time_s is not None:
+        update_data["metadata"] = {**(update_data.get("metadata") or {}), "processing_time_s": round(processing_time_s, 1)}
     # Backfill title if the row was created without one (e.g. language-chained rows)
     if video_title:
         update_data["video_title"] = video_title

@@ -447,6 +447,7 @@ async def _process_video(
             audio_url = str(audio_path)
 
         # Step 5: Mark done (per language)
+        processing_time = (datetime.now() - start_time).total_seconds()
         db.mark_video_completed(
             video_id, summary, audio_url,
             metadata={
@@ -457,6 +458,8 @@ async def _process_video(
             },
             language=user_language,
             video_title=video_title or None,
+            transcript_source=transcript_extractor.last_transcript_source or None,
+            processing_time_s=processing_time,
         )
         _video_completed = True  # Do not call mark_video_failed after this point
         db.complete_job(job["id"])
@@ -476,12 +479,12 @@ async def _process_video(
             if re_queued:
                 logger.info(f"[{video_id}] Queued for next language: {next_lang}")
 
-        processing_time = (datetime.now() - start_time).total_seconds()
         stats.record_video_processed(processing_time)
 
         logger.info(
             f"✅ [{video_id}] Done: {video_title} "
             f"(transcript: ${transcript_cost:.4f}, source: {source_lang}, "
+            f"transcript_source: {transcript_extractor.last_transcript_source}, "
             f"summary: {len(summary)} chars, time: {processing_time:.1f}s)"
         )
         await alert_system.send_alert(
