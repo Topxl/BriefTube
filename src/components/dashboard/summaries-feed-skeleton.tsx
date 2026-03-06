@@ -8,12 +8,12 @@ export function SummariesFeedSkeleton() {
           key={i}
           className="nm-raised flex items-center gap-3 rounded-2xl px-4 py-3"
         >
-          <Skeleton className="h-9 w-9 shrink-0 rounded-full" />
+          <Skeleton className="h-9 w-9 shrink-0 rounded-full bg-white/[0.06]" />
           <div className="flex flex-1 flex-col gap-1.5">
-            <Skeleton className="h-2.5 w-24 rounded" />
-            <Skeleton className="h-2.5 w-48 rounded" />
+            <Skeleton className="h-2.5 w-24 rounded bg-white/[0.06]" />
+            <Skeleton className="h-2.5 w-48 rounded bg-white/[0.06]" />
           </div>
-          <Skeleton className="h-7 w-7 shrink-0 rounded-full" />
+          <Skeleton className="h-7 w-7 shrink-0 rounded-full bg-white/[0.06]" />
         </div>
       ))}
     </div>

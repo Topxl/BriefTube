@@ -2,12 +2,14 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
+import { after } from "next/server";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, Youtube } from "@/lib/icons";
 import { ListActions } from "@/components/lists/list-actions";
 import { ShareListButton } from "@/components/lists/share-list-button";
 import { SiteConfig } from "@/site-config";
+import { getYouTubeChannelInfo } from "@/lib/youtube";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -123,6 +125,28 @@ export default async function ListDetailPage({ params }: Props) {
     channel_avatar_url: string | null;
   }[];
 
+  // Fetch and cache real YouTube avatars in the background for channels missing them
+  const channelsNeedingAvatars = channels.filter((ch) => !ch.channel_avatar_url);
+  if (channelsNeedingAvatars.length > 0) {
+    after(async () => {
+      await Promise.allSettled(
+        channelsNeedingAvatars.map(async (ch) => {
+          try {
+            const info = await getYouTubeChannelInfo(ch.channel_id);
+            if (!info.channelAvatarUrl.includes("ui-avatars.com")) {
+              await adminSupabase
+                .from("list_channels")
+                .update({ channel_avatar_url: info.channelAvatarUrl })
+                .eq("id", ch.id);
+            }
+          } catch {
+            // silent — will retry next page load
+          }
+        }),
+      );
+    });
+  }
+
   return (
     <div className="bg-background min-h-screen">
       {/* Top bar */}
@@ -200,20 +224,16 @@ export default async function ListDetailPage({ params }: Props) {
                     key={ch.id}
                     className="flex items-center gap-3 px-4 py-2.5"
                   >
-                    {ch.channel_avatar_url ? (
-                      <Image
-                        src={ch.channel_avatar_url}
-                        alt={ch.channel_name}
-                        width={32}
-                        height={32}
-                        suppressHydrationWarning
-                        className="h-8 w-8 shrink-0 rounded-full"
-                      />
-                    ) : (
-                      <div className="nm-inset-sm flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-500/15 text-xs font-bold text-red-400">
-                        {ch.channel_name.charAt(0).toUpperCase()}
-                      </div>
-                    )}
+                    <Image
+                      src={
+                        ch.channel_avatar_url ??
+                        `https://ui-avatars.com/api/?name=${encodeURIComponent(ch.channel_name)}&background=dc2626&color=fff&size=64`
+                      }
+                      alt={ch.channel_name}
+                      width={32}
+                      height={32}
+                      className="h-8 w-8 shrink-0 rounded-full"
+                    />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">
                         {ch.channel_name}

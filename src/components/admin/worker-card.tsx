@@ -12,7 +12,10 @@ import {
   Loader2,
   Play,
   Pause,
+  Copy,
+  Check,
 } from "@/lib/icons";
+import { useState } from "react";
 
 type WorkerApiResponse = {
   workerStatus: {
@@ -60,6 +63,24 @@ function LogLine({ line }: { line: string }) {
 
 export function WorkerCard() {
   const queryClient = useQueryClient();
+  const [copied, setCopied] = useState(false);
+  const [copiedErrors, setCopiedErrors] = useState(false);
+
+  const copyLogs = () => {
+    const lines = (data?.logLines ?? []).join("\n");
+    void navigator.clipboard.writeText(lines).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  const copyErrors = () => {
+    const lines = (data?.recentErrors ?? []).join("\n");
+    void navigator.clipboard.writeText(lines).then(() => {
+      setCopiedErrors(true);
+      setTimeout(() => setCopiedErrors(false), 2000);
+    });
+  };
 
   const { data, isLoading, dataUpdatedAt } = useQuery<WorkerApiResponse>({
     queryKey: ["admin-worker"],
@@ -207,6 +228,18 @@ export function WorkerCard() {
               {(data?.errorCount ?? 0) > 1 ? "s" : ""} récente
               {(data?.errorCount ?? 0) > 1 ? "s" : ""}
             </p>
+            <button
+              onClick={copyErrors}
+              className="ml-auto flex items-center gap-1 rounded px-1 py-0.5 text-[10px] text-red-400/60 transition-colors hover:text-red-400"
+              title="Copier les erreurs"
+            >
+              {copiedErrors ? (
+                <Check className="h-3 w-3 text-emerald-400" />
+              ) : (
+                <Copy className="h-3 w-3" />
+              )}
+              {copiedErrors ? "Copié" : "Copier"}
+            </button>
           </div>
           <div className="flex flex-col gap-0.5">
             {data?.recentErrors.map((line, i) => (
@@ -223,10 +256,24 @@ export function WorkerCard() {
           <p className="text-muted-foreground text-xs font-medium">
             Logs (60 dernières lignes)
           </p>
-          <div className="ml-auto flex gap-1">
-            <span className="h-2 w-2 rounded-full bg-red-500/60" />
-            <span className="h-2 w-2 rounded-full bg-yellow-500/60" />
-            <span className="h-2 w-2 rounded-full bg-emerald-500/60" />
+          <div className="ml-auto flex items-center gap-2">
+            <button
+              onClick={copyLogs}
+              className="text-muted-foreground hover:text-foreground flex items-center gap-1 rounded px-1 py-0.5 text-[10px] transition-colors"
+              title="Copier les logs"
+            >
+              {copied ? (
+                <Check className="h-3 w-3 text-emerald-400" />
+              ) : (
+                <Copy className="h-3 w-3" />
+              )}
+              {copied ? "Copié" : "Copier"}
+            </button>
+            <div className="flex gap-1">
+              <span className="h-2 w-2 rounded-full bg-red-500/60" />
+              <span className="h-2 w-2 rounded-full bg-yellow-500/60" />
+              <span className="h-2 w-2 rounded-full bg-emerald-500/60" />
+            </div>
           </div>
         </div>
         <div className="max-h-96 overflow-y-auto px-4 py-3">

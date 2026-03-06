@@ -1086,11 +1086,32 @@ async def health_loop():
                         continue
             return {"name": "Invidious", "status": "error", "detail": "All instances unreachable"}
 
+        async def check_proxy():
+            proxy_url = os.environ.get("YOUTUBE_PROXY_HTTP", "")
+            if not proxy_url:
+                return {"name": "Proxy YouTube", "status": "not_configured"}
+            try:
+                async with aiohttp.ClientSession() as s:
+                    async with s.get(
+                        "https://www.google.com",
+                        proxy=proxy_url,
+                        timeout=aiohttp.ClientTimeout(total=8),
+                    ) as r:
+                        if r.status == 200:
+                            return {"name": "Proxy YouTube", "status": "ok", "detail": "connecté"}
+                        elif r.status == 402:
+                            return {"name": "Proxy YouTube", "status": "error", "detail": "quota épuisé (402)"}
+                        else:
+                            return {"name": "Proxy YouTube", "status": "error", "detail": f"HTTP {r.status}"}
+            except Exception as e:
+                return {"name": "Proxy YouTube", "status": "error", "detail": str(e)[:80]}
+
         results = await asyncio.gather(
             _check("Gemini", check_gemini()),
             _check("Groq / Whisper", check_groq()),
             _check("Telegram", check_telegram()),
             _check("Invidious", check_invidious()),
+            _check("Proxy YouTube", check_proxy()),
         )
 
         return web.json_response({

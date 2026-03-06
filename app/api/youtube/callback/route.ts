@@ -1,6 +1,7 @@
 import { SiteConfig } from "@/site-config";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import { logger } from "@/lib/logger";
@@ -186,74 +187,6 @@ export async function GET(request: NextRequest) {
 
   const skipped = youtubeChannels.length - toImport.length;
 
-  // Pre-mark all existing videos for every channel as "skipped" BEFORE inserting
-  // subscriptions. This prevents the RSS scanner (which runs every 5 min) from
-  // treating all historical videos as "new" and queuing them all for processing.
-  // ignoreDuplicates: true ensures we never downgrade a video that was already
-  // completed/pending for another subscriber.
-  if (toImport.length > 0) {
-    logger.info(
-      `Pre-marking existing videos for ${toImport.length} channels...`,
-    );
-
-    const rssResults = await Promise.allSettled(
-      toImport.map(async (ch) => {
-        try {
-          const rssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${ch.channel_id}`;
-          const rssRes = await fetch(rssUrl, {
-            signal: AbortSignal.timeout(5000),
-          });
-          if (!rssRes.ok) return [];
-          const rssText = await rssRes.text();
-          const entries = [
-            ...rssText.matchAll(/<entry>([\s\S]*?)<\/entry>/g),
-          ].map((m) => m[1]);
-          return entries
-            .map((entry) => ({
-              video_id:
-                entry.match(/<yt:videoId>([^<]+)<\/yt:videoId>/)?.[1] ?? null,
-              channel_id: ch.channel_id,
-            }))
-            .filter(
-              (v): v is { video_id: string; channel_id: string } =>
-                !!v.video_id,
-            );
-        } catch {
-          return [];
-        }
-      }),
-    );
-
-    const allVideos = rssResults.flatMap((r) =>
-      r.status === "fulfilled" ? r.value : [],
-    );
-
-    if (allVideos.length > 0) {
-      // Single upsert — RSS feeds contain at most ~15 videos each so the total
-      // is well within Supabase's row limit even for 100+ channels.
-      const { error: upsertError } = await supabase
-        .from("processed_videos")
-        .upsert(
-          allVideos.map((v) => ({
-            video_id: v.video_id,
-            channel_id: v.channel_id,
-            video_title: "[pre-subscription-import]",
-            video_url: `https://www.youtube.com/watch?v=${v.video_id}`,
-            status: "skipped",
-            language: "fr", // sentinel — video_id presence in the set is enough for the scanner
-          })),
-          { onConflict: "video_id,language", ignoreDuplicates: true },
-        );
-      if (upsertError) {
-        logger.error("Failed to pre-mark videos as skipped:", upsertError);
-      } else {
-        logger.info(
-          `Pre-marked ${allVideos.length} videos as skipped across ${toImport.length} channels`,
-        );
-      }
-    }
-  }
-
   const { data: inserted, error: insertError } = await supabase
     .from("subscriptions")
     .insert(toImport)
@@ -268,6 +201,71 @@ export async function GET(request: NextRequest) {
 
   const imported = inserted.length;
   logger.info(`Import complete: ${imported} imported, ${skipped} skipped`);
+
+  // Pre-mark existing RSS videos as "skipped" in the background — after the
+  // redirect is sent. This prevents the RSS scanner (every 5 min) from treating
+  // historical videos as new, without blocking the user during import.
+  if (toImport.length > 0) {
+    after(async () => {
+      logger.info(
+        `Pre-marking existing videos for ${toImport.length} channels (background)...`,
+      );
+      const rssResults = await Promise.allSettled(
+        toImport.map(async (ch) => {
+          try {
+            const rssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${ch.channel_id}`;
+            const rssRes = await fetch(rssUrl, {
+              signal: AbortSignal.timeout(5000),
+            });
+            if (!rssRes.ok) return [];
+            const rssText = await rssRes.text();
+            const entries = [
+              ...rssText.matchAll(/<entry>([\s\S]*?)<\/entry>/g),
+            ].map((m) => m[1]);
+            return entries
+              .map((entry) => ({
+                video_id:
+                  entry.match(/<yt:videoId>([^<]+)<\/yt:videoId>/)?.[1] ??
+                  null,
+                channel_id: ch.channel_id,
+              }))
+              .filter(
+                (v): v is { video_id: string; channel_id: string } =>
+                  !!v.video_id,
+              );
+          } catch {
+            return [];
+          }
+        }),
+      );
+      const allVideos = rssResults.flatMap((r) =>
+        r.status === "fulfilled" ? r.value : [],
+      );
+      if (allVideos.length > 0) {
+        const supabaseBg = await createClient();
+        const { error: upsertError } = await supabaseBg
+          .from("processed_videos")
+          .upsert(
+            allVideos.map((v) => ({
+              video_id: v.video_id,
+              channel_id: v.channel_id,
+              video_title: "[pre-subscription-import]",
+              video_url: `https://www.youtube.com/watch?v=${v.video_id}`,
+              status: "skipped",
+              language: "fr",
+            })),
+            { onConflict: "video_id,language", ignoreDuplicates: true },
+          );
+        if (upsertError) {
+          logger.error("Failed to pre-mark videos as skipped:", upsertError);
+        } else {
+          logger.info(
+            `Pre-marked ${allVideos.length} videos as skipped across ${toImport.length} channels`,
+          );
+        }
+      }
+    });
+  }
 
   return NextResponse.redirect(
     new URL(

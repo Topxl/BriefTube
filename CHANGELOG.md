@@ -2,6 +2,7 @@
 
 ## 2026-03-06
 
+FIX: DB — mise à jour de la contrainte transcript_source pour inclure youtube_api, invidious, piped, yt-dlp, whisper (était limité à youtube/groq/manual)
 FEATURE: Admin — ajout du proxy YouTube (Webshare) dans le health check des services (détecte quota épuisé 402)
 FIX: Lists — avatars manquants résolus via after() qui scrape YouTube et sauvegarde en base ; fallback immédiat ui-avatars.com (à la place du div rouge custom)
 FIX: Lists — avatars des chaînes résolus depuis la table subscriptions quand channel_avatar_url est null dans list_channels
