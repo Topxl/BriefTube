@@ -1,19 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollReveal } from "@/components/ui/scroll-reveal";
 import { formatCurrency } from "@/lib/format";
-import { logger } from "@/lib/logger";
+import { usePrices } from "@/hooks/use-prices";
 import { t } from "@/locales";
 
 const tl = t.landing.pricing;
-
-type PricesData = {
-  monthly: { amount: number; currency: string };
-  annual: { amount: number; currency: string };
-};
 
 type Interval = "month" | "year";
 
@@ -33,19 +28,10 @@ const plans = [
 ];
 
 export function Pricing() {
-  const [prices, setPrices] = useState<PricesData | null>(null);
+  const { data: prices } = usePrices();
   const [interval, setInterval] = useState<Interval>("month");
 
-  useEffect(() => {
-    fetch("/api/stripe/price")
-      .then(async (res) => res.json())
-      .then((data: PricesData) => {
-        if (data.monthly.amount) setPrices(data);
-      })
-      .catch((err) => logger.error("Failed to fetch price:", err));
-  }, []);
-
-  const priceData = prices
+  const priceData = prices?.monthly.amount
     ? interval === "year"
       ? prices.annual
       : prices.monthly

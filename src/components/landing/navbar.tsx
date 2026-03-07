@@ -24,25 +24,25 @@ export function Navbar() {
         <div className="text-muted-foreground hidden items-center gap-1 text-sm md:flex">
           <Link
             href="/#how-it-works"
-            className="hover:text-foreground relative rounded-full px-3 py-1.5 transition-all duration-300 after:absolute after:bottom-0 after:left-1/2 after:h-px after:w-0 after:-translate-x-1/2 after:bg-red-500 after:transition-all after:duration-300 hover:bg-white/[0.06] hover:after:w-2/3"
+            className="hover:text-foreground rounded-full px-3 py-1.5 transition-colors duration-150 hover:bg-white/[0.06]"
           >
             {tl.howItWorks}
           </Link>
           <Link
             href="/#features"
-            className="hover:text-foreground relative rounded-full px-3 py-1.5 transition-all duration-300 after:absolute after:bottom-0 after:left-1/2 after:h-px after:w-0 after:-translate-x-1/2 after:bg-red-500 after:transition-all after:duration-300 hover:bg-white/[0.06] hover:after:w-2/3"
+            className="hover:text-foreground rounded-full px-3 py-1.5 transition-colors duration-150 hover:bg-white/[0.06]"
           >
             {tl.features}
           </Link>
           <Link
             href="/#pricing"
-            className="hover:text-foreground relative rounded-full px-3 py-1.5 transition-all duration-300 after:absolute after:bottom-0 after:left-1/2 after:h-px after:w-0 after:-translate-x-1/2 after:bg-red-500 after:transition-all after:duration-300 hover:bg-white/[0.06] hover:after:w-2/3"
+            className="hover:text-foreground rounded-full px-3 py-1.5 transition-colors duration-150 hover:bg-white/[0.06]"
           >
             {tl.pricing}
           </Link>
           <Link
             href="/#faq"
-            className="hover:text-foreground relative rounded-full px-3 py-1.5 transition-all duration-300 after:absolute after:bottom-0 after:left-1/2 after:h-px after:w-0 after:-translate-x-1/2 after:bg-red-500 after:transition-all after:duration-300 hover:bg-white/[0.06] hover:after:w-2/3"
+            className="hover:text-foreground rounded-full px-3 py-1.5 transition-colors duration-150 hover:bg-white/[0.06]"
           >
             {tl.faq}
           </Link>

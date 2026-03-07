@@ -58,19 +58,20 @@ export const metadata: Metadata = {
 const CaptionFont = Space_Grotesk({
   subsets: ["latin"],
   variable: "--font-caption",
-  display: "swap",
+  display: "optional",
 });
 
 const GeistSans = Inter({
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
   variable: "--font-geist-sans",
-  display: "swap",
+  display: "optional",
 });
 
 const GeistMono = Geist_Mono({
   subsets: ["latin"],
   variable: "--font-geist-mono",
-  display: "swap",
+  display: "optional",
 });
 
 export default function RootLayout({
@@ -81,12 +82,15 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
       <head>
+        <link rel="preconnect" href="https://img.youtube.com" />
+        <link rel="preconnect" href="https://www.googletagmanager.com" />
+        <link rel="dns-prefetch" href="https://noembed.com" />
         <Script
           async
           src="https://www.googletagmanager.com/gtag/js?id=AW-17972477350"
-          strategy="afterInteractive"
+          strategy="lazyOnload"
         />
-        <Script id="google-ads" strategy="afterInteractive">
+        <Script id="google-ads" strategy="lazyOnload">
           {`
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}

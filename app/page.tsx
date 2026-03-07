@@ -132,17 +132,17 @@ export default function Home() {
         <SocialProof />
       </Suspense>
       <div className="section-divider" />
-      <Problem />
-      <HowItWorks />
+      <Suspense fallback={null}><Problem /></Suspense>
+      <Suspense fallback={null}><HowItWorks /></Suspense>
       <div className="section-divider" />
-      <Demo />
+      <Suspense fallback={null}><Demo /></Suspense>
       <div className="section-divider" />
-      <Features />
-      <Pricing />
+      <Suspense fallback={null}><Features /></Suspense>
+      <Suspense fallback={null}><Pricing /></Suspense>
       <div className="section-divider" />
-      <FAQ />
-      <FinalCTA />
-      <Footer />
+      <Suspense fallback={null}><FAQ /></Suspense>
+      <Suspense fallback={null}><FinalCTA /></Suspense>
+      <Suspense fallback={null}><Footer /></Suspense>
     </main>
   );
 }

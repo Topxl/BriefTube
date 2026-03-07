@@ -1,5 +1,3 @@
-"use client";
-
 import Link from "next/link";
 import Image from "next/image";
 import { GoogleLoginButton } from "./_components/google-login-button";
@@ -12,14 +10,8 @@ export default function LoginPage() {
     <div className="relative flex min-h-screen items-center justify-center px-4">
       {/* Background orbs */}
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        <div
-          className="absolute top-1/4 left-1/4 h-[300px] w-[300px] rounded-full bg-red-600/8 blur-[150px]"
-          style={{ animation: "orb-drift 20s ease-in-out infinite" }}
-        />
-        <div
-          className="absolute right-1/4 bottom-1/4 h-[250px] w-[250px] rounded-full bg-blue-500/8 blur-[150px]"
-          style={{ animation: "orb-drift 25s ease-in-out infinite reverse" }}
-        />
+        <div className="absolute top-1/4 left-1/4 h-[300px] w-[300px] rounded-full bg-red-600/8 blur-[60px]" />
+        <div className="absolute right-1/4 bottom-1/4 h-[250px] w-[250px] rounded-full bg-blue-500/8 blur-[60px]" />
       </div>
 
       <div className="nm-raised w-full max-w-sm overflow-hidden rounded-2xl">

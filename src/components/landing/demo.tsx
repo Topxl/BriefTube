@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2 } from "@/lib/icons";
@@ -85,10 +86,13 @@ export function Demo() {
         {result && (
           <div className="mt-8 rounded-xl border border-white/[0.08] bg-white/[0.03] p-6 text-left">
             <div className="mb-4 flex items-start gap-3">
-              <img
+              <Image
                 src={`https://img.youtube.com/vi/${result.videoId}/default.jpg`}
                 alt={result.title}
+                width={112}
+                height={64}
                 className="h-16 w-28 shrink-0 rounded-lg object-cover"
+                loading="lazy"
               />
               <div className="min-w-0">
                 <p className="text-muted-foreground text-xs font-medium">

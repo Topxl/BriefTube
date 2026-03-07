@@ -12,6 +12,8 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   typedRoutes: true,
   images: {
+    formats: ["image/avif", "image/webp"],
+    minimumCacheTTL: 60 * 60 * 24 * 7, // 7 days
     remotePatterns: [
       {
         protocol: "https",
