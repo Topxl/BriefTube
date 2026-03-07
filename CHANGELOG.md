@@ -2,6 +2,9 @@
 
 ## 2026-03-07
 
+FEATURE: SEO — 4 nouvelles pages VS après recherche concurrentielle approfondie (TubeOnAI, Snipcast, Summarize.tech, Kome.ai)
+FIX: SEO — corriger "3 channels free" → "5 channels free" + prix Eightify dans les comparaisons existantes
+
 PERF: Layout — preconnect pour img.youtube.com + googletagmanager.com + dns-prefetch noembed.com (élimine 300-500ms de DNS lookup mobile)
 PERF: Dashboard — Suspense autour de PersonalStats (3 requêtes DB dont une séquentielle) : page streame sans attendre les stats
 PERF: Login — suppression "use client" (page redevient Server Component) + orbes blur 150px → 60px + animations orb-drift supprimées
