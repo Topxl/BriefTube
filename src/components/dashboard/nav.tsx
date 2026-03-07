@@ -105,8 +105,8 @@ export function DashboardNav() {
       </nav>
 
       {/* Mobile bottom nav */}
-      <nav className="fixed right-0 bottom-0 left-0 z-40 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:hidden">
-        <div className="flex items-center rounded-full border border-white/[0.08] bg-[oklch(0.24_0_0)]/40 shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-2xl">
+      <nav className="fixed right-0 bottom-0 left-0 z-40 border-t border-white/[0.06] bg-[oklch(0.13_0_0)]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-2xl md:hidden">
+        <div className="flex items-stretch">
           {navItems.map((item) => {
             const active = isActive(item.href, pathname);
             const Icon = item.icon;
@@ -115,19 +115,34 @@ export function DashboardNav() {
               <Link
                 key={item.href}
                 href={item.href}
-                className="flex flex-1 flex-col items-center py-1.5"
+                className="flex flex-1 flex-col items-center gap-1 py-2.5"
               >
+                {/* Icon bubble */}
                 <div
-                  className={`relative flex flex-col items-center gap-0.5 rounded-full px-5 py-1 transition-colors duration-150 ${
-                    active ? "nm-inset text-red-400" : "text-white/35"
+                  className={`relative rounded-xl px-3 py-1 transition-colors duration-200 ${
+                    active ? "bg-red-600/[0.15]" : ""
                   }`}
                 >
-                  <Icon className="h-5 w-5" strokeWidth={active ? 2 : 1.5} />
-                  <span className="text-[10px] font-medium">{item.label}</span>
+                  <Icon
+                    className={`h-[22px] w-[22px] transition-colors duration-200 ${
+                      active ? "text-red-400" : "text-white/40"
+                    }`}
+                    strokeWidth={active ? 2.5 : 1.5}
+                  />
                   {showBadge && (
-                    <span className="absolute -top-0.5 right-2 h-2 w-2 animate-pulse rounded-full bg-red-500" />
+                    <span className="absolute -top-0.5 -right-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white ring-2 ring-[oklch(0.13_0_0)]">
+                      {recentCount > 9 ? "9+" : recentCount}
+                    </span>
                   )}
                 </div>
+                {/* Label */}
+                <span
+                  className={`text-[10px] font-medium transition-colors duration-200 ${
+                    active ? "text-red-400" : "text-white/40"
+                  }`}
+                >
+                  {item.label}
+                </span>
               </Link>
             );
           })}
