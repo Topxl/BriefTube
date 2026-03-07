@@ -2,7 +2,9 @@
 
 ## 2026-03-07
 
+REFACTOR: Comparison pages — rewrite all prose to sound more natural and human (vary sentence structure, add intellectual hesitation, avoid generic AI vocabulary)
 FEATURE: SEO — 4 nouvelles pages VS après recherche concurrentielle approfondie (TubeOnAI, Snipcast, Summarize.tech, Kome.ai)
+REFACTOR: SEO — réécriture de tous les textes des 14 pages VS pour un ton plus naturel et moins générique
 FIX: SEO — corriger "3 channels free" → "5 channels free" + prix Eightify dans les comparaisons existantes
 
 PERF: Layout — preconnect pour img.youtube.com + googletagmanager.com + dns-prefetch noembed.com (élimine 300-500ms de DNS lookup mobile)
