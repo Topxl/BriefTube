@@ -721,7 +721,6 @@ html.dark .shiki span {
     oklch(0.08 0.01 300) 50%,
     oklch(0.1 0.008 240) 100%
   );
-  background-attachment: fixed;
 }
 
 /* Liquid Glass Utility Classes */
@@ -743,8 +742,8 @@ html.dark .shiki span {
 
 .glass-strong {
   background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(40px);
-  -webkit-backdrop-filter: blur(40px);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.35);
 }

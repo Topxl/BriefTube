@@ -1,38 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { ScrollReveal } from "@/components/ui/scroll-reveal";
 import { t } from "@/locales";
-import { formatCurrency } from "@/lib/format";
-import { logger } from "@/lib/logger";
+import { usePriceFormatted } from "@/hooks/use-prices";
 
 const tl = t.landing.faq;
 
-type PricesData = {
-  monthly: { amount: number; currency: string };
-  annual: { amount: number; currency: string };
-};
-
 export function FAQ() {
   const [open, setOpen] = useState<number | null>(null);
-  const [proPrice, setProPrice] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetch("/api/stripe/price")
-      .then(async (res) => res.json())
-      .then((data: PricesData) => {
-        if (data.monthly.amount) {
-          const { formatted, symbol } = formatCurrency(
-            data.monthly.amount,
-            data.monthly.currency,
-          );
-          setProPrice(
-            symbol === "$" ? `${symbol}${formatted}` : `${formatted}${symbol}`,
-          );
-        }
-      })
-      .catch((err) => logger.error("Failed to fetch price:", err));
-  }, []);
+  const proPrice = usePriceFormatted();
 
   return (
     <section id="faq" className="py-14 md:py-20">

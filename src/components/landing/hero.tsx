@@ -120,16 +120,13 @@ export function Hero() {
       {/* Gradient background orbs */}
       <div className="pointer-events-none absolute inset-0 -z-10">
         <div
-          className="absolute top-0 left-1/2 h-[600px] w-[600px] -translate-x-1/2 rounded-full bg-red-600/15 blur-[150px]"
-          style={{ animation: "orb-drift 20s ease-in-out infinite" }}
+          className="absolute top-0 left-1/2 h-[600px] w-[600px] -translate-x-1/2 rounded-full bg-red-600/15 blur-[80px]"
         />
         <div
-          className="absolute top-1/3 right-0 h-[400px] w-[400px] rounded-full bg-blue-500/12 blur-[150px]"
-          style={{ animation: "orb-drift 25s ease-in-out infinite reverse" }}
+          className="absolute top-1/3 right-0 h-[400px] w-[400px] rounded-full bg-blue-500/12 blur-[60px]"
         />
         <div
-          className="absolute bottom-0 left-0 h-[350px] w-[350px] rounded-full bg-violet-500/10 blur-[150px]"
-          style={{ animation: "orb-drift 22s ease-in-out infinite 5s" }}
+          className="absolute bottom-0 left-0 h-[350px] w-[350px] rounded-full bg-violet-500/10 blur-[60px]"
         />
       </div>
 
@@ -164,10 +161,7 @@ export function Hero() {
         </div>
 
         {/* Telegram mockup */}
-        <div
-          className="mx-auto mt-16 max-w-sm"
-          style={{ animation: "float 6s ease-in-out infinite" }}
-        >
+        <div className="mx-auto mt-16 max-w-sm">
           <div className="nm-raised rounded-2xl p-4">
             <div className="mb-3 flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-600 shadow-[0_0_16px_rgba(239,68,68,0.3)]">
@@ -216,7 +210,7 @@ export function Hero() {
                         audiosRef.current[i] = el;
                       }}
                       src={demo.src}
-                      preload="metadata"
+                      preload="none"
                       onLoadedMetadata={(e) =>
                         patchCard(i, { duration: e.currentTarget.duration })
                       }

@@ -1,23 +1,23 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { LayoutDashboard, ListVideo, User } from "@/lib/icons";
 import { ChannelSearchBar } from "@/components/dashboard/channel-search-bar";
 import { createClient } from "@/lib/supabase/client";
 
 function useRecentDeliveriesCount() {
-  const [count, setCount] = useState(0);
-
-  useEffect(() => {
-    const supabase = createClient();
-    void (async () => {
+  const { data = 0 } = useQuery({
+    queryKey: ["recent-deliveries-count"],
+    queryFn: async () => {
+      const supabase = createClient();
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) return 0;
       const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const { count: n } = await supabase
         .from("deliveries")
@@ -25,11 +25,12 @@ function useRecentDeliveriesCount() {
         .eq("user_id", user.id)
         .eq("status", "sent")
         .gte("created_at", since);
-      setCount(n ?? 0);
-    })();
-  }, []);
-
-  return count;
+      return n ?? 0;
+    },
+    staleTime: 1000 * 60 * 5, // 5 min — pas besoin de refetch à chaque navigation
+    gcTime: 1000 * 60 * 10,
+  });
+  return data;
 }
 
 const navItems = [
@@ -76,7 +77,7 @@ export function DashboardNav() {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`relative rounded-full px-3 py-1.5 text-[13px] transition-all duration-200 ${
+                    className={`relative rounded-full px-3 py-1.5 text-[13px] transition-colors duration-150 ${
                       active
                         ? "text-foreground font-medium shadow-[inset_3px_3px_8px_rgba(0,0,0,0.7),inset_-2px_-2px_5px_rgba(255,255,255,0.07)]"
                         : "text-muted-foreground hover:text-foreground"
@@ -117,7 +118,7 @@ export function DashboardNav() {
                 className="flex flex-1 flex-col items-center py-1.5"
               >
                 <div
-                  className={`relative flex flex-col items-center gap-0.5 rounded-full px-5 py-1 transition-all duration-200 ${
+                  className={`relative flex flex-col items-center gap-0.5 rounded-full px-5 py-1 transition-colors duration-150 ${
                     active ? "nm-inset text-red-400" : "text-white/35"
                   }`}
                 >

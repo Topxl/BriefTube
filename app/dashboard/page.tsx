@@ -82,7 +82,9 @@ export default async function DashboardPage() {
 
       {/* Personal stats */}
       <SectionErrorBoundary>
-        <PersonalStats userId={user.id} />
+        <Suspense fallback={null}>
+          <PersonalStats userId={user.id} />
+        </Suspense>
       </SectionErrorBoundary>
 
       {/* Recent summaries */}

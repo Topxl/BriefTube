@@ -1,5 +1,27 @@
 # Changelog
 
+## 2026-03-07
+
+PERF: Layout — preconnect pour img.youtube.com + googletagmanager.com + dns-prefetch noembed.com (élimine 300-500ms de DNS lookup mobile)
+PERF: Dashboard — Suspense autour de PersonalStats (3 requêtes DB dont une séquentielle) : page streame sans attendre les stats
+PERF: Login — suppression "use client" (page redevient Server Component) + orbes blur 150px → 60px + animations orb-drift supprimées
+PERF: DashboardNav — useRecentDeliveriesCount() migré vers TanStack Query (staleTime 5min) : une seule requête puis cache, zéro refetch par navigation
+PERF: DashboardNav — transition-all → transition-colors duration-150 sur les liens desktop et mobile
+PERF: Hook usePrices — remplace le double useEffect/fetch vers /api/stripe/price dans Pricing et FAQ par TanStack Query (une seule requête, cachée 1h)
+PERF: Demo — <img> natif → <Image> Next.js avec loading="lazy" (WebP/AVIF automatique)
+PERF: Hero — suppression animation float (6s infinite GPU) sur le mockup Telegram ; blur des orbes réduit de 150px → 60-80px
+PERF: Navbar — transition-all (toutes propriétés) → transition-colors duration-150 sur les liens ; suppression de l'animation ::after width (reflow)
+PERF: CSS — glass-strong backdrop-filter réduit de blur(40px) → blur(20px)
+PERF: Google Ads — strategy="afterInteractive" → "lazyOnload" (se charge à l'idle navigateur)
+PERF: Inter font — weight limité à [400,500,600,700] au lieu de tous les weights disponibles
+PERF: next.config.ts — formats AVIF/WebP activés explicitement + minimumCacheTTL 7 jours sur les images
+PERF: Fonts — display: "swap" → "optional" sur les 3 fonts (Inter, Space_Grotesk, Geist_Mono) pour supprimer le blocage rendu
+PERF: Hero — suppression des animations CSS orb-drift (GPU) sur les 3 orbes ; preload="metadata" → "none" sur les 2 audio
+PERF: Landing page — Suspense fallback={null} sur les 8 composants dynamic() pour débloquer l'hydratation
+PERF: CSS — suppression de background-attachment: fixed (forçait un repaint total au scroll)
+PERF: Channels — remplacement des <img> natifs par <Image> Next.js avec priority (avatar) et loading="lazy" (thumbnails)
+PERF: Providers — PostHogIdentify wrappé dans Suspense pour déférer son hydratation
+
 ## 2026-03-06
 
 FIX: DB — mise à jour de la contrainte transcript_source pour inclure youtube_api, invidious, piped, yt-dlp, whisper (était limité à youtube/groq/manual)

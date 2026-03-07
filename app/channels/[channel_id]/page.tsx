@@ -201,12 +201,13 @@ export default async function ChannelPage({ params }: Props) {
       <div className="mx-auto max-w-2xl px-4 py-8">
         {/* Channel header */}
         <div className="mb-8 flex items-center gap-4">
-          <img
+          <Image
             src={channelAvatarUrl}
             alt={channelName}
             width={64}
             height={64}
             className="h-16 w-16 rounded-full object-cover"
+            priority
           />
           <div className="flex-1">
             <a
@@ -265,12 +266,13 @@ export default async function ChannelPage({ params }: Props) {
               >
                 <div className="flex items-start gap-4">
                   <div className="shrink-0 overflow-hidden rounded-xl">
-                    <img
+                    <Image
                       src={thumbnailUrl}
                       alt={video.video_title ?? "Video"}
                       width={160}
                       height={90}
                       className="h-[90px] w-[160px] object-cover"
+                      loading="lazy"
                     />
                   </div>
 

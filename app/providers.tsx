@@ -47,7 +47,9 @@ export const Providers = ({ children }: PropsWithChildren) => {
         <Suspense fallback={null}>
           <PostHogPageView />
         </Suspense>
-        <PostHogIdentify />
+        <Suspense fallback={null}>
+          <PostHogIdentify />
+        </Suspense>
         <Toaster />
         <DialogManagerRenderer />
         <GlobalDialogLazy />
