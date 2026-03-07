@@ -53,8 +53,8 @@ export const comparisons: ComparisonData[] = [
       },
       {
         feature: "Free tier",
-        briefTube: "3 channels free",
-        competitor: "Limited free, paid from $7/month",
+        briefTube: "5 channels free",
+        competitor: "Limited free, paid from $4.99/month (annual)",
       },
       {
         feature: "Multi-language audio",
@@ -106,8 +106,8 @@ export const comparisons: ComparisonData[] = [
       },
       {
         feature: "Free tier",
-        briefTube: "3 channels free",
-        competitor: "Limited free credits",
+        briefTube: "5 channels free",
+        competitor: "15 free uses/month, paid from $2.99/month",
       },
       {
         feature: "Use case",
@@ -537,5 +537,221 @@ export const comparisons: ComparisonData[] = [
       "Active podcast listeners who want to capture specific insights and highlights while listening",
     briefTubeBestFor:
       "YouTube followers who want automated audio summaries of new videos delivered passively to Telegram",
+  },
+  {
+    slug: "tubeonai",
+    competitor: "TubeOnAI",
+    title:
+      "BriefTube vs TubeOnAI: which automated YouTube summarizer is right for you?",
+    description:
+      "TubeOnAI and BriefTube both monitor YouTube channels and generate audio summaries automatically. The key difference: BriefTube delivers audio directly to Telegram. TubeOnAI keeps everything inside its own app.",
+    lastUpdated: "2026-03-07",
+    competitorDescription:
+      "TubeOnAI is a web and mobile app that monitors YouTube channels and podcasts, automatically summarizes new content, and plays AI-generated audio summaries inside its own app. It supports YouTube, podcasts, articles, and PDFs in a single interface.",
+    table: [
+      {
+        feature: "Automatic channel monitoring",
+        briefTube: "Yes, RSS-based",
+        competitor: "Yes",
+      },
+      {
+        feature: "Audio summaries",
+        briefTube: "Yes — Microsoft Edge neural TTS",
+        competitor: "Yes — in-app TTS",
+      },
+      {
+        feature: "Telegram delivery",
+        briefTube: "Yes — audio file sent to Telegram",
+        competitor: "No — in-app only, must open their app",
+      },
+      {
+        feature: "Podcast support",
+        briefTube: "No",
+        competitor: "Yes",
+      },
+      {
+        feature: "Voice languages",
+        briefTube: "55 languages via Microsoft Edge",
+        competitor: "20 languages",
+      },
+      {
+        feature: "Pricing",
+        briefTube: "Free (5 channels), Pro unlimited",
+        competitor: "Free limited, then $20/month",
+      },
+      {
+        feature: "Requires dedicated app",
+        briefTube: "No — delivered via Telegram",
+        competitor: "Yes — must open TubeOnAI app or website",
+      },
+    ],
+    verdict:
+      "TubeOnAI is the closest alternative to BriefTube — both automate YouTube channel monitoring and produce audio. The fundamental difference is delivery: TubeOnAI keeps summaries inside its ecosystem (you must open another app to listen), while BriefTube pushes audio files directly into Telegram, where you already spend time. If you follow podcasts in addition to YouTube, TubeOnAI covers both. If your focus is YouTube and you live in Telegram, BriefTube removes one more app from your daily routine.",
+    competitorBestFor:
+      "Users who want a single app for both YouTube and podcast summaries, and don't use Telegram regularly",
+    briefTubeBestFor:
+      "YouTube subscribers who want audio summaries delivered passively into Telegram, without opening a dedicated app",
+  },
+  {
+    slug: "snipcast",
+    competitor: "Snipcast",
+    title:
+      "BriefTube vs Snipcast: audio Telegram delivery vs text email digests",
+    description:
+      "Both tools monitor YouTube channels automatically. Snipcast sends text summaries by email with a 10-subscription cap. BriefTube delivers audio files to Telegram with no subscription limit on the Pro plan.",
+    lastUpdated: "2026-03-07",
+    competitorDescription:
+      "Snipcast monitors YouTube channels, Spotify podcasts, and Apple Podcasts, then automatically emails text summaries of new episodes. The paid plan supports up to 10 subscriptions at $5.99/month, with full transcripts and timestamps.",
+    table: [
+      {
+        feature: "Automatic channel monitoring",
+        briefTube: "Yes",
+        competitor: "Yes",
+      },
+      {
+        feature: "Audio output",
+        briefTube: "Yes — neural TTS audio file",
+        competitor: "No — text only",
+      },
+      {
+        feature: "Delivery channel",
+        briefTube: "Telegram (audio file)",
+        competitor: "Email (text digest)",
+      },
+      {
+        feature: "Max channel subscriptions",
+        briefTube: "5 free, unlimited on Pro",
+        competitor: "2 free, 10 max on paid plan",
+      },
+      {
+        feature: "Podcast support",
+        briefTube: "No",
+        competitor: "Yes — Spotify, Apple Podcasts",
+      },
+      {
+        feature: "Multi-language",
+        briefTube: "Yes — 55 languages",
+        competitor: "Not specified",
+      },
+      {
+        feature: "Price",
+        briefTube: "Free (5 channels), Pro unlimited",
+        competitor: "$5.99/month, 10 subscriptions max",
+      },
+    ],
+    verdict:
+      "Snipcast proves that the 'automated monitoring + delivery' model works — people want their YouTube content without having to visit YouTube. The difference is output: Snipcast sends text to your email inbox, BriefTube sends audio to your Telegram. Email competes with hundreds of other messages; Telegram audio files are ready to play on your commute. Snipcast's hard cap of 10 subscriptions is also a real constraint if you follow more channels.",
+    competitorBestFor:
+      "Users who prefer text summaries in their email inbox and also follow podcasts on Spotify or Apple Podcasts",
+    briefTubeBestFor:
+      "YouTube subscribers who want to listen to summaries hands-free through Telegram, with no subscription cap on Pro",
+  },
+  {
+    slug: "summarize-tech",
+    competitor: "Summarize.tech",
+    title:
+      "BriefTube vs Summarize.tech: automated audio delivery vs on-demand web summaries",
+    description:
+      "Summarize.tech generates text summaries when you paste a YouTube URL. BriefTube monitors channels and delivers audio summaries to Telegram automatically — no URL pasting, no manual steps.",
+    lastUpdated: "2026-03-07",
+    competitorDescription:
+      "Summarize.tech is a web tool that produces chapter-by-chapter text summaries from YouTube URLs. Paste a link, click submit, read the result. No account needed for basic use. It relies entirely on YouTube's auto-generated subtitles, so videos without captions return no result.",
+    table: [
+      {
+        feature: "Automatic monitoring",
+        briefTube: "Yes, RSS-based",
+        competitor: "No — paste URL manually each time",
+      },
+      {
+        feature: "Audio output",
+        briefTube: "Yes, neural TTS",
+        competitor: "No — text only",
+      },
+      {
+        feature: "Telegram delivery",
+        briefTube: "Yes",
+        competitor: "No",
+      },
+      {
+        feature: "Works without subtitles",
+        briefTube: "Yes — Whisper transcription fallback",
+        competitor: "No — subtitle-dependent",
+      },
+      {
+        feature: "Account required",
+        briefTube: "Yes",
+        competitor: "No for basic use",
+      },
+      {
+        feature: "Channels you can monitor",
+        briefTube: "5 free, unlimited on Pro",
+        competitor: "None — single video only",
+      },
+      {
+        feature: "Paid plan",
+        briefTube: "Pro unlimited channels",
+        competitor: "$10/month — 200 videos cap",
+      },
+    ],
+    verdict:
+      "Summarize.tech is one of the simplest possible tools: paste a URL, get text. Zero setup, zero automation. BriefTube is the opposite: set up your channels once, then receive audio summaries automatically for every new video — no URL, no click, no reading required. If you occasionally need a quick summary of a specific video, Summarize.tech is fine. If you follow specific creators, BriefTube removes all the friction.",
+    competitorBestFor:
+      "Casual users who occasionally need a quick text summary of a specific video without signing up for anything",
+    briefTubeBestFor:
+      "YouTube channel followers who want audio summaries delivered automatically to Telegram, without any manual steps",
+  },
+  {
+    slug: "kome",
+    competitor: "Kome.ai",
+    title:
+      "BriefTube vs Kome.ai: automated audio summaries vs browser extension bookmarking",
+    description:
+      "Kome.ai is a browser extension that bookmarks and summarizes YouTube videos and articles on demand. BriefTube monitors channels and delivers audio summaries to Telegram automatically.",
+    lastUpdated: "2026-03-07",
+    competitorDescription:
+      "Kome.ai is a browser extension for Chrome, Firefox, Edge, and Brave that combines AI summarization with web bookmarking. It supports YouTube videos, articles, and web pages across 120+ languages. The paid plan allows 200 summary credits per month at $5.99/month.",
+    table: [
+      {
+        feature: "Automatic channel monitoring",
+        briefTube: "Yes",
+        competitor: "No — manual per video",
+      },
+      {
+        feature: "Audio output",
+        briefTube: "Yes, neural TTS delivered to Telegram",
+        competitor: "No — text only",
+      },
+      {
+        feature: "Telegram delivery",
+        briefTube: "Yes",
+        competitor: "No",
+      },
+      {
+        feature: "Bookmarking and annotation",
+        briefTube: "No",
+        competitor: "Yes — core feature",
+      },
+      {
+        feature: "Browser extension required",
+        briefTube: "No",
+        competitor: "Yes",
+      },
+      {
+        feature: "Monthly summary limit",
+        briefTube: "No limit on Pro",
+        competitor: "200 summaries/month on paid plan",
+      },
+      {
+        feature: "Price",
+        briefTube: "Free (5 channels), Pro unlimited",
+        competitor: "$5.99/month — 200 credits cap",
+      },
+    ],
+    verdict:
+      "Kome.ai is built for active browsing: you stumble upon a video or article, save it, and get a summary. That's useful for ad-hoc content discovery. BriefTube is the opposite model — it runs in the background and delivers summaries of channels you already follow, without any browser involvement. If you're looking for YouTube channel automation, Kome.ai simply doesn't cover that use case.",
+    competitorBestFor:
+      "Browser users who want AI-powered bookmarking and on-demand summaries for content they discover while browsing",
+    briefTubeBestFor:
+      "YouTube channel followers who want audio summaries delivered automatically to Telegram without any browser extension or manual action",
   },
 ];
