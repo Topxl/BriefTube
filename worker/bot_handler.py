@@ -176,11 +176,10 @@ CHANNEL_URL_RE = re.compile(
 HANDLE_RE = re.compile(r"^@([\w.-]+)$")
 ON_DEMAND_MONTHLY_LIMIT = 30
 
-def _share_keyboard(url: str, video_id: str, language: str) -> InlineKeyboardMarkup:
-    """Return keyboard for a share-link message: [Language] [Share →]"""
+def _share_keyboard(url: str) -> InlineKeyboardMarkup:
+    """Return keyboard for a share-link message: [Share →]"""
     tg_share_url = f"https://t.me/share/url?url={_url_quote(url)}"
     return InlineKeyboardMarkup([[
-        InlineKeyboardButton("Language", callback_data=f"shareLang_{video_id}_{language}"),
         InlineKeyboardButton("Share →", url=tg_share_url),
     ]])
 
@@ -958,7 +957,7 @@ async def handle_share_callback(update: Update, context: ContextTypes.DEFAULT_TY
     await query.message.reply_text(
         f"<code>{url}</code>",
         parse_mode="HTML",
-        reply_markup=_share_keyboard(url, video_id, language),
+        reply_markup=_share_keyboard(url),
     )
 
 
@@ -1043,7 +1042,7 @@ async def handle_share_set_lang_callback(update: Update, context: ContextTypes.D
             await query.message.edit_text(
                 f"<code>{url}</code>",
                 parse_mode="HTML",
-                reply_markup=_share_keyboard(url, video_id, new_lang),
+                reply_markup=_share_keyboard(url),
             )
         except Exception:
             pass
