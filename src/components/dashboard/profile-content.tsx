@@ -40,6 +40,7 @@ type Props = {
   initialTelegramConnected: boolean;
   initialVoice: string;
   initialLanguage: string;
+  initialFavorites?: string[];
   maxChannels: number;
   referralCode?: string;
   referralStats?: ReferralStats;
@@ -60,6 +61,7 @@ export function ProfileContent({
   initialTelegramConnected,
   initialVoice,
   initialLanguage,
+  initialFavorites,
   maxChannels,
   referralCode,
   referralStats,
@@ -204,6 +206,7 @@ export function ProfileContent({
         initialTelegramConnected={initialTelegramConnected}
         initialVoice={initialVoice}
         initialLanguage={initialLanguage}
+        initialFavorites={initialFavorites}
       />
 
       {/* Notifications */}

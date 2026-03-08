@@ -872,6 +872,7 @@ async def handle_options_callback(update: Update, context: ContextTypes.DEFAULT_
 
     rows = [
         [InlineKeyboardButton("📄 Summary", callback_data=f"summary_{video_id}_{language}")],
+        [InlineKeyboardButton("🌐 Language", callback_data=f"lang_{video_id}_{language}")],
         [InlineKeyboardButton("🔗 Share", callback_data=f"share_{video_id}_{language}")],
     ]
     if sub_row:

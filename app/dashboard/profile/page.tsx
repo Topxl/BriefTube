@@ -24,7 +24,7 @@ export default async function ProfilePage(props: {
     supabase
       .from("profiles")
       .select(
-        "subscription_status, trial_ends_at, stripe_customer_id, telegram_connected, tts_voice, preferred_language, max_channels, referral_code, notify_new_summaries_push, email_newsletter, email_announcements",
+        "subscription_status, trial_ends_at, stripe_customer_id, telegram_connected, tts_voice, preferred_language, favorite_languages, max_channels, referral_code, notify_new_summaries_push, email_newsletter, email_announcements",
       )
       .eq("id", user.id)
       .single(),
@@ -88,6 +88,7 @@ export default async function ProfilePage(props: {
       initialLanguage={
         profile?.preferred_language ?? SiteConfig.defaultLanguage
       }
+      initialFavorites={profile?.favorite_languages ?? []}
       maxChannels={profile?.max_channels ?? SiteConfig.freeChannelsLimit}
       referralCode={profile?.referral_code ?? ""}
       referralStats={referralStats}
