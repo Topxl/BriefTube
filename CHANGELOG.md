@@ -2,6 +2,7 @@
 
 ## 2026-03-09
 
+FIX: Bot Telegram — retire le bouton "Language" du clavier Share (déplacé dans Options)
 FEATURE: Bot Telegram — ajoute bouton "🌐 Language" dans le menu Options
 FEATURE: Dashboard — sélecteur de langue avec système de favoris (étoiles) + sous-menu "Other languages" pour les non-favoris
 FEATURE: DB — colonne `favorite_languages text[]` sur la table profiles
