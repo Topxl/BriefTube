@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Check, Loader2, Play } from "@/lib/icons";
+import { Check, Loader2, Play, Star } from "@/lib/icons";
 import { dialogManager } from "@/features/dialog-manager/dialog-manager";
 import { languages } from "@/lib/languages";
 import type { Language } from "@/lib/languages";
@@ -173,19 +173,69 @@ function VoicePicker({
 
 function LanguagePicker({
   currentCode,
+  favorites,
   onSelect,
+  onToggleFavorite,
 }: {
   currentCode: string;
+  favorites: string[];
   onSelect: (lang: Language) => void;
+  onToggleFavorite: (code: string) => void;
 }) {
   const [search, setSearch] = useState("");
-  const filtered = search.trim()
+  const [showOthers, setShowOthers] = useState(false);
+
+  const q = search.trim().toLowerCase();
+  const allFiltered = q
     ? languages.filter(
         (l) =>
-          l.name.toLowerCase().includes(search.toLowerCase()) ||
-          l.nativeName.toLowerCase().includes(search.toLowerCase()),
+          l.name.toLowerCase().includes(q) ||
+          l.nativeName.toLowerCase().includes(q),
       )
-    : languages;
+    : null;
+
+  const favLangs = languages.filter((l) => favorites.includes(l.code));
+  const otherLangs = languages.filter((l) => !favorites.includes(l.code));
+
+  const displayFavs = allFiltered
+    ? allFiltered.filter((l) => favorites.includes(l.code))
+    : favLangs;
+  const displayOthers = allFiltered
+    ? allFiltered.filter((l) => !favorites.includes(l.code))
+    : otherLangs;
+
+  const showOthersSection = allFiltered ? displayOthers.length > 0 : showOthers;
+
+  function LangButton({ l }: { l: Language }) {
+    const isFav = favorites.includes(l.code);
+    return (
+      <div
+        className={`flex items-center gap-1.5 rounded-xl px-2.5 py-2 transition-all duration-200 ${
+          currentCode === l.code
+            ? "nm-inset text-foreground"
+            : "nm-raised-sm text-muted-foreground hover:text-foreground"
+        }`}
+      >
+        <button
+          onClick={() => onSelect(l)}
+          className="min-w-0 flex-1 text-left"
+        >
+          <p className="text-[12px] leading-none font-medium">{l.nativeName}</p>
+          <p className="text-muted-foreground mt-0.5 text-[10px]">{l.name}</p>
+        </button>
+        {currentCode === l.code && (
+          <Check className="h-3 w-3 shrink-0 text-red-400" />
+        )}
+        <button
+          onClick={(e) => { e.stopPropagation(); onToggleFavorite(l.code); }}
+          className={`shrink-0 transition-colors ${isFav ? "text-yellow-400 hover:text-muted-foreground" : "text-muted-foreground/30 hover:text-yellow-400"}`}
+          aria-label={isFav ? "Remove from favorites" : "Add to favorites"}
+        >
+          <Star className="h-3 w-3" fill={isFav ? "currentColor" : "none"} />
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">
@@ -196,32 +246,47 @@ function LanguagePicker({
         onChange={(e) => setSearch(e.target.value)}
         className="nm-inset text-foreground placeholder:text-muted-foreground w-full rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-white/20"
       />
-      <div className="max-h-64 overflow-y-auto">
-        <div className="grid grid-cols-2 gap-1.5">
-          {filtered.map((l) => (
+      <div className="max-h-72 overflow-y-auto space-y-3">
+        {/* Favorites */}
+        {displayFavs.length > 0 && (
+          <div className="space-y-1.5">
+            {!allFiltered && (
+              <p className="text-muted-foreground/50 px-1 text-[10px] font-medium uppercase tracking-wide">Favorites</p>
+            )}
+            <div className="grid grid-cols-2 gap-1.5">
+              {displayFavs.map((l) => <LangButton key={l.code} l={l} />)}
+            </div>
+          </div>
+        )}
+
+        {/* Other languages */}
+        {!allFiltered && displayOthers.length > 0 && (
+          <div className="space-y-1.5">
             <button
-              key={l.code}
-              onClick={() => onSelect(l)}
-              className={`flex items-center gap-2 rounded-xl px-3 py-2 text-left transition-all duration-200 ${
-                currentCode === l.code
-                  ? "nm-inset text-foreground"
-                  : "nm-raised-sm text-muted-foreground hover:text-foreground"
-              }`}
+              onClick={() => setShowOthers((v) => !v)}
+              className="text-muted-foreground/50 hover:text-muted-foreground flex items-center gap-1 px-1 text-[10px] font-medium uppercase tracking-wide transition-colors"
             >
-              <div className="min-w-0">
-                <p className="text-[12px] leading-none font-medium">
-                  {l.nativeName}
-                </p>
-                <p className="text-muted-foreground mt-0.5 text-[10px]">
-                  {l.name}
-                </p>
-              </div>
-              {currentCode === l.code && (
-                <Check className="ml-auto h-3 w-3 shrink-0 text-red-400" />
-              )}
+              Other languages
+              <span className="text-[9px]">{showOthers ? "▲" : "▼"}</span>
             </button>
-          ))}
-        </div>
+            {showOthers && (
+              <div className="grid grid-cols-2 gap-1.5">
+                {displayOthers.map((l) => <LangButton key={l.code} l={l} />)}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Search results — others */}
+        {allFiltered && showOthersSection && (
+          <div className="grid grid-cols-2 gap-1.5">
+            {displayOthers.map((l) => <LangButton key={l.code} l={l} />)}
+          </div>
+        )}
+
+        {allFiltered && displayFavs.length === 0 && displayOthers.length === 0 && (
+          <p className="text-muted-foreground text-center text-sm py-4">No language found</p>
+        )}
       </div>
     </div>
   );
@@ -344,12 +409,14 @@ type Props = {
   initialTelegramConnected: boolean;
   initialVoice: string;
   initialLanguage: string;
+  initialFavorites?: string[];
 };
 
 export function DeliverySection({
   initialTelegramConnected,
   initialVoice,
   initialLanguage,
+  initialFavorites = [],
 }: Props) {
   const supabase = createClient();
   const [telegramConnected, setTelegramConnected] = useState(
@@ -359,6 +426,7 @@ export function DeliverySection({
   const [savingVoice, setSavingVoice] = useState(false);
   const [language, setLanguage] = useState(initialLanguage);
   const [savingLanguage, setSavingLanguage] = useState(false);
+  const [favorites, setFavorites] = useState<string[]>(initialFavorites);
 
   const currentLanguageMeta = languages.find((l) => l.code === language);
   const voiceList = getVoicesForLanguage(language);
@@ -426,6 +494,16 @@ export function DeliverySection({
     toast.success("Language updated");
   };
 
+  const toggleFavorite = async (code: string) => {
+    const next = favorites.includes(code)
+      ? favorites.filter((c) => c !== code)
+      : [...favorites, code];
+    setFavorites(next);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    await supabase.from("profiles").update({ favorite_languages: next }).eq("id", user.id);
+  };
+
   const openLanguagePicker = () => {
     dialogManager.custom({
       title: "Summary language",
@@ -433,10 +511,12 @@ export function DeliverySection({
       children: (
         <LanguagePicker
           currentCode={language}
+          favorites={favorites}
           onSelect={(lang) => {
             dialogManager.closeAll();
             void updateLanguage(lang);
           }}
+          onToggleFavorite={(code) => void toggleFavorite(code)}
         />
       ),
     });

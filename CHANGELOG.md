@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-03-09
+
+FEATURE: Bot Telegram — ajoute bouton "🌐 Language" dans le menu Options
+FEATURE: Dashboard — sélecteur de langue avec système de favoris (étoiles) + sous-menu "Other languages" pour les non-favoris
+FEATURE: DB — colonne `favorite_languages text[]` sur la table profiles
+FIX: DB — contrainte `processed_videos_transcript_source_check` élargie pour accepter les nouvelles sources (youtube_api, invidious, piped, yt-dlp, whisper)
+CHORE: Worker — health check proxy Webshare ajouté au endpoint `/services`
+CHORE: CLAUDE.md — réécriture complète (suppr. marketing/bloat, schéma DB à jour, infos VPS/Worker)
+
 ## 2026-03-07
 
 REFACTOR: Comparison pages — rewrite all prose to sound more natural and human (vary sentence structure, add intellectual hesitation, avoid generic AI vocabulary)
