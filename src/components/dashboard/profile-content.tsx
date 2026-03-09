@@ -79,8 +79,19 @@ export function ProfileContent({
     defaultInterval ?? "year",
   );
   const [prices, setPrices] = useState<PricesData | null>(null);
+  const [referral, setReferral] = useState("");
 
   const isActivating = !!paymentSuccess && !isActivePro && retryCount < 10;
+
+  useEffect(() => {
+    const w = window as Window & {
+      rewardful?: (event: string, cb: () => void) => void;
+      Rewardful?: { referral: string };
+    };
+    w.rewardful?.("ready", () => {
+      if (w.Rewardful?.referral) setReferral(w.Rewardful.referral);
+    });
+  }, []);
 
   useEffect(() => {
     fetch("/api/stripe/price")
@@ -315,6 +326,7 @@ export function ProfileContent({
                     name="interval"
                     value={upgradeInterval}
                   />
+                  <input type="hidden" name="referral" value={referral} />
                   <Button
                     type="submit"
                     size="sm"
