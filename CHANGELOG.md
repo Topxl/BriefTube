@@ -2,6 +2,8 @@
 
 ## 2026-03-09
 
+FEATURE: Bot Telegram — toutes les actions Options en inline (Share, Subscribe, Unsubscribe) sans nouveau message
+FEATURE: Bot Telegram — confirmation ⏳/✓ avec show_alert lors du changement de langue (génération vs déjà prêt)
 FEATURE: Bot Telegram — sélecteur de langue inline (edit_reply_markup) : favoris ⭐ en premier, ✓ déjà générée, bouton "Manage favorites" → profil web, bouton ← Back
 FEATURE: Bot Telegram — sélecteur de langue synchronisé avec les favoris du dashboard (⭐ en premier, ✓ = déjà générée)
 FIX: Bot Telegram — retire le bouton "Language" du clavier Share (déplacé dans Options)
