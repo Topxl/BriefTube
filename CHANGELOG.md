@@ -2,6 +2,7 @@
 
 ## 2026-03-09
 
+CHORE: Analytics — ajout Google Analytics GA4 (G-NSS12KB41V) au tag gtag existant
 FEATURE: Bot Telegram — bouton "📋 Copy link" dans le menu Share (CopyTextButton natif, copie sans nouveau message)
 FEATURE: Affiliation — intégration Rewardful (scripts layout, referral hidden input sur tous les formulaires checkout, client_reference_id passé à Stripe)
 
