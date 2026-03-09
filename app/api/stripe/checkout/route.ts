@@ -14,9 +14,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Read interval from form body (month | year), default to month
+  // Read interval and referral from form body
   const formData = await req.formData().catch(() => null);
   const interval = formData?.get("interval") === "year" ? "year" : "month";
+  const referral = formData?.get("referral");
   const priceId =
     interval === "year"
       ? env.STRIPE_PRO_ANNUAL_PRICE_ID
@@ -65,6 +66,7 @@ export async function POST(req: NextRequest) {
       },
     ],
     ...(trialEnd ? { subscription_data: { trial_end: trialEnd } } : {}),
+    ...(referral ? { client_reference_id: String(referral) } : {}),
     success_url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/dashboard/billing?success=true`,
     cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/dashboard/profile`,
     metadata: {

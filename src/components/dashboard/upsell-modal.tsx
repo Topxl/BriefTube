@@ -28,6 +28,17 @@ type Props = {
 export function UpsellModal({ defaultInterval = "year" }: Props) {
   const [interval, setInterval] = useState<Interval>(defaultInterval);
   const [prices, setPrices] = useState<PricesData | null>(null);
+  const [referral, setReferral] = useState("");
+
+  useEffect(() => {
+    const w = window as Window & {
+      rewardful?: (event: string, cb: () => void) => void;
+      Rewardful?: { referral: string };
+    };
+    w.rewardful?.("ready", () => {
+      if (w.Rewardful?.referral) setReferral(w.Rewardful.referral);
+    });
+  }, []);
 
   useEffect(() => {
     fetch("/api/stripe/price")
@@ -135,6 +146,7 @@ export function UpsellModal({ defaultInterval = "year" }: Props) {
         suppressHydrationWarning
       >
         <input type="hidden" name="interval" value={interval} />
+        <input type="hidden" name="referral" value={referral} />
         <Button
           type="submit"
           className="w-full rounded-full bg-red-600 hover:bg-red-500"

@@ -2,6 +2,8 @@
 
 ## 2026-03-09
 
+FEATURE: Affiliation — intégration Rewardful (scripts layout, referral hidden input sur tous les formulaires checkout, client_reference_id passé à Stripe)
+
 FEATURE: Bot Telegram — toutes les actions Options en inline (Share, Subscribe, Unsubscribe) sans nouveau message
 FEATURE: Bot Telegram — confirmation ⏳/✓ avec show_alert lors du changement de langue (génération vs déjà prêt)
 FEATURE: Bot Telegram — sélecteur de langue inline (edit_reply_markup) : favoris ⭐ en premier, ✓ déjà générée, bouton "Manage favorites" → profil web, bouton ← Back

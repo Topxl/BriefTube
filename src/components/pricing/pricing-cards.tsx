@@ -35,6 +35,17 @@ const PRO_FEATURES = [
 export function PricingCards({ isLoggedIn, isPro }: Props) {
   const [interval, setInterval] = useState<Interval>("year");
   const [prices, setPrices] = useState<PricesData | null>(null);
+  const [referral, setReferral] = useState("");
+
+  useEffect(() => {
+    const w = window as Window & {
+      rewardful?: (event: string, cb: () => void) => void;
+      Rewardful?: { referral: string };
+    };
+    w.rewardful?.("ready", () => {
+      if (w.Rewardful?.referral) setReferral(w.Rewardful.referral);
+    });
+  }, []);
 
   useEffect(() => {
     fetch("/api/stripe/price")
@@ -193,6 +204,7 @@ export function PricingCards({ isLoggedIn, isPro }: Props) {
                 suppressHydrationWarning
               >
                 <input type="hidden" name="interval" value={interval} />
+                <input type="hidden" name="referral" value={referral} />
                 <Button
                   type="submit"
                   className="mt-5 w-full rounded-full bg-red-600 hover:bg-red-500"
