@@ -2,6 +2,7 @@
 
 ## 2026-03-09
 
+FEATURE: Bot Telegram — sélecteur de langue inline (edit_reply_markup) : favoris ⭐ en premier, ✓ déjà générée, bouton "Manage favorites" → profil web, bouton ← Back
 FEATURE: Bot Telegram — sélecteur de langue synchronisé avec les favoris du dashboard (⭐ en premier, ✓ = déjà générée)
 FIX: Bot Telegram — retire le bouton "Language" du clavier Share (déplacé dans Options)
 FEATURE: Bot Telegram — ajoute bouton "🌐 Language" dans le menu Options
