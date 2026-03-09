@@ -865,9 +865,9 @@ async def handle_options_callback(update: Update, context: ContextTypes.DEFAULT_
             db.is_subscribed_to_channel, profile["id"], channel_info["channel_id"]
         )
         if is_subscribed:
-            sub_row = [InlineKeyboardButton("❌ Unsubscribe", callback_data=f"unsub_{video_id}")]
+            sub_row = [InlineKeyboardButton("❌ Unsubscribe", callback_data=f"unsub_{video_id}_{language}")]
         else:
-            sub_row = [InlineKeyboardButton("➕ Subscribe", callback_data=f"sub_{video_id}")]
+            sub_row = [InlineKeyboardButton("➕ Subscribe", callback_data=f"sub_{video_id}_{language}")]
 
     rows = [
         [InlineKeyboardButton("📄 Summary", callback_data=f"summary_{video_id}_{language}")],
@@ -954,11 +954,14 @@ async def handle_share_callback(update: Update, context: ContextTypes.DEFAULT_TY
         return
 
     url = f"{APP_URL}/s/{share['short_id']}"
-    await query.message.reply_text(
-        f"<code>{url}</code>",
-        parse_mode="HTML",
-        reply_markup=_share_keyboard(url),
-    )
+    share_keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("↗ Open share link", url=url)],
+        [InlineKeyboardButton("← Back", callback_data=f"options_{video_id}_{language}")],
+    ])
+    try:
+        await query.message.edit_reply_markup(reply_markup=share_keyboard)
+    except Exception:
+        pass
 
 
 async def handle_share_lang_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -1131,22 +1134,37 @@ async def handle_lang_callback(update: Update, context: ContextTypes.DEFAULT_TYP
 
 
 async def handle_setlang_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Queue delivery of this summary in a different language, then restore Options keyboard."""
+    """Queue delivery in a different language. Shows appropriate confirmation then restores Options."""
     query = update.callback_query
 
     _, _, rest = query.data.partition("_")  # strip "setlang_"
     video_id, _, new_lang = rest.rpartition("_")
+    if not video_id or not new_lang:
+        try:
+            await query.answer()
+        except Exception:
+            pass
+        return
 
     label = _LANG_LABELS.get(new_lang, new_lang)
+
+    # Check if already generated to show the right confirmation
+    profile, available = await asyncio.gather(
+        asyncio.to_thread(db.get_profile_by_telegram, str(query.from_user.id)),
+        asyncio.to_thread(db.get_available_languages_for_video, video_id),
+    )
+
+    already_done = new_lang in available
+    if already_done:
+        alert_text = f"✓ {label} — sending your summary now!"
+    else:
+        alert_text = f"⏳ Generating summary in {label}…\n\nYou'll receive it as a new message when ready."
+
     try:
-        await query.answer(f"✓ {label} — you'll receive it shortly")
+        await query.answer(alert_text, show_alert=True)
     except Exception:
         pass
 
-    if not video_id or not new_lang:
-        return
-
-    profile = await asyncio.to_thread(db.get_profile_by_telegram, str(query.from_user.id))
     if not profile:
         return
 
@@ -1162,7 +1180,7 @@ async def handle_setlang_callback(update: Update, context: ContextTypes.DEFAULT_
 
     await asyncio.to_thread(_queue_lang_delivery)
 
-    # Restore Options keyboard (with updated language so callbacks stay coherent)
+    # Restore Options keyboard (language updated so all callbacks stay coherent)
     rows = [
         [InlineKeyboardButton("📄 Summary", callback_data=f"summary_{video_id}_{new_lang}")],
         [InlineKeyboardButton("🌐 Language", callback_data=f"lang_{video_id}_{new_lang}")],
@@ -1182,21 +1200,26 @@ async def handle_sub_channel_callback(update: Update, context: ContextTypes.DEFA
     except Exception:
         pass
 
-    video_id = query.data[4:]  # strip "sub_"
+    # sub_{video_id}_{language}
+    rest = query.data[4:]  # strip "sub_"
+    video_id, _, language = rest.rpartition("_")
 
     profile = await asyncio.to_thread(db.get_profile_by_telegram, str(query.from_user.id))
     if not profile:
-        await query.message.reply_text("Connect your BriefTube account first (/start).")
+        try:
+            await query.answer("Connect your BriefTube account first (/start).", show_alert=True)
+        except Exception:
+            pass
         return
 
     channel_info = await asyncio.to_thread(db.get_video_channel, video_id)
     if not channel_info:
-        # Fallback: on-demand videos have channel_id="" in DB — scrape YouTube
         channel_info = await _get_channel_for_video(video_id)
     if not channel_info:
-        await query.message.reply_text(
-            "Could not find the channel for this video."
-        )
+        try:
+            await query.answer("Could not find the channel for this video.", show_alert=True)
+        except Exception:
+            pass
         return
 
     channel_id = channel_info["channel_id"]
@@ -1207,10 +1230,13 @@ async def handle_sub_channel_callback(update: Update, context: ContextTypes.DEFA
         count = await asyncio.to_thread(db.get_subscription_count, profile["id"])
         max_ch = profile.get("max_channels", 5)
         if count >= max_ch:
-            await query.message.reply_text(
-                f"You've reached your limit of {max_ch} channels.\n\n"
-                f"Upgrade to Pro for unlimited channels: {APP_URL}/dashboard/profile"
-            )
+            try:
+                await query.answer(
+                    f"You've reached your limit of {max_ch} channels. Upgrade to Pro for unlimited.",
+                    show_alert=True,
+                )
+            except Exception:
+                pass
             return
 
     avatar_url = await _get_channel_avatar(channel_id)
@@ -1222,55 +1248,84 @@ async def handle_sub_channel_callback(update: Update, context: ContextTypes.DEFA
             await asyncio.to_thread(db.mark_existing_videos_as_skipped, channel_id)
         except Exception:
             pass
-        await query.message.reply_text(
-            f"Subscribed to {channel_name}!\n\n"
-            "You'll receive audio summaries when new videos are published."
-        )
         logger.info(f"Options subscribe: user={profile['id']}, channel={channel_name} ({channel_id})")
-    else:
-        await query.message.reply_text(f"You're already subscribed to {channel_name}.")
+
+    try:
+        await query.answer(
+            f"✓ Subscribed to {channel_name}!" if newly else f"Already subscribed to {channel_name}.",
+            show_alert=False,
+        )
+    except Exception:
+        pass
+
+    # Swap Subscribe → Unsubscribe inline
+    rows = [
+        [InlineKeyboardButton("📄 Summary", callback_data=f"summary_{video_id}_{language}")],
+        [InlineKeyboardButton("🌐 Language", callback_data=f"lang_{video_id}_{language}")],
+        [InlineKeyboardButton("🔗 Share", callback_data=f"share_{video_id}_{language}")],
+        [InlineKeyboardButton("❌ Unsubscribe", callback_data=f"unsub_{video_id}_{language}")],
+    ]
+    try:
+        await query.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup(rows))
+    except Exception:
+        pass
 
 
 async def handle_unsub_channel_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Ask for confirmation before unsubscribing (from Options menu)."""
+    """Show inline confirmation before unsubscribing (edits the Options keyboard in place)."""
     query = update.callback_query
     try:
         await query.answer()
     except Exception:
         pass
 
-    video_id = query.data[6:]  # strip "unsub_"
+    # unsub_{video_id}_{language}
+    rest = query.data[6:]  # strip "unsub_"
+    video_id, _, language = rest.rpartition("_")
 
     channel_info = await asyncio.to_thread(db.get_video_channel, video_id)
     if not channel_info:
         channel_info = await _get_channel_for_video(video_id)
     if not channel_info:
-        await query.message.reply_text("Could not find the channel for this video.")
+        try:
+            await query.answer("Could not find the channel for this video.", show_alert=True)
+        except Exception:
+            pass
         return
 
     channel_id = channel_info["channel_id"]
     channel_name = channel_info["channel_name"]
 
-    keyboard = InlineKeyboardMarkup([[
-        InlineKeyboardButton("Yes, unsubscribe", callback_data=f"confirmUnsub_{channel_id}"),
-        InlineKeyboardButton("Cancel", callback_data="cancelUnsub"),
-    ]])
-    await query.message.reply_text(
-        f"Unsubscribe from <b>{_html.escape(channel_name)}</b>?",
-        parse_mode="HTML",
-        reply_markup=keyboard,
-    )
+    # Edit keyboard in place to show confirmation
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton(
+            f"✓ Yes, unsubscribe from {channel_name}",
+            callback_data=f"confirmUnsub_{channel_id}_{video_id}_{language}",
+        )],
+        [InlineKeyboardButton("← Cancel", callback_data=f"options_{video_id}_{language}")],
+    ])
+    try:
+        await query.message.edit_reply_markup(reply_markup=keyboard)
+    except Exception:
+        pass
 
 
 async def handle_confirm_unsub_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Actually unsubscribe after confirmation."""
+    """Actually unsubscribe after confirmation, then restore Options keyboard."""
     query = update.callback_query
     try:
         await query.answer()
     except Exception:
         pass
 
-    channel_id = query.data[len("confirmUnsub_"):]
+    # confirmUnsub_{channel_id}_{video_id}_{language}
+    rest = query.data[len("confirmUnsub_"):]
+    # channel_id can contain underscores (UCxxx) but video_id is 11 chars + language is 2 chars
+    # Split from the right to get video_id and language reliably
+    parts = rest.rsplit("_", 2)
+    if len(parts) != 3:
+        return
+    channel_id, video_id, language = parts
 
     try:
         profile, channel_name = await asyncio.wait_for(
@@ -1284,28 +1339,31 @@ async def handle_confirm_unsub_callback(update: Update, context: ContextTypes.DE
         logger.warning(f"Timeout fetching profile/channel for confirmUnsub (channel={channel_id})")
         return
     if not profile:
-        await query.message.edit_text("Connect your BriefTube account first (/start).")
         return
 
     deactivated = await asyncio.to_thread(db.unsubscribe_channel, profile["id"], channel_id)
     if deactivated:
-        await query.message.edit_text(f"Unsubscribed from {channel_name}.", reply_markup=None)
         logger.info(f"Options unsubscribe confirmed: user={profile['id']}, channel={channel_name} ({channel_id})")
-    else:
-        await query.message.edit_text(f"You're not subscribed to {channel_name}.", reply_markup=None)
 
-
-async def handle_cancel_unsub_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Cancel the unsubscribe confirmation."""
-    query = update.callback_query
     try:
-        await query.answer()
+        await query.answer(
+            f"Unsubscribed from {channel_name}." if deactivated else f"Not subscribed to {channel_name}.",
+            show_alert=False,
+        )
     except Exception:
         pass
+
+    # Restore Options keyboard with Subscribe button
+    rows = [
+        [InlineKeyboardButton("📄 Summary", callback_data=f"summary_{video_id}_{language}")],
+        [InlineKeyboardButton("🌐 Language", callback_data=f"lang_{video_id}_{language}")],
+        [InlineKeyboardButton("🔗 Share", callback_data=f"share_{video_id}_{language}")],
+        [InlineKeyboardButton("➕ Subscribe", callback_data=f"sub_{video_id}_{language}")],
+    ]
     try:
-        await query.message.delete()
+        await query.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup(rows))
     except Exception:
-        await query.message.edit_text("Cancelled.", reply_markup=None)
+        pass
 
 
 async def handle_subch_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -1448,7 +1506,6 @@ def create_bot_application() -> Application:
     app.add_handler(CallbackQueryHandler(handle_setlang_callback, pattern=r"^setlang_"))
     app.add_handler(CallbackQueryHandler(handle_sub_channel_callback, pattern=r"^sub_"))
     app.add_handler(CallbackQueryHandler(handle_confirm_unsub_callback, pattern=r"^confirmUnsub_"))
-    app.add_handler(CallbackQueryHandler(handle_cancel_unsub_callback, pattern=r"^cancelUnsub$"))
     app.add_handler(CallbackQueryHandler(handle_unsub_channel_callback, pattern=r"^unsub_"))
     app.add_handler(CallbackQueryHandler(handle_subch_callback, pattern=r"^subch_"))
     app.add_handler(CallbackQueryHandler(handle_unsubch_callback, pattern=r"^unsubch_"))
