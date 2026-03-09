@@ -2,6 +2,7 @@
 
 ## 2026-03-09
 
+FEATURE: Bot Telegram — bouton "📋 Copy link" dans le menu Share (CopyTextButton natif, copie sans nouveau message)
 FEATURE: Affiliation — intégration Rewardful (scripts layout, referral hidden input sur tous les formulaires checkout, client_reference_id passé à Stripe)
 
 FEATURE: Bot Telegram — toutes les actions Options en inline (Share, Subscribe, Unsubscribe) sans nouveau message
