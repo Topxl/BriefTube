@@ -1084,7 +1084,11 @@ async def handle_share_set_lang_callback(update: Update, context: ContextTypes.D
 
 
 async def handle_lang_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Show language picker: favorites first (⭐), then others. Already-processed marked ✓."""
+    """Inline language picker — edits the current keyboard in place.
+
+    Favorites (⭐) appear first; ✓ means the summary is already generated in that language.
+    Picking a language queues delivery (or generation) without changing the global preference.
+    """
     query = update.callback_query
     try:
         await query.answer()
@@ -1104,44 +1108,46 @@ async def handle_lang_callback(update: Update, context: ContextTypes.DEFAULT_TYP
     favorites: list[str] = (profile or {}).get("favorite_languages") or []
     available_set = set(available)
 
-    all_langs = [lang for lang in _LANG_LABELS if lang != current_lang]
     fav_langs = [lang for lang in favorites if lang in _LANG_LABELS and lang != current_lang]
-    other_langs = [lang for lang in all_langs if lang not in fav_langs]
+    other_langs = [lang for lang in _LANG_LABELS if lang != current_lang and lang not in fav_langs]
 
     def _btn(lang: str) -> InlineKeyboardButton:
-        label = _LANG_LABELS.get(lang, lang)
+        label = _LANG_LABELS[lang]
         prefix = "⭐ " if lang in fav_langs else ""
         suffix = " ✓" if lang in available_set else ""
         return InlineKeyboardButton(f"{prefix}{label}{suffix}", callback_data=f"setlang_{video_id}_{lang}")
 
-    buttons = [[_btn(lang)] for lang in fav_langs] + [[_btn(lang)] for lang in other_langs]
-
-    if not buttons:
-        await query.message.reply_text("No other languages available.")
-        return
-
-    await query.message.reply_text(
-        "Choose a language (⭐ = favorites, ✓ = already generated):",
-        reply_markup=InlineKeyboardMarkup(buttons),
+    rows: list[list[InlineKeyboardButton]] = (
+        [[_btn(lang)] for lang in fav_langs]
+        + [[_btn(lang)] for lang in other_langs]
+        + [[InlineKeyboardButton("⭐ Manage favorites", url=f"{APP_URL}/dashboard/profile")]]
+        + [[InlineKeyboardButton("← Back", callback_data=f"options_{video_id}_{current_lang}")]]
     )
 
-
-async def handle_setlang_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Queue delivery of this summary in a different language."""
-    query = update.callback_query
     try:
-        await query.answer()
+        await query.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup(rows))
     except Exception:
         pass
 
+
+async def handle_setlang_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Queue delivery of this summary in a different language, then restore Options keyboard."""
+    query = update.callback_query
+
     _, _, rest = query.data.partition("_")  # strip "setlang_"
     video_id, _, new_lang = rest.rpartition("_")
+
+    label = _LANG_LABELS.get(new_lang, new_lang)
+    try:
+        await query.answer(f"✓ {label} — you'll receive it shortly")
+    except Exception:
+        pass
+
     if not video_id or not new_lang:
         return
 
     profile = await asyncio.to_thread(db.get_profile_by_telegram, str(query.from_user.id))
     if not profile:
-        await query.message.reply_text("Connect your BriefTube account first (/start).")
         return
 
     def _queue_lang_delivery() -> None:
@@ -1156,8 +1162,16 @@ async def handle_setlang_callback(update: Update, context: ContextTypes.DEFAULT_
 
     await asyncio.to_thread(_queue_lang_delivery)
 
-    label = _LANG_LABELS.get(new_lang, new_lang)
-    await query.message.reply_text(f"You'll receive this summary in {label} shortly.")
+    # Restore Options keyboard (with updated language so callbacks stay coherent)
+    rows = [
+        [InlineKeyboardButton("📄 Summary", callback_data=f"summary_{video_id}_{new_lang}")],
+        [InlineKeyboardButton("🌐 Language", callback_data=f"lang_{video_id}_{new_lang}")],
+        [InlineKeyboardButton("🔗 Share", callback_data=f"share_{video_id}_{new_lang}")],
+    ]
+    try:
+        await query.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup(rows))
+    except Exception:
+        pass
 
 
 async def handle_sub_channel_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
