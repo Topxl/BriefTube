@@ -771,7 +771,7 @@ def get_profile_by_telegram(telegram_chat_id: str) -> dict | None:
     sb = get_client()
     res = (
         sb.table("profiles")
-        .select("id, subscription_status, trial_ends_at, max_channels, preferred_language, tts_voice")
+        .select("id, subscription_status, trial_ends_at, max_channels, preferred_language, tts_voice, favorite_languages")
         .eq("telegram_chat_id", telegram_chat_id)
         .eq("telegram_connected", True)
         .execute()
