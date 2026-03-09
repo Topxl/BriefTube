@@ -1084,7 +1084,7 @@ async def handle_share_set_lang_callback(update: Update, context: ContextTypes.D
 
 
 async def handle_lang_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Show available language variants for this summary."""
+    """Show language picker: favorites first (⭐), then others. Already-processed marked ✓."""
     query = update.callback_query
     try:
         await query.answer()
@@ -1096,24 +1096,32 @@ async def handle_lang_callback(update: Update, context: ContextTypes.DEFAULT_TYP
     if not video_id:
         return
 
-    available = await asyncio.to_thread(db.get_available_languages_for_video, video_id)
-    other_langs = [lang for lang in available if lang != current_lang]
+    profile, available = await asyncio.gather(
+        asyncio.to_thread(db.get_profile_by_telegram, str(query.from_user.id)),
+        asyncio.to_thread(db.get_available_languages_for_video, video_id),
+    )
 
-    if not other_langs:
-        await query.message.reply_text(
-            "This summary is only available in one language for now."
-        )
+    favorites: list[str] = (profile or {}).get("favorite_languages") or []
+    available_set = set(available)
+
+    all_langs = [lang for lang in _LANG_LABELS if lang != current_lang]
+    fav_langs = [lang for lang in favorites if lang in _LANG_LABELS and lang != current_lang]
+    other_langs = [lang for lang in all_langs if lang not in fav_langs]
+
+    def _btn(lang: str) -> InlineKeyboardButton:
+        label = _LANG_LABELS.get(lang, lang)
+        prefix = "⭐ " if lang in fav_langs else ""
+        suffix = " ✓" if lang in available_set else ""
+        return InlineKeyboardButton(f"{prefix}{label}{suffix}", callback_data=f"setlang_{video_id}_{lang}")
+
+    buttons = [[_btn(lang)] for lang in fav_langs] + [[_btn(lang)] for lang in other_langs]
+
+    if not buttons:
+        await query.message.reply_text("No other languages available.")
         return
 
-    buttons = [
-        [InlineKeyboardButton(
-            _LANG_LABELS.get(lang, lang),
-            callback_data=f"setlang_{video_id}_{lang}",
-        )]
-        for lang in other_langs
-    ]
     await query.message.reply_text(
-        "Choose a language to receive this summary in:",
+        "Choose a language (⭐ = favorites, ✓ = already generated):",
         reply_markup=InlineKeyboardMarkup(buttons),
     )
 
