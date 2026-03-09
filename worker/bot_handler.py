@@ -10,7 +10,7 @@ from urllib.parse import quote as _url_quote
 import aiohttp
 import feedparser
 from typing import Optional
-from telegram import Bot, BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, LinkPreviewOptions, Update
+from telegram import Bot, BotCommand, CopyTextButton, InlineKeyboardButton, InlineKeyboardMarkup, LinkPreviewOptions, Update
 from telegram.error import Conflict
 from telegram.ext import (
     Application,
@@ -955,7 +955,8 @@ async def handle_share_callback(update: Update, context: ContextTypes.DEFAULT_TY
 
     url = f"{APP_URL}/s/{share['short_id']}"
     share_keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("↗ Open share link", url=url)],
+        [InlineKeyboardButton("↗ Open link", url=url),
+         InlineKeyboardButton("📋 Copy link", copy_text=CopyTextButton(text=url))],
         [InlineKeyboardButton("← Back", callback_data=f"options_{video_id}_{language}")],
     ])
     try:
