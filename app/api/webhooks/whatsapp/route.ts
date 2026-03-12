@@ -64,13 +64,16 @@ export async function POST(req: NextRequest) {
         .update({ verified: true })
         .eq("user_id", verification.user_id);
 
-      await supabase.from("platform_connections").upsert({
-        user_id: verification.user_id,
-        platform: "whatsapp",
-        external_id: from,
-        credentials: {},
-        connected: true,
-      });
+      await supabase.from("platform_connections").upsert(
+        {
+          user_id: verification.user_id,
+          platform: "whatsapp",
+          external_id: from,
+          credentials: {},
+          connected: true,
+        },
+        { onConflict: "user_id,platform" },
+      );
     }
   }
 
