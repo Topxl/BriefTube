@@ -27,6 +27,8 @@ from gemini_api import GeminiSummarizer
 from text_cleaner import clean_for_tts
 from tts_processor import text_to_audio, cleanup_audio_files
 from telegram_deliverer import send_audio_to_user
+from notion_deliverer import send_to_notion
+from whatsapp_deliverer import send_to_whatsapp
 from bot_handler import create_bot_application, setup_bot_commands, MonitoringAlert, send_daily_report
 from monitoring import stats
 import rss_scanner
@@ -666,6 +668,41 @@ async def processor_loop(alert_system: MonitoringAlert):
 
 # ── Loop 5: Telegram Deliverer ─────────────────────────────────
 
+async def _dispatch_delivery(d: dict, audio_path: Path) -> bool:
+    """Dispatch a delivery to the appropriate platform handler."""
+    platform = d.get("platform", "telegram")
+    if platform == "telegram":
+        return await send_audio_to_user(
+            chat_id=d["external_id"],
+            audio_path=audio_path,
+            video_title=d["video_title"],
+            video_id=d["video_id"],
+            channel_id=d["channel_id"],
+            language=d.get("language", "fr"),
+        )
+    elif platform == "notion":
+        creds = d.get("credentials") or {}
+        return await send_to_notion(
+            access_token=creds.get("access_token", ""),
+            database_id=creds.get("database_id", ""),
+            video_title=d["video_title"],
+            video_id=d["video_id"],
+            summary=d.get("summary", ""),
+            audio_url=d.get("audio_url", ""),
+            language=d.get("language", "fr"),
+        )
+    elif platform == "whatsapp":
+        return await send_to_whatsapp(
+            phone=d["external_id"],
+            video_title=d["video_title"],
+            video_id=d["video_id"],
+            audio_url=d.get("audio_url", ""),
+        )
+    else:
+        logger.error(f"Unknown delivery platform: {platform}")
+        return False
+
+
 async def delivery_loop(alert_system: MonitoringAlert):
     """Send completed audio to subscribed users."""
     logger.info("Telegram Deliverer started")
@@ -763,14 +800,7 @@ async def delivery_loop(alert_system: MonitoringAlert):
                             await asyncio.to_thread(db.mark_delivery_failed, d["delivery_id"])
                             continue
 
-                    success = await send_audio_to_user(
-                        chat_id=d["chat_id"],
-                        audio_path=audio_path,
-                        video_title=d["video_title"],
-                        video_id=video_id,
-                        channel_id=d["channel_id"],
-                        language=delivery_language,
-                    )
+                    success = await _dispatch_delivery(d, audio_path)
 
                     if success:
                         # Retry marking as sent to survive transient Supabase errors.
@@ -816,7 +846,7 @@ async def delivery_loop(alert_system: MonitoringAlert):
                         # send_audio_to_user returned False: Telegram permanently
                         # rejected the send (user blocked bot, invalid chat, etc.).
                         await asyncio.to_thread(db.mark_delivery_failed, d["delivery_id"])
-                        await asyncio.to_thread(db.mark_user_telegram_disconnected, d["user_id"])
+                        await asyncio.to_thread(db.mark_user_platform_disconnected, d["user_id"], d.get("platform", "telegram"))
                         stats.record_delivery_failed()
 
                     await asyncio.sleep(0.05)
@@ -1119,11 +1149,67 @@ async def health_loop():
             "timestamp": datetime.now(timezone.utc).isoformat(),
         })
 
+    async def handle_send_whatsapp_otp(request):
+        """Send a WhatsApp OTP via Twilio (POST /send-whatsapp-otp).
+
+        Body (JSON): { "phone": "+33612345678", "code": "123456" }
+        Auth: Authorization: Bearer <WORKER_API_SECRET>
+        """
+        auth_header = request.headers.get("Authorization", "")
+        token = auth_header.removeprefix("Bearer ").strip()
+        if WORKER_API_SECRET and token != WORKER_API_SECRET:
+            return web.json_response({"error": "Unauthorized"}, status=401)
+
+        try:
+            body = await request.json()
+        except Exception:
+            return web.json_response({"error": "Invalid JSON"}, status=400)
+
+        phone = body.get("phone", "").strip()
+        code = body.get("code", "").strip()
+        if not phone or not code:
+            return web.json_response({"error": "phone and code required"}, status=400)
+
+        account_sid = os.environ.get("TWILIO_ACCOUNT_SID", "")
+        auth_token = os.environ.get("TWILIO_AUTH_TOKEN", "")
+        from_number = os.environ.get("TWILIO_WHATSAPP_FROM", "")
+
+        if not account_sid or not auth_token or not from_number:
+            logger.warning("WhatsApp OTP skipped: Twilio env vars not set")
+            return web.json_response({"error": "WhatsApp not configured"}, status=503)
+
+        import base64
+        credentials = base64.b64encode(f"{account_sid}:{auth_token}".encode()).decode()
+        payload = {
+            "From": f"whatsapp:{from_number}",
+            "To": f"whatsapp:{phone}",
+            "Body": f"Your BriefTube verification code: {code}\n\nThis code expires in 10 minutes.",
+        }
+
+        try:
+            async with aiohttp.ClientSession() as s:
+                async with s.post(
+                    f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Messages.json",
+                    headers={"Authorization": f"Basic {credentials}"},
+                    data=payload,
+                    timeout=aiohttp.ClientTimeout(total=15),
+                ) as r:
+                    if r.status >= 400:
+                        text = await r.text()
+                        logger.warning(f"Twilio OTP error {r.status}: {text[:200]}")
+                        return web.json_response({"error": f"Twilio error {r.status}"}, status=502)
+                    logger.info(f"WhatsApp OTP sent to {phone}")
+                    return web.json_response({"ok": True})
+        except Exception as e:
+            logger.error(f"WhatsApp OTP send failed: {e}")
+            return web.json_response({"error": str(e)[:100]}, status=500)
+
     port = HEALTH_PORT + WORKER_INSTANCE  # Instance 0→8080, 1→8081, 2→8082, …
     app = web.Application()
     app.router.add_get("/health", handle_health)
     app.router.add_get("/logs", handle_logs)
     app.router.add_get("/services", handle_services)
+    app.router.add_post("/send-whatsapp-otp", handle_send_whatsapp_otp)
     # Disable HTTP access logging — every /logs poll would otherwise write
     # a line into worker.log, creating a feedback loop that drowns real logs.
     runner = web.AppRunner(app, access_log=None)

@@ -1,7 +1,6 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { motion } from "motion/react";
 import { useFormStatus } from "react-dom";
 import { Loader } from "../../components/nowts/loader";
 import type { ButtonProps } from "../../components/ui/button";
@@ -32,32 +31,22 @@ export const LoadingButton = ({
       disabled={props.disabled ?? loading}
       className={cn(className, "relative")}
     >
-      <motion.span
-        className="flex items-center gap-1"
-        animate={{
-          opacity: loading ? 0 : 1,
-          y: loading ? -10 : 0,
-        }}
+      <span
+        className={cn(
+          "flex items-center gap-1 transition-all duration-200",
+          loading ? "-translate-y-2 opacity-0" : "translate-y-0 opacity-100",
+        )}
       >
         {children}
-      </motion.span>
-      <motion.span
-        initial={{
-          opacity: 0,
-          y: 10,
-        }}
-        animate={{
-          opacity: loading ? 1 : 0,
-          y: loading ? 0 : 10,
-        }}
-        exit={{
-          opacity: 0,
-          y: 10,
-        }}
-        className="absolute inset-0 flex items-center justify-center"
+      </span>
+      <span
+        className={cn(
+          "absolute inset-0 flex items-center justify-center transition-all duration-200",
+          loading ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0",
+        )}
       >
         <Loader size={20} />
-      </motion.span>
+      </span>
     </Button>
   );
 };

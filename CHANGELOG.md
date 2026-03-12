@@ -2,6 +2,17 @@
 
 ## 2026-03-12
 
+REFACTOR: WhatsApp OTP — Twilio déplacé du worker (endpoint /send-whatsapp-otp) ; Next.js n'a plus que TWILIO_AUTH_TOKEN (validation webhook)
+FEATURE: Multi-platform delivery architecture — Notion et WhatsApp en plus de Telegram
+FEATURE: Table platform_connections en DB — connexions Telegram migrées, nouvelle table whatsapp_verifications
+FEATURE: Worker — dispatcher _dispatch_delivery multi-plateforme (telegram/notion/whatsapp)
+FEATURE: Worker — notion_deliverer.py (création de pages Notion) + whatsapp_deliverer.py (Meta Cloud API)
+FEATURE: Next.js — OAuth Notion (routes connect/callback/select-database/disconnect)
+FEATURE: Next.js — WhatsApp connexion par OTP (register/verify/disconnect + webhook Meta)
+REFACTOR: Worker db.py — multi-platform delivery support via platform_connections table (get_platform_connections_for_users, mark_user_platform_disconnected, updated create_deliveries_for_video, get_pending_deliveries, cleanup_undeliverable_deliveries, mark_user_telegram_disconnected, get_profile_by_telegram)
+REFACTOR: Worker bot — migrate Telegram linking from profiles.telegram_chat_id to platform_connections table
+REFACTOR: Dashboard delivery-section — sections Notion et WhatsApp ajoutées, polling platform_connections
+CHORE: Types Supabase regénérés (platform_connections, whatsapp_verifications, deliveries.platform)
 FIX: Worker — retire "requested format is not available" de la détection live stream via proxy (faux positif bloquant toute la queue depuis ce matin)
 
 ## 2026-03-09

@@ -8,7 +8,7 @@ import { t } from "@/locales";
 const tl = t.dashboard.stepper;
 
 type OnboardingStepperProps = {
-  telegramConnected: boolean;
+  hasConnection: boolean;
   channelCount: number;
   deliveryCount: number;
 };
@@ -35,11 +35,11 @@ const steps = [
 ];
 
 export function OnboardingStepper({
-  telegramConnected,
+  hasConnection,
   channelCount,
   deliveryCount,
 }: OnboardingStepperProps) {
-  const completed = [telegramConnected, channelCount > 0, deliveryCount > 0];
+  const completed = [hasConnection, channelCount > 0, deliveryCount > 0];
   const completedCount = completed.filter(Boolean).length;
   const allDone = completedCount === 3;
 

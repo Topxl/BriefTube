@@ -1,0 +1,110 @@
+import { createClient } from "@/lib/supabase/server";
+import { env } from "@/lib/env";
+import { createHmac } from "crypto";
+import { redirect } from "next/navigation";
+import type { NextRequest } from "next/server";
+
+export async function GET(req: NextRequest) {
+  const { searchParams } = req.nextUrl;
+  const code = searchParams.get("code");
+  const stateParam = searchParams.get("state");
+
+  if (!code || !stateParam) {
+    redirect("/dashboard?error=notion_missing_params");
+  }
+
+  // Validate HMAC state
+  const [userId, stateHash] = stateParam.split(".");
+  if (!userId || !stateHash) {
+    redirect("/dashboard?error=notion_invalid_state");
+  }
+
+  const expectedHash = createHmac(
+    "sha256",
+    env.NOTION_CLIENT_SECRET ?? "secret",
+  )
+    .update(userId)
+    .digest("hex");
+
+  if (stateHash !== expectedHash) {
+    redirect("/dashboard?error=notion_invalid_state");
+  }
+
+  // Exchange code for access_token
+  const tokenRes = await fetch("https://api.notion.com/v1/oauth/token", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Basic ${Buffer.from(`${env.NOTION_CLIENT_ID}:${env.NOTION_CLIENT_SECRET}`).toString("base64")}`,
+    },
+    body: JSON.stringify({
+      grant_type: "authorization_code",
+      code,
+      redirect_uri: env.NOTION_REDIRECT_URI,
+    }),
+  });
+
+  if (!tokenRes.ok) {
+    redirect("/dashboard?error=notion_token_exchange_failed");
+  }
+
+  const tokenData = (await tokenRes.json()) as {
+    access_token: string;
+    workspace_id: string;
+    workspace_name: string;
+    bot_id: string;
+  };
+
+  // Search for accessible databases
+  const searchRes = await fetch("https://api.notion.com/v1/search", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${tokenData.access_token}`,
+      "Notion-Version": "2022-06-28",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ filter: { value: "database", property: "object" } }),
+  });
+
+  const searchData = (await searchRes.json()) as {
+    results: { id: string; title: { plain_text: string }[] }[];
+  };
+
+  const databases = searchData.results.map((db) => ({
+    id: db.id,
+    title: db.title[0]?.plain_text ?? "Untitled",
+  }));
+
+  const supabase = await createClient();
+
+  if (databases.length === 1) {
+    // Auto-select the only database
+    const db = databases[0];
+    await supabase.from("platform_connections").upsert(
+      {
+        user_id: userId,
+        platform: "notion",
+        external_id: tokenData.workspace_id,
+        credentials: {
+          access_token: tokenData.access_token,
+          database_id: db.id,
+          database_name: db.title,
+          workspace_name: tokenData.workspace_name,
+        },
+        connected: true,
+      },
+      { onConflict: "user_id,platform" },
+    );
+    redirect("/dashboard/profile?notion=connected");
+  }
+
+  // Multiple databases — store token temporarily and let user choose
+  // Encode databases list in a short-lived cookie via redirect URL
+  const dbsParam = encodeURIComponent(JSON.stringify(databases));
+  const tokenParam = encodeURIComponent(tokenData.access_token);
+  const wsId = encodeURIComponent(tokenData.workspace_id);
+  const wsName = encodeURIComponent(tokenData.workspace_name);
+  redirect(
+    `/dashboard/profile?notion=select_db&dbs=${dbsParam}&token=${tokenParam}&ws_id=${wsId}&ws_name=${wsName}`,
+  );
+}

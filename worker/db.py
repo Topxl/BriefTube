@@ -272,28 +272,27 @@ def fail_job(job_id: str, immediate: bool = False) -> bool:
     return False
 
 
-def get_telegram_chat_ids_for_video(video_id: str) -> list[str]:
-    """Return telegram_chat_id of all connected users with a pending delivery for this video."""
+def get_platform_connections_for_users(user_ids: list[str]) -> list[dict]:
+    """Return all active platform connections for the given user IDs."""
     sb = get_client()
-    deliveries = (
-        sb.table("deliveries")
-        .select("user_id")
-        .eq("video_id", video_id)
-        .eq("status", "pending")
+    res = (
+        sb.table("platform_connections")
+        .select("user_id, platform, external_id, credentials")
+        .in_("user_id", user_ids)
+        .eq("connected", True)
         .execute()
     )
-    if not deliveries.data:
-        return []
-    user_ids = [d["user_id"] for d in deliveries.data]
-    profiles = (
-        sb.table("profiles")
-        .select("telegram_chat_id")
-        .in_("id", user_ids)
-        .eq("telegram_connected", True)
-        .not_.is_("telegram_chat_id", "null")
-        .execute()
-    )
-    return [p["telegram_chat_id"] for p in (profiles.data or []) if p.get("telegram_chat_id")]
+    return res.data or []
+
+
+def mark_user_platform_disconnected(user_id: str, platform: str) -> None:
+    """Mark a platform connection as disconnected (bot blocked, token revoked, etc.)."""
+    sb = get_client()
+    try:
+        sb.table("platform_connections").update({"connected": False}).eq("user_id", user_id).eq("platform", platform).execute()
+        logger.info(f"Marked user {user_id[:8]}… as {platform} disconnected")
+    except Exception as e:
+        logger.warning(f"Could not mark user {user_id[:8]}… as {platform} disconnected: {e}")
 
 
 # ── Deliveries ─────────────────────────────────────────────────
@@ -335,11 +334,8 @@ def get_subscriber_languages(channel_id: str) -> list[dict]:
 def create_deliveries_for_video(video_id: str, channel_id: str, language: str = "fr"):
     """Create delivery entries for all users subscribed to this channel with the given language.
 
-    Only creates deliveries for users with Telegram connected — bot-blocked users
-    are excluded here (telegram_connected is set to false when Telegram rejects).
-
-    Uses a single bulk check + single batch insert instead of N individual
-    SELECT+INSERT calls — reduces DB round-trips from O(users) to O(1).
+    Creates one delivery per user per active platform connection (Telegram, Notion, WhatsApp…).
+    Uses a single bulk check + single batch insert — reduces DB round-trips from O(users) to O(1).
     """
     sb = get_client()
     # Get all users subscribed to this channel
@@ -356,12 +352,11 @@ def create_deliveries_for_video(video_id: str, channel_id: str, language: str = 
     # Deduplicate user_ids
     user_ids = list({s["user_id"] for s in subs.data})
 
-    # Only users with Telegram connected and matching language
+    # Filter users with matching preferred language
     profiles = (
         sb.table("profiles")
         .select("id, preferred_language")
         .in_("id", user_ids)
-        .eq("telegram_connected", True)
         .execute()
     )
     matching_ids = [
@@ -371,22 +366,33 @@ def create_deliveries_for_video(video_id: str, channel_id: str, language: str = 
     if not matching_ids:
         return
 
-    # Fetch all existing deliveries for this video+language in one query
+    # Get all active platform connections for matching users
+    connections = get_platform_connections_for_users(matching_ids)
+    if not connections:
+        return
+
+    # Fetch all existing deliveries for this video+language (check by user+platform pair)
     existing = (
         sb.table("deliveries")
-        .select("user_id")
+        .select("user_id, platform")
         .eq("video_id", video_id)
         .eq("language", language)
         .in_("user_id", matching_ids)
         .execute()
     )
-    existing_ids = {d["user_id"] for d in (existing.data or [])}
+    existing_pairs = {(d["user_id"], d.get("platform", "telegram")) for d in (existing.data or [])}
 
-    # Batch insert all missing deliveries in a single request
+    # Batch insert one delivery per user per platform
     to_insert = [
-        {"user_id": uid, "video_id": video_id, "status": "pending", "language": language}
-        for uid in matching_ids
-        if uid not in existing_ids
+        {
+            "user_id": conn["user_id"],
+            "video_id": video_id,
+            "status": "pending",
+            "language": language,
+            "platform": conn["platform"],
+        }
+        for conn in connections
+        if (conn["user_id"], conn["platform"]) not in existing_pairs
     ]
     if to_insert:
         sb.table("deliveries").insert(to_insert).execute()
@@ -430,7 +436,7 @@ def get_pending_deliveries(limit: int = 20) -> list[dict]:
         batch = completed_ids[i : i + 100]
         res = (
             sb.table("deliveries")
-            .select("id, user_id, video_id, language")
+            .select("id, user_id, video_id, language, platform")
             .eq("status", "pending")
             .in_("video_id", batch)
             .order("created_at")
@@ -469,15 +475,26 @@ def get_pending_deliveries(limit: int = 20) -> list[dict]:
     # key: (video_id, language)
     video_map = {(v["video_id"], v.get("language", "fr")): v for v in pv_rows}
 
-    # 3. User profiles
+    # 3. User profiles (for tts_voice) + platform connections
     user_ids = list({d["user_id"] for d in raw_deliveries})
+
     profiles_res = (
         sb.table("profiles")
-        .select("id, telegram_chat_id, tts_voice, telegram_connected")
+        .select("id, tts_voice")
         .in_("id", user_ids)
         .execute()
     )
     profile_map = {p["id"]: p for p in (profiles_res.data or [])}
+
+    # Build (user_id, platform) → connection map
+    conn_res = (
+        sb.table("platform_connections")
+        .select("user_id, platform, external_id, credentials")
+        .in_("user_id", user_ids)
+        .eq("connected", True)
+        .execute()
+    )
+    conn_map = {(c["user_id"], c["platform"]): c for c in (conn_res.data or [])}
 
     results = []
     for d in raw_deliveries:
@@ -485,14 +502,18 @@ def get_pending_deliveries(limit: int = 20) -> list[dict]:
         v = video_map.get((d["video_id"], lang))
         if not v:
             continue
-        profile = profile_map.get(d["user_id"])
-        if not profile or not profile.get("telegram_connected"):
+        platform = d.get("platform", "telegram")
+        conn = conn_map.get((d["user_id"], platform))
+        if not conn:
             continue
+        profile = profile_map.get(d["user_id"])
         results.append({
             "delivery_id": d["id"],
             "user_id": d["user_id"],
-            "chat_id": profile["telegram_chat_id"],
-            "tts_voice": profile.get("tts_voice"),
+            "platform": platform,
+            "external_id": conn["external_id"],
+            "credentials": conn.get("credentials") or {},
+            "tts_voice": profile.get("tts_voice") if profile else None,
             "video_id": v["video_id"],
             "language": lang,
             "video_title": v["video_title"],
@@ -511,7 +532,7 @@ def cleanup_undeliverable_deliveries() -> int:
     - Skipped videos   → DELETE the delivery (pre-subscription skip is intentional,
                          not a real failure — keeps the admin dashboard clean)
     - Failed videos    → mark as 'failed' (real processing error, worth tracking)
-    - No Telegram      → mark as 'failed'
+    - Disconnected platform connection → mark as 'failed'
 
     Returns the number of deliveries cleaned up.
     """
@@ -559,25 +580,30 @@ def cleanup_undeliverable_deliveries() -> int:
             )
             cleaned += len(res.data or [])
 
-    # Users without Telegram → deliveries can never be sent
-    disconnected = (
-        sb.table("profiles")
-        .select("id")
-        .or_("telegram_connected.is.false,telegram_chat_id.is.null")
+    # Disconnected platform connections → deliveries for those platforms can never be sent
+    disconnected_conns = (
+        sb.table("platform_connections")
+        .select("user_id, platform")
+        .eq("connected", False)
         .execute()
     )
-    if disconnected.data:
-        user_ids = [p["id"] for p in disconnected.data]
-        for i in range(0, len(user_ids), 100):
-            batch = user_ids[i : i + 100]
-            res = (
-                sb.table("deliveries")
-                .update({"status": "failed"})
-                .eq("status", "pending")
-                .in_("user_id", batch)
-                .execute()
-            )
-            cleaned += len(res.data or [])
+    if disconnected_conns.data:
+        # Group by platform for efficient batched updates
+        by_platform: dict[str, list[str]] = {}
+        for conn in disconnected_conns.data:
+            by_platform.setdefault(conn["platform"], []).append(conn["user_id"])
+        for plat, uids in by_platform.items():
+            for i in range(0, len(uids), 100):
+                batch = uids[i : i + 100]
+                res = (
+                    sb.table("deliveries")
+                    .update({"status": "failed"})
+                    .eq("status", "pending")
+                    .eq("platform", plat)
+                    .in_("user_id", batch)
+                    .execute()
+                )
+                cleaned += len(res.data or [])
 
     return cleaned
 
@@ -596,18 +622,8 @@ def mark_delivery_failed(delivery_id: str):
 
 
 def mark_user_telegram_disconnected(user_id: str) -> None:
-    """Mark a user's Telegram as disconnected after a permanent send failure.
-
-    Called when Telegram permanently rejects a message (user blocked bot,
-    invalid chat ID, etc.). Prevents future deliveries from being created
-    for this user until they reconnect Telegram in the app.
-    """
-    sb = get_client()
-    try:
-        sb.table("profiles").update({"telegram_connected": False}).eq("id", user_id).execute()
-        logger.info(f"Marked user {user_id[:8]}… as Telegram disconnected (bot blocked)")
-    except Exception as e:
-        logger.warning(f"Could not mark user {user_id[:8]}… as disconnected: {e}")
+    """Mark a user's Telegram as disconnected. Delegates to mark_user_platform_disconnected."""
+    mark_user_platform_disconnected(user_id, "telegram")
 
 
 def recover_failed_deliveries() -> int:
@@ -767,13 +783,23 @@ def count_on_demand_this_month(user_id: str) -> int:
 # ── Shared Summaries ───────────────────────────────────────────
 
 def get_profile_by_telegram(telegram_chat_id: str) -> dict | None:
-    """Fetch profile fields needed by bot handlers for a connected Telegram user."""
+    """Fetch profile fields for a connected Telegram user via platform_connections."""
     sb = get_client()
+    conn_res = (
+        sb.table("platform_connections")
+        .select("user_id")
+        .eq("platform", "telegram")
+        .eq("external_id", telegram_chat_id)
+        .eq("connected", True)
+        .execute()
+    )
+    if not conn_res.data:
+        return None
+    user_id = conn_res.data[0]["user_id"]
     res = (
         sb.table("profiles")
         .select("id, subscription_status, trial_ends_at, max_channels, preferred_language, tts_voice, favorite_languages")
-        .eq("telegram_chat_id", telegram_chat_id)
-        .eq("telegram_connected", True)
+        .eq("id", user_id)
         .execute()
     )
     return res.data[0] if res.data else None

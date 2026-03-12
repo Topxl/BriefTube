@@ -205,46 +205,43 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     if context.args and len(context.args) == 1:
         token = context.args[0]
 
-        # Look up the token in profiles and link the chat_id
         sb = db.get_client()
 
-        # Step 1: Unlink any other profile already connected to this chat_id
-        # (a Telegram account can only be linked to ONE BriefTube account at a time)
-        sb.table("profiles").update({
-            "telegram_chat_id": None,
-            "telegram_connected": False,
-        }).eq("telegram_chat_id", chat_id).neq("telegram_connect_token", token).execute()
-
-        # Step 2: Link this profile
-        res = (
-            sb.table("profiles")
-            .update({
-                "telegram_chat_id": chat_id,
-                "telegram_connected": True,
-                "telegram_connect_token": None,
-            })
-            .eq("telegram_connect_token", token)
-            .execute()
-        )
-
-        if res.data:
-            email = res.data[0].get("email", "")
-            ref_code = res.data[0].get("referral_code", "")
-            ref_text = (
-                f"\n\nShare BriefTube with friends: {APP_URL}/?ref={ref_code}"
-                if ref_code else ""
-            )
-            await update.message.reply_text(
-                f"Connected! Your Telegram is now linked to {email}.\n\n"
-                "You'll receive audio summaries here whenever new videos are published "
-                f"on your subscribed channels.{ref_text}"
-            )
-            logger.info(f"Telegram connected: chat_id={chat_id}, email={email}")
-        else:
+        # Step 1: Find the user claiming this token
+        token_res = sb.table("profiles").select("id, email, referral_code").eq("telegram_connect_token", token).execute()
+        if not token_res.data:
             await update.message.reply_text(
                 "Invalid or expired token.\n\n"
                 "Go to your BriefTube dashboard (Settings) to generate a new connection link."
             )
+            return
+
+        user_id = token_res.data[0]["id"]
+        email = token_res.data[0].get("email", "")
+        ref_code = token_res.data[0].get("referral_code", "")
+
+        # Step 2: Disconnect any OTHER user's Telegram connection with this chat_id
+        sb.table("platform_connections").update({"connected": False}).eq("platform", "telegram").eq("external_id", chat_id).neq("user_id", user_id).execute()
+
+        # Step 3: Upsert this user's Telegram connection
+        sb.table("platform_connections").upsert(
+            {"user_id": user_id, "platform": "telegram", "external_id": chat_id, "connected": True},
+            on_conflict="user_id,platform",
+        ).execute()
+
+        # Step 4: Clear the connect token
+        sb.table("profiles").update({"telegram_connect_token": None}).eq("id", user_id).execute()
+
+        ref_text = (
+            f"\n\nShare BriefTube with friends: {APP_URL}/?ref={ref_code}"
+            if ref_code else ""
+        )
+        await update.message.reply_text(
+            f"Connected! Your Telegram is now linked to {email}.\n\n"
+            "You'll receive audio summaries here whenever new videos are published "
+            f"on your subscribed channels.{ref_text}"
+        )
+        logger.info(f"Telegram connected: chat_id={chat_id}, email={email}")
     else:
         # No token — check if already connected
         logger.info(f"/start (no token) from chat_id={chat_id}")
@@ -416,13 +413,23 @@ def _calc_success_rate(summary: dict) -> int:
 # ── Helper: get profile from chat_id ──────────────────────────
 
 def _get_profile_by_chat_id(chat_id: str) -> dict | None:
-    """Look up a connected profile by telegram chat_id."""
+    """Look up a connected profile by telegram chat_id via platform_connections."""
     sb = db.get_client()
+    conn_res = (
+        sb.table("platform_connections")
+        .select("user_id")
+        .eq("platform", "telegram")
+        .eq("external_id", chat_id)
+        .eq("connected", True)
+        .execute()
+    )
+    if not conn_res.data:
+        return None
+    user_id = conn_res.data[0]["user_id"]
     res = (
         sb.table("profiles")
         .select("id, email, subscription_status, trial_ends_at, max_channels, preferred_language, tts_voice")
-        .eq("telegram_chat_id", chat_id)
-        .eq("telegram_connected", True)
+        .eq("id", user_id)
         .execute()
     )
     return res.data[0] if res.data else None
