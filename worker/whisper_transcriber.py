@@ -226,10 +226,11 @@ class WhisperTranscriber:
                 if any(kw in err.lower() for kw in (
                     "no video formats found",
                     "live event has ended",
-                    "requested format is not available",
                 )):
                     logger.info(f"Audio download (proxy): live/ended stream — {err[:80]}")
                     return "live"
+                # "requested format is not available" via proxy = proxy/YouTube restriction,
+                # NOT necessarily a live stream — fall through to auth_required (retry)
                 logger.warning(f"Audio download (proxy) failed: {err[:120]}")
 
         logger.warning(

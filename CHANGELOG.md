@@ -1,6 +1,16 @@
 # Changelog
 
+## 2026-03-12
+
+FIX: Worker — retire "requested format is not available" de la détection live stream via proxy (faux positif bloquant toute la queue depuis ce matin)
+
 ## 2026-03-09
+
+PERF: Landing — ISR revalidate=3600 sur la home page pour servir depuis le CDN (TTFB 1.6s → ~50ms)
+PERF: Landing — preload de l'image LCP (thumbnail YouTube hero card 0) + priority prop sur Next/Image
+PERF: Layout — Rewardful queue script beforeInteractive → afterInteractive (supprime le script render-blocking)
+PERF: Layout — ajout dns-prefetch pour r.wdfl.co (Rewardful CDN)
+FIX: Accessibilité — progressbar Hero : ajout aria-label, aria-valuemin, aria-valuemax (score 93 → ~95)
 
 CHORE: Analytics — ajout Google Analytics GA4 (G-NSS12KB41V) au tag gtag existant
 FEATURE: Bot Telegram — bouton "📋 Copy link" dans le menu Share (CopyTextButton natif, copie sans nouveau message)
