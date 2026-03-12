@@ -22,13 +22,16 @@ export const POST = authRoute
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
-    await supabase.from("whatsapp_verifications").upsert({
-      user_id: ctx.user.id,
-      phone,
-      code,
-      expires_at: expiresAt,
-      verified: false,
-    });
+    await supabase.from("whatsapp_verifications").upsert(
+      {
+        user_id: ctx.user.id,
+        phone,
+        code,
+        expires_at: expiresAt,
+        verified: false,
+      },
+      { onConflict: "user_id" },
+    );
 
     const workerUrl = env.VPS_WORKER_URL;
     const workerSecret = env.WORKER_API_SECRET;
