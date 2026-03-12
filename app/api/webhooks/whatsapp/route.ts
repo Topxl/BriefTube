@@ -48,14 +48,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  // Check if this looks like a 6-digit verification code
-  if (/^\d{6}$/.test(text)) {
+  // Check if this looks like a magic link token (bt-XXXXXX)
+  if (/^bt-[A-Z0-9]{6}$/i.test(text)) {
     const supabase = await createClient();
     const { data: verification } = await supabase
       .from("whatsapp_verifications")
-      .select("user_id, code, expires_at, verified")
-      .eq("phone", from)
-      .eq("code", text)
+      .select("user_id, expires_at, verified")
+      .eq("token", text)
       .eq("verified", false)
       .single();
 
@@ -65,16 +64,13 @@ export async function POST(req: NextRequest) {
         .update({ verified: true })
         .eq("user_id", verification.user_id);
 
-      await supabase.from("platform_connections").upsert(
-        {
-          user_id: verification.user_id,
-          platform: "whatsapp",
-          external_id: from,
-          credentials: {},
-          connected: true,
-        },
-        { onConflict: "user_id,platform" },
-      );
+      await supabase.from("platform_connections").upsert({
+        user_id: verification.user_id,
+        platform: "whatsapp",
+        external_id: from,
+        credentials: {},
+        connected: true,
+      });
     }
   }
 

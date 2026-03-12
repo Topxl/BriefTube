@@ -736,29 +736,32 @@ export type Database = {
       };
       whatsapp_verifications: {
         Row: {
-          code: string;
+          code: string | null;
           created_at: string | null;
           expires_at: string;
           id: string;
-          phone: string;
+          phone: string | null;
+          token: string | null;
           user_id: string;
           verified: boolean | null;
         };
         Insert: {
-          code: string;
+          code?: string | null;
           created_at?: string | null;
           expires_at: string;
           id?: string;
-          phone: string;
+          phone?: string | null;
+          token?: string | null;
           user_id: string;
           verified?: boolean | null;
         };
         Update: {
-          code?: string;
+          code?: string | null;
           created_at?: string | null;
           expires_at?: string;
           id?: string;
-          phone?: string;
+          phone?: string | null;
+          token?: string | null;
           user_id?: string;
           verified?: boolean | null;
         };
