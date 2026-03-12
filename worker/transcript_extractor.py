@@ -481,14 +481,11 @@ class TranscriptExtractor:
                             return text, detected_lang, None
             except Exception as e:
                 err = str(e)
-                if any(kw in err.lower() for kw in (
-                    "no video formats found",
-                    "live event has ended",
-                )):
+                if "live event has ended" in err.lower():
                     logger.info(f"yt-dlp subtitle (proxy): live/ended stream — {err[:80]}")
                     return None, None, "video_is_live"
-                # "requested format is not available" is NOT a live indicator —
-                # it can mean the video is inaccessible from this IP/region.
+                # "no video formats found" and "requested format is not available" via proxy
+                # = proxy/YouTube IP restriction, NOT necessarily a live stream.
                 # Fall through so Whisper can attempt the audio download.
                 logger.warning(f"yt-dlp subtitle (proxy) failed: {err[:120]}")
 
