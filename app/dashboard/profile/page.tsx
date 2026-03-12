@@ -20,19 +20,41 @@ export default async function ProfilePage(props: {
 
   const admin = createAdminClient();
 
-  const [{ data: profile }, { data: referralRows }] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select(
-        "subscription_status, trial_ends_at, stripe_customer_id, telegram_connected, tts_voice, preferred_language, favorite_languages, max_channels, referral_code, notify_new_summaries_push, email_newsletter, email_announcements",
-      )
-      .eq("id", user.id)
-      .single(),
-    supabase
-      .from("referrals")
-      .select("referee_id, status")
-      .eq("referrer_id", user.id),
-  ]);
+  const [{ data: profile }, { data: referralRows }, { data: platformConns }] =
+    await Promise.all([
+      supabase
+        .from("profiles")
+        .select(
+          "subscription_status, trial_ends_at, stripe_customer_id, tts_voice, preferred_language, favorite_languages, max_channels, referral_code, notify_new_summaries_push, email_newsletter, email_announcements",
+        )
+        .eq("id", user.id)
+        .single(),
+      supabase
+        .from("referrals")
+        .select("referee_id, status")
+        .eq("referrer_id", user.id),
+      supabase
+        .from("platform_connections")
+        .select("platform, connected, credentials, external_id")
+        .eq("user_id", user.id)
+        .eq("connected", true),
+    ]);
+
+  const telegramConnected = (platformConns ?? []).some(
+    (c) => c.platform === "telegram",
+  );
+  const notionConnected = (platformConns ?? []).some(
+    (c) => c.platform === "notion",
+  );
+  const notionDatabaseName = (platformConns ?? []).find(
+    (c) => c.platform === "notion",
+  )?.credentials as { database_name?: string } | null;
+  const whatsappConnected = (platformConns ?? []).some(
+    (c) => c.platform === "whatsapp",
+  );
+  const whatsappPhone =
+    (platformConns ?? []).find((c) => c.platform === "whatsapp")?.external_id ??
+    "";
 
   const isActivePro = profile?.subscription_status === "active";
 
@@ -83,7 +105,11 @@ export default async function ProfilePage(props: {
       isActivePro={isActivePro}
       trialDaysLeft={trialDaysLeft}
       hasStripeCustomer={!!profile?.stripe_customer_id}
-      initialTelegramConnected={profile?.telegram_connected ?? false}
+      initialTelegramConnected={telegramConnected}
+      initialNotionConnected={notionConnected}
+      initialNotionDatabaseName={notionDatabaseName?.database_name ?? ""}
+      initialWhatsappConnected={whatsappConnected}
+      initialWhatsappPhone={whatsappPhone}
       initialVoice={profile?.tts_voice ?? SiteConfig.defaultTtsVoice}
       initialLanguage={
         profile?.preferred_language ?? SiteConfig.defaultLanguage

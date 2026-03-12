@@ -33,6 +33,13 @@ export const env = createEnv({
     // PostHog analytics (admin panel — visitor data)
     POSTHOG_PERSONAL_API_KEY: z.string().optional(),
     POSTHOG_PROJECT_ID: z.string().optional(),
+    // Notion OAuth integration
+    NOTION_CLIENT_ID: z.string().optional(),
+    NOTION_CLIENT_SECRET: z.string().optional(),
+    NOTION_REDIRECT_URI: z.string().url().optional(),
+    // WhatsApp via Twilio — only auth token needed here (webhook signature validation)
+    // TWILIO_ACCOUNT_SID and TWILIO_WHATSAPP_FROM live on the worker only
+    TWILIO_AUTH_TOKEN: z.string().optional(),
     NODE_ENV: z.enum(["development", "production", "test"]),
     CI: z.coerce.boolean().optional(),
   },

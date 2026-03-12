@@ -38,6 +38,10 @@ type Props = {
   trialDaysLeft: number;
   hasStripeCustomer: boolean;
   initialTelegramConnected: boolean;
+  initialNotionConnected: boolean;
+  initialNotionDatabaseName?: string;
+  initialWhatsappConnected: boolean;
+  initialWhatsappPhone?: string;
   initialVoice: string;
   initialLanguage: string;
   initialFavorites?: string[];
@@ -59,6 +63,10 @@ export function ProfileContent({
   trialDaysLeft,
   hasStripeCustomer,
   initialTelegramConnected,
+  initialNotionConnected,
+  initialNotionDatabaseName,
+  initialWhatsappConnected,
+  initialWhatsappPhone,
   initialVoice,
   initialLanguage,
   initialFavorites,
@@ -215,6 +223,10 @@ export function ProfileContent({
       {/* Delivery */}
       <DeliverySection
         initialTelegramConnected={initialTelegramConnected}
+        initialNotionConnected={initialNotionConnected}
+        initialNotionDatabaseName={initialNotionDatabaseName}
+        initialWhatsappConnected={initialWhatsappConnected}
+        initialWhatsappPhone={initialWhatsappPhone}
         initialVoice={initialVoice}
         initialLanguage={initialLanguage}
         initialFavorites={initialFavorites}

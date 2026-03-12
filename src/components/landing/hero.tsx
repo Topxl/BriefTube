@@ -119,15 +119,9 @@ export function Hero() {
     <section className="relative overflow-hidden pt-28 pb-14 md:pt-44 md:pb-32">
       {/* Gradient background orbs */}
       <div className="pointer-events-none absolute inset-0 -z-10">
-        <div
-          className="absolute top-0 left-1/2 h-[600px] w-[600px] -translate-x-1/2 rounded-full bg-red-600/15 blur-[80px]"
-        />
-        <div
-          className="absolute top-1/3 right-0 h-[400px] w-[400px] rounded-full bg-blue-500/12 blur-[60px]"
-        />
-        <div
-          className="absolute bottom-0 left-0 h-[350px] w-[350px] rounded-full bg-violet-500/10 blur-[60px]"
-        />
+        <div className="absolute top-0 left-1/2 h-[600px] w-[600px] -translate-x-1/2 rounded-full bg-red-600/15 blur-[80px]" />
+        <div className="absolute top-1/3 right-0 h-[400px] w-[400px] rounded-full bg-blue-500/12 blur-[60px]" />
+        <div className="absolute bottom-0 left-0 h-[350px] w-[350px] rounded-full bg-violet-500/10 blur-[60px]" />
       </div>
 
       <div className="mx-auto max-w-4xl px-6 text-center">
@@ -201,6 +195,7 @@ export function Hero() {
                       alt=""
                       fill
                       sizes="384px"
+                      priority={i === 0}
                       className="object-cover opacity-[0.15]"
                     />
 
@@ -259,6 +254,9 @@ export function Hero() {
                         {/* Clickable progress bar */}
                         <div
                           role="progressbar"
+                          aria-label={`${demo.title} — playback progress`}
+                          aria-valuemin={0}
+                          aria-valuemax={100}
                           aria-valuenow={Math.round(progress * 100)}
                           className="relative h-1 flex-1 cursor-pointer rounded-full bg-white/[0.08]"
                           onClick={(e) => {

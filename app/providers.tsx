@@ -3,15 +3,30 @@
 import { Toaster } from "@/components/ui/sonner";
 import { DialogManagerRenderer } from "@/features/dialog-manager/dialog-manager-renderer";
 import { GlobalDialogLazy } from "@/features/global-dialog/global-dialog-lazy";
-import { PostHogPageView } from "@/components/posthog/posthog-page-view";
-import { PostHogIdentify } from "@/components/posthog/posthog-identify";
 import {
   isServer,
   QueryClient,
   QueryClientProvider,
 } from "@tanstack/react-query";
+import dynamic from "next/dynamic";
 import { ThemeProvider } from "next-themes";
 import { Suspense, type PropsWithChildren } from "react";
+
+// Lazy-load PostHog to keep it out of the initial JS bundle (~176 KiB)
+const PostHogPageView = dynamic(
+  async () =>
+    import("@/components/posthog/posthog-page-view").then((m) => ({
+      default: m.PostHogPageView,
+    })),
+  { ssr: false },
+);
+const PostHogIdentify = dynamic(
+  async () =>
+    import("@/components/posthog/posthog-identify").then((m) => ({
+      default: m.PostHogIdentify,
+    })),
+  { ssr: false },
+);
 
 function makeQueryClient() {
   return new QueryClient({

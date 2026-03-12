@@ -85,6 +85,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://img.youtube.com" />
         <link rel="preconnect" href="https://www.googletagmanager.com" />
         <link rel="dns-prefetch" href="https://noembed.com" />
+        <link rel="dns-prefetch" href="https://r.wdfl.co" />
         <Script
           async
           src="https://www.googletagmanager.com/gtag/js?id=AW-17972477350"
@@ -120,7 +121,7 @@ export default function RootLayout({
             <Analytics />
           </Providers>
         </NuqsAdapter>
-        <Script id="rewardful-queue" strategy="beforeInteractive">
+        <Script id="rewardful-queue" strategy="afterInteractive">
           {`(function(w,r){w._rwq=r;w[r]=w[r]||function(){(w[r].q=w[r].q||[]).push(arguments)}})(window,'rewardful');`}
         </Script>
         <Script

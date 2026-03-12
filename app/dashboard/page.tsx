@@ -21,21 +21,27 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  const [{ data: profile }, { data: sources }] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select(
-        "subscription_status, trial_ends_at, max_channels, telegram_connected, preferred_language",
-      )
-      .eq("id", user.id)
-      .single(),
-    supabase
-      .from("subscriptions")
-      .select("*")
-      .eq("user_id", user.id)
-      .or("source_type.is.null,source_type.eq.youtube_channel")
-      .order("created_at", { ascending: false }),
-  ]);
+  const [{ data: profile }, { data: sources }, { data: connections }] =
+    await Promise.all([
+      supabase
+        .from("profiles")
+        .select(
+          "subscription_status, trial_ends_at, max_channels, preferred_language",
+        )
+        .eq("id", user.id)
+        .single(),
+      supabase
+        .from("subscriptions")
+        .select("*")
+        .eq("user_id", user.id)
+        .or("source_type.is.null,source_type.eq.youtube_channel")
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("platform_connections")
+        .select("platform")
+        .eq("user_id", user.id)
+        .eq("connected", true),
+    ]);
 
   if (!profile) {
     redirect("/login");
@@ -59,7 +65,7 @@ export default async function DashboardPage() {
       {/* Getting started module */}
       <GettingStarted
         hasChannel={(sources ?? []).length > 0}
-        hasTelegram={profile.telegram_connected ?? false}
+        hasConnection={(connections ?? []).length > 0}
         language={profile.preferred_language ?? "fr"}
       />
 

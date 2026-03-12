@@ -47,11 +47,12 @@ function TelegramConnectContent({ onConnected }: { onConnected: () => void }) {
       } = await supabase.auth.getUser();
       if (!user) return;
       const { data } = await supabase
-        .from("profiles")
-        .select("telegram_connected")
-        .eq("id", user.id)
-        .single();
-      if (data?.telegram_connected) {
+        .from("platform_connections")
+        .select("connected")
+        .eq("user_id", user.id)
+        .eq("platform", "telegram")
+        .maybeSingle();
+      if (data?.connected) {
         setConnected(true);
         clearInterval(interval);
         toast.success("Telegram connected!");
@@ -184,11 +185,11 @@ function LanguagePickerContent({
 
 type Props = {
   hasChannel: boolean;
-  hasTelegram: boolean;
+  hasConnection: boolean;
   language: string;
 };
 
-export function GettingStarted({ hasChannel, hasTelegram, language }: Props) {
+export function GettingStarted({ hasChannel, hasConnection, language }: Props) {
   const router = useRouter();
   const supabase = createClient();
   const [languageChosen, setLanguageChosen] = useState(
@@ -197,7 +198,7 @@ export function GettingStarted({ hasChannel, hasTelegram, language }: Props) {
       localStorage.getItem("gs_language_chosen") === "1",
   );
 
-  const showModule = !hasChannel || !hasTelegram;
+  const showModule = !hasChannel || !hasConnection;
   if (!showModule) return null;
 
   const langMeta = languages.find((l) => l.code === language);
@@ -271,7 +272,7 @@ export function GettingStarted({ hasChannel, hasTelegram, language }: Props) {
         )}
 
         {/* Connect Telegram — masqué une fois fait */}
-        {!hasTelegram && (
+        {!hasConnection && (
           <div className="flex items-center justify-between px-4 py-3">
             <div className="flex items-center gap-3">
               <CircleIcon className="text-muted-foreground h-4 w-4 shrink-0" />

@@ -119,6 +119,13 @@ const jsonLd = [
 export default function Home() {
   return (
     <main className="bg-background min-h-screen">
+      {/* Preload LCP image (first Hero card YouTube thumbnail) */}
+      <link
+        rel="preload"
+        as="image"
+        href="https://img.youtube.com/vi/qp0HIF3SfI4/hqdefault.jpg"
+        fetchPriority="high"
+      />
       {jsonLd.map((schema, i) => (
         <script
           key={i}
@@ -132,17 +139,33 @@ export default function Home() {
         <SocialProof />
       </Suspense>
       <div className="section-divider" />
-      <Suspense fallback={null}><Problem /></Suspense>
-      <Suspense fallback={null}><HowItWorks /></Suspense>
+      <Suspense fallback={null}>
+        <Problem />
+      </Suspense>
+      <Suspense fallback={null}>
+        <HowItWorks />
+      </Suspense>
       <div className="section-divider" />
-      <Suspense fallback={null}><Demo /></Suspense>
+      <Suspense fallback={null}>
+        <Demo />
+      </Suspense>
       <div className="section-divider" />
-      <Suspense fallback={null}><Features /></Suspense>
-      <Suspense fallback={null}><Pricing /></Suspense>
+      <Suspense fallback={null}>
+        <Features />
+      </Suspense>
+      <Suspense fallback={null}>
+        <Pricing />
+      </Suspense>
       <div className="section-divider" />
-      <Suspense fallback={null}><FAQ /></Suspense>
-      <Suspense fallback={null}><FinalCTA /></Suspense>
-      <Suspense fallback={null}><Footer /></Suspense>
+      <Suspense fallback={null}>
+        <FAQ />
+      </Suspense>
+      <Suspense fallback={null}>
+        <FinalCTA />
+      </Suspense>
+      <Suspense fallback={null}>
+        <Footer />
+      </Suspense>
     </main>
   );
 }
