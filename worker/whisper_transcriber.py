@@ -100,9 +100,16 @@ class WhisperTranscriber:
                         hours = _hours_until_premiere(pre_err)
                         return f"premiere:{hours}"
                     if any(kw in pre_err.lower() for kw in (
-                        "is a live stream", "live event", "no video formats found",
+                        "is a live stream", "live event",
                     )):
                         return "live"
+                    if any(kw in pre_err.lower() for kw in (
+                        "no video formats found", "requested format is not available",
+                    )):
+                        logger.info(
+                            f"Audio pre-check: format unavailable with {client_name} — trying next client"
+                        )
+                        continue
                     if "your country" in pre_err.lower():
                         logger.warning("Audio pre-check: video geo-restricted — skipping permanently")
                         return "geo_restricted"
@@ -155,12 +162,18 @@ class WhisperTranscriber:
                 if any(kw in err.lower() for kw in (
                     "is a live stream", "currently broadcasting",
                     "is a live event", "live event",
-                    "no video formats found",  # live stream currently broadcasting
                     "live event has ended",    # ended live replay not yet available
-                    "requested format is not available",  # ended live, no replay format yet
                 )):
                     logger.info("Audio download: live/ended stream detected — no audio to download")
                     return "live"
+                if any(kw in err.lower() for kw in (
+                    "requested format is not available",  # YouTube IP block, try next client
+                    "no video formats found",             # YouTube IP block, try next client
+                )):
+                    logger.info(
+                        f"Audio download: format unavailable with {client_name} — trying next client"
+                    )
+                    continue
                 if "error opening output files" in err.lower() or "invalid argument" in err.lower():
                     logger.warning("Audio download: ffmpeg output error (live stream or unsupported format) — skipping permanently")
                     return "unsupported"

@@ -2,7 +2,13 @@
 
 ## 2026-03-12
 
-REFACTOR: WhatsApp OTP — Twilio déplacé du worker (endpoint /send-whatsapp-otp) ; Next.js n'a plus que TWILIO_AUTH_TOKEN (validation webhook)
+FIX: Worker — retire "requested format is not available" et "no video formats found" de la détection live en connexion directe (false positive YouTube IP block → continue vers client suivant)
+FEATURE: WhatsApp magic link — remplace OTP (utilisateur clique lien wa.me pré-rempli, envoie token bt-XXXXXX)
+REFACTOR: WhatsApp — token-based magic link au lieu de phone+code OTP (registration, webhook, database)
+REFACTOR: Worker — endpoint /send-whatsapp-otp remplacé par GET /get-whatsapp-link
+REFACTOR: Dashboard delivery-section — WhatsApp UI remplacée (deux étapes → magic link + polling)
+CHORE: DB migration — colonne token sur whatsapp_verifications, phone et code deviennent nullable
+CHORE: Types Supabase regénérés (whatsapp_verifications avec token)
 FEATURE: Multi-platform delivery architecture — Notion et WhatsApp en plus de Telegram
 FEATURE: Table platform_connections en DB — connexions Telegram migrées, nouvelle table whatsapp_verifications
 FEATURE: Worker — dispatcher _dispatch_delivery multi-plateforme (telegram/notion/whatsapp)

@@ -1149,67 +1149,37 @@ async def health_loop():
             "timestamp": datetime.now(timezone.utc).isoformat(),
         })
 
-    async def handle_send_whatsapp_otp(request):
-        """Send a WhatsApp OTP via Twilio (POST /send-whatsapp-otp).
+    async def handle_get_whatsapp_link(request):
+        """Get WhatsApp magic link (GET /get-whatsapp-link?token=<token>).
 
-        Body (JSON): { "phone": "+33612345678", "code": "123456" }
+        Query params: token (required)
         Auth: Authorization: Bearer <WORKER_API_SECRET>
+        Returns: { "waLink": "https://wa.me/14155238886?text=bt-A1B2C3" }
         """
         auth_header = request.headers.get("Authorization", "")
         token = auth_header.removeprefix("Bearer ").strip()
         if WORKER_API_SECRET and token != WORKER_API_SECRET:
             return web.json_response({"error": "Unauthorized"}, status=401)
 
-        try:
-            body = await request.json()
-        except Exception:
-            return web.json_response({"error": "Invalid JSON"}, status=400)
+        token_param = request.query.get("token", "").strip()
+        if not token_param:
+            return web.json_response({"error": "token query param required"}, status=400)
 
-        phone = body.get("phone", "").strip()
-        code = body.get("code", "").strip()
-        if not phone or not code:
-            return web.json_response({"error": "phone and code required"}, status=400)
-
-        account_sid = os.environ.get("TWILIO_ACCOUNT_SID", "")
-        auth_token = os.environ.get("TWILIO_AUTH_TOKEN", "")
         from_number = os.environ.get("TWILIO_WHATSAPP_FROM", "")
-
-        if not account_sid or not auth_token or not from_number:
-            logger.warning("WhatsApp OTP skipped: Twilio env vars not set")
+        if not from_number:
+            logger.warning("WhatsApp link generation failed: TWILIO_WHATSAPP_FROM not set")
             return web.json_response({"error": "WhatsApp not configured"}, status=503)
 
-        import base64
-        credentials = base64.b64encode(f"{account_sid}:{auth_token}".encode()).decode()
-        payload = {
-            "From": f"whatsapp:{from_number}",
-            "To": f"whatsapp:{phone}",
-            "Body": f"Your BriefTube verification code: {code}\n\nThis code expires in 10 minutes.",
-        }
-
-        try:
-            async with aiohttp.ClientSession() as s:
-                async with s.post(
-                    f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Messages.json",
-                    headers={"Authorization": f"Basic {credentials}"},
-                    data=payload,
-                    timeout=aiohttp.ClientTimeout(total=15),
-                ) as r:
-                    if r.status >= 400:
-                        text = await r.text()
-                        logger.warning(f"Twilio OTP error {r.status}: {text[:200]}")
-                        return web.json_response({"error": f"Twilio error {r.status}"}, status=502)
-                    logger.info(f"WhatsApp OTP sent to {phone}")
-                    return web.json_response({"ok": True})
-        except Exception as e:
-            logger.error(f"WhatsApp OTP send failed: {e}")
-            return web.json_response({"error": str(e)[:100]}, status=500)
+        number_without_plus = from_number.lstrip("+")
+        wa_link = f"https://wa.me/{number_without_plus}?text={token_param}"
+        return web.json_response({"waLink": wa_link})
 
     port = HEALTH_PORT + WORKER_INSTANCE  # Instance 0→8080, 1→8081, 2→8082, …
     app = web.Application()
     app.router.add_get("/health", handle_health)
     app.router.add_get("/logs", handle_logs)
     app.router.add_get("/services", handle_services)
-    app.router.add_post("/send-whatsapp-otp", handle_send_whatsapp_otp)
+    app.router.add_get("/get-whatsapp-link", handle_get_whatsapp_link)
     # Disable HTTP access logging — every /logs poll would otherwise write
     # a line into worker.log, creating a feedback loop that drowns real logs.
     runner = web.AppRunner(app, access_log=None)
