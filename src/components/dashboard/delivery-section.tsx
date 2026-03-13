@@ -687,14 +687,12 @@ export function DeliverySection({
               Reconnect
             </button>
           ) : (
-            <Button
-              size="sm"
-              variant="outline"
+            <button
               onClick={openTelegramModal}
-              className="rounded-full text-xs"
+              className="nm-raised-sm text-muted-foreground hover:text-foreground rounded-full px-3 py-1 text-xs transition-all"
             >
               Connect
-            </Button>
+            </button>
           )}
         </div>
 
@@ -737,14 +735,12 @@ export function DeliverySection({
               Disconnect
             </button>
           ) : (
-            <Button
-              size="sm"
-              variant="outline"
-              className="rounded-full text-xs"
-              asChild
+            <a
+              href="/api/connect/notion"
+              className="nm-raised-sm text-muted-foreground hover:text-foreground rounded-full px-3 py-1 text-xs transition-all"
             >
-              <a href="/api/connect/notion">Connect</a>
-            </Button>
+              Connect
+            </a>
           )}
         </div>
 
@@ -807,19 +803,17 @@ export function DeliverySection({
               </button>
             </div>
           ) : (
-            <Button
-              size="sm"
-              variant="outline"
-              className="rounded-full text-xs"
+            <button
               onClick={() => void startWhatsappConnect()}
               disabled={waConnecting}
+              className="nm-raised-sm text-muted-foreground hover:text-foreground rounded-full px-3 py-1 text-xs transition-all disabled:opacity-50"
             >
               {waConnecting ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (
                 "Connect"
               )}
-            </Button>
+            </button>
           )}
         </div>
 
