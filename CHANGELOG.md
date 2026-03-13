@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-03-14
+
+FEATURE: Video processing preview card — shows thumbnail, title, and animated progress bar after submitting a video URL
+
 ## 2026-03-13
 
 FIX: Sécurité — routes admin API utilisent env.ADMIN_USER_ID au lieu d'un UUID hardcodé

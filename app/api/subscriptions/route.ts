@@ -372,7 +372,14 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  return NextResponse.json(data, { status: 201 });
+  return NextResponse.json(
+    {
+      ...data,
+      videoId: ahaVideo?.videoId ?? null,
+      videoTitle: ahaVideo?.title ?? null,
+    },
+    { status: 201 },
+  );
 }
 
 // PATCH /api/subscriptions - Toggle active status for a subscription
