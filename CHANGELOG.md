@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-03-13
+
+FIX: Sécurité — routes admin API utilisent env.ADMIN_USER_ID au lieu d'un UUID hardcodé
+FIX: Sécurité — webhook Resend rejette les requêtes non-signées si RESEND_WEBHOOK_SECRET manquant
+FIX: Sécurité — Notion OAuth token stocké en cookie httpOnly au lieu d'être exposé dans l'URL
+FIX: Sécurité — select-database Notion lit le token depuis le cookie au lieu du body
+FIX: Sécurité — email tracking valide le format UUID avant de requêter la DB
+FIX: Sécurité — worker /health, /logs et /services acceptent Authorization Bearer header au lieu de ?token= dans l'URL
+FIX: Sécurité — routes admin Next.js transmettent le token worker via header Authorization
+
 ## 2026-03-12
 
 FIX: Worker — retire "requested format is not available" et "no video formats found" de la détection live en connexion directe (false positive YouTube IP block → continue vers client suivant)

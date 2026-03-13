@@ -8,7 +8,6 @@ import path from "path";
 import { env } from "@/lib/env";
 
 const execAsync = promisify(exec);
-const ADMIN_USER_ID = "67320a39-948c-44d2-98e3-c0de49af1ec6";
 const LOG_PATH = path.join(process.cwd(), "worker", "worker.log");
 
 async function requireAdmin() {
@@ -16,7 +15,7 @@ async function requireAdmin() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (user?.id !== ADMIN_USER_ID) return null;
+  if (!env.ADMIN_USER_ID || user?.id !== env.ADMIN_USER_ID) return null;
   return user;
 }
 
@@ -32,11 +31,14 @@ export async function GET() {
 
   // --- VPS remote endpoint (preferred) ---
   if (env.VPS_WORKER_URL) {
-    const url = `${env.VPS_WORKER_URL}/logs${env.WORKER_API_SECRET ? `?token=${env.WORKER_API_SECRET}` : ""}`;
+    const url = `${env.VPS_WORKER_URL}/logs`;
     try {
       const res = await fetch(url, {
         signal: AbortSignal.timeout(8000),
         cache: "no-store",
+        headers: env.WORKER_API_SECRET
+          ? { Authorization: `Bearer ${env.WORKER_API_SECRET}` }
+          : {},
       });
       if (!res.ok) throw new Error(`VPS returned ${res.status}`);
       const data = await res.json();

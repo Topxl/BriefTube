@@ -981,6 +981,10 @@ async def health_loop():
     from aiohttp import web
 
     async def handle_health(request):
+        auth_header = request.headers.get("Authorization", "")
+        token = auth_header.removeprefix("Bearer ").strip()
+        if WORKER_API_SECRET and token != WORKER_API_SECRET:
+            return web.json_response({"error": "Unauthorized"}, status=401)
         return web.json_response({
             "status": "ok",
             "uptime": stats.get_uptime(),
@@ -990,8 +994,9 @@ async def health_loop():
         })
 
     async def handle_logs(request):
-        # Token auth
-        token = request.rel_url.query.get("token", "")
+        # Token auth via Authorization: Bearer header
+        auth_header = request.headers.get("Authorization", "")
+        token = auth_header.removeprefix("Bearer ").strip()
         if WORKER_API_SECRET and token != WORKER_API_SECRET:
             return web.json_response({"error": "Unauthorized"}, status=401)
 
@@ -1051,7 +1056,8 @@ async def health_loop():
 
     async def handle_services(request):
         """Ping each external service and return their status."""
-        token = request.rel_url.query.get("token", "")
+        auth_header = request.headers.get("Authorization", "")
+        token = auth_header.removeprefix("Bearer ").strip()
         if WORKER_API_SECRET and token != WORKER_API_SECRET:
             return web.json_response({"error": "Unauthorized"}, status=401)
 
