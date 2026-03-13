@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Check, Loader2, Play, Star } from "@/lib/icons";
+import { Check, Headphones, Languages, Loader2, Play, Star } from "@/lib/icons";
 import { dialogManager } from "@/features/dialog-manager/dialog-manager";
 import { languages } from "@/lib/languages";
 import type { Language } from "@/lib/languages";
@@ -819,12 +819,17 @@ export function DeliverySection({
 
         {/* Language row */}
         <div className="flex items-center justify-between px-4 py-3">
-          <div>
-            <p className="text-sm font-medium">Summary language</p>
-            <p className="text-muted-foreground text-[11px]">
-              {currentLanguageMeta?.nativeName ?? "English"} ·{" "}
-              {currentLanguageMeta?.name ?? "English"}
-            </p>
+          <div className="flex items-center gap-2.5">
+            <div className="nm-inset-sm flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
+              <Languages className="text-muted-foreground h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-sm font-medium">Summary language</p>
+              <p className="text-muted-foreground text-[11px]">
+                {currentLanguageMeta?.nativeName ?? "English"} ·{" "}
+                {currentLanguageMeta?.name ?? "English"}
+              </p>
+            </div>
           </div>
           <button
             onClick={openLanguagePicker}
@@ -841,11 +846,16 @@ export function DeliverySection({
 
         {/* Voice row */}
         <div className="flex items-center justify-between px-4 py-3">
-          <div>
-            <p className="text-sm font-medium">Audio voice</p>
-            <p className="text-muted-foreground text-[11px]">
-              {currentVoiceEntry.label} · {currentVoiceEntry.tone}
-            </p>
+          <div className="flex items-center gap-2.5">
+            <div className="nm-inset-sm flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
+              <Headphones className="text-muted-foreground h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-sm font-medium">Audio voice</p>
+              <p className="text-muted-foreground text-[11px]">
+                {currentVoiceEntry.label} · {currentVoiceEntry.tone}
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <button
