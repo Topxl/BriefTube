@@ -7,13 +7,16 @@ const PIXEL = Buffer.from(
   "base64",
 );
 
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
 
-  if (id) {
+  if (id && UUID_REGEX.test(id)) {
     const admin = createAdminClient();
     // Only set opened_at on first open
     await admin

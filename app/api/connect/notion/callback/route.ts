@@ -2,7 +2,10 @@ import { createClient } from "@/lib/supabase/server";
 import { env } from "@/lib/env";
 import { createHmac } from "crypto";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import type { NextRequest } from "next/server";
+
+const NOTION_PENDING_TOKEN_COOKIE = "notion_pending_token";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
@@ -98,13 +101,20 @@ export async function GET(req: NextRequest) {
     redirect("/dashboard/profile?notion=connected");
   }
 
-  // Multiple databases — store token temporarily and let user choose
-  // Encode databases list in a short-lived cookie via redirect URL
+  // Multiple databases — store token in a short-lived httpOnly cookie, keep only non-sensitive data in URL
+  const cookieStore = await cookies();
+  cookieStore.set(NOTION_PENDING_TOKEN_COOKIE, tokenData.access_token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 600, // 10 minutes
+    path: "/",
+  });
+
   const dbsParam = encodeURIComponent(JSON.stringify(databases));
-  const tokenParam = encodeURIComponent(tokenData.access_token);
   const wsId = encodeURIComponent(tokenData.workspace_id);
   const wsName = encodeURIComponent(tokenData.workspace_name);
   redirect(
-    `/dashboard/profile?notion=select_db&dbs=${dbsParam}&token=${tokenParam}&ws_id=${wsId}&ws_name=${wsName}`,
+    `/dashboard/profile?notion=select_db&dbs=${dbsParam}&ws_id=${wsId}&ws_name=${wsName}`,
   );
 }

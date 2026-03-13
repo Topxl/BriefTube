@@ -4,15 +4,13 @@ import { resend } from "@/lib/mail/resend";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 
-const ADMIN_USER_ID = "67320a39-948c-44d2-98e3-c0de49af1ec6";
-
 export async function POST() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (user?.id !== ADMIN_USER_ID) {
+  if (!env.ADMIN_USER_ID || user?.id !== env.ADMIN_USER_ID) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
