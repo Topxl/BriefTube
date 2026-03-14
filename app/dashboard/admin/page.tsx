@@ -7,9 +7,6 @@ import {
   Activity,
   Mail,
   ChevronRight,
-  Users,
-  Zap,
-  Send,
 } from "@/lib/icons";
 import {
   Item,
@@ -19,7 +16,6 @@ import {
   ItemDescription,
   ItemActions,
   ItemGroup,
-  ItemSeparator,
 } from "@/components/ui/item";
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
