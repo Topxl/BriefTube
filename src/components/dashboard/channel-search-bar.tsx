@@ -106,10 +106,18 @@ export function ChannelSearchBar() {
     if (!preview) return;
     setSubscribing(true);
     try {
+      const payload = preview.channelId
+        ? {
+            channelId: preview.channelId,
+            channelName: preview.channelName,
+            videoId: preview.videoId,
+            videoTitle: preview.title,
+          }
+        : { url: trimmed };
       const res = await fetch("/api/subscriptions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: trimmed }),
+        body: JSON.stringify(payload),
       });
       const data = (await res.json()) as {
         active?: boolean;
@@ -148,10 +156,18 @@ export function ChannelSearchBar() {
     try {
       if (!preview.isSubscribed) {
         // Subscribe + process video at the same time
+        const payload = preview.channelId
+          ? {
+              channelId: preview.channelId,
+              channelName: preview.channelName,
+              videoId: preview.videoId,
+              videoTitle: preview.title,
+            }
+          : { url: trimmed };
         const res = await fetch("/api/subscriptions", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: trimmed }),
+          body: JSON.stringify(payload),
         });
         const data = (await res.json()) as {
           active?: boolean;
