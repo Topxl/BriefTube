@@ -207,7 +207,7 @@ export function ChannelSearchBar() {
       </div>
 
       {isYT && (loadingPreview || preview) && (
-        <div className="nm-inset-sm absolute top-full right-0 left-0 z-50 mt-1 rounded-xl p-3">
+        <div className="nm-inset-sm absolute top-full right-0 left-0 z-50 mt-1 rounded-xl bg-[oklch(0.18_0_0)] p-3">
           {loadingPreview && !preview ? (
             <div className="flex items-center gap-2">
               <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
@@ -315,7 +315,7 @@ function VideoProcessingCard({
   }, []);
 
   return (
-    <div className="nm-inset-sm rounded-xl p-3">
+    <div className="nm-inset-sm rounded-xl bg-[oklch(0.18_0_0)] p-3">
       <div className="flex items-start gap-3">
         <img
           src={`https://img.youtube.com/vi/${videoId}/mqdefault.jpg`}
