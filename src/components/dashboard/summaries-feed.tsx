@@ -97,6 +97,31 @@ export function SummariesFeed() {
     void loadDeliveries(0);
   }, [loadDeliveries]);
 
+  // Realtime: update video status in-place when processed_videos changes
+  useEffect(() => {
+    const channel = supabase
+      .channel("processed-videos-status")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "processed_videos" },
+        (payload) => {
+          const updated = payload.new as ProcessedVideo;
+          setDeliveries((prev) =>
+            prev.map((d) =>
+              d.video_id === updated.video_id
+                ? { ...d, video: updated }
+                : d,
+            ),
+          );
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [supabase]);
+
   // Resolve missing titles via noembed API
   useEffect(() => {
     const missing = deliveries.filter(

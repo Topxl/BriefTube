@@ -2,6 +2,8 @@
 
 ## 2026-03-15
 
+FIX: SummariesFeed — abonnement Supabase Realtime sur processed_videos pour mettre à jour le badge de statut en live sans rechargement de page
+FEATURE: Search bar preview — skeleton placeholders pour titre/chaîne pendant le chargement (boutons stables)
 FEATURE: Admin — panel services redesigné en vue pipeline arborescente (RSS → Transcription → Résumé IA → Synthèse vocale → Livraison)
 FEATURE: Admin — ajout check Webshare (proxy résidentiel) et YouTube Direct dans le pipeline de transcription
 REFACTOR: Worker /services endpoint restructuré en groupes pipeline au lieu d'une liste plate
