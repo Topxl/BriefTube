@@ -44,22 +44,29 @@ export const POST = authRoute
 
     // Queue for processing
     const title = videoTitle ?? existing?.video_title ?? videoId;
-    await supabase.from("processed_videos").upsert(
-      {
+    if (existing) {
+      // Row exists (failed/skipped) — reset to pending
+      await supabase
+        .from("processed_videos")
+        .update({ status: "pending", video_title: title })
+        .eq("video_id", videoId)
+        .eq("language", userLang);
+    } else {
+      await supabase.from("processed_videos").insert({
         video_id: videoId,
         video_title: title,
         video_url: videoUrl,
         status: "pending",
         language: userLang,
-        channel_id: existing?.channel_id ?? "",
-      },
-      { onConflict: "video_id,language" },
-    );
+        channel_id: "",
+      });
+    }
 
     const { data: existingJob } = await supabase
       .from("processing_queue")
       .select("id")
       .eq("video_id", videoId)
+      .in("status", ["queued", "processing"])
       .maybeSingle();
 
     if (!existingJob) {
