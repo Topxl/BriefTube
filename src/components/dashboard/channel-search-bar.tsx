@@ -208,14 +208,7 @@ export function ChannelSearchBar() {
 
       {isYT && (loadingPreview || preview) && (
         <div className="nm-inset-sm absolute top-full right-0 left-0 z-50 mt-1 rounded-xl bg-[oklch(0.18_0_0)] p-3">
-          {loadingPreview && !preview ? (
-            <div className="flex items-center gap-2">
-              <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
-              <span className="text-muted-foreground text-xs">
-                Loading preview…
-              </span>
-            </div>
-          ) : preview ? (
+          {preview ? (
             <div className="flex items-start gap-3">
               {preview.thumbnail ? (
                 <img
@@ -229,14 +222,20 @@ export function ChannelSearchBar() {
                 </div>
               )}
               <div className="min-w-0 flex-1">
-                {preview.title && (
+                {preview.title ? (
                   <p className="line-clamp-2 text-xs font-medium">
                     {preview.title}
                   </p>
+                ) : (
+                  <div className="bg-muted/50 mb-1 h-3 w-3/4 animate-pulse rounded" />
                 )}
-                <p className="text-muted-foreground text-[11px]">
-                  {preview.channelName}
-                </p>
+                {preview.channelName ? (
+                  <p className="text-muted-foreground text-[11px]">
+                    {preview.channelName}
+                  </p>
+                ) : (
+                  <div className="bg-muted/50 h-2.5 w-1/2 animate-pulse rounded" />
+                )}
                 <div className="mt-2 flex gap-2">
                   {!preview.isSubscribed && (
                     <button
