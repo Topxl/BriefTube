@@ -1,33 +1,22 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useQueryState } from "nuqs";
+import { useState, useEffect, useCallback } from "react";
 import { X } from "@/lib/icons";
+import {
+  type ProcessingVideo,
+  getProcessingVideos,
+  removeProcessingVideo,
+} from "@/lib/processing-videos";
 
-function calcProgress(startedAt: string): number {
-  const ts = Number(startedAt);
-  if (!ts) return 0;
-  const elapsed = (Date.now() - ts) / 1000; // seconds
+function calcProgress(startedAt: number): number {
+  const elapsed = (Date.now() - startedAt) / 1000;
   return 85 * (1 - Math.pow(0.985, elapsed));
 }
 
-export function ProcessingVideoCard() {
-  const [videoId, setVideoId] = useQueryState("processingVideoId", {
-    defaultValue: "",
-    shallow: false,
-  });
-  const [title, setTitle] = useQueryState("processingVideoTitle", {
-    defaultValue: "",
-    shallow: false,
-  });
-  const [startedAt] = useQueryState("processingStartedAt", {
-    defaultValue: "",
-    shallow: false,
-  });
-  const [progress, setProgress] = useState(() => calcProgress(startedAt));
+function ProcessingCard({ video }: { video: ProcessingVideo }) {
+  const [progress, setProgress] = useState(() => calcProgress(video.startedAt));
 
   useEffect(() => {
-    if (!videoId) return;
     const interval = setInterval(() => {
       setProgress((p) => {
         if (p >= 85) {
@@ -38,25 +27,18 @@ export function ProcessingVideoCard() {
       });
     }, 1000);
     return () => clearInterval(interval);
-  }, [videoId, startedAt]);
-
-  if (!videoId) return null;
-
-  const handleDismiss = async () => {
-    await setVideoId(null);
-    await setTitle(null);
-  };
+  }, []);
 
   return (
     <div className="nm-inset-sm rounded-xl bg-[oklch(0.18_0_0)] p-3">
       <div className="flex items-start gap-3">
         <img
-          src={`https://img.youtube.com/vi/${videoId}/mqdefault.jpg`}
-          alt={title}
+          src={`https://img.youtube.com/vi/${video.videoId}/mqdefault.jpg`}
+          alt={video.title}
           className="h-14 w-24 shrink-0 rounded-lg object-cover"
         />
         <div className="min-w-0 flex-1">
-          <p className="line-clamp-2 text-xs font-medium">{title}</p>
+          <p className="line-clamp-2 text-xs font-medium">{video.title}</p>
           <p className="text-muted-foreground mt-0.5 text-[11px]">
             Processing your summary…
           </p>
@@ -69,12 +51,37 @@ export function ProcessingVideoCard() {
         </div>
         <button
           type="button"
-          onClick={() => void handleDismiss()}
+          onClick={() => removeProcessingVideo(video.videoId)}
           className="text-muted-foreground hover:text-foreground shrink-0 transition-colors"
         >
           <X className="h-3.5 w-3.5" />
         </button>
       </div>
+    </div>
+  );
+}
+
+export function ProcessingVideoCard() {
+  const [videos, setVideos] = useState<ProcessingVideo[]>(() =>
+    getProcessingVideos(),
+  );
+
+  const sync = useCallback(() => {
+    setVideos(getProcessingVideos());
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener("processingVideosChanged", sync);
+    return () => window.removeEventListener("processingVideosChanged", sync);
+  }, [sync]);
+
+  if (videos.length === 0) return null;
+
+  return (
+    <div className="flex flex-col gap-2">
+      {videos.map((v) => (
+        <ProcessingCard key={v.videoId} video={v} />
+      ))}
     </div>
   );
 }
