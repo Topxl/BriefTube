@@ -2,6 +2,7 @@
 
 ## 2026-03-14
 
+REFACTOR: Move VideoProcessingCard from navbar search bar to dashboard Recent summaries section using nuqs URL state
 FIX: Search bar preview card positioned absolute pour ne pas déformer la navbar sticky
 FEATURE: Rich preview card for channel search bar — shows video/channel details with subscription and summarize buttons
 FEATURE: Link preview API endpoint for detecting YouTube videos and channels with subscription status
