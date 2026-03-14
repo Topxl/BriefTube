@@ -264,10 +264,13 @@ def fail_job(job_id: str, immediate: bool = False) -> bool:
     }).eq("id", job_id).execute()
     # Keep processed_videos in sync: when the job permanently fails, mark the
     # video as failed too so it doesn't stay stuck in "pending" forever.
+    # Always use immediate=True here: processing_queue already decided this is
+    # a permanent failure, so processed_videos must reflect that regardless of
+    # its own failure_count (avoids the "pending forever" bug when failure_count < 3).
     if status == "failed":
         video_id = res.data[0].get("video_id")
         if video_id:
-            mark_video_failed(video_id, language=user_language, immediate=immediate)
+            mark_video_failed(video_id, language=user_language, immediate=True)
         return True
     return False
 

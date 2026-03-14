@@ -2,6 +2,8 @@
 
 ## 2026-03-14
 
+FIX: Worker — fail_job() appelle désormais mark_video_failed(immediate=True) pour syncer processed_videos au statut "failed" quand un job abandonne définitivement (évite le bug "pending forever")
+FIX: DB — 372 vidéos bloquées (processing_queue=failed / processed_videos=pending) corrigées manuellement vers status=failed
 REFACTOR: Move VideoProcessingCard from navbar search bar to dashboard Recent summaries section using nuqs URL state
 FIX: Search bar preview card positioned absolute pour ne pas déformer la navbar sticky
 FEATURE: Rich preview card for channel search bar — shows video/channel details with subscription and summarize buttons
