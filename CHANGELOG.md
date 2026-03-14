@@ -2,6 +2,7 @@
 
 ## 2026-03-14
 
+FIX: Search bar preview card positioned absolute pour ne pas déformer la navbar sticky
 FEATURE: Rich preview card for channel search bar — shows video/channel details with subscription and summarize buttons
 FEATURE: Link preview API endpoint for detecting YouTube videos and channels with subscription status
 FEATURE: Process video API endpoint for queuing videos without subscribing to the full channel
