@@ -131,9 +131,11 @@ export async function POST(request: NextRequest) {
       );
     }
   } else {
-    // Direct channelId/channelName
+    // Direct channelId/channelName (+ optional videoId/videoTitle)
     channelId = body.channelId;
     channelName = body.channelName;
+    specificVideoId = body.videoId ?? undefined;
+    specificVideoTitle = body.videoTitle ?? undefined;
   }
 
   if (!channelId || !channelName) {
