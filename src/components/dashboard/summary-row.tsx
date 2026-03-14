@@ -77,6 +77,11 @@ export function SummaryRow({
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [showSummary, setShowSummary] = useState(false);
+  const [isRead, setIsRead] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      !!localStorage.getItem(`read:${delivery.id}`),
+  );
 
   const title = video?.video_title ?? resolvedTitle ?? null;
   const thumbnailUrl = `https://img.youtube.com/vi/${delivery.video_id}/default.jpg`;
@@ -88,9 +93,13 @@ export function SummaryRow({
       audio.pause();
     } else {
       void audio.play();
+      if (!isRead) {
+        localStorage.setItem(`read:${delivery.id}`, "1");
+        setIsRead(true);
+      }
     }
     setPlaying(!playing);
-  }, [playing]);
+  }, [playing, isRead, delivery.id]);
 
   const cycleSpeed = useCallback(() => {
     const audio = audioRef.current;
@@ -130,7 +139,11 @@ export function SummaryRow({
   return (
     <div
       className={`nm-raised overflow-hidden rounded-2xl transition-all duration-200 hover:scale-[1.005] hover:shadow-md ${
-        playing ? "ring-1 ring-red-500/25" : ""
+        playing
+          ? "ring-1 ring-red-500/25"
+          : !isRead
+            ? "bg-red-500/[0.05] ring-1 ring-red-500/30"
+            : ""
       }`}
     >
       {/* Main row: thumbnail + title + controls */}
