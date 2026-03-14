@@ -154,45 +154,7 @@ export function ChannelSearchBar() {
     if (!preview?.videoId) return;
     setSummarizing(true);
     try {
-      if (!preview.isSubscribed) {
-        // Subscribe + process video at the same time
-        const payload = preview.channelId
-          ? {
-              channelId: preview.channelId,
-              channelName: preview.channelName,
-              videoId: preview.videoId,
-              videoTitle: preview.title,
-            }
-          : { url: trimmed };
-        const res = await fetch("/api/subscriptions", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        const data = (await res.json()) as {
-          active?: boolean;
-          error?: string;
-          videoId?: string | null;
-          videoTitle?: string | null;
-        };
-        if (!res.ok && res.status !== 409) {
-          toast.error(data.error ?? "Failed");
-          return;
-        }
-        if (res.ok) {
-          if (!data.active) openUpsellModal();
-          setPreview((p) => (p ? { ...p, isSubscribed: true } : p));
-        }
-        if (data.videoId) {
-          await setProcessingVideoId(data.videoId);
-          await setProcessingVideoTitle(data.videoTitle ?? data.videoId);
-          await setProcessingStartedAt(String(Date.now()));
-          await setQ(null);
-          router.refresh();
-          return;
-        }
-      }
-      // Already subscribed (or subscribe returned 409) — just process the video
+      // Summarize only — never subscribe
       const res = await fetch("/api/process-video", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
