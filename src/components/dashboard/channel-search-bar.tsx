@@ -174,7 +174,7 @@ export function ChannelSearchBar() {
   };
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="relative">
       <div className="relative w-full">
         {isYT ? (
           <Youtube className="text-muted-foreground absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2" />
@@ -207,7 +207,7 @@ export function ChannelSearchBar() {
       </div>
 
       {isYT && (loadingPreview || preview) && (
-        <div className="nm-inset-sm rounded-xl p-3">
+        <div className="nm-inset-sm absolute top-full right-0 left-0 z-50 mt-1 rounded-xl p-3">
           {loadingPreview && !preview ? (
             <div className="flex items-center gap-2">
               <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
@@ -277,11 +277,13 @@ export function ChannelSearchBar() {
       )}
 
       {processingVideo && (
-        <VideoProcessingCard
-          videoId={processingVideo.videoId}
-          title={processingVideo.title}
-          onDismiss={() => setProcessingVideo(null)}
-        />
+        <div className="absolute top-full right-0 left-0 z-50 mt-1">
+          <VideoProcessingCard
+            videoId={processingVideo.videoId}
+            title={processingVideo.title}
+            onDismiss={() => setProcessingVideo(null)}
+          />
+        </div>
       )}
     </div>
   );
@@ -313,7 +315,7 @@ function VideoProcessingCard({
   }, []);
 
   return (
-    <div className="nm-inset-sm mt-2 rounded-xl p-3">
+    <div className="nm-inset-sm rounded-xl p-3">
       <div className="flex items-start gap-3">
         <img
           src={`https://img.youtube.com/vi/${videoId}/mqdefault.jpg`}
