@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-03-15
+
+FEATURE: Admin — panel services redesigné en vue pipeline arborescente (RSS → Transcription → Résumé IA → Synthèse vocale → Livraison)
+FEATURE: Admin — ajout check Webshare (proxy résidentiel) et YouTube Direct dans le pipeline de transcription
+REFACTOR: Worker /services endpoint restructuré en groupes pipeline au lieu d'une liste plate
+
 ## 2026-03-14
 
 FIX: Worker — fail_job() appelle désormais mark_video_failed(immediate=True) pour syncer processed_videos au statut "failed" quand un job abandonne définitivement (évite le bug "pending forever")
