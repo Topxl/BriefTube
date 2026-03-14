@@ -4,6 +4,13 @@ import { useState, useEffect } from "react";
 import { useQueryState } from "nuqs";
 import { X } from "@/lib/icons";
 
+function calcProgress(startedAt: string): number {
+  const ts = Number(startedAt);
+  if (!ts) return 0;
+  const elapsed = (Date.now() - ts) / 1000; // seconds
+  return 85 * (1 - Math.pow(0.985, elapsed));
+}
+
 export function ProcessingVideoCard() {
   const [videoId, setVideoId] = useQueryState("processingVideoId", {
     defaultValue: "",
@@ -13,7 +20,11 @@ export function ProcessingVideoCard() {
     defaultValue: "",
     shallow: false,
   });
-  const [progress, setProgress] = useState(0);
+  const [startedAt] = useQueryState("processingStartedAt", {
+    defaultValue: "",
+    shallow: false,
+  });
+  const [progress, setProgress] = useState(() => calcProgress(startedAt));
 
   useEffect(() => {
     if (!videoId) return;
@@ -27,7 +38,7 @@ export function ProcessingVideoCard() {
       });
     }, 1000);
     return () => clearInterval(interval);
-  }, [videoId]);
+  }, [videoId, startedAt]);
 
   if (!videoId) return null;
 
