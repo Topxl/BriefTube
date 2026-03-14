@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     try {
       const oembedRes = await fetch(
         `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`,
-        { next: { revalidate: 3600 } },
+        { signal: AbortSignal.timeout(5000), next: { revalidate: 3600 } },
       );
       if (oembedRes.ok) {
         const data = (await oembedRes.json()) as {
