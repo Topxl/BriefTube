@@ -66,9 +66,8 @@ async function extractChannelInfo(url: string): Promise<ChannelInfo> {
         };
       }
     } catch {
-      // fall through to generic fallback
+      throw new Error("Could not fetch video info — try again");
     }
-    return { channelId: videoId, channelName: videoId, videoId };
   }
 
   // @handle
@@ -114,12 +113,23 @@ export async function POST(request: NextRequest) {
   let specificVideoTitle: string | undefined;
 
   if (body.url) {
-    // Extract from URL (async — handles video links via oEmbed)
-    const extracted = await extractChannelInfo(body.url);
-    channelId = extracted.channelId;
-    channelName = extracted.channelName;
-    specificVideoId = extracted.videoId;
-    specificVideoTitle = extracted.videoTitle;
+    try {
+      const extracted = await extractChannelInfo(body.url);
+      channelId = extracted.channelId;
+      channelName = extracted.channelName;
+      specificVideoId = extracted.videoId;
+      specificVideoTitle = extracted.videoTitle;
+    } catch (err) {
+      return NextResponse.json(
+        {
+          error:
+            err instanceof Error
+              ? err.message
+              : "Could not fetch video info — try again",
+        },
+        { status: 422 },
+      );
+    }
   } else {
     // Direct channelId/channelName
     channelId = body.channelId;
