@@ -335,24 +335,35 @@ export async function POST(request: NextRequest) {
           `Aha video already ${existingStatus}, delivery created directly: ${ahaVideo.videoId}`,
         );
       } else {
-        // "skipped" or absent — upgrade to pending and queue
-        await supabase.from("processed_videos").upsert(
-          {
+        // "skipped" / "failed" / absent — set to pending
+        if (existingStatus) {
+          // Row exists but is failed/skipped — update it
+          await supabase
+            .from("processed_videos")
+            .update({
+              status: "pending",
+              video_title: ahaVideo.title,
+              channel_id: finalChannelId,
+            })
+            .eq("video_id", ahaVideo.videoId)
+            .eq("language", userLang);
+        } else {
+          await supabase.from("processed_videos").insert({
             video_id: ahaVideo.videoId,
             channel_id: finalChannelId,
             video_title: ahaVideo.title,
             video_url: ahaUrl,
             status: "pending",
             language: userLang,
-          },
-          { onConflict: "video_id,language" },
-        );
+          });
+        }
 
         // Insert into processing_queue only if no existing job for this video
         const { data: existingJob } = await supabase
           .from("processing_queue")
           .select("id")
           .eq("video_id", ahaVideo.videoId)
+          .in("status", ["queued", "processing"])
           .maybeSingle();
 
         if (!existingJob) {
