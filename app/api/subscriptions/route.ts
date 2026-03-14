@@ -48,7 +48,7 @@ async function extractChannelInfo(url: string): Promise<ChannelInfo> {
     try {
       // oEmbed is the official, free, no-key-required YouTube metadata API
       const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
-      const res = await fetch(oembedUrl);
+      const res = await fetch(oembedUrl, { signal: AbortSignal.timeout(5000) });
       if (res.ok) {
         const data = (await res.json()) as {
           title: string;
