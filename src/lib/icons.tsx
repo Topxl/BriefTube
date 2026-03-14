@@ -73,6 +73,7 @@ import {
   MessageCircle as _MessageCircle,
   Zap as _Zap,
   Layers as _Layers,
+  Shield as _Shield,
   ShieldAlert as _ShieldAlert,
   TrendingUp as _TrendingUp,
   BarChart2 as _BarChart2,
@@ -160,6 +161,7 @@ export const Cpu = wrap(_Cpu);
 export const MessageCircle = wrap(_MessageCircle);
 export const Zap = wrap(_Zap);
 export const Layers = wrap(_Layers);
+export const Shield = wrap(_Shield);
 export const ShieldAlert = wrap(_ShieldAlert);
 export const TrendingUp = wrap(_TrendingUp);
 export const BarChart2 = wrap(_BarChart2);
