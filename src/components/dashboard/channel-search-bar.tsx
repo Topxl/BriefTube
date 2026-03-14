@@ -247,12 +247,12 @@ export function ChannelSearchBar() {
                       {subscribing ? (
                         <Loader2 className="h-3 w-3 animate-spin" />
                       ) : null}
-                      S'abonner
+                      Subscribe
                     </button>
                   )}
                   {preview.isSubscribed && (
                     <span className="flex items-center gap-1 text-[11px] text-emerald-400">
-                      <Check className="h-3 w-3" /> Abonné
+                      <Check className="h-3 w-3" /> Subscribed
                     </span>
                   )}
                   {preview.type === "video" && (
@@ -266,7 +266,7 @@ export function ChannelSearchBar() {
                       ) : (
                         <Play className="h-3 w-3" />
                       )}
-                      Résumer
+                      Summarize
                     </button>
                   )}
                 </div>
