@@ -2,6 +2,7 @@
 
 ## 2026-03-15
 
+FEATURE: ProcessingVideoCard — messages dynamiques par étape (Transcription → Résumé → Audio → Livraison), indicateur d'étapes visuel, et auto-dismiss via Realtime quand la vidéo est traitée
 FIX: SummariesFeed — abonnement Supabase Realtime sur processed_videos pour mettre à jour le badge de statut en live sans rechargement de page
 FEATURE: Search bar preview — skeleton placeholders pour titre/chaîne pendant le chargement (boutons stables)
 FEATURE: Admin — panel services redesigné en vue pipeline arborescente (RSS → Transcription → Résumé IA → Synthèse vocale → Livraison)
