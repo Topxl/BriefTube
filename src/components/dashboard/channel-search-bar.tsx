@@ -38,6 +38,10 @@ export function ChannelSearchBar() {
     "processingVideoTitle",
     { defaultValue: "", shallow: false },
   );
+  const [, setProcessingStartedAt] = useQueryState("processingStartedAt", {
+    defaultValue: "",
+    shallow: false,
+  });
   const [preview, setPreview] = useState<LinkPreview | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [subscribing, setSubscribing] = useState(false);
@@ -103,6 +107,7 @@ export function ChannelSearchBar() {
       if (data.videoId) {
         await setProcessingVideoId(data.videoId);
         await setProcessingVideoTitle(data.videoTitle ?? data.videoId);
+        await setProcessingStartedAt(String(Date.now()));
       }
       await setQ(null);
       router.refresh();
@@ -141,6 +146,7 @@ export function ChannelSearchBar() {
         if (data.videoId) {
           await setProcessingVideoId(data.videoId);
           await setProcessingVideoTitle(data.videoTitle ?? data.videoId);
+          await setProcessingStartedAt(String(Date.now()));
           await setQ(null);
           router.refresh();
           return;
@@ -162,6 +168,7 @@ export function ChannelSearchBar() {
       }
       await setProcessingVideoId(preview.videoId);
       await setProcessingVideoTitle(preview.title ?? preview.videoId);
+      await setProcessingStartedAt(String(Date.now()));
       await setQ(null);
       router.refresh();
     } catch {
