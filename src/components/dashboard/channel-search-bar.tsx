@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Search, Youtube, X, Loader2, Play, Check } from "@/lib/icons";
 import { toast } from "sonner";
 import { openUpsellModal } from "@/components/dashboard/upsell-modal";
+import { addProcessingVideo } from "@/lib/processing-videos";
 
 function isYouTubeInput(val: string): boolean {
   const v = val.trim();
@@ -37,18 +38,6 @@ type LinkPreview = {
 
 export function ChannelSearchBar() {
   const [q, setQ] = useQueryState("q", { defaultValue: "", shallow: true });
-  const [_processingVideoId, setProcessingVideoId] = useQueryState(
-    "processingVideoId",
-    { defaultValue: "", shallow: false },
-  );
-  const [_processingVideoTitle, setProcessingVideoTitle] = useQueryState(
-    "processingVideoTitle",
-    { defaultValue: "", shallow: false },
-  );
-  const [, setProcessingStartedAt] = useQueryState("processingStartedAt", {
-    defaultValue: "",
-    shallow: false,
-  });
   const [preview, setPreview] = useState<LinkPreview | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [subscribing, setSubscribing] = useState(false);
@@ -137,9 +126,11 @@ export function ChannelSearchBar() {
       }
       setPreview((p) => (p ? { ...p, isSubscribed: true } : p));
       if (data.videoId) {
-        await setProcessingVideoId(data.videoId);
-        await setProcessingVideoTitle(data.videoTitle ?? data.videoId);
-        await setProcessingStartedAt(String(Date.now()));
+        addProcessingVideo({
+          videoId: data.videoId,
+          title: data.videoTitle ?? data.videoId,
+          startedAt: Date.now(),
+        });
       }
       await setQ(null);
       router.refresh();
@@ -168,9 +159,11 @@ export function ChannelSearchBar() {
         toast.error(d.error ?? "Failed");
         return;
       }
-      await setProcessingVideoId(preview.videoId);
-      await setProcessingVideoTitle(preview.title ?? preview.videoId);
-      await setProcessingStartedAt(String(Date.now()));
+      addProcessingVideo({
+        videoId: preview.videoId,
+        title: preview.title ?? preview.videoId,
+        startedAt: Date.now(),
+      });
       await setQ(null);
       router.refresh();
     } catch {
