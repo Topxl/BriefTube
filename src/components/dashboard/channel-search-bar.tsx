@@ -30,14 +30,18 @@ type LinkPreview = {
 
 export function ChannelSearchBar() {
   const [q, setQ] = useQueryState("q", { defaultValue: "", shallow: true });
+  const [_processingVideoId, setProcessingVideoId] = useQueryState(
+    "processingVideoId",
+    { defaultValue: "", shallow: false },
+  );
+  const [_processingVideoTitle, setProcessingVideoTitle] = useQueryState(
+    "processingVideoTitle",
+    { defaultValue: "", shallow: false },
+  );
   const [preview, setPreview] = useState<LinkPreview | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [subscribing, setSubscribing] = useState(false);
   const [summarizing, setSummarizing] = useState(false);
-  const [processingVideo, setProcessingVideo] = useState<{
-    videoId: string;
-    title: string;
-  } | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const router = useRouter();
 
@@ -97,10 +101,8 @@ export function ChannelSearchBar() {
       }
       setPreview((p) => (p ? { ...p, isSubscribed: true } : p));
       if (data.videoId) {
-        setProcessingVideo({
-          videoId: data.videoId,
-          title: data.videoTitle ?? data.videoId,
-        });
+        await setProcessingVideoId(data.videoId);
+        await setProcessingVideoTitle(data.videoTitle ?? data.videoId);
       }
       await setQ(null);
       router.refresh();
@@ -137,10 +139,8 @@ export function ChannelSearchBar() {
           setPreview((p) => (p ? { ...p, isSubscribed: true } : p));
         }
         if (data.videoId) {
-          setProcessingVideo({
-            videoId: data.videoId,
-            title: data.videoTitle ?? data.videoId,
-          });
+          await setProcessingVideoId(data.videoId);
+          await setProcessingVideoTitle(data.videoTitle ?? data.videoId);
           await setQ(null);
           router.refresh();
           return;
@@ -160,10 +160,8 @@ export function ChannelSearchBar() {
         toast.error(d.error ?? "Failed");
         return;
       }
-      setProcessingVideo({
-        videoId: preview.videoId,
-        title: preview.title ?? preview.videoId,
-      });
+      await setProcessingVideoId(preview.videoId);
+      await setProcessingVideoTitle(preview.title ?? preview.videoId);
       await setQ(null);
       router.refresh();
     } catch {
@@ -275,73 +273,6 @@ export function ChannelSearchBar() {
           ) : null}
         </div>
       )}
-
-      {processingVideo && (
-        <div className="absolute top-full right-0 left-0 z-50 mt-1">
-          <VideoProcessingCard
-            videoId={processingVideo.videoId}
-            title={processingVideo.title}
-            onDismiss={() => setProcessingVideo(null)}
-          />
-        </div>
-      )}
-    </div>
-  );
-}
-
-function VideoProcessingCard({
-  videoId,
-  title,
-  onDismiss,
-}: {
-  videoId: string;
-  title: string;
-  onDismiss: () => void;
-}) {
-  const [progress, setProgress] = useState(0);
-
-  useEffect(() => {
-    // Simulate progress: reaches ~85% in 3 minutes
-    const interval = setInterval(() => {
-      setProgress((p) => {
-        if (p >= 85) {
-          clearInterval(interval);
-          return p;
-        }
-        return p + (85 - p) * 0.015;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  return (
-    <div className="nm-inset-sm rounded-xl bg-[oklch(0.18_0_0)] p-3">
-      <div className="flex items-start gap-3">
-        <img
-          src={`https://img.youtube.com/vi/${videoId}/mqdefault.jpg`}
-          alt={title}
-          className="h-14 w-24 shrink-0 rounded-lg object-cover"
-        />
-        <div className="min-w-0 flex-1">
-          <p className="line-clamp-2 text-xs font-medium">{title}</p>
-          <p className="text-muted-foreground mt-0.5 text-[11px]">
-            Processing your summary…
-          </p>
-          <div className="bg-muted mt-2 h-1 overflow-hidden rounded-full">
-            <div
-              className="h-full rounded-full bg-red-500 transition-all duration-1000 ease-out"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={onDismiss}
-          className="text-muted-foreground hover:text-foreground shrink-0 transition-colors"
-        >
-          <X className="h-3.5 w-3.5" />
-        </button>
-      </div>
     </div>
   );
 }

@@ -10,6 +10,7 @@ import { SectionErrorBoundary } from "@/components/nowts/section-error-boundary"
 import { PersonalStats } from "@/components/dashboard/personal-stats";
 import { PushNotificationBanner } from "@/components/dashboard/push-notification-banner";
 import { GettingStarted } from "@/components/dashboard/getting-started";
+import { ProcessingVideoCard } from "@/components/dashboard/processing-video-card";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -96,6 +97,9 @@ export default async function DashboardPage() {
       {/* Recent summaries */}
       <div className="space-y-3">
         <h2 className="text-base font-semibold">Recent summaries</h2>
+        <Suspense fallback={null}>
+          <ProcessingVideoCard />
+        </Suspense>
         <SectionErrorBoundary>
           <Suspense fallback={<SummariesFeedSkeleton />}>
             <SummariesFeed />
