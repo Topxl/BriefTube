@@ -1107,6 +1107,23 @@ async def health_loop():
                         return {"name": "Telegram", "status": "ok", "detail": f"@{username}"}
                     return {"name": "Telegram", "status": "error", "detail": str(data.get("description", ""))}
 
+        async def check_youtube_direct():
+            """Test if YouTube is directly accessible (no proxy)."""
+            try:
+                async with aiohttp.ClientSession() as s:
+                    async with s.get(
+                        "https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=jNQXAC9IVRw&format=json",
+                        timeout=aiohttp.ClientTimeout(total=7),
+                    ) as r:
+                        if r.status == 200:
+                            return {"name": "YouTube Direct", "status": "ok", "detail": "accessible"}
+                        elif r.status in (403, 429):
+                            return {"name": "YouTube Direct", "status": "error", "detail": f"bloqué (HTTP {r.status})"}
+                        else:
+                            return {"name": "YouTube Direct", "status": "error", "detail": f"HTTP {r.status}"}
+            except Exception as e:
+                return {"name": "YouTube Direct", "status": "error", "detail": str(e)[:80]}
+
         async def check_invidious():
             async with aiohttp.ClientSession() as s:
                 for instance in INVIDIOUS_INSTANCES[:4]:
@@ -1122,36 +1139,66 @@ async def health_loop():
                         continue
             return {"name": "Invidious", "status": "error", "detail": "All instances unreachable"}
 
-        async def check_proxy():
+        async def check_webshare():
+            """Test Webshare residential proxy against YouTube."""
             proxy_url = os.environ.get("YOUTUBE_PROXY_HTTP", "")
             if not proxy_url:
-                return {"name": "Proxy YouTube", "status": "not_configured"}
+                return {"name": "Webshare", "status": "not_configured"}
             try:
                 async with aiohttp.ClientSession() as s:
                     async with s.get(
-                        "https://www.google.com",
+                        "https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=jNQXAC9IVRw&format=json",
                         proxy=proxy_url,
-                        timeout=aiohttp.ClientTimeout(total=8),
+                        timeout=aiohttp.ClientTimeout(total=10),
                     ) as r:
                         if r.status == 200:
-                            return {"name": "Proxy YouTube", "status": "ok", "detail": "connecté"}
+                            return {"name": "Webshare", "status": "ok", "detail": "proxy résidentiel actif"}
                         elif r.status == 402:
-                            return {"name": "Proxy YouTube", "status": "error", "detail": "quota épuisé (402)"}
+                            return {"name": "Webshare", "status": "error", "detail": "quota épuisé (402)"}
                         else:
-                            return {"name": "Proxy YouTube", "status": "error", "detail": f"HTTP {r.status}"}
+                            return {"name": "Webshare", "status": "error", "detail": f"HTTP {r.status}"}
             except Exception as e:
-                return {"name": "Proxy YouTube", "status": "error", "detail": str(e)[:80]}
+                return {"name": "Webshare", "status": "error", "detail": str(e)[:80]}
 
-        results = await asyncio.gather(
-            _check("Gemini", check_gemini()),
-            _check("Groq / Whisper", check_groq()),
-            _check("Telegram", check_telegram()),
+        (yt_direct, webshare, invidious, groq, gemini, telegram) = await asyncio.gather(
+            _check("YouTube Direct", check_youtube_direct()),
+            _check("Webshare", check_webshare()),
             _check("Invidious", check_invidious()),
-            _check("Proxy YouTube", check_proxy()),
+            _check("Groq / Whisper", check_groq()),
+            _check("Gemini", check_gemini()),
+            _check("Telegram", check_telegram()),
         )
 
+        groups = [
+            {
+                "id": "rss",
+                "label": "Surveillance RSS",
+                "services": [{"name": "Worker", "status": "ok", "detail": "en cours d'exécution"}],
+            },
+            {
+                "id": "transcript",
+                "label": "Transcription",
+                "services": [yt_direct, webshare, invidious, groq],
+            },
+            {
+                "id": "summary",
+                "label": "Résumé IA",
+                "services": [gemini],
+            },
+            {
+                "id": "tts",
+                "label": "Synthèse vocale",
+                "services": [{"name": "Edge TTS", "status": "ok", "detail": "Microsoft (gratuit)"}],
+            },
+            {
+                "id": "delivery",
+                "label": "Livraison",
+                "services": [telegram],
+            },
+        ]
+
         return web.json_response({
-            "services": list(results),
+            "groups": groups,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         })
 
