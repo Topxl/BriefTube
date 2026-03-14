@@ -50,6 +50,23 @@ function ProcessingCard({ video }: { video: ProcessingVideo }) {
     return () => clearInterval(interval);
   }, [video.startedAt]);
 
+  // On mount: check if already completed (e.g. card stuck from before Realtime was added)
+  useEffect(() => {
+    supabase
+      .from("processed_videos")
+      .select("status")
+      .eq("video_id", video.videoId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.status === "completed") {
+          setDone(true);
+          setTimeout(() => removeProcessingVideo(video.videoId), 2500);
+        } else if (data?.status === "failed") {
+          removeProcessingVideo(video.videoId);
+        }
+      }, (_err) => { /* ignore network errors */ });
+  }, [video.videoId, supabase]);
+
   // Realtime: auto-dismiss when the video is done
   useEffect(() => {
     const channel = supabase
