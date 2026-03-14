@@ -125,7 +125,10 @@ export function SummariesFeed() {
   // Resolve missing titles via noembed API
   useEffect(() => {
     const missing = deliveries.filter(
-      (d) => !d.video?.video_title && !titles[d.video_id],
+      (d) =>
+        !titles[d.video_id] &&
+        // No title, or title is just the raw videoId (inserted without metadata)
+        (!d.video?.video_title || d.video.video_title === d.video_id),
     );
     if (missing.length === 0) return;
 

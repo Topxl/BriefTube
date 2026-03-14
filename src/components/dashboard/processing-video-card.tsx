@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useMemo, useSyncExternalStore } from "react";
 import { X, CheckCircle } from "@/lib/icons";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -9,14 +9,14 @@ import {
   removeProcessingVideo,
 } from "@/lib/processing-videos";
 
-// Each stage: how many seconds elapsed before we move on, label, and which step dot is active
+// Stages calibrated to real worker timing (median 69s, P75 119s, P90 200s)
 const STAGES = [
-  { until: 18, label: "Extraction de la transcription…", step: 0 },
-  { until: 40, label: "Analyse du contenu…", step: 1 },
-  { until: 65, label: "Génération du résumé IA…", step: 1 },
-  { until: 90, label: "Synthèse vocale en cours…", step: 2 },
-  { until: 115, label: "Upload de l'audio…", step: 2 },
-  { until: Infinity, label: "Livraison en cours…", step: 3 },
+  { until: 30,       label: "Extraction de la transcription…", step: 0 },
+  { until: 70,       label: "Analyse du contenu…",             step: 1 },
+  { until: 110,      label: "Génération du résumé IA…",        step: 1 },
+  { until: 150,      label: "Synthèse vocale en cours…",       step: 2 },
+  { until: 190,      label: "Upload de l'audio…",              step: 2 },
+  { until: Infinity, label: "Livraison en cours…",             step: 3 },
 ] as const;
 
 const STEP_LABELS = ["Transcription", "Résumé", "Audio", "Livraison"] as const;
@@ -26,8 +26,10 @@ function getStage(elapsedSeconds: number) {
 }
 
 function calcProgress(startedAt: number): number {
+  // base=0.990 → ~22% at 30s, ~43% at 69s (median), ~59% at 120s, ~74% at 200s (P90)
+  // Always leaves room for Realtime completion to feel like a positive surprise
   const elapsed = (Date.now() - startedAt) / 1000;
-  return 85 * (1 - Math.pow(0.985, elapsed));
+  return 85 * (1 - Math.pow(0.990, elapsed));
 }
 
 function ProcessingCard({ video }: { video: ProcessingVideo }) {
@@ -165,17 +167,19 @@ function ProcessingCard({ video }: { video: ProcessingVideo }) {
   );
 }
 
+function subscribeProcessingVideos(cb: () => void) {
+  window.addEventListener("processingVideosChanged", cb);
+  return () => window.removeEventListener("processingVideosChanged", cb);
+}
+
 export function ProcessingVideoCard() {
-  const [videos, setVideos] = useState<ProcessingVideo[]>(() => getProcessingVideos());
-
-  const sync = useCallback(() => {
-    setVideos(getProcessingVideos());
-  }, []);
-
-  useEffect(() => {
-    window.addEventListener("processingVideosChanged", sync);
-    return () => window.removeEventListener("processingVideosChanged", sync);
-  }, [sync]);
+  // useSyncExternalStore handles SSR (server snapshot = []) and client (localStorage)
+  // without causing hydration mismatches
+  const videos = useSyncExternalStore(
+    subscribeProcessingVideos,
+    getProcessingVideos,
+    () => [] as ProcessingVideo[],
+  );
 
   if (videos.length === 0) return null;
 

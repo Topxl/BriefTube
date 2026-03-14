@@ -2,6 +2,8 @@
 
 ## 2026-03-15
 
+FIX: ProcessingVideoCard — erreur hydratation React #418 corrigée (localStorage lu après mount, pas dans useState initializer)
+FIX: SummariesFeed — résolution du titre via noembed si video_title = video_id (vidéo insérée sans titre)
 FEATURE: ProcessingVideoCard — messages dynamiques par étape (Transcription → Résumé → Audio → Livraison), indicateur d'étapes visuel, et auto-dismiss via Realtime quand la vidéo est traitée
 FIX: SummariesFeed — abonnement Supabase Realtime sur processed_videos pour mettre à jour le badge de statut en live sans rechargement de page
 FEATURE: Search bar preview — skeleton placeholders pour titre/chaîne pendant le chargement (boutons stables)
