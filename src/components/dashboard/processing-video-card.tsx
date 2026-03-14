@@ -167,17 +167,27 @@ function ProcessingCard({ video }: { video: ProcessingVideo }) {
   );
 }
 
+// Module-level cache so getSnapshot returns a stable reference between events.
+// useSyncExternalStore uses Object.is — a new array every call causes infinite loops.
+let _snapshot: ProcessingVideo[] = [];
+
 function subscribeProcessingVideos(cb: () => void) {
-  window.addEventListener("processingVideosChanged", cb);
-  return () => window.removeEventListener("processingVideosChanged", cb);
+  // Initialise cache on first subscribe (client-side only)
+  _snapshot = getProcessingVideos();
+  const handler = () => {
+    _snapshot = getProcessingVideos(); // update before notifying React
+    cb();
+  };
+  window.addEventListener("processingVideosChanged", handler);
+  return () => window.removeEventListener("processingVideosChanged", handler);
 }
 
 export function ProcessingVideoCard() {
-  // useSyncExternalStore handles SSR (server snapshot = []) and client (localStorage)
-  // without causing hydration mismatches
+  // useSyncExternalStore: stable server snapshot ([]) avoids hydration mismatch,
+  // stable client snapshot avoids infinite re-render loop
   const videos = useSyncExternalStore(
     subscribeProcessingVideos,
-    getProcessingVideos,
+    () => _snapshot,
     () => [] as ProcessingVideo[],
   );
 
