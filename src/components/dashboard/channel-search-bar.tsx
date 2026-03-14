@@ -159,11 +159,16 @@ export function ChannelSearchBar() {
         toast.error(d.error ?? "Failed");
         return;
       }
-      addProcessingVideo({
-        videoId: preview.videoId,
-        title: preview.title ?? preview.videoId,
-        startedAt: Date.now(),
-      });
+      const data = (await res.json()) as { queued?: boolean };
+      // Only show the processing card when the video actually needs processing.
+      // If queued=false the video was already completed — just a new delivery was added.
+      if (data.queued) {
+        addProcessingVideo({
+          videoId: preview.videoId,
+          title: preview.title ?? preview.videoId,
+          startedAt: Date.now(),
+        });
+      }
       await setQ(null);
       router.refresh();
     } catch {
