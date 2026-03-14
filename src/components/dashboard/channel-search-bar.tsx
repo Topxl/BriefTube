@@ -18,6 +18,13 @@ function isYouTubeInput(val: string): boolean {
   );
 }
 
+function extractVideoIdFromUrl(url: string): string | null {
+  const m = url.match(
+    /(?:watch\?(?:[^&]*&)*v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
+  );
+  return m ? m[1] : null;
+}
+
 type LinkPreview = {
   type: "video" | "channel";
   videoId?: string;
@@ -60,6 +67,24 @@ export function ChannelSearchBar() {
       setLoadingPreview(false);
       return;
     }
+
+    // Show thumbnail instantly for video URLs — no network call needed
+    const instantVideoId = extractVideoIdFromUrl(trimmed);
+    if (instantVideoId) {
+      setPreview((prev) =>
+        prev?.videoId === instantVideoId
+          ? prev
+          : {
+              type: "video",
+              videoId: instantVideoId,
+              thumbnail: `https://img.youtube.com/vi/${instantVideoId}/mqdefault.jpg`,
+              channelName: "",
+              channelId: "",
+              isSubscribed: false,
+            },
+      );
+    }
+
     setLoadingPreview(true);
     debounceRef.current = setTimeout(() => {
       fetch(`/api/link-preview?url=${encodeURIComponent(trimmed)}`)
@@ -69,7 +94,6 @@ export function ChannelSearchBar() {
           setLoadingPreview(false);
         })
         .catch(() => {
-          setPreview(null);
           setLoadingPreview(false);
         });
     }, 400);
