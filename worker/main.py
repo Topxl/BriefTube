@@ -291,6 +291,7 @@ async def _process_video(
     youtube_url = job["youtube_url"]
     video_title = job.get("video_title", video_id)
     start_time = datetime.now()
+    _t0 = time.monotonic()
 
     logger.info(f"[{video_id}] Processing: {video_title}")
 
@@ -394,7 +395,10 @@ async def _process_video(
             if TranscriptExtractor.should_retry(error):
                 # Transient error (rate limit, video not yet available) — retry later
                 logger.info(f"[{video_id}] Will retry later")
-                permanent = db.fail_job(job["id"])
+                permanent = db.fail_job(
+                    job["id"],
+                    retry_after_minutes=30 if error == "youtube_auth_required" else 0,
+                )
                 if permanent:
                     await _notify_video_failure(video_id, alert_system)
             else:
@@ -409,6 +413,7 @@ async def _process_video(
             f"[{video_id}] Transcript: {len(transcript)} chars, "
             f"lang: {source_lang}, cost: ${transcript_cost:.4f}"
         )
+        _t_transcript = time.monotonic() - _t0
 
         # Step 2: Summarize
         logger.info(f"[{video_id}] Generating summary...")
@@ -428,6 +433,7 @@ async def _process_video(
             raise Exception(f"Summary generation failed: {summary_error}")
 
         logger.info(f"[{video_id}] Summary: {len(summary)} chars")
+        _t_summary = time.monotonic() - _t0 - _t_transcript
 
         # Step 3: Clean + TTS
         clean_summary = clean_for_tts(summary)
@@ -437,6 +443,7 @@ async def _process_video(
             voice=tts_voice,
             output_filename=f"video_{video_id}"
         )
+        _t_audio = time.monotonic() - _t0 - _t_transcript - _t_summary
 
         # Step 4: Upload to Cloudflare R2 (zero egress cost)
         storage_key = f"audio/{video_id}_{user_language}.mp3"
@@ -447,6 +454,7 @@ async def _process_video(
         except Exception as e:
             logger.warning(f"[{video_id}] R2 upload failed (using local path): {e}")
             audio_url = str(audio_path)
+        _t_upload = time.monotonic() - _t0 - _t_transcript - _t_summary - _t_audio
 
         # Step 5: Mark done (per language)
         processing_time = (datetime.now() - start_time).total_seconds()
@@ -487,7 +495,9 @@ async def _process_video(
             f"✅ [{video_id}] Done: {video_title} "
             f"(transcript: ${transcript_cost:.4f}, source: {source_lang}, "
             f"transcript_source: {transcript_extractor.last_transcript_source}, "
-            f"summary: {len(summary)} chars, time: {processing_time:.1f}s)"
+            f"summary: {len(summary)} chars, time: {processing_time:.1f}s | "
+            f"steps: transcript={_t_transcript:.1f}s summary={_t_summary:.1f}s "
+            f"tts={_t_audio:.1f}s upload={_t_upload:.1f}s)"
         )
         await alert_system.send_alert(
             f"✅ **Video processed**\n\n"
@@ -632,6 +642,7 @@ async def processor_loop(alert_system: MonitoringAlert):
 
             if not job:
                 semaphore.release()
+                logger.debug("Queue empty — no jobs available, waiting 10s")
                 await asyncio.sleep(10)
                 continue
 

@@ -2,7 +2,11 @@
 
 ## 2026-03-16
 
+FIX: Worker db — add missing get_telegram_chat_ids_for_video function (was crashing failure notifications)
+FIX: Add 30min retry delay for youtube_auth_required to stop immediate re-queue spam
+FEATURE: Add per-step timing logs (transcript/summary/tts/upload) to Done log line
 FIX: Speed up transcript extraction — switch yt-dlp to SHORT client list (2 vs 4) and remove always-failing proxy yt-dlp subtitle retry
+REFACTOR: Extract isProUser/getMaxChannels helpers to src/lib/is-pro.ts and consolidate video queuing logic to src/lib/video-queue.ts
 REFACTOR: Consolidate duplicated extractVideoId functions and inline oEmbed fetches across landing demo, channel search bar, link preview, subscriptions, and demo summarize routes using centralized utilities from @/lib/youtube-id and @/lib/youtube
 
 ## 2026-03-15

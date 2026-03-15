@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { getYouTubeChannelInfo, fetchVideoOembed } from "@/lib/youtube";
 import { extractVideoId } from "@/lib/youtube-id";
+import { isProUser, getMaxChannels } from "@/lib/is-pro";
+import { queueVideoForProcessing } from "@/lib/video-queue";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
@@ -179,12 +181,10 @@ export async function POST(request: NextRequest) {
     .eq("user_id", user.id)
     .eq("active", true);
 
-  const maxActiveChannels =
-    profile?.max_channels ?? SiteConfig.freeChannelsLimit;
-  const isPro =
-    profile?.subscription_status === "active" ||
-    (profile?.trial_ends_at != null &&
-      new Date(profile.trial_ends_at) > new Date());
+  const maxActiveChannels = profile
+    ? getMaxChannels(profile)
+    : SiteConfig.freeChannelsLimit;
+  const isPro = profile ? isProUser(profile) : false;
 
   // Free users can always add channels, but active is limited to maxActiveChannels
   const shouldBeActive = isPro || (activeCount ?? 0) < maxActiveChannels;
@@ -299,85 +299,22 @@ export async function POST(request: NextRequest) {
 
   if (ahaVideo) {
     try {
-      const ahaUrl = `https://www.youtube.com/watch?v=${ahaVideo.videoId}`;
       const userLang = profile?.preferred_language ?? "fr";
+      const { queued } = await queueVideoForProcessing(supabase, {
+        userId: user.id,
+        videoId: ahaVideo.videoId,
+        videoTitle: ahaVideo.title,
+        channelId: finalChannelId,
+        userLang,
+      });
 
-      // Check current status — never downgrade a completed/in-progress video back to "pending"
-      const { data: existingAha } = await supabase
-        .from("processed_videos")
-        .select("status")
-        .eq("video_id", ahaVideo.videoId)
-        .maybeSingle();
-
-      const existingStatus = existingAha?.status;
-
-      if (
-        existingStatus === "completed" ||
-        existingStatus === "pending" ||
-        existingStatus === "processing"
-      ) {
-        // Already processed or in progress — just create the delivery, no reprocessing
-        await supabase.from("deliveries").insert({
-          user_id: user.id,
-          video_id: ahaVideo.videoId,
-          status: "pending",
-          language: userLang,
-        });
-        logger.info(
-          `Aha video already ${existingStatus}, delivery created directly: ${ahaVideo.videoId}`,
-        );
-      } else {
-        // "skipped" / "failed" / absent — set to pending
-        if (existingStatus) {
-          // Row exists but is failed/skipped — update it
-          await supabase
-            .from("processed_videos")
-            .update({
-              status: "pending",
-              video_title: ahaVideo.title,
-              channel_id: finalChannelId,
-            })
-            .eq("video_id", ahaVideo.videoId)
-            .eq("language", userLang);
-        } else {
-          await supabase.from("processed_videos").insert({
-            video_id: ahaVideo.videoId,
-            channel_id: finalChannelId,
-            video_title: ahaVideo.title,
-            video_url: ahaUrl,
-            status: "pending",
-            language: userLang,
-          });
-        }
-
-        // Insert into processing_queue only if no existing job for this video
-        const { data: existingJob } = await supabase
-          .from("processing_queue")
-          .select("id")
-          .eq("video_id", ahaVideo.videoId)
-          .in("status", ["queued", "processing"])
-          .maybeSingle();
-
-        if (!existingJob) {
-          await supabase.from("processing_queue").insert({
-            video_id: ahaVideo.videoId,
-            youtube_url: ahaUrl,
-            video_title: ahaVideo.title,
-            channel_id: finalChannelId,
-            status: "queued",
-            user_language: userLang,
-          });
-        }
-
-        await supabase.from("deliveries").insert({
-          user_id: user.id,
-          video_id: ahaVideo.videoId,
-          status: "pending",
-          language: userLang,
-        });
-
+      if (queued) {
         logger.info(
           `Aha video queued for immediate delivery: ${ahaVideo.title} (${ahaVideo.videoId})`,
+        );
+      } else {
+        logger.info(
+          `Aha video already processing/completed, delivery created directly: ${ahaVideo.videoId}`,
         );
       }
     } catch (e) {
@@ -424,12 +361,10 @@ export async function PATCH(request: NextRequest) {
       .eq("id", user.id)
       .single();
 
-    const isPro =
-      profile?.subscription_status === "active" ||
-      (profile?.trial_ends_at != null &&
-        new Date(profile.trial_ends_at) > new Date());
-    const maxActiveChannels =
-      profile?.max_channels ?? SiteConfig.freeChannelsLimit;
+    const isPro = profile ? isProUser(profile) : false;
+    const maxActiveChannels = profile
+      ? getMaxChannels(profile)
+      : SiteConfig.freeChannelsLimit;
 
     if (!isPro) {
       const { count } = await supabase
@@ -500,10 +435,7 @@ export async function PUT(request: NextRequest) {
     .eq("id", user.id)
     .single();
 
-  const isPro =
-    profile?.subscription_status === "active" ||
-    (profile?.trial_ends_at != null &&
-      new Date(profile.trial_ends_at) > new Date());
+  const isPro = profile ? isProUser(profile) : false;
 
   if (isPro) {
     const { error } = await supabase
@@ -519,8 +451,9 @@ export async function PUT(request: NextRequest) {
   }
 
   // Free user: only activate up to (maxActiveChannels - currentActiveCount) paused channels
-  const maxActiveChannels =
-    profile?.max_channels ?? SiteConfig.freeChannelsLimit;
+  const maxActiveChannels = profile
+    ? getMaxChannels(profile)
+    : SiteConfig.freeChannelsLimit;
 
   const { count: activeCount } = await supabase
     .from("subscriptions")
