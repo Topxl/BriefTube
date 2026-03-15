@@ -13,8 +13,10 @@ from youtube_utils import extract_video_id as _yt_extract_video_id
 logger = logging.getLogger(__name__)
 
 # High-confidence music/ambient title patterns — only match clear-cut cases
-# to avoid false positives (podcasts with "music" in channel name, etc.)
+# to avoid false positives (podcasts with "music" in channel name, etc.).
+# Multilingual: English, French, Spanish, Portuguese.
 _MUSIC_TITLE_RE = re.compile(
+    # ── English ────────────────────────────────────────────────────────────────
     r'\blofi\b'
     r'|\bchill beats?\b'
     r'|\b(?:study|sleep|relax(?:ing)?|focus)\s+music\b'
@@ -23,7 +25,29 @@ _MUSIC_TITLE_RE = re.compile(
     r'|\b(?:no[- ]copyright|background|bgm)\s+music\b'
     r'|\b(?:instrumental|ambient)\s+(?:music|mix|playlist)\b'
     r'|\b24/?7\s+(?:music|stream|radio|lofi|chill)\b'
-    r'|\bmusic\s+(?:mix|playlist|24/?7|radio|live)\b',
+    r'|\bmusic\s+(?:mix|playlist|24/?7|radio|live)\b'
+    r'|\bsleep\s+sounds?\b'
+    r'|\bbinaural\s+beats?\b'
+    r'|\b(?:white|brown|pink)\s+noise\b'
+    r'|\bnature\s+sounds?\b'
+    # ── French ─────────────────────────────────────────────────────────────────
+    r'|musique\s+(?:zen|douce|relaxante|de\s+m[eé]ditation|ambiante|pour\s+dormir)'
+    r'|musique\s+(?:de\s+relaxation|de\s+concentration|pour\s+se\s+concentrer)'
+    r'|musique\s+(?:classique|instrumentale)\s+(?:douce|relaxante)'
+    r'|\d+\s*h(?:eures?)?\s+de\s+musique'
+    r'|sons\s+(?:de\s+la\s+nature|binauraux|relaxants|pour\s+dormir)'
+    r'|bruit\s+(?:blanc|brun|rose)'
+    # ── Spanish ────────────────────────────────────────────────────────────────
+    r'|m[uú]sica\s+de\s+meditaci[oó]n'
+    r'|m[uú]sica\s+(?:relajante|zen|ambiental|instrumental)'
+    r'|m[uú]sica\s+para\s+(?:dormir|estudiar|relajarse|concentrarse|meditar)'
+    r'|relajaci[oó]n\s+profunda'
+    r'|sonidos?\s+(?:de\s+la\s+naturaleza|relajantes|binaurales|para\s+dormir|del\s+bosque|del\s+mar|de\s+lluvia)'
+    r'|\d+\s*h(?:oras?)?\s+de\s+m[uú]sica'
+    # ── Portuguese ─────────────────────────────────────────────────────────────
+    r'|m[uú]sica\s+(?:relaxante|zen|ambiente|instrumental|para\s+dormir|para\s+meditar|para\s+estudar)'
+    r'|sons\s+(?:da\s+natureza|relaxantes|para\s+dormir)'
+    r'|\d+\s*h(?:oras?)?\s+de\s+m[uú]sica',
     re.IGNORECASE,
 )
 
