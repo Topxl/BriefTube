@@ -428,7 +428,7 @@ def _get_profile_by_chat_id(chat_id: str) -> dict | None:
     user_id = conn_res.data[0]["user_id"]
     res = (
         sb.table("profiles")
-        .select("id, email, subscription_status, trial_ends_at, max_channels, preferred_language, tts_voice")
+        .select("id, email, subscription_status, trial_ends_at, max_channels, preferred_language, tts_voice, favorite_languages")
         .eq("id", user_id)
         .execute()
     )

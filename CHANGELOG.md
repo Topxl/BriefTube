@@ -2,7 +2,7 @@
 
 ## 2026-03-16
 
-FIX: Worker RSS scanner — add French, Spanish, Portuguese music/ambient detection patterns (previously English-only, missed titles like "Música de Meditación")
+REFACTOR: Worker — replace hardcoded multilingual music title patterns with Invidious genre check (YouTube category "Music" is language-agnostic, works in all languages without pattern matching)
 FIX: Worker — premiere_not_available_yet now fails permanently after 7 days (was snoozed forever)
 FIX: Worker db — fail_job now syncs ALL language variants of processed_videos on permanent failure (not just the job's language)
 CHORE: DB — manually fail stale premiere job RmivubKg-zE (Chico Crypto, created March 3)
