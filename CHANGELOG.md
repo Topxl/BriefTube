@@ -2,6 +2,7 @@
 
 ## 2026-03-16
 
+FEATURE: Worker — yt-dlp subtitle proxy fallback: when all direct clients are bot-detected, retry via residential proxy before falling back to Whisper (saves 3-5 min on long videos that have auto-generated captions)
 FIX: Worker — live streams snoozed forever now fail permanently after 48h (was looping every 2h indefinitely)
 CHORE: DB — delete 1515 zombie processing_queue jobs from Feb 22-23 (attempts=0, never ran)
 REFACTOR: Centralize isPro check (isProUser/getMaxChannels) and video queue logic (queueVideoForProcessing) — removes ~80 lines of duplicated business logic across subscriptions, process-video, youtube/callback, lists/[id]/follow, and onboarding/follow-list routes
