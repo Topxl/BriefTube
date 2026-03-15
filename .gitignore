@@ -48,6 +48,7 @@ worker/__pycache__/
 worker/venv/
 worker/*.log
 worker/*.log.*
+worker/kokoro_models/
 
 # Worker temporary files
 worker/audio/*.mp3

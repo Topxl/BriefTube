@@ -2,6 +2,7 @@
 
 ## 2026-03-15
 
+FEATURE: Add Kokoro ONNX TTS as primary voice engine with Edge TTS fallback for unsupported languages
 FIX: ProcessingVideoCard — erreur hydratation React #418 corrigée (localStorage lu après mount, pas dans useState initializer)
 FIX: SummariesFeed — résolution du titre via noembed si video_title = video_id (vidéo insérée sans titre)
 FEATURE: ProcessingVideoCard — messages dynamiques par étape (Transcription → Résumé → Audio → Livraison), indicateur d'étapes visuel, et auto-dismiss via Realtime quand la vidéo est traitée
