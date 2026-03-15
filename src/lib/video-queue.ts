@@ -22,11 +22,13 @@ export async function queueVideoForProcessing(
   const { userId, videoId, videoTitle, channelId, userLang } = params;
   const videoUrl = toVideoUrl(videoId);
 
-  // Check current processing status
+  // Check current processing status — filter by language to avoid mixing rows
+  // (a video can have separate fr/en rows; maybeSingle() would error on multiple)
   const { data: existing } = await supabase
     .from("processed_videos")
     .select("status, video_title, channel_id")
     .eq("video_id", videoId)
+    .eq("language", userLang)
     .maybeSingle();
 
   if (
@@ -43,8 +45,15 @@ export async function queueVideoForProcessing(
     return { queued: false };
   }
 
-  // Queue for processing
-  const title = videoTitle || existing?.video_title || videoId;
+  // Prefer a real title over the video_id fallback.
+  // If the caller only had the video_id, the worker will backfill the real title
+  // from YouTube metadata once it fetches it.
+  const title =
+    (videoTitle !== videoId ? videoTitle : null) ||
+    (existing?.video_title !== "[pre-subscription]"
+      ? existing?.video_title
+      : null) ||
+    videoId;
   if (existing) {
     await supabase
       .from("processed_videos")
