@@ -8,6 +8,7 @@ import { Search, Youtube, X, Loader2, Play, Check } from "@/lib/icons";
 import { toast } from "sonner";
 import { openUpsellModal } from "@/components/dashboard/upsell-modal";
 import { addProcessingVideo } from "@/lib/processing-videos";
+import { extractVideoId } from "@/lib/youtube-id";
 
 function isYouTubeInput(val: string): boolean {
   const v = val.trim();
@@ -17,13 +18,6 @@ function isYouTubeInput(val: string): boolean {
     v.startsWith("@") ||
     /^UC[\w-]{10,}$/.test(v)
   );
-}
-
-function extractVideoIdFromUrl(url: string): string | null {
-  const m = url.match(
-    /(?:watch\?(?:[^&]*&)*v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
-  );
-  return m ? m[1] : null;
 }
 
 type LinkPreview = {
@@ -58,7 +52,7 @@ export function ChannelSearchBar() {
     }
 
     // Show thumbnail instantly for video URLs — no network call needed
-    const instantVideoId = extractVideoIdFromUrl(trimmed);
+    const instantVideoId = extractVideoId(trimmed);
     if (instantVideoId) {
       setPreview((prev) =>
         prev?.videoId === instantVideoId

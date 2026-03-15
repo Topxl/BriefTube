@@ -1,7 +1,8 @@
 import { SiteConfig } from "@/site-config";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
-import { getYouTubeChannelInfo } from "@/lib/youtube";
+import { getYouTubeChannelInfo, fetchVideoOembed } from "@/lib/youtube";
+import { extractVideoId } from "@/lib/youtube-id";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
@@ -40,34 +41,23 @@ type ChannelInfo = {
 // Helper to extract channel info from URL (supports video links via YouTube oEmbed)
 async function extractChannelInfo(url: string): Promise<ChannelInfo> {
   // Video URL: youtube.com/watch?v=ID  or  youtu.be/ID
-  const videoMatch = url.match(
-    /(?:watch\?(?:[^&]*&)*v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
-  );
-  if (videoMatch) {
-    const videoId = videoMatch[1];
-    try {
-      // oEmbed is the official, free, no-key-required YouTube metadata API
-      const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
-      const res = await fetch(oembedUrl, { signal: AbortSignal.timeout(5000) });
-      if (res.ok) {
-        const data = (await res.json()) as {
-          title: string;
-          author_name: string;
-          author_url: string;
-        };
-        // author_url is like "https://www.youtube.com/@ChannelHandle"
-        const handleMatch = data.author_url.match(/\/@([a-zA-Z0-9_-]+)/);
-        const channelId = handleMatch ? `@${handleMatch[1]}` : data.author_name;
-        return {
-          channelId,
-          channelName: data.author_name,
-          videoId,
-          videoTitle: data.title,
-        };
-      }
-    } catch {
-      throw new Error("Could not fetch video info — try again");
+  const videoId = extractVideoId(url);
+  if (videoId) {
+    const oembedData = await fetchVideoOembed(videoId);
+    if (oembedData) {
+      // author_url is like "https://www.youtube.com/@ChannelHandle"
+      const handleMatch = oembedData.author_url.match(/\/@([a-zA-Z0-9_-]+)/);
+      const channelId = handleMatch
+        ? `@${handleMatch[1]}`
+        : oembedData.author_name;
+      return {
+        channelId,
+        channelName: oembedData.author_name,
+        videoId,
+        videoTitle: oembedData.title,
+      };
     }
+    throw new Error("Could not fetch video info — try again");
   }
 
   // @handle

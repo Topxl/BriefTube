@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { extractVideoId } from "@/lib/youtube-id";
+import { fetchVideoOembed } from "@/lib/youtube";
 
 // Simple in-memory rate limiting (per IP, 3 requests per 10 min)
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -27,21 +29,6 @@ function isRateLimited(ip: string): boolean {
   if (entry.count >= RATE_LIMIT) return true;
   entry.count++;
   return false;
-}
-
-function extractVideoId(url: string): string | null {
-  const patterns = [
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]{11})/,
-    /youtube\.com\/shorts\/([\w-]{11})/,
-    /youtube\.com\/embed\/([\w-]{11})/,
-  ];
-  for (const pattern of patterns) {
-    const match = url.match(pattern);
-    if (match?.[1]) return match[1];
-  }
-  // Bare video ID
-  if (/^[\w-]{11}$/.test(url.trim())) return url.trim();
-  return null;
 }
 
 async function tryFetchLang(
@@ -81,23 +68,12 @@ async function fetchTranscript(videoId: string): Promise<string | null> {
 async function fetchVideoInfo(
   videoId: string,
 ): Promise<{ title: string; channel: string } | null> {
-  try {
-    const res = await fetch(
-      `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`,
-      { signal: AbortSignal.timeout(5000) },
-    );
-    if (!res.ok) return null;
-    const data = (await res.json()) as {
-      title?: string;
-      author_name?: string;
-    };
-    return {
-      title: data.title ?? videoId,
-      channel: data.author_name ?? "Unknown",
-    };
-  } catch {
-    return null;
-  }
+  const oembedData = await fetchVideoOembed(videoId);
+  if (!oembedData) return null;
+  return {
+    title: oembedData.title,
+    channel: oembedData.author_name,
+  };
 }
 
 export async function POST(req: NextRequest) {
