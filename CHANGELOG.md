@@ -2,6 +2,7 @@
 
 ## 2026-03-16
 
+REFACTOR: Centralize isPro check (isProUser/getMaxChannels) and video queue logic (queueVideoForProcessing) — removes ~80 lines of duplicated business logic across subscriptions, process-video, youtube/callback, lists/[id]/follow, and onboarding/follow-list routes
 FIX: Worker db — add missing get_telegram_chat_ids_for_video function (was crashing failure notifications)
 FIX: Add 30min retry delay for youtube_auth_required to stop immediate re-queue spam
 FEATURE: Add per-step timing logs (transcript/summary/tts/upload) to Done log line

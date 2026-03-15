@@ -1,6 +1,7 @@
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { getYouTubeChannelInfo } from "@/lib/youtube";
 import { SiteConfig } from "@/site-config";
+import { isProUser, getMaxChannels } from "@/lib/is-pro";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
@@ -55,12 +56,10 @@ export async function POST(req: NextRequest) {
     .eq("id", user.id)
     .single();
 
-  const isPro =
-    profile?.subscription_status === "active" ||
-    (profile?.trial_ends_at != null &&
-      new Date(profile.trial_ends_at) > new Date());
-  const maxActiveChannels =
-    profile?.max_channels ?? SiteConfig.freeChannelsLimit;
+  const isPro = profile ? isProUser(profile) : false;
+  const maxActiveChannels = profile
+    ? getMaxChannels(profile)
+    : SiteConfig.freeChannelsLimit;
 
   // Fetch user's existing subscriptions to skip duplicates and count active ones
   const { data: existingSubs } = await admin
