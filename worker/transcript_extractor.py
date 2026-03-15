@@ -27,7 +27,7 @@ from youtube_transcript_api._errors import (
 from youtube_utils import (
     _PREMIERE_RE,
     hours_until_premiere as _hours_until_premiere,
-    PLAYER_CLIENTS_FULL as _PLAYER_CLIENTS,
+    PLAYER_CLIENTS_SHORT as _PLAYER_CLIENTS,
     BOT_DETECTION_KEYWORDS as _BOT_KW,
     INVIDIOUS_INSTANCES as _INVIDIOUS_INSTANCES,
     PIPED_INSTANCES as _PIPED_INSTANCES,
@@ -438,56 +438,6 @@ class TranscriptExtractor:
                 else:
                     logger.warning(f"yt-dlp subtitle failed: {err[:120]}")
                     return None, None, None  # unknown error, stop trying
-
-        # All player clients failed — try with proxy as last yt-dlp attempt
-        http_proxy = os.environ.get("YOUTUBE_PROXY_HTTP", "")
-        if http_proxy:
-            logger.info("yt-dlp subtitle: all clients blocked, retrying with proxy...")
-            proxy_opts: dict = {
-                "skip_download": True,
-                "writesubtitles": True,
-                "writeautomaticsub": True,
-                "subtitleslangs": list(dict.fromkeys(preferred_languages)),
-                "subtitlesformat": "vtt",
-                "quiet": True,
-                "no_warnings": True,
-                "noprogress": True,
-                "nocheckcertificate": True,
-                "extractor_args": {"youtube": {"player_client": ["ios"]}},
-                "proxy": http_proxy,
-            }
-            if cookies_file:
-                proxy_opts["cookiefile"] = cookies_file
-            try:
-                with tempfile.TemporaryDirectory(prefix="brieftube_vtt_") as tmp:
-                    proxy_opts["outtmpl"] = os.path.join(tmp, "%(id)s")
-                    with yt_dlp.YoutubeDL(proxy_opts) as ydl:
-                        ydl.extract_info(youtube_url, download=True)
-                    vtt_files = glob.glob(os.path.join(tmp, "*.vtt"))
-                    if vtt_files:
-                        selected = vtt_files[0]
-                        detected_lang = "auto"
-                        for lang in preferred_languages:
-                            matches = [f for f in vtt_files if f".{lang}." in f]
-                            if matches:
-                                selected = matches[0]
-                                detected_lang = lang
-                                break
-                        text = self._parse_vtt(selected)
-                        if text:
-                            logger.info(
-                                f"✅ yt-dlp subtitle (proxy) {len(text)} chars lang: {detected_lang}"
-                            )
-                            return text, detected_lang, None
-            except Exception as e:
-                err = str(e)
-                if "live event has ended" in err.lower():
-                    logger.info(f"yt-dlp subtitle (proxy): live/ended stream — {err[:80]}")
-                    return None, None, "video_is_live"
-                # "no video formats found" and "requested format is not available" via proxy
-                # = proxy/YouTube IP restriction, NOT necessarily a live stream.
-                # Fall through so Whisper can attempt the audio download.
-                logger.warning(f"yt-dlp subtitle (proxy) failed: {err[:120]}")
 
         return None, None, None
 

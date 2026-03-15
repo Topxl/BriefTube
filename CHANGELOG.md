@@ -2,6 +2,7 @@
 
 ## 2026-03-16
 
+FIX: Speed up transcript extraction — switch yt-dlp to SHORT client list (2 vs 4) and remove always-failing proxy yt-dlp subtitle retry
 REFACTOR: Consolidate duplicated extractVideoId functions and inline oEmbed fetches across landing demo, channel search bar, link preview, subscriptions, and demo summarize routes using centralized utilities from @/lib/youtube-id and @/lib/youtube
 
 ## 2026-03-15
