@@ -450,6 +450,13 @@ async def _process_video(
         )
         _t_transcript = time.monotonic() - _t0
 
+        # Backfill title from Invidious metadata if the job title is just the raw
+        # video_id (happens when triggered via /api/process-video without a real title).
+        invidious_title = transcript_extractor.last_video_metadata.get("title", "")
+        if invidious_title and (not video_title or video_title == video_id):
+            video_title = invidious_title
+            logger.info(f"[{video_id}] Title backfilled from Invidious: {video_title[:80]}")
+
         # Step 2: Summarize
         logger.info(f"[{video_id}] Generating summary...")
         summary, summary_error = await asyncio.to_thread(

@@ -191,6 +191,8 @@ class TranscriptExtractor:
                 with urllib.request.urlopen(req, timeout=8) as resp:
                     data = json.loads(resp.read().decode())
                 result: dict = {}
+                if title := data.get("title"):
+                    result["title"] = title
                 if genre := data.get("genre"):
                     result["genre"] = genre
                 if keywords := data.get("keywords"):

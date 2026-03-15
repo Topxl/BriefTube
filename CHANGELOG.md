@@ -2,6 +2,10 @@
 
 ## 2026-03-16
 
+FIX: queueVideoForProcessing — add language filter to existing check (was using maybeSingle() without language, breaking when fr+en rows both exist for a video)
+FIX: Worker + API — video title no longer stuck as raw video_id when manually triggering; worker backfills real title from Invidious metadata
+FIX: Worker — include YouTube title in Invidious metadata fetch for title backfill
+
 FEATURE: Worker — save rich YouTube metadata (genre, keywords, duration, view_count, like_count, published_at, description) to processed_videos.metadata for future recommendation algorithms
 REFACTOR: Worker — replace hardcoded multilingual music title patterns with Invidious genre check (YouTube category "Music" is language-agnostic, works in all languages without pattern matching)
 FIX: Worker — premiere_not_available_yet now fails permanently after 7 days (was snoozed forever)
