@@ -4,15 +4,9 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { t } from "@/locales";
+import { extractVideoId } from "@/lib/youtube-id";
 
 const tl = t.landing.demo;
-
-function extractVideoId(url: string): string | null {
-  const m = url.match(
-    /(?:watch\?(?:[^&]*&)*v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
-  );
-  return m ? m[1] : null;
-}
 
 export function Demo() {
   const [url, setUrl] = useState("");

@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { extractVideoId, toThumbnailUrl } from "@/lib/youtube-id";
+import { fetchVideoOembed } from "@/lib/youtube";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
@@ -18,39 +20,23 @@ export async function GET(request: NextRequest) {
   }
 
   // Detect video URL
-  const videoMatch = url.match(
-    /(?:watch\?(?:[^&]*&)*v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
-  );
+  const videoId = extractVideoId(url);
 
   let type: "video" | "channel" = "channel";
-  let videoId: string | undefined;
   let title: string | undefined;
   let channelName = "";
   let channelId = "";
   let thumbnail: string | undefined;
 
-  if (videoMatch) {
+  if (videoId) {
     type = "video";
-    videoId = videoMatch[1];
-    thumbnail = `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
-    try {
-      const oembedRes = await fetch(
-        `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`,
-        { signal: AbortSignal.timeout(5000), next: { revalidate: 3600 } },
-      );
-      if (oembedRes.ok) {
-        const data = (await oembedRes.json()) as {
-          title: string;
-          author_name: string;
-          author_url: string;
-        };
-        title = data.title;
-        channelName = data.author_name;
-        const handleMatch = data.author_url.match(/\/@([a-zA-Z0-9_-]+)/);
-        channelId = handleMatch ? `@${handleMatch[1]}` : data.author_name;
-      }
-    } catch {
-      /* ignore */
+    thumbnail = toThumbnailUrl(videoId);
+    const oembedData = await fetchVideoOembed(videoId);
+    if (oembedData) {
+      title = oembedData.title;
+      channelName = oembedData.author_name;
+      const handleMatch = oembedData.author_url.match(/\/@([a-zA-Z0-9_-]+)/);
+      channelId = handleMatch ? `@${handleMatch[1]}` : oembedData.author_name;
     }
   } else {
     // Channel URL

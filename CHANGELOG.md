@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-03-16
+
+REFACTOR: Consolidate duplicated extractVideoId functions and inline oEmbed fetches across landing demo, channel search bar, link preview, subscriptions, and demo summarize routes using centralized utilities from @/lib/youtube-id and @/lib/youtube
+
 ## 2026-03-15
 
 FEATURE: Landing demo — Summarize redirige vers /login avec videoId en localStorage, auto-lance le processing après connexion

@@ -1,5 +1,30 @@
 import { logger } from "./logger";
 
+type OEmbedResponse = {
+  title: string;
+  author_name: string;
+  author_url: string;
+};
+
+/**
+ * Fetch video title and channel name via YouTube oEmbed (no API key needed).
+ * Returns null on failure.
+ */
+export async function fetchVideoOembed(
+  videoId: string,
+): Promise<OEmbedResponse | null> {
+  try {
+    const res = await fetch(
+      `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`,
+      { signal: AbortSignal.timeout(5000), next: { revalidate: 3600 } },
+    );
+    if (!res.ok) return null;
+    return (await res.json()) as OEmbedResponse;
+  } catch {
+    return null;
+  }
+}
+
 type YouTubeChannelInfo = {
   channelId: string;
   channelName: string;
