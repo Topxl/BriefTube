@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { isProUser } from "@/lib/is-pro";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
@@ -58,10 +59,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     .eq("id", user.id)
     .single();
 
-  const isPro =
-    profile?.subscription_status === "active" ||
-    (profile?.trial_ends_at != null &&
-      new Date(profile.trial_ends_at) > new Date());
+  const isPro = profile ? isProUser(profile) : false;
 
   if (!isPro) {
     return NextResponse.json(

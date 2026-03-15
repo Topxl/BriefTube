@@ -5,6 +5,7 @@ import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import { logger } from "@/lib/logger";
+import { isProUser, getMaxChannels } from "@/lib/is-pro";
 
 type YouTubeSubscriptionItem = {
   snippet: {
@@ -153,12 +154,10 @@ export async function GET(request: NextRequest) {
   ]);
 
   const profile = profileRes.data;
-  const isPro =
-    profile?.subscription_status === "active" ||
-    (profile?.trial_ends_at != null &&
-      new Date(profile.trial_ends_at) > new Date());
-  const maxActiveChannels =
-    profile?.max_channels ?? SiteConfig.freeChannelsLimit;
+  const isPro = profile ? isProUser(profile) : false;
+  const maxActiveChannels = profile
+    ? getMaxChannels(profile)
+    : SiteConfig.freeChannelsLimit;
   const existingActiveCount = (existingSubsRes.data ?? []).filter(
     (s) => s.active,
   ).length;
@@ -225,8 +224,7 @@ export async function GET(request: NextRequest) {
             return entries
               .map((entry) => ({
                 video_id:
-                  entry.match(/<yt:videoId>([^<]+)<\/yt:videoId>/)?.[1] ??
-                  null,
+                  entry.match(/<yt:videoId>([^<]+)<\/yt:videoId>/)?.[1] ?? null,
                 channel_id: ch.channel_id,
               }))
               .filter(
