@@ -439,6 +439,72 @@ class TranscriptExtractor:
                     logger.warning(f"yt-dlp subtitle failed: {err[:120]}")
                     return None, None, None  # unknown error, stop trying
 
+        # All direct clients bot-detected — retry once via residential proxy.
+        # VTT files are tiny (a few KB) so proxy bandwidth cost is negligible.
+        http_proxy = os.environ.get("YOUTUBE_PROXY_HTTP", "")
+        if not http_proxy:
+            return None, None, None
+
+        logger.info("yt-dlp subtitle: all clients bot-detected — retrying with proxy")
+        proxy_opts: dict = {
+            "skip_download": True,
+            "writesubtitles": True,
+            "writeautomaticsub": True,
+            "subtitleslangs": list(dict.fromkeys(preferred_languages)),
+            "subtitlesformat": "vtt",
+            "quiet": True,
+            "no_warnings": True,
+            "noprogress": True,
+            "nocheckcertificate": True,
+            "extractor_args": {"youtube": {"player_client": ["ios"]}},
+            "proxy": http_proxy,
+        }
+        if cookies_file:
+            proxy_opts["cookiefile"] = cookies_file
+
+        try:
+            with tempfile.TemporaryDirectory(prefix="brieftube_vtt_proxy_") as tmp:
+                proxy_opts["outtmpl"] = os.path.join(tmp, "%(id)s")
+                with yt_dlp.YoutubeDL(proxy_opts) as ydl:
+                    info = ydl.extract_info(youtube_url, download=True)
+                    if info:
+                        live_status = info.get("live_status")
+                        if live_status == "is_upcoming":
+                            scheduled = info.get("scheduled_start_time")
+                            if scheduled:
+                                import time as _time
+                                hours = max(1, int((scheduled - _time.time()) / 3600) + 1)
+                            else:
+                                hours = 24
+                            return None, None, f"premiere_not_available_yet:{hours}"
+                        if live_status == "is_live" or info.get("is_live"):
+                            return None, None, "video_is_live"
+
+                vtt_files = glob.glob(os.path.join(tmp, "*.vtt"))
+                if vtt_files:
+                    selected = vtt_files[0]
+                    detected_lang = "auto"
+                    for lang in preferred_languages:
+                        matches = [f for f in vtt_files if f".{lang}." in f]
+                        if matches:
+                            selected = matches[0]
+                            detected_lang = lang
+                            break
+                    text = self._parse_vtt(selected)
+                    if text:
+                        logger.info(
+                            f"✅ yt-dlp subtitle via proxy ({len(text)} chars) "
+                            f"lang: {detected_lang} [FREE]"
+                        )
+                        return text, detected_lang, None
+        except Exception as e:
+            err = str(e)
+            if _PREMIERE_RE.search(err):
+                return None, None, f"premiere_not_available_yet:{_hours_until_premiere(err)}"
+            if any(kw in err.lower() for kw in ("is a live stream", "live event", "no video formats found")):
+                return None, None, "video_is_live"
+            logger.warning(f"yt-dlp subtitle (proxy) failed: {err[:120]}")
+
         return None, None, None
 
     @staticmethod
