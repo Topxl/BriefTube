@@ -10,9 +10,11 @@ load_dotenv(override=True)
 BASE_DIR = Path(__file__).parent
 AUDIO_DIR = BASE_DIR / "audio"
 COOKIES_DIR = BASE_DIR / "cookies"
+KOKORO_MODELS_DIR = BASE_DIR / "kokoro_models"
 
 AUDIO_DIR.mkdir(exist_ok=True)
 COOKIES_DIR.mkdir(exist_ok=True)
+KOKORO_MODELS_DIR.mkdir(exist_ok=True)
 
 # Supabase
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
