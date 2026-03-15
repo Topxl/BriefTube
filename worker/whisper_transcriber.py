@@ -94,6 +94,16 @@ class WhisperTranscriber:
                         if "Music" in categories:
                             logger.info("Audio pre-check: YouTube category=Music — skip Whisper")
                             return "music"
+                        # Duration guard — videos > 90 min take 10+ min to process and
+                        # consume significant Groq quota with little marginal value.
+                        _MAX_DURATION_S = 5400  # 90 minutes
+                        duration_s = pre_info.get("duration") or 0
+                        if duration_s > _MAX_DURATION_S:
+                            logger.info(
+                                f"Audio pre-check: video too long ({duration_s // 60} min "
+                                f"> {_MAX_DURATION_S // 60} min) — skipping Whisper"
+                            )
+                            return "too_long"
                 except Exception as pre_e:
                     pre_err = str(pre_e)
                     if _PREMIERE_RE.search(pre_err):
@@ -491,6 +501,8 @@ class WhisperTranscriber:
                 return None, None, "video_is_live", 0.0
             if dl_result == "music":
                 return None, None, "music_content", 0.0
+            if dl_result == "too_long":
+                return None, None, "audio_too_long_for_whisper", 0.0
             if dl_result == "unsupported":
                 return None, None, "audio_unsupported_format", 0.0
             if dl_result == "geo_restricted":

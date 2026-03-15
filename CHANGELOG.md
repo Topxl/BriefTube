@@ -2,6 +2,9 @@
 
 ## 2026-03-16
 
+FIX: Worker — live streams snoozed forever now fail permanently after 48h (was looping every 2h indefinitely)
+FIX: Worker — skip Whisper for videos > 90 min to avoid 10+ min processing outliers
+CHORE: DB — delete 1515 zombie processing_queue jobs from Feb 22-23 (attempts=0, never ran)
 REFACTOR: Centralize isPro check (isProUser/getMaxChannels) and video queue logic (queueVideoForProcessing) — removes ~80 lines of duplicated business logic across subscriptions, process-video, youtube/callback, lists/[id]/follow, and onboarding/follow-list routes
 FIX: Worker db — add missing get_telegram_chat_ids_for_video function (was crashing failure notifications)
 FIX: Add 30min retry delay for youtube_auth_required to stop immediate re-queue spam
