@@ -15,8 +15,8 @@ logger = logging.getLogger(__name__)
 
 # ── Kokoro configuration ──────────────────────────────────────
 
-KOKORO_ONNX_PATH = KOKORO_MODELS_DIR / "kokoro-v1_0.onnx"
-KOKORO_VOICES_PATH = KOKORO_MODELS_DIR / "voices.bin"
+KOKORO_ONNX_PATH = KOKORO_MODELS_DIR / "kokoro-v1.0.int8.onnx"
+KOKORO_VOICES_PATH = KOKORO_MODELS_DIR / "voices-v1.0.bin"
 
 # Language code → (kokoro_voice_id, kokoro_lang_code)
 # Languages not listed here automatically fall back to Edge TTS.
