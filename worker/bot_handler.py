@@ -1166,19 +1166,57 @@ async def handle_lang_callback(update: Update, context: ContextTypes.DEFAULT_TYP
     available_set = set(available)
 
     fav_langs = [lang for lang in favorites if lang in _LANG_LABELS and lang != current_lang]
-    other_langs = [lang for lang in _LANG_LABELS if lang != current_lang and lang not in fav_langs]
+    # Already generated but not in favorites
+    extra_available = [lang for lang in available_set if lang in _LANG_LABELS and lang != current_lang and lang not in fav_langs]
 
-    def _btn(lang: str) -> InlineKeyboardButton:
+    def _btn(lang: str, show_star: bool = False) -> InlineKeyboardButton:
         label = _LANG_LABELS[lang]
-        prefix = "⭐ " if lang in fav_langs else ""
+        prefix = "⭐ " if show_star else ""
         suffix = " ✓" if lang in available_set else ""
         return InlineKeyboardButton(f"{prefix}{label}{suffix}", callback_data=f"setlang_{video_id}_{lang}")
 
     rows: list[list[InlineKeyboardButton]] = (
-        [[_btn(lang)] for lang in fav_langs]
-        + [[_btn(lang)] for lang in other_langs]
+        [[_btn(lang, show_star=True)] for lang in fav_langs]
+        + [[_btn(lang)] for lang in extra_available]
+        + [[InlineKeyboardButton("Other languages ▼", callback_data=f"alllang_{video_id}_{current_lang}")]]
         + [[InlineKeyboardButton("⭐ Manage favorites", url=f"{APP_URL}/dashboard/profile")]]
         + [[InlineKeyboardButton("← Back", callback_data=f"options_{video_id}_{current_lang}")]]
+    )
+
+    try:
+        await query.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup(rows))
+    except Exception:
+        pass
+
+
+async def handle_alllang_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Show all available languages (expanded view)."""
+    query = update.callback_query
+    try:
+        await query.answer()
+    except Exception:
+        pass
+
+    _, video_id, current_lang = query.data.split("_", 2)
+
+    profile, available = await asyncio.gather(
+        asyncio.to_thread(db.get_profile_by_telegram, str(query.from_user.id)),
+        asyncio.to_thread(db.get_available_languages_for_video, video_id),
+    )
+
+    favorites: list[str] = (profile or {}).get("favorite_languages") or []
+    available_set = set(available)
+
+    def _btn(lang: str) -> InlineKeyboardButton:
+        label = _LANG_LABELS[lang]
+        prefix = "⭐ " if lang in favorites else ""
+        suffix = " ✓" if lang in available_set else ""
+        return InlineKeyboardButton(f"{prefix}{label}{suffix}", callback_data=f"setlang_{video_id}_{lang}")
+
+    all_langs = [lang for lang in _LANG_LABELS if lang != current_lang]
+    rows: list[list[InlineKeyboardButton]] = (
+        [[_btn(lang)] for lang in all_langs]
+        + [[InlineKeyboardButton("← Back", callback_data=f"lang_{video_id}_{current_lang}")]]
     )
 
     try:
@@ -1557,6 +1595,7 @@ def create_bot_application() -> Application:
     app.add_handler(CallbackQueryHandler(handle_share_lang_callback, pattern=r"^shareLang_"))
     app.add_handler(CallbackQueryHandler(handle_share_callback, pattern=r"^share_"))
     app.add_handler(CallbackQueryHandler(handle_lang_callback, pattern=r"^lang_"))
+    app.add_handler(CallbackQueryHandler(handle_alllang_callback, pattern=r"^alllang_"))
     app.add_handler(CallbackQueryHandler(handle_setlang_callback, pattern=r"^setlang_"))
     app.add_handler(CallbackQueryHandler(handle_sub_channel_callback, pattern=r"^sub_"))
     app.add_handler(CallbackQueryHandler(handle_confirm_unsub_callback, pattern=r"^confirmUnsub_"))
