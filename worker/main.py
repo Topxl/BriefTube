@@ -383,12 +383,30 @@ async def _process_video(
                 db.snooze_job(job["id"], hours=hours)
                 return
 
-            # Live stream currently broadcasting — no transcript/audio yet, snooze silently
+            # Live stream currently broadcasting — no transcript/audio yet.
+            # Snooze for 2h, but give up after 48h — the stream has ended by then
+            # and will never get a transcript (or it's a permanent live channel).
             if error == "video_is_live":
-                logger.info(
-                    f"[{video_id}] Live stream in progress — snoozed 2h: {video_title[:80]}"
-                )
-                db.snooze_job(job["id"], hours=2)
+                job_age_hours = 0.0
+                try:
+                    created_dt = datetime.fromisoformat(
+                        job.get("created_at", "").replace("Z", "+00:00")
+                    )
+                    job_age_hours = (
+                        datetime.now(timezone.utc) - created_dt
+                    ).total_seconds() / 3600
+                except Exception:
+                    pass
+                if job_age_hours > 48:
+                    logger.info(
+                        f"[{video_id}] Live stream stale (>48h) — failing permanently: {video_title[:80]}"
+                    )
+                    db.fail_job(job["id"], immediate=True)
+                else:
+                    logger.info(
+                        f"[{video_id}] Live stream in progress — snoozed 2h: {video_title[:80]}"
+                    )
+                    db.snooze_job(job["id"], hours=2)
                 return
 
             logger.error(f"[{video_id}] Transcript extraction failed: {error}")
