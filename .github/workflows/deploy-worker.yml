@@ -43,9 +43,6 @@ jobs:
             worker/venv/bin/pip install -r worker/requirements.txt -q
             worker/venv/bin/pip install -U yt-dlp -q
 
-            echo "→ Downloading Kokoro models (skipped if already present)..."
-            worker/venv/bin/python worker/download_kokoro.py
-
             echo "→ Restarting services..."
             chmod +x vps/*.sh 2>/dev/null || true
             sudo systemctl daemon-reload
