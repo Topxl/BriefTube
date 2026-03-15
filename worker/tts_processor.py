@@ -2,10 +2,18 @@
 
 import asyncio
 import logging
+import os
 import tempfile
 import time
 import uuid
 from pathlib import Path
+
+# Limit ONNX/OpenMP threads before any import loads onnxruntime.
+# Without this, each Kokoro inference spawns threads on all CPU cores,
+# which saturates the VPS when multiple videos process concurrently.
+os.environ.setdefault("OMP_NUM_THREADS", "2")
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "2")
+os.environ.setdefault("MKL_NUM_THREADS", "2")
 
 import edge_tts
 
@@ -56,18 +64,11 @@ async def _get_kokoro() -> object | None:
             )
             return None
         try:
-            import onnxruntime as ort  # type: ignore
             from kokoro_onnx import Kokoro  # type: ignore
-            # Limit ONNX to 2 threads per inference so concurrent calls
-            # don't saturate all CPU cores on the VPS.
-            sess_options = ort.SessionOptions()
-            sess_options.intra_op_num_threads = 2
-            sess_options.inter_op_num_threads = 1
             _kokoro = await asyncio.to_thread(
-                Kokoro, str(KOKORO_ONNX_PATH), str(KOKORO_VOICES_PATH),
-                sess_options=sess_options,
+                Kokoro, str(KOKORO_ONNX_PATH), str(KOKORO_VOICES_PATH)
             )
-            logger.info("Kokoro TTS initialized (ONNX, 2 threads/inference)")
+            logger.info("Kokoro TTS initialized (ONNX, OMP_NUM_THREADS=2)")
         except Exception as e:
             logger.error(f"Kokoro initialization failed: {e} — falling back to Edge TTS")
         return _kokoro
