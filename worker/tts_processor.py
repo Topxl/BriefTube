@@ -35,6 +35,9 @@ _KOKORO_VOICE_MAP: dict[str, tuple[str, str]] = {
 _kokoro: object | None = None
 _kokoro_init_attempted: bool = False
 _kokoro_lock = asyncio.Lock()
+# Limit concurrent Kokoro inferences to avoid saturating all CPU cores.
+# ONNX uses all threads per call — more than 2 parallel calls kills the VPS.
+_kokoro_sem = asyncio.Semaphore(2)
 
 
 async def _get_kokoro() -> object | None:
@@ -53,11 +56,18 @@ async def _get_kokoro() -> object | None:
             )
             return None
         try:
+            import onnxruntime as ort  # type: ignore
             from kokoro_onnx import Kokoro  # type: ignore
+            # Limit ONNX to 2 threads per inference so concurrent calls
+            # don't saturate all CPU cores on the VPS.
+            sess_options = ort.SessionOptions()
+            sess_options.intra_op_num_threads = 2
+            sess_options.inter_op_num_threads = 1
             _kokoro = await asyncio.to_thread(
-                Kokoro, str(KOKORO_ONNX_PATH), str(KOKORO_VOICES_PATH)
+                Kokoro, str(KOKORO_ONNX_PATH), str(KOKORO_VOICES_PATH),
+                sess_options=sess_options,
             )
-            logger.info("Kokoro TTS initialized (ONNX on CPU)")
+            logger.info("Kokoro TTS initialized (ONNX, 2 threads/inference)")
         except Exception as e:
             logger.error(f"Kokoro initialization failed: {e} — falling back to Edge TTS")
         return _kokoro
@@ -84,9 +94,10 @@ async def _kokoro_generate(kokoro: object, text: str, lang_code: str, output_pat
     try:
         import soundfile as sf  # type: ignore
 
-        samples, sample_rate = await asyncio.to_thread(
-            kokoro.create, text, voice=kokoro_voice, speed=1.0, lang=kokoro_lang
-        )
+        async with _kokoro_sem:
+            samples, sample_rate = await asyncio.to_thread(
+                kokoro.create, text, voice=kokoro_voice, speed=1.0, lang=kokoro_lang
+            )
 
         # Write WAV to a temp file, then encode to MP3 with ffmpeg
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
