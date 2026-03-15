@@ -163,6 +163,29 @@ class TranscriptExtractor:
         """Return True if the title strongly suggests a music/ambient video."""
         return bool(_MUSIC_TITLE_RE.search(title))
 
+    @staticmethod
+    def _check_invidious_genre(video_id: str) -> Optional[str]:
+        """Fetch video genre from Invidious API. Returns genre string or None on failure.
+
+        Invidious /api/v1/videos/{id} returns YouTube's own category as a 'genre'
+        field (e.g. "Music", "Science & Technology", "News & Politics").
+        This is language-agnostic — YouTube assigns categories regardless of title language.
+        """
+        instances = list(_INVIDIOUS_INSTANCES)
+        random.shuffle(instances)
+        for instance in instances:
+            try:
+                api_url = f"{instance}/api/v1/videos/{urllib.parse.quote(video_id, safe='')}"
+                req = urllib.request.Request(api_url, headers={"User-Agent": "Mozilla/5.0"})
+                with urllib.request.urlopen(req, timeout=8) as resp:
+                    data = json.loads(resp.read().decode())
+                genre = data.get("genre")
+                if genre:
+                    return genre
+            except Exception:
+                continue
+        return None
+
     def get_transcript(
         self,
         youtube_url: str,
@@ -191,6 +214,15 @@ class TranscriptExtractor:
         video_id = TranscriptExtractor.extract_video_id(youtube_url)
         if not video_id:
             return None, None, "Invalid YouTube URL", 0.0
+
+        # Language-agnostic music detection via YouTube category (Invidious API).
+        # YouTube assigns genre="Music" regardless of title language — no hardcoded
+        # patterns needed. Checked before any heavy processing to avoid wasting
+        # Whisper quota on music/ambient content.
+        genre = TranscriptExtractor._check_invidious_genre(video_id)
+        if genre and genre.lower() == "music":
+            logger.info(f"[{video_id}] YouTube category is Music — skipping (genre: {genre})")
+            return None, None, "music_content", 0.0
 
         try:
             # Try to get transcript in preferred language order
