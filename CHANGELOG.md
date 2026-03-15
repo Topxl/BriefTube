@@ -2,6 +2,9 @@
 
 ## 2026-03-16
 
+FIX: Worker — premiere_not_available_yet now fails permanently after 7 days (was snoozed forever)
+FIX: Worker db — fail_job now syncs ALL language variants of processed_videos on permanent failure (not just the job's language)
+CHORE: DB — manually fail stale premiere job RmivubKg-zE (Chico Crypto, created March 3)
 FEATURE: Worker — yt-dlp subtitle proxy fallback: when all direct clients are bot-detected, retry via residential proxy before falling back to Whisper (saves 3-5 min on long videos that have auto-generated captions)
 FIX: Worker — live streams snoozed forever now fail permanently after 48h (was looping every 2h indefinitely)
 CHORE: DB — delete 1515 zombie processing_queue jobs from Feb 22-23 (attempts=0, never ran)

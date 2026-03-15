@@ -124,10 +124,29 @@ def mark_video_completed(
     sb.table("processed_videos").update(update_data).eq("video_id", video_id).eq("language", language).execute()
 
 
-def mark_video_failed(video_id: str, language: str = "fr", immediate: bool = False):
+def mark_video_failed(video_id: str, language: str = "fr", immediate: bool = False, all_languages: bool = False):
     sb = get_client()
     # Increment failure_count — use execute() (not .single()) to avoid throwing
     # if the row was deleted between job pick and failure handling.
+    if all_languages:
+        # Update ALL pending language variants for this video (e.g. when the video
+        # itself is unreachable — premiere stale, live expired — every language fails).
+        res = (
+            sb.table("processed_videos")
+            .select("failure_count, language")
+            .eq("video_id", video_id)
+            .in_("status", ["pending", "processing"])
+            .execute()
+        )
+        for row in (res.data or []):
+            count = (row.get("failure_count") or 0) + 1
+            status = "failed" if (immediate or count >= 3) else "pending"
+            sb.table("processed_videos").update({
+                "failure_count": count,
+                "status": status,
+            }).eq("video_id", video_id).eq("language", row["language"]).execute()
+        return
+
     res = (
         sb.table("processed_videos")
         .select("failure_count")
@@ -273,7 +292,9 @@ def fail_job(job_id: str, immediate: bool = False, retry_after_minutes: int = 0)
     if status == "failed":
         video_id = res.data[0].get("video_id")
         if video_id:
-            mark_video_failed(video_id, language=user_language, immediate=True)
+            # Sync ALL pending language variants — if a job fails permanently,
+            # the video itself is unreachable so every language row must fail too.
+            mark_video_failed(video_id, language=user_language, immediate=True, all_languages=True)
         return True
     return False
 
