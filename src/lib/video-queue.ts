@@ -1,0 +1,92 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { toVideoUrl } from "@/lib/youtube-id";
+
+type QueueVideoParams = {
+  userId: string;
+  videoId: string;
+  videoTitle: string;
+  channelId: string;
+  userLang: string;
+};
+
+/**
+ * Ensures a video is queued for processing and a delivery record exists.
+ * - If already completed/pending/processing: just insert delivery, skip reprocessing.
+ * - If failed/missing: (re)insert into processed_videos and processing_queue.
+ * Returns whether a new processing job was created.
+ */
+export async function queueVideoForProcessing(
+  supabase: SupabaseClient,
+  params: QueueVideoParams,
+): Promise<{ queued: boolean }> {
+  const { userId, videoId, videoTitle, channelId, userLang } = params;
+  const videoUrl = toVideoUrl(videoId);
+
+  // Check current processing status
+  const { data: existing } = await supabase
+    .from("processed_videos")
+    .select("status, video_title, channel_id")
+    .eq("video_id", videoId)
+    .maybeSingle();
+
+  if (
+    existing?.status === "completed" ||
+    existing?.status === "pending" ||
+    existing?.status === "processing"
+  ) {
+    await supabase.from("deliveries").insert({
+      user_id: userId,
+      video_id: videoId,
+      status: "pending",
+      language: userLang,
+    });
+    return { queued: false };
+  }
+
+  // Queue for processing
+  const title = videoTitle || existing?.video_title || videoId;
+  if (existing) {
+    await supabase
+      .from("processed_videos")
+      .update({ status: "pending", video_title: title })
+      .eq("video_id", videoId)
+      .eq("language", userLang);
+  } else {
+    await supabase.from("processed_videos").insert({
+      video_id: videoId,
+      video_title: title,
+      video_url: videoUrl,
+      status: "pending",
+      language: userLang,
+      channel_id: channelId,
+    });
+  }
+
+  // Deduplication: only insert a new job if none is queued/processing
+  const { data: existingJob } = await supabase
+    .from("processing_queue")
+    .select("id")
+    .eq("video_id", videoId)
+    .in("status", ["queued", "processing"])
+    .maybeSingle();
+
+  if (!existingJob) {
+    await supabase.from("processing_queue").insert({
+      video_id: videoId,
+      youtube_url: videoUrl,
+      video_title: title,
+      channel_id: existing?.channel_id ?? channelId,
+      status: "queued",
+      user_language: userLang,
+    });
+  }
+
+  await supabase.from("deliveries").insert({
+    user_id: userId,
+    video_id: videoId,
+    status: "pending",
+    language: userLang,
+  });
+
+  return { queued: true };
+}

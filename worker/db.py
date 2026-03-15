@@ -243,7 +243,7 @@ def snooze_job(job_id: str, hours: int) -> None:
     logger.info(f"Job {job_id} snoozed for {hours}h (premiere/scheduled)")
 
 
-def fail_job(job_id: str, immediate: bool = False) -> bool:
+def fail_job(job_id: str, immediate: bool = False, retry_after_minutes: int = 0) -> bool:
     """Mark a job as failed. Returns True if this was a permanent failure.
 
     immediate=True skips the 3-attempt retry cycle and fails permanently on
@@ -258,10 +258,13 @@ def fail_job(job_id: str, immediate: bool = False) -> bool:
     attempts = (res.data[0].get("attempts") or 0) + 1
     user_language = res.data[0].get("user_language") or "fr"
     status = "failed" if (immediate or attempts >= 3) else "queued"
-    sb.table("processing_queue").update({
-        "status": status,
-        "attempts": attempts,
-    }).eq("id", job_id).execute()
+    update_data: dict = {"status": status, "attempts": attempts}
+    if status == "queued" and retry_after_minutes > 0:
+        from datetime import datetime, timezone, timedelta
+        update_data["retry_after"] = (
+            datetime.now(timezone.utc) + timedelta(minutes=retry_after_minutes)
+        ).isoformat()
+    sb.table("processing_queue").update(update_data).eq("id", job_id).execute()
     # Keep processed_videos in sync: when the job permanently fails, mark the
     # video as failed too so it doesn't stay stuck in "pending" forever.
     # Always use immediate=True here: processing_queue already decided this is
@@ -873,6 +876,51 @@ def get_processed_video(video_id: str, language: str) -> dict | None:
         .execute()
     )
     return res.data[0] if res.data else None
+
+
+def get_telegram_chat_ids_for_video(video_id: str) -> list[str]:
+    """Return Telegram chat IDs (external_id) for all users subscribed to the channel of this video.
+
+    Used to notify users when a video permanently fails processing.
+    Returns an empty list if the video has no channel or no connected Telegram users.
+    """
+    sb = get_client()
+    # Get channel_id for this video
+    pv_res = (
+        sb.table("processed_videos")
+        .select("channel_id")
+        .eq("video_id", video_id)
+        .neq("channel_id", "")
+        .limit(1)
+        .execute()
+    )
+    if not pv_res.data or not pv_res.data[0].get("channel_id"):
+        return []
+    channel_id = pv_res.data[0]["channel_id"]
+
+    # Get users subscribed to this channel
+    subs = (
+        sb.table("subscriptions")
+        .select("user_id")
+        .eq("channel_id", channel_id)
+        .eq("active", True)
+        .execute()
+    )
+    if not subs.data:
+        return []
+
+    user_ids = [s["user_id"] for s in subs.data]
+
+    # Get Telegram external_ids for connected users
+    conns = (
+        sb.table("platform_connections")
+        .select("external_id")
+        .in_("user_id", user_ids)
+        .eq("platform", "telegram")
+        .eq("connected", True)
+        .execute()
+    )
+    return [c["external_id"] for c in (conns.data or [])]
 
 
 def get_video_channel(video_id: str) -> dict | None:
