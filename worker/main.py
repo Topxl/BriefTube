@@ -371,16 +371,33 @@ async def _process_video(
                 db.fail_job(job["id"], immediate=True)
                 return
 
-            # Premiere/scheduled video — snooze until it starts, no failure notification
+            # Premiere/scheduled video — snooze until it starts, no failure notification.
+            # Give up after 7 days — the premiere was cancelled or already aired.
             if error and error.startswith("premiere_not_available_yet:"):
                 try:
                     hours = int(error.split(":")[1])
                 except (IndexError, ValueError):
                     hours = 2
-                logger.info(
-                    f"[{video_id}] Premiere/scheduled — snoozed for {hours}h: {video_title[:80]}"
-                )
-                db.snooze_job(job["id"], hours=hours)
+                job_age_hours = 0.0
+                try:
+                    created_dt = datetime.fromisoformat(
+                        job.get("created_at", "").replace("Z", "+00:00")
+                    )
+                    job_age_hours = (
+                        datetime.now(timezone.utc) - created_dt
+                    ).total_seconds() / 3600
+                except Exception:
+                    pass
+                if job_age_hours > 7 * 24:
+                    logger.info(
+                        f"[{video_id}] Premiere stale (>7 days) — failing permanently: {video_title[:80]}"
+                    )
+                    db.fail_job(job["id"], immediate=True)
+                else:
+                    logger.info(
+                        f"[{video_id}] Premiere/scheduled — snoozed for {hours}h: {video_title[:80]}"
+                    )
+                    db.snooze_job(job["id"], hours=hours)
                 return
 
             # Live stream currently broadcasting — no transcript/audio yet.
