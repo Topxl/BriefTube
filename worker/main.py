@@ -493,14 +493,19 @@ async def _process_video(
 
         # Step 5: Mark done (per language)
         processing_time = (datetime.now() - start_time).total_seconds()
+        # Merge Invidious-fetched YouTube metadata (genre, keywords, duration, views, …)
+        # with processing stats. Stored as JSONB — useful for future recommendation
+        # algorithms, analytics, and content filtering.
+        video_metadata = {
+            **transcript_extractor.last_video_metadata,  # genre, keywords, duration_seconds, …
+            "transcript_cost": transcript_cost,
+            "transcript_length": len(transcript),
+            "source_language": source_lang,
+            "summary_length": len(summary),
+        }
         db.mark_video_completed(
             video_id, summary, audio_url,
-            metadata={
-                "transcript_cost": transcript_cost,
-                "transcript_length": len(transcript),
-                "source_language": source_lang,
-                "summary_length": len(summary),
-            },
+            metadata=video_metadata,
             language=user_language,
             video_title=video_title or None,
             transcript_source=transcript_extractor.last_transcript_source or None,

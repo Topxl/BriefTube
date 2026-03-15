@@ -93,6 +93,10 @@ class TranscriptExtractor:
         self.last_ip_blocked = False
         # Which extraction method was used last (youtube_api, invidious, piped, yt-dlp, whisper).
         self.last_transcript_source: str = ""
+        # YouTube metadata fetched from Invidious at the start of get_transcript().
+        # Contains: genre, keywords, duration_seconds, view_count, like_count,
+        # published_at, description. Empty dict if Invidious was unreachable.
+        self.last_video_metadata: dict = {}
 
         if self.enable_whisper_fallback:
             try:
@@ -164,12 +168,19 @@ class TranscriptExtractor:
         return bool(_MUSIC_TITLE_RE.search(title))
 
     @staticmethod
-    def _check_invidious_genre(video_id: str) -> Optional[str]:
-        """Fetch video genre from Invidious API. Returns genre string or None on failure.
+    def _fetch_invidious_metadata(video_id: str) -> dict:
+        """Fetch rich video metadata from Invidious API.
 
-        Invidious /api/v1/videos/{id} returns YouTube's own category as a 'genre'
-        field (e.g. "Music", "Science & Technology", "News & Politics").
-        This is language-agnostic — YouTube assigns categories regardless of title language.
+        Invidious /api/v1/videos/{id} returns YouTube's own metadata:
+        - genre: YouTube category ("Music", "Science & Technology", ...) — language-agnostic
+        - keywords: YouTube tags set by the creator
+        - lengthSeconds: exact duration
+        - viewCount / likeCount: popularity signals
+        - description: video description
+        - published: Unix timestamp of publication
+
+        Returns a dict with the above keys (absent keys are omitted).
+        Returns {} on failure (all instances down or timeout).
         """
         instances = list(_INVIDIOUS_INSTANCES)
         random.shuffle(instances)
@@ -179,12 +190,25 @@ class TranscriptExtractor:
                 req = urllib.request.Request(api_url, headers={"User-Agent": "Mozilla/5.0"})
                 with urllib.request.urlopen(req, timeout=8) as resp:
                     data = json.loads(resp.read().decode())
-                genre = data.get("genre")
-                if genre:
-                    return genre
+                result: dict = {}
+                if genre := data.get("genre"):
+                    result["genre"] = genre
+                if keywords := data.get("keywords"):
+                    result["keywords"] = keywords[:30]  # cap at 30 tags
+                if length := data.get("lengthSeconds"):
+                    result["duration_seconds"] = int(length)
+                if views := data.get("viewCount"):
+                    result["view_count"] = int(views)
+                if likes := data.get("likeCount"):
+                    result["like_count"] = int(likes)
+                if pub := data.get("published"):
+                    result["published_at"] = int(pub)
+                if desc := data.get("description"):
+                    result["description"] = desc[:1000]  # cap to avoid bloat
+                return result
             except Exception:
                 continue
-        return None
+        return {}
 
     def get_transcript(
         self,
@@ -215,14 +239,19 @@ class TranscriptExtractor:
         if not video_id:
             return None, None, "Invalid YouTube URL", 0.0
 
-        # Language-agnostic music detection via YouTube category (Invidious API).
-        # YouTube assigns genre="Music" regardless of title language — no hardcoded
-        # patterns needed. Checked before any heavy processing to avoid wasting
-        # Whisper quota on music/ambient content.
-        genre = TranscriptExtractor._check_invidious_genre(video_id)
-        if genre and genre.lower() == "music":
-            logger.info(f"[{video_id}] YouTube category is Music — skipping (genre: {genre})")
-            return None, None, "music_content", 0.0
+        # Fetch rich metadata from Invidious (genre, keywords, duration, views, …).
+        # Used for: language-agnostic music detection + storing enriched metadata in DB.
+        self.last_video_metadata = TranscriptExtractor._fetch_invidious_metadata(video_id)
+        if self.last_video_metadata:
+            genre = self.last_video_metadata.get("genre", "")
+            dur = self.last_video_metadata.get("duration_seconds")
+            logger.info(
+                f"[{video_id}] Invidious metadata: genre={genre!r}"
+                + (f" duration={dur}s" if dur else "")
+            )
+            if genre.lower() == "music":
+                logger.info(f"[{video_id}] YouTube category is Music — skipping")
+                return None, None, "music_content", 0.0
 
         try:
             # Try to get transcript in preferred language order
