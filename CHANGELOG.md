@@ -3,6 +3,8 @@
 ## 2026-03-16
 
 FEATURE: SummaryRow — Add dropdown menu (•••) with YouTube link, share button, and language generation options for favorite languages
+REFACTOR: Extract LanguagePicker to standalone component — reused from DeliverySection and SummariesFeed dropdown without code duplication
+FEATURE: SummaryRow dropdown — Add "Gérer les langues favorites" item that opens the LanguagePicker modal directly from a summary card
 FEATURE: /api/process-video — Add optional language parameter to allow generating summaries in different languages
 FIX: ProcessingVideoCard — step indicators (Transcription/Résumé/Audio/Livraison) now responsive on mobile with flex-1 + truncate + flexible connectors
 FIX: ChannelSearchBar — clicking Summarize on an already-processed video now refreshes the summaries feed so the delivery appears at the top

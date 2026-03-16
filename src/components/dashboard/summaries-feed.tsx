@@ -5,6 +5,9 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Inbox } from "@/lib/icons";
 import { SummaryRow } from "@/components/dashboard/summary-row";
+import { LanguagePicker } from "@/components/dashboard/language-picker";
+import { dialogManager } from "@/features/dialog-manager/dialog-manager";
+import { toast } from "sonner";
 import { t } from "@/locales";
 import type {
   EnrichedDelivery,
@@ -39,6 +42,7 @@ export function SummariesFeed() {
   const [page, setPage] = useState(0);
   const [titles, setTitles] = useState<Record<string, string>>({});
   const [favLangs, setFavLangs] = useState<string[]>([]);
+  const [preferredLang, setPreferredLang] = useState("fr");
   const supabase = useMemo(() => createClient(), []);
 
   const loadDeliveries = useCallback(
@@ -55,11 +59,10 @@ export function SummariesFeed() {
           .select("favorite_languages, preferred_language")
           .eq("id", user.id)
           .single();
+        const pref = profile?.preferred_language ?? "fr";
+        setPreferredLang(pref);
         const langs = [
-          ...new Set([
-            ...(profile?.favorite_languages ?? []),
-            profile?.preferred_language ?? "fr",
-          ]),
+          ...new Set([...(profile?.favorite_languages ?? []), pref]),
         ];
         setFavLangs(langs);
       }
@@ -124,6 +127,50 @@ export function SummariesFeed() {
   useEffect(() => {
     void loadDeliveries(0);
   }, [loadDeliveries]);
+
+  const openLangPicker = useCallback(() => {
+    dialogManager.custom({
+      title: "Langues favorites",
+      size: "sm",
+      children: (
+        <LanguagePicker
+          currentCode={preferredLang}
+          favorites={favLangs}
+          onSelect={(lang) => {
+            dialogManager.closeAll();
+            setPreferredLang(lang.code);
+            void (async () => {
+              const {
+                data: { user },
+              } = await supabase.auth.getUser();
+              if (!user) return;
+              await supabase
+                .from("profiles")
+                .update({ preferred_language: lang.code })
+                .eq("id", user.id);
+              toast.success("Langue mise à jour");
+            })();
+          }}
+          onToggleFavorite={(code) => {
+            const next = favLangs.includes(code)
+              ? favLangs.filter((c) => c !== code)
+              : [...favLangs, code];
+            setFavLangs(next);
+            void (async () => {
+              const {
+                data: { user },
+              } = await supabase.auth.getUser();
+              if (!user) return;
+              await supabase
+                .from("profiles")
+                .update({ favorite_languages: next })
+                .eq("id", user.id);
+            })();
+          }}
+        />
+      ),
+    });
+  }, [favLangs, preferredLang, supabase]);
 
   // Promote a video to top when already in list, or re-fetch if not found
   useEffect(() => {
@@ -229,6 +276,7 @@ export function SummariesFeed() {
             delivery={delivery}
             resolvedTitle={titles[delivery.video_id]}
             favoriteLanguages={favLangs}
+            onManageFavorites={openLangPicker}
           />
         ))}
         {loading &&
