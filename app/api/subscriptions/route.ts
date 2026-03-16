@@ -1,5 +1,5 @@
 import { SiteConfig } from "@/site-config";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { getYouTubeChannelInfo, fetchVideoOembed } from "@/lib/youtube";
 import { extractVideoId } from "@/lib/youtube-id";
@@ -300,7 +300,7 @@ export async function POST(request: NextRequest) {
   if (ahaVideo) {
     try {
       const userLang = profile?.preferred_language ?? "fr";
-      const { queued } = await queueVideoForProcessing(supabase, {
+      const { queued } = await queueVideoForProcessing(createAdminClient(), {
         userId: user.id,
         videoId: ahaVideo.videoId,
         videoTitle: ahaVideo.title,

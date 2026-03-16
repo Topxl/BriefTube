@@ -4,6 +4,7 @@
 
 FIX: ProcessingVideoCard — step indicators (Transcription/Résumé/Audio/Livraison) now responsive on mobile with flex-1 + truncate + flexible connectors
 FIX: ChannelSearchBar — clicking Summarize on an already-processed video now refreshes the summaries feed so the delivery appears at the top
+FIX: process-video + subscriptions API routes — use createAdminClient for queueVideoForProcessing (processed_videos/processing_queue/deliveries bloquaient silencieusement tous les INSERT en user session via RLS)
 
 FEATURE: Dashboard redesign — Add StatsSheet (lazy-loaded stats panel with BarChart2 icon) and ChannelsSheet (Rss icon) to consolidate navigation
 REFACTOR: Dashboard layout — Move PersonalStats and SourcesSection to right-side sheets; simplify Recent summaries section with inline button controls
