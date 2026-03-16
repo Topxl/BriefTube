@@ -171,7 +171,6 @@ export function ChannelSearchBar() {
         );
       }
       await setQ(null);
-      router.refresh();
     } catch {
       toast.error("Something went wrong");
     } finally {
