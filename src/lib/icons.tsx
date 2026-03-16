@@ -84,6 +84,7 @@ import {
   Megaphone as _Megaphone,
   Globe as _Globe,
   Languages as _Languages,
+  Rss as _Rss,
 } from "lucide-react";
 
 export type { LucideIcon, LucideProps } from "lucide-react";
@@ -172,3 +173,4 @@ export const BellOff = wrap(_BellOff);
 export const Megaphone = wrap(_Megaphone);
 export const Globe = wrap(_Globe);
 export const Languages = wrap(_Languages);
+export const Rss = wrap(_Rss);
