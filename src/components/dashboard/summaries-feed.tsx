@@ -38,6 +38,7 @@ export function SummariesFeed() {
   const [hasMore, setHasMore] = useState(false);
   const [page, setPage] = useState(0);
   const [titles, setTitles] = useState<Record<string, string>>({});
+  const [favLangs, setFavLangs] = useState<string[]>([]);
   const supabase = useMemo(() => createClient(), []);
 
   const loadDeliveries = useCallback(
@@ -47,6 +48,21 @@ export function SummariesFeed() {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) return;
+
+      if (pageNum === 0) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("favorite_languages, preferred_language")
+          .eq("id", user.id)
+          .single();
+        const langs = [
+          ...new Set([
+            ...(profile?.favorite_languages ?? []),
+            profile?.preferred_language ?? "fr",
+          ]),
+        ];
+        setFavLangs(langs);
+      }
 
       const from = pageNum * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
@@ -212,6 +228,7 @@ export function SummariesFeed() {
             key={delivery.id}
             delivery={delivery}
             resolvedTitle={titles[delivery.video_id]}
+            favoriteLanguages={favLangs}
           />
         ))}
         {loading &&
