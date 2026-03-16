@@ -67,21 +67,33 @@ export function SummariesFeed() {
 
       const videoIds = [...new Set(deliveryData.map((d) => d.video_id))];
 
-      let videoMap: Record<string, ProcessedVideo> = {};
+      const videoMap: Record<string, ProcessedVideo> = {};
       if (videoIds.length > 0) {
+        // Select only the columns the card needs — skip summary/metadata/transcript fields
+        // which are heavy (summary = long text, metadata = JSONB with description etc.)
+        // Also filter by the languages present in these deliveries to avoid fetching
+        // duplicate rows for other languages.
+        const languages = [...new Set(deliveryData.map((d) => d.language))];
         const { data: videos } = await supabase
           .from("processed_videos")
-          .select("*")
-          .in("video_id", videoIds);
+          .select(
+            "video_id, language, video_title, video_url, summary, audio_url, channel_id, status",
+          )
+          .in("video_id", videoIds)
+          .in("language", languages);
 
         if (videos) {
-          videoMap = Object.fromEntries(videos.map((v) => [v.video_id, v]));
+          // Key by video_id:language for precise matching, fallback to video_id
+          for (const v of videos) {
+            videoMap[`${v.video_id}:${v.language}`] = v;
+            videoMap[v.video_id] ??= v;
+          }
         }
       }
 
       const enriched: EnrichedDelivery[] = deliveryData.map((d) => ({
         ...d,
-        video: videoMap[d.video_id],
+        video: videoMap[`${d.video_id}:${d.language}`] ?? videoMap[d.video_id],
       }));
 
       setDeliveries((prev) =>
@@ -108,9 +120,7 @@ export function SummariesFeed() {
           const updated = payload.new as ProcessedVideo;
           setDeliveries((prev) =>
             prev.map((d) =>
-              d.video_id === updated.video_id
-                ? { ...d, video: updated }
-                : d,
+              d.video_id === updated.video_id ? { ...d, video: updated } : d,
             ),
           );
         },

@@ -2,6 +2,7 @@
 
 ## 2026-03-16
 
+PERF: SummariesFeed — select only needed columns (drop summary/metadata) + filter processed_videos by language, cuts payload size by ~70% for users with 100s of summaries
 FIX: queueVideoForProcessing — add language filter to existing check (was using maybeSingle() without language, breaking when fr+en rows both exist for a video)
 FIX: Worker + API — video title no longer stuck as raw video_id when manually triggering; worker backfills real title from Invidious metadata
 FIX: Worker — include YouTube title in Invidious metadata fetch for title backfill
