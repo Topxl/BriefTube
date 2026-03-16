@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -22,6 +23,7 @@ type Props = {
 };
 
 export function ChannelsSheet({ initialSources, maxChannels, isPro }: Props) {
+  const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
 
   return (
@@ -32,7 +34,14 @@ export function ChannelsSheet({ initialSources, maxChannels, isPro }: Props) {
           <span className="text-xs font-medium">{initialSources.length}</span>
         </Button>
       </SheetTrigger>
-      <SheetContent side="right" className="overflow-y-auto p-0 sm:max-w-md">
+      <SheetContent
+        side={isMobile ? "bottom" : "right"}
+        className={
+          isMobile
+            ? "h-[85dvh] overflow-y-auto p-0"
+            : "overflow-y-auto p-0 sm:max-w-md"
+        }
+      >
         <SheetHeader className="border-b border-white/[0.04] px-6 py-4">
           <SheetTitle>Channels</SheetTitle>
         </SheetHeader>
