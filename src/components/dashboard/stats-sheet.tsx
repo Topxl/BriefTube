@@ -10,6 +10,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   BarChart2,
   Flame,
@@ -64,6 +65,7 @@ function computeStreak(deliveryDays: Set<string>): number {
 
 export function StatsSheet() {
   const session = useSession();
+  const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(false);
@@ -188,7 +190,14 @@ export function StatsSheet() {
           ) : null}
         </Button>
       </SheetTrigger>
-      <SheetContent side="right" className="overflow-y-auto p-0 sm:max-w-md">
+      <SheetContent
+        side={isMobile ? "bottom" : "right"}
+        className={
+          isMobile
+            ? "h-[85dvh] overflow-y-auto p-0"
+            : "overflow-y-auto p-0 sm:max-w-md"
+        }
+      >
         <SheetHeader className="border-b border-white/[0.04] px-6 py-4">
           <SheetTitle>Your stats</SheetTitle>
         </SheetHeader>
