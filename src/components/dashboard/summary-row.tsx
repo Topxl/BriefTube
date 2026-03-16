@@ -79,10 +79,12 @@ export function SummaryRow({
   delivery,
   resolvedTitle,
   favoriteLanguages = [],
+  onManageFavorites,
 }: {
   delivery: EnrichedDelivery;
   resolvedTitle?: string;
   favoriteLanguages?: string[];
+  onManageFavorites?: () => void;
 }) {
   const video = delivery.video;
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -339,6 +341,18 @@ export function SummaryRow({
                         </DropdownMenuItem>
                       );
                     })}
+                </>
+              )}
+              {onManageFavorites && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={onManageFavorites}
+                    className="flex items-center gap-2"
+                  >
+                    <Languages className="h-3.5 w-3.5" />
+                    Gérer les langues favorites
+                  </DropdownMenuItem>
                 </>
               )}
             </DropdownMenuContent>
