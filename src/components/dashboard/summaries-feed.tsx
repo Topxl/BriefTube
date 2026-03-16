@@ -128,6 +128,26 @@ export function SummariesFeed() {
     void loadDeliveries(0);
   }, [loadDeliveries]);
 
+  const toggleFavorite = useCallback(
+    (code: string) => {
+      const next = favLangs.includes(code)
+        ? favLangs.filter((c) => c !== code)
+        : [...favLangs, code];
+      setFavLangs(next);
+      void (async () => {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) return;
+        await supabase
+          .from("profiles")
+          .update({ favorite_languages: next })
+          .eq("id", user.id);
+      })();
+    },
+    [favLangs, supabase],
+  );
+
   const openLangPicker = useCallback(() => {
     dialogManager.custom({
       title: "Langues favorites",
@@ -151,26 +171,11 @@ export function SummariesFeed() {
               toast.success("Langue mise à jour");
             })();
           }}
-          onToggleFavorite={(code) => {
-            const next = favLangs.includes(code)
-              ? favLangs.filter((c) => c !== code)
-              : [...favLangs, code];
-            setFavLangs(next);
-            void (async () => {
-              const {
-                data: { user },
-              } = await supabase.auth.getUser();
-              if (!user) return;
-              await supabase
-                .from("profiles")
-                .update({ favorite_languages: next })
-                .eq("id", user.id);
-            })();
-          }}
+          onToggleFavorite={toggleFavorite}
         />
       ),
     });
-  }, [favLangs, preferredLang, supabase]);
+  }, [toggleFavorite, favLangs, preferredLang, supabase]);
 
   // Promote a video to top when already in list, or re-fetch if not found
   useEffect(() => {
@@ -277,6 +282,7 @@ export function SummariesFeed() {
             resolvedTitle={titles[delivery.video_id]}
             favoriteLanguages={favLangs}
             onManageFavorites={openLangPicker}
+            onToggleFavorite={toggleFavorite}
           />
         ))}
         {loading &&

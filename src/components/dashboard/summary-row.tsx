@@ -10,6 +10,7 @@ import {
   MoreHorizontal,
   Share2,
   Languages,
+  Star,
 } from "@/lib/icons";
 import {
   DropdownMenu,
@@ -23,6 +24,8 @@ import { toast } from "sonner";
 import { addProcessingVideo } from "@/lib/processing-videos";
 import { languages as LANGUAGES } from "@/lib/languages";
 import { SiteConfig } from "@/site-config";
+import { LanguagePicker } from "@/components/dashboard/language-picker";
+import { dialogManager } from "@/features/dialog-manager/dialog-manager";
 
 const tl = t.dashboard.summaries;
 
@@ -80,11 +83,13 @@ export function SummaryRow({
   resolvedTitle,
   favoriteLanguages = [],
   onManageFavorites,
+  onToggleFavorite,
 }: {
   delivery: EnrichedDelivery;
   resolvedTitle?: string;
   favoriteLanguages?: string[];
   onManageFavorites?: () => void;
+  onToggleFavorite?: (code: string) => void;
 }) {
   const video = delivery.video;
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -207,6 +212,30 @@ export function SummaryRow({
     [delivery.video_id, title],
   );
 
+  const handleOpenLangPicker = useCallback(() => {
+    if (!onToggleFavorite) return;
+    dialogManager.custom({
+      title: "Générer dans une autre langue",
+      size: "sm",
+      children: (
+        <LanguagePicker
+          currentCode={delivery.language ?? "fr"}
+          favorites={favoriteLanguages}
+          onSelect={(lang) => {
+            dialogManager.closeAll();
+            void handleGenerateLang(lang.code);
+          }}
+          onToggleFavorite={onToggleFavorite}
+        />
+      ),
+    });
+  }, [
+    delivery.language,
+    favoriteLanguages,
+    handleGenerateLang,
+    onToggleFavorite,
+  ]);
+
   return (
     <div
       className={`nm-raised overflow-hidden rounded-2xl transition-all duration-200 ${
@@ -318,43 +347,36 @@ export function SummaryRow({
                 <Share2 className="h-3.5 w-3.5" />
                 Partager le résumé
               </DropdownMenuItem>
-              {favoriteLanguages.filter((l) => l !== delivery.language).length >
-                0 && (
-                <>
-                  <DropdownMenuSeparator />
-                  {favoriteLanguages
-                    .filter((l) => l !== delivery.language)
-                    .map((code) => {
-                      const lang = LANGUAGES.find((l) => l.code === code);
-                      if (!lang) return null;
-                      return (
-                        <DropdownMenuItem
-                          key={code}
-                          disabled={generatingLang === code}
-                          onClick={() => void handleGenerateLang(code)}
-                          className="flex items-center gap-2"
-                        >
-                          <Languages className="h-3.5 w-3.5" />
-                          {generatingLang === code
-                            ? "Génération…"
-                            : `Générer en ${lang.nativeName}`}
-                        </DropdownMenuItem>
-                      );
-                    })}
-                </>
-              )}
-              {onManageFavorites && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={onManageFavorites}
-                    className="flex items-center gap-2"
-                  >
-                    <Languages className="h-3.5 w-3.5" />
-                    Gérer les langues favorites
-                  </DropdownMenuItem>
-                </>
-              )}
+              <DropdownMenuSeparator />
+              {favoriteLanguages
+                .filter((l) => l !== delivery.language)
+                .map((code) => {
+                  const lang = LANGUAGES.find((l) => l.code === code);
+                  if (!lang) return null;
+                  return (
+                    <DropdownMenuItem
+                      key={code}
+                      disabled={generatingLang === code}
+                      onClick={() => void handleGenerateLang(code)}
+                      className="flex items-center gap-2"
+                    >
+                      <Star
+                        className="h-3 w-3 shrink-0 text-yellow-400"
+                        fill="currentColor"
+                      />
+                      {generatingLang === code
+                        ? "Génération…"
+                        : `Générer en ${lang.nativeName}`}
+                    </DropdownMenuItem>
+                  );
+                })}
+              <DropdownMenuItem
+                onClick={handleOpenLangPicker}
+                className="flex items-center gap-2"
+              >
+                <Languages className="h-3.5 w-3.5" />
+                Autre langue…
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

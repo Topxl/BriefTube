@@ -2,6 +2,7 @@
 
 ## 2026-03-16
 
+REFACTOR: Language UX on summary cards — Add internal favorites state to LanguagePicker for instant visual feedback when starring languages inside dialogs; redesign SummaryRow dropdown with favorited languages as starred items and "Autre langue…" picker at bottom
 FEATURE: SummaryRow — Add dropdown menu (•••) with YouTube link, share button, and language generation options for favorite languages
 REFACTOR: Extract LanguagePicker to standalone component — reused from DeliverySection and SummariesFeed dropdown without code duplication
 FEATURE: SummaryRow dropdown — Add "Gérer les langues favorites" item that opens the LanguagePicker modal directly from a summary card
