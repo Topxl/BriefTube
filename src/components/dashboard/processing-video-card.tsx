@@ -11,30 +11,34 @@ import {
 
 // Stages calibrated to real worker timing (median 69s, P75 119s, P90 200s)
 const STAGES = [
-  { until: 30,       label: "Extraction de la transcription…", step: 0 },
-  { until: 70,       label: "Analyse du contenu…",             step: 1 },
-  { until: 110,      label: "Génération du résumé IA…",        step: 1 },
-  { until: 150,      label: "Synthèse vocale en cours…",       step: 2 },
-  { until: 190,      label: "Upload de l'audio…",              step: 2 },
-  { until: Infinity, label: "Livraison en cours…",             step: 3 },
+  { until: 30, label: "Extraction de la transcription…", step: 0 },
+  { until: 70, label: "Analyse du contenu…", step: 1 },
+  { until: 110, label: "Génération du résumé IA…", step: 1 },
+  { until: 150, label: "Synthèse vocale en cours…", step: 2 },
+  { until: 190, label: "Upload de l'audio…", step: 2 },
+  { until: Infinity, label: "Livraison en cours…", step: 3 },
 ] as const;
 
 const STEP_LABELS = ["Transcription", "Résumé", "Audio", "Livraison"] as const;
 
 function getStage(elapsedSeconds: number) {
-  return STAGES.find((s) => elapsedSeconds < s.until) ?? STAGES[STAGES.length - 1];
+  return (
+    STAGES.find((s) => elapsedSeconds < s.until) ?? STAGES[STAGES.length - 1]
+  );
 }
 
 function calcProgress(startedAt: number): number {
   // base=0.990 → ~22% at 30s, ~43% at 69s (median), ~59% at 120s, ~74% at 200s (P90)
   // Always leaves room for Realtime completion to feel like a positive surprise
   const elapsed = (Date.now() - startedAt) / 1000;
-  return 85 * (1 - Math.pow(0.990, elapsed));
+  return 85 * (1 - Math.pow(0.99, elapsed));
 }
 
 function ProcessingCard({ video }: { video: ProcessingVideo }) {
   const supabase = useMemo(() => createClient(), []);
-  const [elapsed, setElapsed] = useState(() => (Date.now() - video.startedAt) / 1000);
+  const [elapsed, setElapsed] = useState(
+    () => (Date.now() - video.startedAt) / 1000,
+  );
   const [progress, setProgress] = useState(() => calcProgress(video.startedAt));
   const [done, setDone] = useState(false);
 
@@ -57,14 +61,19 @@ function ProcessingCard({ video }: { video: ProcessingVideo }) {
       .select("status")
       .eq("video_id", video.videoId)
       .maybeSingle()
-      .then(({ data }) => {
-        if (data?.status === "completed") {
-          setDone(true);
-          setTimeout(() => removeProcessingVideo(video.videoId), 2500);
-        } else if (data?.status === "failed") {
-          removeProcessingVideo(video.videoId);
-        }
-      }, (_err) => { /* ignore network errors */ });
+      .then(
+        ({ data }) => {
+          if (data?.status === "completed") {
+            setDone(true);
+            setTimeout(() => removeProcessingVideo(video.videoId), 2500);
+          } else if (data?.status === "failed") {
+            removeProcessingVideo(video.videoId);
+          }
+        },
+        (_err) => {
+          /* ignore network errors */
+        },
+      );
   }, [video.videoId, supabase]);
 
   // Realtime: auto-dismiss when the video is done
@@ -109,7 +118,9 @@ function ProcessingCard({ video }: { video: ProcessingVideo }) {
           <CheckCircle className="h-4 w-4 shrink-0 text-emerald-400" />
           <div className="min-w-0">
             <p className="line-clamp-1 text-xs font-medium">{video.title}</p>
-            <p className="mt-0.5 text-[11px] text-emerald-400">Résumé envoyé sur Telegram !</p>
+            <p className="mt-0.5 text-[11px] text-emerald-400">
+              Résumé envoyé sur Telegram !
+            </p>
           </div>
         </div>
       </div>
@@ -187,6 +198,8 @@ function ProcessingCard({ video }: { video: ProcessingVideo }) {
 // Module-level cache so getSnapshot returns a stable reference between events.
 // useSyncExternalStore uses Object.is — a new array every call causes infinite loops.
 let _snapshot: ProcessingVideo[] = [];
+// Stable empty array for getServerSnapshot — must be the same reference on every call.
+const _EMPTY: ProcessingVideo[] = [];
 
 function subscribeProcessingVideos(cb: () => void) {
   // Initialise cache on first subscribe (client-side only)
@@ -205,7 +218,7 @@ export function ProcessingVideoCard() {
   const videos = useSyncExternalStore(
     subscribeProcessingVideos,
     () => _snapshot,
-    () => [] as ProcessingVideo[],
+    () => _EMPTY,
   );
 
   if (videos.length === 0) return null;
