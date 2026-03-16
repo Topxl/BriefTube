@@ -162,6 +162,9 @@ export function ChannelSearchBar() {
           title: preview.title ?? preview.videoId,
           startedAt: Date.now(),
         });
+      } else {
+        // Video already processed — refresh the summaries feed to show it at the top
+        window.dispatchEvent(new Event("summariesRefresh"));
       }
       await setQ(null);
       router.refresh();
