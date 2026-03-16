@@ -109,6 +109,13 @@ export function SummariesFeed() {
     void loadDeliveries(0);
   }, [loadDeliveries]);
 
+  // Re-fetch when another component signals a new delivery was added
+  useEffect(() => {
+    const handler = () => void loadDeliveries(0);
+    window.addEventListener("summariesRefresh", handler);
+    return () => window.removeEventListener("summariesRefresh", handler);
+  }, [loadDeliveries]);
+
   // Realtime: update video status in-place when processed_videos changes
   useEffect(() => {
     const channel = supabase
