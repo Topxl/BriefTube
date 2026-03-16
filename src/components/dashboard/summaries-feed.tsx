@@ -109,11 +109,26 @@ export function SummariesFeed() {
     void loadDeliveries(0);
   }, [loadDeliveries]);
 
-  // Re-fetch when another component signals a new delivery was added
+  // Promote a video to top when already in list, or re-fetch if not found
   useEffect(() => {
-    const handler = () => void loadDeliveries(0);
-    window.addEventListener("summariesRefresh", handler);
-    return () => window.removeEventListener("summariesRefresh", handler);
+    const handler = (e: Event) => {
+      const videoId = (e as CustomEvent<{ videoId: string }>).detail.videoId;
+      if (!videoId) return;
+      setDeliveries((prev) => {
+        const idx = prev.findIndex((d) => d.video_id === videoId);
+        if (idx > 0) {
+          // Already in list — move to top instantly, no re-fetch needed
+          const item = prev[idx];
+          return [item, ...prev.slice(0, idx), ...prev.slice(idx + 1)];
+        }
+        // Not in current page — trigger a full re-fetch
+        void loadDeliveries(0);
+        return prev;
+      });
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+    window.addEventListener("summariesHighlight", handler);
+    return () => window.removeEventListener("summariesHighlight", handler);
   }, [loadDeliveries]);
 
   // Realtime: update video status in-place when processed_videos changes
