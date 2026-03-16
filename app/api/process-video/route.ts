@@ -4,13 +4,20 @@ import { z } from "zod";
 import { queueVideoForProcessing } from "@/lib/video-queue";
 
 export const POST = authRoute
-  .body(z.object({ videoId: z.string(), videoTitle: z.string().optional() }))
+  .body(
+    z.object({
+      videoId: z.string(),
+      videoTitle: z.string().optional(),
+      language: z.string().optional(),
+    }),
+  )
   .handler(async (_req, { body, ctx }) => {
     const supabase = await createClient();
     const adminSupabase = createAdminClient();
-    const { videoId, videoTitle } = body as {
+    const { videoId, videoTitle, language } = body as {
       videoId: string;
       videoTitle?: string;
+      language?: string;
     };
 
     // Get user language (user session is fine for reading profiles)
@@ -19,7 +26,7 @@ export const POST = authRoute
       .select("preferred_language")
       .eq("id", ctx.user.id)
       .single();
-    const userLang = profile?.preferred_language ?? "fr";
+    const userLang = language ?? profile?.preferred_language ?? "fr";
 
     // Use admin client for writes — processed_videos/processing_queue/deliveries
     // have no INSERT RLS for user sessions (service_role only)

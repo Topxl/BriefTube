@@ -2,6 +2,8 @@
 
 ## 2026-03-16
 
+FEATURE: SummaryRow — Add dropdown menu (•••) with YouTube link, share button, and language generation options for favorite languages
+FEATURE: /api/process-video — Add optional language parameter to allow generating summaries in different languages
 FIX: ProcessingVideoCard — step indicators (Transcription/Résumé/Audio/Livraison) now responsive on mobile with flex-1 + truncate + flexible connectors
 FIX: ChannelSearchBar — clicking Summarize on an already-processed video now refreshes the summaries feed so the delivery appears at the top
 FIX: process-video + subscriptions API routes — use createAdminClient for queueVideoForProcessing (processed_videos/processing_queue/deliveries bloquaient silencieusement tous les INSERT en user session via RLS)

@@ -3,8 +3,26 @@
 import { useRef, useState, useCallback } from "react";
 import Image from "next/image";
 import { formatDate } from "@/lib/format";
-import { ChevronDown, ExternalLink, Play } from "@/lib/icons";
+import {
+  ChevronDown,
+  ExternalLink,
+  Play,
+  MoreHorizontal,
+  Share2,
+  Languages,
+} from "@/lib/icons";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { t } from "@/locales";
+import { toast } from "sonner";
+import { addProcessingVideo } from "@/lib/processing-videos";
+import { languages as LANGUAGES } from "@/lib/languages";
+import { SiteConfig } from "@/site-config";
 
 const tl = t.dashboard.summaries;
 
@@ -16,6 +34,7 @@ export type Delivery = {
   source: string | null;
   sent_at: string | null;
   created_at: string | null;
+  language?: string;
 };
 
 export type ProcessedVideo = {
@@ -59,9 +78,11 @@ function AudioWaveform() {
 export function SummaryRow({
   delivery,
   resolvedTitle,
+  favoriteLanguages = [],
 }: {
   delivery: EnrichedDelivery;
   resolvedTitle?: string;
+  favoriteLanguages?: string[];
 }) {
   const video = delivery.video;
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -129,6 +150,60 @@ export function SummaryRow({
     const pct = Math.max(0, Math.min(1, x / rect.width));
     audio.currentTime = pct * audio.duration;
   }, []);
+
+  const handleShare = useCallback(async () => {
+    const url = `${SiteConfig.prodUrl}/videos/${delivery.video_id}`;
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: title ?? "BriefTube", url });
+      } catch {
+        // cancelled
+      }
+    } else {
+      await navigator.clipboard.writeText(url);
+      toast.success("Lien copié !");
+    }
+  }, [title, delivery.video_id]);
+
+  const [generatingLang, setGeneratingLang] = useState<string | null>(null);
+
+  const handleGenerateLang = useCallback(
+    async (langCode: string) => {
+      setGeneratingLang(langCode);
+      try {
+        const res = await fetch("/api/process-video", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            videoId: delivery.video_id,
+            videoTitle: title ?? delivery.video_id,
+            language: langCode,
+          }),
+        });
+        if (!res.ok) {
+          toast.error("Erreur lors de la génération");
+          return;
+        }
+        const data = (await res.json()) as { queued?: boolean };
+        if (data.queued) {
+          addProcessingVideo({
+            videoId: delivery.video_id,
+            title: title ?? delivery.video_id,
+            startedAt: Date.now(),
+          });
+          toast.success("Génération lancée !");
+        } else {
+          toast.info("Résumé déjà disponible dans cette langue");
+        }
+      } catch {
+        toast.error("Erreur réseau");
+      } finally {
+        setGeneratingLang(null);
+      }
+    },
+    [delivery.video_id, title],
+  );
 
   return (
     <div
@@ -214,16 +289,60 @@ export function SummaryRow({
           >
             x{speed}
           </button>
-          {video?.video_url && (
-            <a
-              href={video.video_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-muted-foreground hover:text-foreground flex h-6 w-6 items-center justify-center rounded-md transition-colors"
-            >
-              <ExternalLink className="h-3.5 w-3.5" />
-            </a>
-          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="text-muted-foreground hover:text-foreground flex h-6 w-6 items-center justify-center rounded-md transition-colors">
+                <MoreHorizontal className="h-4 w-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              {video?.video_url && (
+                <DropdownMenuItem asChild>
+                  <a
+                    href={video.video_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    Ouvrir sur YouTube
+                  </a>
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem
+                onClick={() => void handleShare()}
+                className="flex items-center gap-2"
+              >
+                <Share2 className="h-3.5 w-3.5" />
+                Partager le résumé
+              </DropdownMenuItem>
+              {favoriteLanguages.filter((l) => l !== delivery.language).length >
+                0 && (
+                <>
+                  <DropdownMenuSeparator />
+                  {favoriteLanguages
+                    .filter((l) => l !== delivery.language)
+                    .map((code) => {
+                      const lang = LANGUAGES.find((l) => l.code === code);
+                      if (!lang) return null;
+                      return (
+                        <DropdownMenuItem
+                          key={code}
+                          disabled={generatingLang === code}
+                          onClick={() => void handleGenerateLang(code)}
+                          className="flex items-center gap-2"
+                        >
+                          <Languages className="h-3.5 w-3.5" />
+                          {generatingLang === code
+                            ? "Génération…"
+                            : `Générer en ${lang.nativeName}`}
+                        </DropdownMenuItem>
+                      );
+                    })}
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
