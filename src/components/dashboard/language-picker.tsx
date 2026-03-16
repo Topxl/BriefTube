@@ -9,7 +9,7 @@ export type { Language };
 
 export function LanguagePicker({
   currentCode,
-  favorites,
+  favorites: initialFavorites,
   onSelect,
   onToggleFavorite,
 }: {
@@ -20,6 +20,16 @@ export function LanguagePicker({
 }) {
   const [search, setSearch] = useState("");
   const [showOthers, setShowOthers] = useState(false);
+  // Internal state so stars update instantly inside the dialog
+  const [favorites, setFavorites] = useState(initialFavorites);
+
+  const handleToggle = (code: string) => {
+    const next = favorites.includes(code)
+      ? favorites.filter((c) => c !== code)
+      : [...favorites, code];
+    setFavorites(next);
+    onToggleFavorite(code);
+  };
 
   const q = search.trim().toLowerCase();
   const allFiltered = q
@@ -65,7 +75,7 @@ export function LanguagePicker({
         <button
           onClick={(e) => {
             e.stopPropagation();
-            onToggleFavorite(l.code);
+            handleToggle(l.code);
           }}
           className={`shrink-0 transition-colors ${isFav ? "hover:text-muted-foreground text-yellow-400" : "text-muted-foreground/30 hover:text-yellow-400"}`}
           aria-label={isFav ? "Remove from favorites" : "Add to favorites"}
