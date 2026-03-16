@@ -163,8 +163,12 @@ export function ChannelSearchBar() {
           startedAt: Date.now(),
         });
       } else {
-        // Video already processed — refresh the summaries feed to show it at the top
-        window.dispatchEvent(new Event("summariesRefresh"));
+        // Video already processed — promote it to the top of the summaries feed
+        window.dispatchEvent(
+          new CustomEvent("summariesHighlight", {
+            detail: { videoId: preview.videoId },
+          }),
+        );
       }
       await setQ(null);
       router.refresh();
