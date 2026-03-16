@@ -2,6 +2,10 @@
 
 ## 2026-03-16
 
+FEATURE: Dashboard redesign — Add StatsSheet (lazy-loaded stats panel with BarChart2 icon) and ChannelsSheet (Rss icon) to consolidate navigation
+REFACTOR: Dashboard layout — Move PersonalStats and SourcesSection to right-side sheets; simplify Recent summaries section with inline button controls
+REFACTOR: SummaryRow — Spotify-inspired UI with always-visible progress bar, larger thumbnails (72px→88px), cleaner card without unread ring
+FIX: SummaryRow — Remove unused formatTime function and duration/currentTime state (only progress bar used now)
 PERF: SummariesFeed — select only needed columns (drop summary/metadata) + filter processed_videos by language, cuts payload size by ~70% for users with 100s of summaries
 FIX: queueVideoForProcessing — add language filter to existing check (was using maybeSingle() without language, breaking when fr+en rows both exist for a video)
 FIX: Worker + API — video title no longer stuck as raw video_id when manually triggering; worker backfills real title from Invidious metadata

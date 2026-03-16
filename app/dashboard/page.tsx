@@ -5,13 +5,13 @@ import { createClient } from "@/lib/supabase/server";
 import { SummariesFeed } from "@/components/dashboard/summaries-feed";
 import { SummariesFeedSkeleton } from "@/components/dashboard/summaries-feed-skeleton";
 import { TrialBanner } from "@/components/dashboard/trial-banner";
-import { SourcesSection } from "@/components/dashboard/sources-section";
 import { SectionErrorBoundary } from "@/components/nowts/section-error-boundary";
-import { PersonalStats } from "@/components/dashboard/personal-stats";
 import { PushNotificationBanner } from "@/components/dashboard/push-notification-banner";
 import { GettingStarted } from "@/components/dashboard/getting-started";
 import { ProcessingVideoCard } from "@/components/dashboard/processing-video-card";
 import { PendingVideoProcessor } from "@/components/dashboard/pending-video-processor";
+import { StatsSheet } from "@/components/dashboard/stats-sheet";
+import { ChannelsSheet } from "@/components/dashboard/channels-sheet";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -63,8 +63,8 @@ export default async function DashboardPage() {
     : 0;
 
   return (
-    <div className="space-y-6">
-      {/* Getting started module */}
+    <div className="flex flex-col gap-4">
+      {/* Getting started — only if needed */}
       <GettingStarted
         hasChannel={(sources ?? []).length > 0}
         hasConnection={(connections ?? []).length > 0}
@@ -76,28 +76,22 @@ export default async function DashboardPage() {
         <PushNotificationBanner />
       </Suspense>
 
-      {/* Sources */}
-      <SectionErrorBoundary>
-        <SourcesSection
-          initialSources={sources ?? []}
-          maxChannels={maxChannels}
-          isPro={isPro}
-        />
-      </SectionErrorBoundary>
-
       {/* Trial banner */}
       {trialDaysLeft > 0 && <TrialBanner daysLeft={trialDaysLeft} />}
 
-      {/* Personal stats */}
-      <SectionErrorBoundary>
-        <Suspense fallback={null}>
-          <PersonalStats userId={user.id} />
-        </Suspense>
-      </SectionErrorBoundary>
-
-      {/* Recent summaries */}
-      <div className="space-y-3">
-        <h2 className="text-base font-semibold">Recent summaries</h2>
+      {/* Summaries — main content */}
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-semibold">Recent summaries</h2>
+          <div className="flex items-center gap-1">
+            <ChannelsSheet
+              initialSources={sources ?? []}
+              maxChannels={maxChannels}
+              isPro={isPro}
+            />
+            <StatsSheet />
+          </div>
+        </div>
         <PendingVideoProcessor />
         <Suspense fallback={null}>
           <ProcessingVideoCard />

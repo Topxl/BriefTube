@@ -32,12 +32,6 @@ export type EnrichedDelivery = Delivery & { video?: ProcessedVideo };
 
 const SPEEDS = [1, 1.5, 2, 3] as const;
 
-function formatTime(seconds: number) {
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  return `${m}:${s.toString().padStart(2, "0")}`;
-}
-
 const WAVEFORM_HEIGHTS = [0.5, 0.9, 0.65, 1, 0.55, 0.8, 0.4, 0.75, 0.6, 0.95];
 
 function AudioWaveform() {
@@ -74,8 +68,8 @@ export function SummaryRow({
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState<(typeof SPEEDS)[number]>(1);
   const [progress, setProgress] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [currentTime, setCurrentTime] = useState(0);
+  const [_duration, setDuration] = useState(0);
+  const [_currentTime, setCurrentTime] = useState(0);
   const [showSummary, setShowSummary] = useState(false);
   const [isRead, setIsRead] = useState(
     () =>
@@ -138,12 +132,8 @@ export function SummaryRow({
 
   return (
     <div
-      className={`nm-raised overflow-hidden rounded-2xl transition-all duration-200 hover:scale-[1.005] hover:shadow-md ${
-        playing
-          ? "ring-1 ring-red-500/25"
-          : !isRead
-            ? "bg-red-500/[0.05] ring-1 ring-red-500/30"
-            : ""
+      className={`nm-raised overflow-hidden rounded-2xl transition-all duration-200 ${
+        playing ? "ring-1 ring-red-500/25" : ""
       }`}
     >
       {/* Main row: thumbnail + title + controls */}
@@ -151,7 +141,7 @@ export function SummaryRow({
         {/* Thumbnail with play overlay */}
         <button
           onClick={togglePlay}
-          className="group relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-black/30 sm:h-[72px] sm:w-[72px]"
+          className="group relative h-[72px] w-[72px] shrink-0 overflow-hidden rounded-lg bg-black/30 sm:h-[88px] sm:w-[88px]"
         >
           <Image
             src={thumbnailUrl}
@@ -163,7 +153,7 @@ export function SummaryRow({
           />
           <div className="absolute inset-0 flex items-center justify-center">
             <div
-              className={`flex h-8 w-8 items-center justify-center rounded-full border border-white/[0.1] backdrop-blur-sm transition-all duration-200 ${
+              className={`flex h-10 w-10 items-center justify-center rounded-full border border-white/[0.1] backdrop-blur-sm transition-all duration-200 ${
                 playing
                   ? "bg-red-600/80 shadow-[0_0_12px_rgba(239,68,68,0.4)]"
                   : "bg-black/50"
@@ -172,7 +162,7 @@ export function SummaryRow({
               {playing ? (
                 <AudioWaveform />
               ) : (
-                <Play className="ml-px h-3 w-3 text-white" fill="white" />
+                <Play className="ml-px h-4 w-4 text-white" fill="white" />
               )}
             </div>
           </div>
@@ -237,42 +227,28 @@ export function SummaryRow({
         </div>
       </div>
 
-      {/* Audio player bar */}
+      {/* Audio element */}
       {video?.audio_url && (
-        <div className="space-y-1 px-3 pb-2.5">
-          <audio
-            ref={audioRef}
-            src={video.audio_url}
-            preload="metadata"
-            onTimeUpdate={handleTimeUpdate}
-            onLoadedMetadata={handleLoadedMetadata}
-            onEnded={handleEnded}
-          />
+        <audio
+          ref={audioRef}
+          src={video.audio_url}
+          preload="metadata"
+          onTimeUpdate={handleTimeUpdate}
+          onLoadedMetadata={handleLoadedMetadata}
+          onEnded={handleEnded}
+        />
+      )}
 
-          {/* Progress bar */}
+      {/* Progress bar — always visible as a track */}
+      {video?.audio_url && (
+        <div
+          className="mx-3 mb-2.5 h-1 cursor-pointer overflow-hidden rounded-full bg-white/[0.06]"
+          onClick={handleSeek}
+        >
           <div
-            className="nm-inset-sm group/bar h-1.5 w-full cursor-pointer rounded-full"
-            onClick={handleSeek}
-          >
-            <div
-              className={`relative h-full rounded-full bg-red-500 transition-[width] duration-100 ${
-                playing ? "shadow-[0_0_8px_rgba(239,68,68,0.45)]" : ""
-              }`}
-              style={{ width: `${progress}%` }}
-            >
-              <div className="absolute top-1/2 right-0 h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-white opacity-0 shadow-sm transition-opacity group-hover/bar:opacity-100" />
-            </div>
-          </div>
-
-          {/* Time */}
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground text-[10px] tabular-nums">
-              {formatTime(currentTime)}
-            </span>
-            <span className="text-muted-foreground text-[10px] tabular-nums">
-              {formatTime(duration)}
-            </span>
-          </div>
+            className="h-full rounded-full bg-red-500/70 transition-none"
+            style={{ width: `${progress}%` }}
+          />
         </div>
       )}
 
