@@ -2,6 +2,8 @@
 
 ## 2026-03-16
 
+FIX: ProcessingVideoCard — step indicators (Transcription/Résumé/Audio/Livraison) now responsive on mobile with flex-1 + truncate + flexible connectors
+
 FEATURE: Dashboard redesign — Add StatsSheet (lazy-loaded stats panel with BarChart2 icon) and ChannelsSheet (Rss icon) to consolidate navigation
 REFACTOR: Dashboard layout — Move PersonalStats and SourcesSection to right-side sheets; simplify Recent summaries section with inline button controls
 REFACTOR: SummaryRow — Spotify-inspired UI with always-visible progress bar, larger thumbnails (72px→88px), cleaner card without unread ring

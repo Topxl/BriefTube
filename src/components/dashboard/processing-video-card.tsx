@@ -150,17 +150,17 @@ function ProcessingCard({ video }: { video: ProcessingVideo }) {
           </div>
 
           {/* Step dots */}
-          <div className="mt-2 flex items-center gap-0">
+          <div className="mt-2 flex w-full items-center">
             {STEP_LABELS.map((label, i) => (
-              <div key={label} className="flex items-center">
-                <div className="flex items-center gap-1">
+              <div key={label} className="flex min-w-0 flex-1 items-center">
+                <div className="flex min-w-0 items-center gap-0.5">
                   <div
-                    className={`h-1 w-1 rounded-full transition-colors duration-700 ${
+                    className={`h-1 w-1 shrink-0 rounded-full transition-colors duration-700 ${
                       i <= stage.step ? "bg-red-500" : "bg-white/15"
                     }`}
                   />
                   <span
-                    className={`text-[9px] transition-colors duration-700 ${
+                    className={`truncate text-[9px] transition-colors duration-700 ${
                       i === stage.step
                         ? "text-white/60"
                         : i < stage.step
@@ -173,7 +173,7 @@ function ProcessingCard({ video }: { video: ProcessingVideo }) {
                 </div>
                 {i < STEP_LABELS.length - 1 && (
                   <div
-                    className={`mx-1.5 h-px w-3 transition-colors duration-700 ${
+                    className={`mx-1 h-px flex-1 transition-colors duration-700 ${
                       i < stage.step ? "bg-red-500/30" : "bg-white/8"
                     }`}
                   />
