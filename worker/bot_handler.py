@@ -43,6 +43,7 @@ class MonitoringAlert:
         self._log_chat_id: str = LOG_BOT_ADMIN_CHAT_ID or admin_chat_id or ""
         # Track video_ids already mirrored this session (avoid sending N copies for N subscribers)
         self._mirrored_video_ids: set = set()
+        self._mirror_enabled: bool = True  # Toggle via /log_toggle
 
     async def send_alert(self, message: str, level: str = "INFO"):
         """Queue an alert to be sent to admin via the log bot."""
@@ -100,6 +101,8 @@ class MonitoringAlert:
         Lets the admin see every video sent to users (title, YouTube link, audio)
         without receiving N duplicates when multiple subscribers get the same video.
         """
+        if not self._mirror_enabled:
+            return
         if not self._log_bot or not self._log_chat_id:
             return
         if video_id in self._mirrored_video_ids:
@@ -446,6 +449,22 @@ async def monitor_logs_command(update: Update, context: ContextTypes.DEFAULT_TYP
         f"<b>Last {lines} lines</b>\n\n{formatted}",
         parse_mode="HTML",
     )
+
+
+async def log_toggle_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Toggle delivery mirroring on/off (admin only)."""
+    chat_id = str(update.effective_chat.id)
+    if not _is_admin(chat_id):
+        await update.message.reply_text("⛔ Admin only command")
+        return
+    # Find the alert_system via the application's bot_data
+    alert = context.application.bot_data.get("alert_system")
+    if not alert:
+        await update.message.reply_text("Alert system not found.")
+        return
+    alert._mirror_enabled = not alert._mirror_enabled
+    state = "enabled ✅" if alert._mirror_enabled else "disabled ⏸️"
+    await update.message.reply_text(f"Delivery mirroring {state}")
 
 
 def _calc_success_rate(summary: dict) -> int:
@@ -1587,6 +1606,7 @@ def create_bot_application() -> Application:
     app.add_handler(CommandHandler("monitor_status", monitor_status_command))
     app.add_handler(CommandHandler("monitor_stats", monitor_stats_command))
     app.add_handler(CommandHandler("monitor_logs", monitor_logs_command))
+    app.add_handler(CommandHandler("log_toggle", log_toggle_command))
 
     # Inline keyboard callbacks — options menu and sub-actions
     app.add_handler(CallbackQueryHandler(handle_options_callback, pattern=r"^options_"))

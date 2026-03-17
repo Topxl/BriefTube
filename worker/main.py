@@ -199,7 +199,24 @@ def _resolve_tts_voice(voice: str | None, language: str) -> str | None:
 
 # ── Video failure notification ────────────────────────────────
 
-async def _notify_video_failure(video_id: str, alert_system) -> None:
+# Human-readable labels for common error codes
+_ERROR_LABELS: dict[str, str] = {
+    "transcripts_disabled": "No captions available on this video",
+    "no_transcript_available": "No transcript found",
+    "video_unavailable": "Video is private or deleted",
+    "youtube_auth_required": "YouTube bot-detection (temporary)",
+    "likely_music_no_speech": "Music / no speech detected",
+    "audio_too_large_for_speech": "Audio file too large",
+    "transcript_too_short": "Transcript too short to summarize",
+    "video_is_live": "Live stream — no transcript yet",
+}
+
+async def _notify_video_failure(
+    video_id: str,
+    alert_system,
+    video_title: str = "",
+    error_reason: str = "",
+) -> None:
     """Notify all affected Telegram users that a video permanently failed."""
     if getattr(alert_system, "bot_app", None) is None:
         return  # Processor-only mode — primary worker handles user notifications
@@ -210,9 +227,12 @@ async def _notify_video_failure(video_id: str, alert_system) -> None:
         return
     if not chat_ids:
         return
+
+    reason_label = _ERROR_LABELS.get(error_reason, error_reason or "Unknown error")
+    title_line = f"\n<b>{video_title[:80]}</b>" if video_title else ""
     msg = (
-        "A video from one of your channels couldn't be processed "
-        "after multiple attempts and has been skipped.\n\n"
+        f"A video from one of your channels couldn't be processed.{title_line}\n\n"
+        f"Reason: {reason_label}\n\n"
         f'<a href="https://youtu.be/{video_id}">Watch on YouTube</a>'
     )
     for chat_id in chat_ids:
@@ -427,21 +447,31 @@ async def _process_video(
                 return
 
             logger.error(f"[{video_id}] Transcript extraction failed: {error}")
+
+            # Always alert the admin log bot for transcript failures
+            await alert_system.send_alert(
+                f"🔴 <b>Transcript failed</b>\n\n"
+                f"<b>{video_title[:60]}</b>\n"
+                f"Reason: {error or 'unknown'}\n"
+                f"https://youtu.be/{video_id}",
+                level="ERROR",
+            )
+
             if TranscriptExtractor.should_retry(error):
-                # Transient error (rate limit, video not yet available) — retry later
+                # Transient error — retry later. Only notify user if permanently exhausted.
                 logger.info(f"[{video_id}] Will retry later")
                 permanent = db.fail_job(
                     job["id"],
                     retry_after_minutes=30 if error == "youtube_auth_required" else 0,
                 )
                 if permanent:
-                    await _notify_video_failure(video_id, alert_system)
+                    await _notify_video_failure(video_id, alert_system, video_title, error)
             else:
-                # Deterministic error (transcripts disabled, video private) — fail immediately
-                logger.info(f"[{video_id}] Permanent transcript failure — no retry")
+                # Deterministic failure — fail immediately, notify user.
+                logger.info(f"[{video_id}] Permanent transcript failure ({error}) — no retry")
                 db.fail_job(job["id"], immediate=True)
-                await _notify_video_failure(video_id, alert_system)
                 stats.record_video_failed("TranscriptUnavailable", error or "no_transcript")
+                await _notify_video_failure(video_id, alert_system, video_title, error)
             return
 
         logger.info(
@@ -546,12 +576,6 @@ async def _process_video(
             f"steps: transcript={_t_transcript:.1f}s summary={_t_summary:.1f}s "
             f"tts={_t_audio:.1f}s upload={_t_upload:.1f}s)"
         )
-        await alert_system.send_alert(
-            f"✅ **Video processed**\n\n"
-            f"Title: {video_title[:60]}\n"
-            f"Time: {processing_time:.1f}s | Cost: ${transcript_cost:.4f}",
-            level="SUCCESS"
-        )
 
     except asyncio.TimeoutError:
         logger.error(f"[{video_id}] Timeout")
@@ -559,7 +583,7 @@ async def _process_video(
         if not _video_completed:
             db.mark_video_failed(video_id, language=user_language)
             if permanent:
-                await _notify_video_failure(video_id, alert_system)
+                await _notify_video_failure(video_id, alert_system, video_title, "timeout")
         else:
             logger.warning(f"[{video_id}] Timeout after successful completion — not marking as failed")
         stats.record_video_failed("Timeout", f"Timeout: {video_title}")
@@ -572,7 +596,7 @@ async def _process_video(
         if not _video_completed:
             db.mark_video_failed(video_id, language=user_language)
             if permanent:
-                await _notify_video_failure(video_id, alert_system)
+                await _notify_video_failure(video_id, alert_system, video_title, type(e).__name__)
         else:
             logger.warning(f"[{video_id}] Post-completion error (bookkeeping) — not marking as failed: {error_msg}")
         stats.record_video_failed(type(e).__name__, error_msg)
@@ -707,7 +731,7 @@ async def processor_loop(alert_system: MonitoringAlert):
                         permanent = db.fail_job(j["id"])
                         db.mark_video_failed(j["video_id"], language=j.get("user_language", "fr"))
                         if permanent:
-                            await _notify_video_failure(j["video_id"], alert_system)
+                            await _notify_video_failure(j["video_id"], alert_system, j.get("video_title", ""), "permanent_failure")
                     except Exception:
                         pass
                 finally:
@@ -1407,6 +1431,7 @@ async def main():
 
     # Initialize monitoring alert system
     alert_system = MonitoringAlert(bot_app, ADMIN_TELEGRAM_CHAT_ID)
+    bot_app.bot_data["alert_system"] = alert_system
 
     # Send startup alert
     if ADMIN_TELEGRAM_CHAT_ID:
