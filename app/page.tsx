@@ -73,7 +73,7 @@ const jsonLd = [
     "@type": "Organization",
     name: SiteConfig.title,
     url: SiteConfig.prodUrl,
-    logo: `${SiteConfig.prodUrl}/images/icon.png`,
+    logo: `${SiteConfig.prodUrl}/logo-hd.png`,
     sameAs: [`https://t.me/brief_tube_bot`],
   },
   {

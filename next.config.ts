@@ -47,6 +47,13 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
+      // Redirect non-www → www (canonical domain)
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "brief-tube.com" }],
+        destination: "https://www.brief-tube.com/:path*",
+        permanent: true,
+      },
       {
         source: "/orgs/:path*",
         destination: "/dashboard",
