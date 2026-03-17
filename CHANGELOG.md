@@ -4,6 +4,7 @@
 
 FIX: SEO — JSON-LD Organization logo pointait vers /images/icon.png (404) → corrigé vers /logo-hd.png
 FIX: SEO — Redirect 301 non-www → www pour éliminer les pages dupliquées (brief-tube.com → www.brief-tube.com)
+FIX: SEO — Supprime app/home/page.tsx (doublon de /) + redirect 301 /home → /
 REFACTOR: Language UX on summary cards — Add internal favorites state to LanguagePicker for instant visual feedback when starring languages inside dialogs; redesign SummaryRow dropdown with favorited languages as starred items and "Autre langue…" picker at bottom
 FEATURE: SummaryRow — Add dropdown menu (•••) with YouTube link, share button, and language generation options for favorite languages
 REFACTOR: Extract LanguagePicker to standalone component — reused from DeliverySection and SummariesFeed dropdown without code duplication

@@ -54,6 +54,12 @@ const nextConfig: NextConfig = {
         destination: "https://www.brief-tube.com/:path*",
         permanent: true,
       },
+      // Duplicate landing page
+      {
+        source: "/home",
+        destination: "/",
+        permanent: true,
+      },
       {
         source: "/orgs/:path*",
         destination: "/dashboard",
