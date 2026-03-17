@@ -124,7 +124,7 @@ export default async function ProfilePage(props: {
       initialPushEnabled={profile?.notify_new_summaries_push ?? true}
       initialNewsletter={profile?.email_newsletter ?? true}
       initialAnnouncements={profile?.email_announcements ?? true}
-      initialDailyDigest={profile?.newsletter_enabled ?? false}
+      initialDailyDigest={profile?.newsletter_enabled ?? true}
       initialDigestHour={profile?.newsletter_hour ?? 8}
     />
   );

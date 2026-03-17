@@ -4,6 +4,9 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { articles } from "@/content/blog";
 import { comparisons } from "@/content/comparisons";
 
+// Revalidate every hour — avoids hammering Supabase on every Googlebot crawl
+export const revalidate = 3600;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const supabase = createAdminClient();
   const [{ data: publicLists }, { data: channelRows }, { data: lastVideos }] =
@@ -22,7 +25,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         .select("video_id, channel_id, created_at")
         .eq("status", "completed")
         .order("created_at", { ascending: false })
-        .limit(1000),
+        .limit(300),
     ]);
 
   const allChannelIds = new Set((channelRows ?? []).map((r) => r.channel_id));
@@ -40,38 +43,38 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     {
       url: `${SiteConfig.prodUrl}`,
-      lastModified: new Date("2026-02-24"),
+      lastModified: new Date("2026-03-16"),
       changeFrequency: "weekly",
       priority: 1,
     },
     {
       url: `${SiteConfig.prodUrl}/pricing`,
-      lastModified: new Date("2026-02-24"),
+      lastModified: new Date("2026-03-16"),
       changeFrequency: "monthly",
       priority: 0.8,
     },
     {
       url: `${SiteConfig.prodUrl}/privacy`,
-      lastModified: new Date("2026-02-18"),
+      lastModified: new Date("2026-03-16"),
       changeFrequency: "yearly",
       priority: 0.3,
     },
     {
       url: `${SiteConfig.prodUrl}/terms`,
-      lastModified: new Date("2026-02-18"),
+      lastModified: new Date("2026-03-16"),
       changeFrequency: "yearly",
       priority: 0.3,
     },
     {
       url: `${SiteConfig.prodUrl}/support`,
-      lastModified: new Date("2026-02-18"),
+      lastModified: new Date("2026-03-16"),
       changeFrequency: "monthly",
       priority: 0.4,
     },
     // Blog
     {
       url: `${SiteConfig.prodUrl}/blog`,
-      lastModified: new Date("2026-02-24"),
+      lastModified: new Date("2026-03-16"),
       changeFrequency: "weekly",
       priority: 0.7,
     },
@@ -84,7 +87,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Comparisons
     {
       url: `${SiteConfig.prodUrl}/vs`,
-      lastModified: new Date("2026-02-24"),
+      lastModified: new Date("2026-03-16"),
       changeFrequency: "monthly",
       priority: 0.6,
     },

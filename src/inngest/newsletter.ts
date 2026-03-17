@@ -115,7 +115,7 @@ export const sendUserNewsletter = inngest.createFunction(
             youtubeUrl:
               v.video_url ?? `https://youtube.com/watch?v=${d.video_id}`,
             summary: v.summary,
-            briefUrl: `${SiteConfig.prodUrl}/videos/${d.video_id}`,
+            briefUrl: `${SiteConfig.prodUrl}/dashboard?video=${d.video_id}`,
           } satisfies NewsletterVideo;
         })
         .filter((v): v is NewsletterVideo => v !== null);
@@ -144,7 +144,7 @@ export const sendUserNewsletter = inngest.createFunction(
       await resend.emails.send({
         from: env.EMAIL_FROM ?? `BriefTube <hello@${SiteConfig.domain}>`,
         to: email,
-        subject: `Tes résumés du jour — ${date}`,
+        subject: `Your daily summaries — ${date}`,
         html,
       });
 

@@ -32,7 +32,7 @@ export function DailyNewsletterEmail({ videos, date, unsubscribeUrl }: Props) {
     <Html>
       <Head />
       <Preview>
-        {`${videos.length} résumé${videos.length > 1 ? "s" : ""} audio du ${date}`}
+        {`${videos.length} audio summar${videos.length > 1 ? "ies" : "y"} for ${date}`}
       </Preview>
       <Body style={body}>
         <Container style={container}>
@@ -47,11 +47,11 @@ export function DailyNewsletterEmail({ videos, date, unsubscribeUrl }: Props) {
           {/* Intro */}
           <Section style={section}>
             <Text style={intro}>
-              Voici tes{" "}
+              Here are your{" "}
               <strong>
-                {videos.length} résumé{videos.length > 1 ? "s" : ""} audio
+                {videos.length} audio summar{videos.length > 1 ? "ies" : "y"}
               </strong>{" "}
-              du jour.
+              for today.
             </Text>
           </Section>
 
@@ -75,10 +75,10 @@ export function DailyNewsletterEmail({ videos, date, unsubscribeUrl }: Props) {
               </Text>
               <div style={buttonRow}>
                 <Button href={video.briefUrl} style={primaryButton}>
-                  Écouter le résumé audio
+                  Listen to audio summary
                 </Button>
                 <Button href={video.youtubeUrl} style={secondaryButton}>
-                  Voir sur YouTube
+                  Watch on YouTube
                 </Button>
               </div>
               {i < videos.length - 1 && <Hr style={cardDivider} />}
@@ -90,7 +90,8 @@ export function DailyNewsletterEmail({ videos, date, unsubscribeUrl }: Props) {
           {/* Footer */}
           <Section style={footer}>
             <Text style={footerText}>
-              Tu reçois cet email parce que tu as activé le digest quotidien sur{" "}
+              You are receiving this email because you enabled the daily digest
+              on{" "}
               <a href="https://brief-tube.com" style={link}>
                 BriefTube
               </a>
@@ -98,7 +99,7 @@ export function DailyNewsletterEmail({ videos, date, unsubscribeUrl }: Props) {
             </Text>
             <Text style={footerText}>
               <a href={unsubscribeUrl} style={unsubLink}>
-                Se désabonner
+                Unsubscribe
               </a>
             </Text>
           </Section>

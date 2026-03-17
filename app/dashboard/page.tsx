@@ -12,6 +12,7 @@ import { ProcessingVideoCard } from "@/components/dashboard/processing-video-car
 import { PendingVideoProcessor } from "@/components/dashboard/pending-video-processor";
 import { StatsSheet } from "@/components/dashboard/stats-sheet";
 import { ChannelsSheet } from "@/components/dashboard/channels-sheet";
+import { VideoHighlighter } from "@/components/dashboard/video-highlighter";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -70,6 +71,11 @@ export default async function DashboardPage() {
         hasConnection={(connections ?? []).length > 0}
         language={profile.preferred_language ?? "fr"}
       />
+
+      {/* Deep-link from email digest — highlights the target video */}
+      <Suspense fallback={null}>
+        <VideoHighlighter />
+      </Suspense>
 
       {/* Push notification banner */}
       <Suspense fallback={null}>
