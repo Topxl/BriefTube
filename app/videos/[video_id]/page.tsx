@@ -9,8 +9,6 @@ import { Footer } from "@/components/landing/footer";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "@/lib/icons";
 
-export const revalidate = 3600;
-
 type Props = {
   params: Promise<{ video_id: string }>;
 };

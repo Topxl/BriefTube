@@ -4,9 +4,6 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { articles } from "@/content/blog";
 import { comparisons } from "@/content/comparisons";
 
-// Revalidate every hour — avoids hammering Supabase on every Googlebot crawl
-export const revalidate = 3600;
-
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const supabase = createAdminClient();
   const [{ data: publicLists }, { data: channelRows }, { data: lastVideos }] =
