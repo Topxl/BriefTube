@@ -2,6 +2,17 @@
 
 ## 2026-03-17
 
+FIX: Monitoring bot — errors-only mode (remove success spam), transcript failures now sent to admin log bot with error detail
+FIX: Video failure user notification now includes video title and human-readable error reason
+FEATURE: /log_toggle command to enable/disable delivery mirroring in admin log bot
+
+## 2026-03-17
+
+FEATURE: Daily digest email links directly to the specific summary in the dashboard via /dashboard?video={id} — VideoHighlighter promotes it to top of feed on arrival
+CHORE: Daily digest delivery time displayed in local timezone — converts local↔UTC on save/load
+FEATURE: Admin email dashboard redesigned — workflow registry (email-workflows.ts) drives visual cards per automation showing trigger, conditions, audience and stats; self-updating when code changes
+CHORE: newsletter_enabled defaults to true in DB and profile page fallback — existing NULL rows updated
+CHORE: Translate daily digest email template to English (preview, intro, buttons, footer, subject lines)
 FEATURE: Daily newsletter digest — Inngest cron fan-out sends per-user email digest of last 24h summaries via Resend; React Email template with thumbnails, summaries and CTAs
 FEATURE: Profile settings — Daily digest toggle + UTC hour picker in Notifications section
 CHORE: Add newsletter_enabled + newsletter_hour columns to profiles table (Supabase migration)
