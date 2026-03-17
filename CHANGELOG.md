@@ -2,6 +2,7 @@
 
 ## 2026-03-17
 
+FEATURE: Add email preview per workflow in admin emails dashboard
 FEATURE: Admin email dashboard v2 — open rate, conversion rate, eligible audience, 14-day sparkline per workflow; single enriched DB query; DigestTriggerButton integrated in Daily Digest card
 FIX: Monitoring bot — errors-only mode (remove success spam), transcript failures now sent to admin log bot with error detail
 FIX: Video failure user notification now includes video title and human-readable error reason

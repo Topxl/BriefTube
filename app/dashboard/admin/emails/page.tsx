@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { env } from "@/lib/env";
 import { Resend } from "resend";
-import { Send, CheckCircle } from "@/lib/icons";
+import { Send, CheckCircle, Eye } from "@/lib/icons";
 import { AdminBreadcrumb } from "@/components/admin/admin-breadcrumb";
 import { DigestTriggerButton } from "@/components/admin/digest-trigger-button";
 import { EMAIL_WORKFLOWS } from "@/lib/email-workflows";
@@ -265,6 +265,15 @@ function WorkflowCard({
             <DigestTriggerButton />
           </div>
         )}
+        <a
+          href={`/api/admin/email-preview/${workflow.id}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`${isDigest ? "" : "ml-auto"} text-muted-foreground/40 hover:text-muted-foreground rounded p-1 transition-colors`}
+          title="Preview email"
+        >
+          <Eye className="h-3.5 w-3.5" />
+        </a>
       </div>
     </div>
   );

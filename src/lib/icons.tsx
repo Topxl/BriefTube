@@ -32,6 +32,7 @@ import {
   Copy as _Copy,
   CopyIcon as _CopyIcon,
   Download as _Download,
+  Eye as _Eye,
   ExternalLink as _ExternalLink,
   ExternalLinkIcon as _ExternalLinkIcon,
   Headphones as _Headphones,
@@ -122,6 +123,7 @@ export const Clock = wrap(_Clock);
 export const Copy = wrap(_Copy);
 export const CopyIcon = wrap(_CopyIcon);
 export const Download = wrap(_Download);
+export const Eye = wrap(_Eye);
 export const ExternalLink = wrap(_ExternalLink);
 export const ExternalLinkIcon = wrap(_ExternalLinkIcon);
 export const Headphones = wrap(_Headphones);
