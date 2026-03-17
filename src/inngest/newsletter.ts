@@ -147,6 +147,14 @@ export const sendUserNewsletter = inngest.createFunction(
         subject: `Tes résumés du jour — ${date}`,
         html,
       });
+
+      // Log to email_logs so admin dashboard can track digest sends
+      const supabase = createAdminClient();
+      await supabase.from("email_logs").insert({
+        user_id: userId,
+        email_type: "daily_digest",
+        sent_at: new Date().toISOString(),
+      });
     });
 
     return { sent: true, count: videos.length };

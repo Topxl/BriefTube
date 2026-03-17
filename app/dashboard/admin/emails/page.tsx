@@ -4,17 +4,16 @@ import { env } from "@/lib/env";
 import { Resend } from "resend";
 import { Mail, Send, Activity, CheckCircle } from "@/lib/icons";
 import { AdminBreadcrumb } from "@/components/admin/admin-breadcrumb";
-import { NewsletterSeedButton } from "@/components/admin/newsletter-seed-button";
-import { TrialRemindersButton } from "@/components/admin/trial-reminders-button";
-import { ActivationEmailsButton } from "@/components/admin/activation-emails-button";
-import { ReengagementEmailsButton } from "@/components/admin/reengagement-emails-button";
-import { ReferralTrialEmailsButton } from "@/components/admin/referral-trial-emails-button";
-import { OnboardingApologyButton } from "@/components/admin/onboarding-apology-button";
+import { DigestTriggerButton } from "@/components/admin/digest-trigger-button";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type EmailLogRow = { email_type: string | null; created_at: string | null };
-type EmailTypeStats = { total: number; last30d: number; lastSentAt: string | null };
+type EmailTypeStats = {
+  total: number;
+  last30d: number;
+  lastSentAt: string | null;
+};
 
 const EMAIL_TYPE_LABELS: Record<string, string> = {
   trial_reminder_j3: "Trial reminder J-3",
@@ -25,6 +24,7 @@ const EMAIL_TYPE_LABELS: Record<string, string> = {
   referral_trial_j3: "Parrainage J-3",
   referral_trial_j1: "Parrainage J-1",
   onboarding_apology: "Onboarding apology",
+  daily_digest: "Daily digest",
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -45,11 +45,21 @@ type StatCardProps = {
   variant?: "default" | "success" | "warning" | "danger";
 };
 
-function StatCard({ label, value, sub, icon, variant = "default" }: StatCardProps) {
+function StatCard({
+  label,
+  value,
+  sub,
+  icon,
+  variant = "default",
+}: StatCardProps) {
   const accent =
-    variant === "success" ? "text-emerald-400" :
-    variant === "warning" ? "text-yellow-400" :
-    variant === "danger" ? "text-red-400" : "text-foreground";
+    variant === "success"
+      ? "text-emerald-400"
+      : variant === "warning"
+        ? "text-yellow-400"
+        : variant === "danger"
+          ? "text-red-400"
+          : "text-foreground";
   return (
     <div className="nm-raised flex flex-col gap-3 rounded-xl px-4 py-3">
       <div className="flex items-center justify-between">
@@ -58,12 +68,13 @@ function StatCard({ label, value, sub, icon, variant = "default" }: StatCardProp
       </div>
       <div>
         <p className={`text-2xl font-bold tabular-nums ${accent}`}>{value}</p>
-        {sub && <p className="text-muted-foreground mt-0.5 text-[11px]">{sub}</p>}
+        {sub && (
+          <p className="text-muted-foreground mt-0.5 text-[11px]">{sub}</p>
+        )}
       </div>
     </div>
   );
 }
-
 
 function timeAgo(iso: string) {
   const diff = Date.now() - new Date(iso).getTime();
@@ -79,7 +90,9 @@ function timeAgo(iso: string) {
 export default async function AdminEmailsPage() {
   // Auth
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!env.ADMIN_USER_ID || user?.id !== env.ADMIN_USER_ID) {
     redirect("/dashboard");
   }
@@ -111,15 +124,37 @@ export default async function AdminEmailsPage() {
     } else {
       entry.total++;
       if (isRecent) entry.last30d++;
-      if (log.created_at && (!entry.lastSentAt || log.created_at > entry.lastSentAt)) {
+      if (
+        log.created_at &&
+        (!entry.lastSentAt || log.created_at > entry.lastSentAt)
+      ) {
         entry.lastSentAt = log.created_at;
       }
     }
   }
   const emailTypeStats = emailTypeStatsMap as Record<string, EmailTypeStats>;
   const totalEmailsSent30d = Object.values(emailTypeStats).reduce(
-    (s, e) => s + e.last30d, 0,
+    (s, e) => s + e.last30d,
+    0,
   );
+
+  // ── Newsletter digest stats ───────────────────────────────────────────────
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const digestLogs = emailLogs.filter((l) => l.email_type === "daily_digest");
+  const digestSentToday = digestLogs.filter(
+    (l) => l.created_at && new Date(l.created_at) >= today,
+  ).length;
+  const digestSent30d = digestLogs.filter(
+    (l) => l.created_at && new Date(l.created_at) >= thirtyDaysAgo,
+  ).length;
+
+  const { data: digestSubscribers } = await admin
+    .from("profiles")
+    .select("id", { count: "exact", head: true })
+    .eq("newsletter_enabled", true);
+  const digestSubscriberCount =
+    (digestSubscribers as unknown as { count?: number } | null)?.count ?? 0;
 
   // ── Resend: recent sent emails ────────────────────────────────────────────
   type ResendEmail = {
@@ -152,9 +187,10 @@ export default async function AdminEmailsPage() {
   const deliveredCount = resendEmails.filter(
     (e) => (e.last_event ?? "delivered") === "delivered",
   ).length;
-  const deliveryRate = resendEmails.length > 0
-    ? Math.round((deliveredCount / resendEmails.length) * 100)
-    : 100;
+  const deliveryRate =
+    resendEmails.length > 0
+      ? Math.round((deliveredCount / resendEmails.length) * 100)
+      : 100;
 
   return (
     <div className="flex flex-col gap-6">
@@ -192,9 +228,19 @@ export default async function AdminEmailsPage() {
           <StatCard
             label="Livraison Resend"
             value={resendEmails.length > 0 ? `${deliveryRate}%` : "—"}
-            sub={resendEmails.length > 0 ? `${resendEmails.length} emails` : "Non configuré"}
+            sub={
+              resendEmails.length > 0
+                ? `${resendEmails.length} emails`
+                : "Non configuré"
+            }
             icon={<CheckCircle className="h-4 w-4" />}
-            variant={deliveryRate >= 95 ? "success" : deliveryRate >= 80 ? "warning" : "danger"}
+            variant={
+              deliveryRate >= 95
+                ? "success"
+                : deliveryRate >= 80
+                  ? "warning"
+                  : "danger"
+            }
           />
         </div>
       </div>
@@ -204,18 +250,29 @@ export default async function AdminEmailsPage() {
         <SectionTitle>Campagnes internes</SectionTitle>
         <div className="nm-raised overflow-hidden rounded-xl">
           <div className="flex items-center border-b border-white/[0.04] px-4 py-2">
-            <p className="text-muted-foreground flex-1 text-xs font-medium">Campagne</p>
-            <p className="text-muted-foreground w-10 text-right text-[10px]">30j</p>
-            <p className="text-muted-foreground w-12 text-right text-[10px]">total</p>
+            <p className="text-muted-foreground flex-1 text-xs font-medium">
+              Campagne
+            </p>
+            <p className="text-muted-foreground w-10 text-right text-[10px]">
+              30j
+            </p>
+            <p className="text-muted-foreground w-12 text-right text-[10px]">
+              total
+            </p>
           </div>
           {Object.keys(emailTypeStats).length === 0 ? (
-            <p className="text-muted-foreground px-4 py-4 text-sm">Aucun email envoyé</p>
+            <p className="text-muted-foreground px-4 py-4 text-sm">
+              Aucun email envoyé
+            </p>
           ) : (
             <div className="divide-y divide-white/[0.04]">
               {Object.entries(emailTypeStats)
                 .sort((a, b) => b[1].total - a[1].total)
                 .map(([type, stats]) => (
-                  <div key={type} className="flex items-center gap-2 px-4 py-2.5">
+                  <div
+                    key={type}
+                    className="flex items-center gap-2 px-4 py-2.5"
+                  >
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm">
                         {EMAIL_TYPE_LABELS[type] ?? type}
@@ -223,13 +280,20 @@ export default async function AdminEmailsPage() {
                       {stats.lastSentAt && (
                         <p className="text-muted-foreground text-[11px]">
                           Dernier :{" "}
-                          {new Date(stats.lastSentAt).toLocaleDateString("fr-FR", {
-                            day: "2-digit", month: "2-digit", year: "2-digit",
-                          })}
+                          {new Date(stats.lastSentAt).toLocaleDateString(
+                            "fr-FR",
+                            {
+                              day: "2-digit",
+                              month: "2-digit",
+                              year: "2-digit",
+                            },
+                          )}
                         </p>
                       )}
                     </div>
-                    <span className={`w-10 text-right text-sm tabular-nums ${stats.last30d > 0 ? "text-emerald-400" : "text-muted-foreground/30"}`}>
+                    <span
+                      className={`w-10 text-right text-sm tabular-nums ${stats.last30d > 0 ? "text-emerald-400" : "text-muted-foreground/30"}`}
+                    >
                       {stats.last30d}
                     </span>
                     <span className="w-12 text-right text-sm font-medium tabular-nums">
@@ -247,20 +311,29 @@ export default async function AdminEmailsPage() {
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between px-1">
             <SectionTitle>Historique Resend</SectionTitle>
-            <span className="text-muted-foreground text-xs">{resendEmails.length} emails</span>
+            <span className="text-muted-foreground text-xs">
+              {resendEmails.length} emails
+            </span>
           </div>
 
           {/* Par sujet */}
           <div className="nm-raised overflow-hidden rounded-xl">
             <div className="flex items-center border-b border-white/[0.04] px-4 py-2">
-              <p className="text-muted-foreground flex-1 text-xs font-medium">Sujet</p>
-              <p className="text-muted-foreground w-12 text-right text-[10px]">envoyés</p>
+              <p className="text-muted-foreground flex-1 text-xs font-medium">
+                Sujet
+              </p>
+              <p className="text-muted-foreground w-12 text-right text-[10px]">
+                envoyés
+              </p>
             </div>
             <div className="divide-y divide-white/[0.04]">
               {Object.entries(resendBySubject)
                 .sort((a, b) => b[1] - a[1])
                 .map(([subject, count]) => (
-                  <div key={subject} className="flex items-center gap-2 px-4 py-2.5">
+                  <div
+                    key={subject}
+                    className="flex items-center gap-2 px-4 py-2.5"
+                  >
                     <p className="min-w-0 flex-1 truncate text-sm">{subject}</p>
                     <span className="text-foreground w-12 text-right text-sm font-medium tabular-nums">
                       {count}
@@ -273,20 +346,31 @@ export default async function AdminEmailsPage() {
           {/* 10 derniers emails */}
           <div className="nm-raised overflow-hidden rounded-xl">
             <div className="flex items-center border-b border-white/[0.04] px-4 py-2">
-              <p className="text-muted-foreground flex-1 text-xs font-medium">Destinataire</p>
-              <p className="text-muted-foreground hidden w-40 text-right text-[10px] sm:block">Sujet</p>
-              <p className="text-muted-foreground w-12 text-right text-[10px]">Envoyé</p>
+              <p className="text-muted-foreground flex-1 text-xs font-medium">
+                Destinataire
+              </p>
+              <p className="text-muted-foreground hidden w-40 text-right text-[10px] sm:block">
+                Sujet
+              </p>
+              <p className="text-muted-foreground w-12 text-right text-[10px]">
+                Envoyé
+              </p>
             </div>
             <div className="divide-y divide-white/[0.04]">
               {resendEmails.slice(0, 15).map((email) => {
                 const to = Array.isArray(email.to) ? email.to[0] : email.to;
                 const isDev = email.subject.startsWith("[DEV]");
                 return (
-                  <div key={email.id} className="flex items-center gap-2 px-4 py-2.5">
+                  <div
+                    key={email.id}
+                    className="flex items-center gap-2 px-4 py-2.5"
+                  >
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm">{to}</p>
                       {isDev && (
-                        <span className="text-muted-foreground text-[10px]">DEV</span>
+                        <span className="text-muted-foreground text-[10px]">
+                          DEV
+                        </span>
                       )}
                     </div>
                     <p className="text-muted-foreground hidden w-40 truncate text-right text-[11px] sm:block">
@@ -303,32 +387,73 @@ export default async function AdminEmailsPage() {
         </div>
       )}
 
-      {/* ── Actions manuelles ── */}
+      {/* ── Newsletter digest ── */}
       <div className="flex flex-col gap-2">
-        <SectionTitle>Actions manuelles</SectionTitle>
-        <div className="nm-raised flex items-center justify-between rounded-xl px-4 py-3">
-          <p className="text-muted-foreground text-sm">Sync users → Resend audience</p>
-          <NewsletterSeedButton />
+        <SectionTitle>Newsletter digest</SectionTitle>
+        <div className="grid grid-cols-3 gap-2">
+          <StatCard
+            label="Abonnés actifs"
+            value={digestSubscriberCount}
+            icon={<Mail className="h-4 w-4" />}
+            variant={digestSubscriberCount > 0 ? "success" : "default"}
+          />
+          <StatCard
+            label="Envoyés aujourd'hui"
+            value={digestSentToday}
+            icon={<Send className="h-4 w-4" />}
+            variant={digestSentToday > 0 ? "success" : "default"}
+          />
+          <StatCard
+            label="Envoyés 30j"
+            value={digestSent30d}
+            icon={<Activity className="h-4 w-4" />}
+            variant={digestSent30d > 0 ? "success" : "default"}
+          />
         </div>
+
+        {/* Derniers envois */}
+        {digestLogs.length > 0 && (
+          <div className="nm-raised overflow-hidden rounded-xl">
+            <div className="flex items-center border-b border-white/[0.04] px-4 py-2">
+              <p className="text-muted-foreground flex-1 text-xs font-medium">
+                User ID
+              </p>
+              <p className="text-muted-foreground w-16 text-right text-[10px]">
+                Envoyé
+              </p>
+            </div>
+            <div className="divide-y divide-white/[0.04]">
+              {digestLogs
+                .filter(
+                  (l): l is EmailLogRow & { created_at: string } =>
+                    !!l.created_at,
+                )
+                .sort(
+                  (a, b) =>
+                    new Date(b.created_at).getTime() -
+                    new Date(a.created_at).getTime(),
+                )
+                .slice(0, 10)
+                .map((log, i) => (
+                  <div key={i} className="flex items-center gap-2 px-4 py-2.5">
+                    <p className="text-muted-foreground min-w-0 flex-1 truncate font-mono text-xs">
+                      {log.created_at}
+                    </p>
+                    <span className="text-muted-foreground w-16 text-right text-[11px] tabular-nums">
+                      {timeAgo(log.created_at)}
+                    </span>
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
+
+        {/* Test manuel */}
         <div className="nm-raised flex flex-col gap-2 rounded-xl px-4 py-3">
-          <p className="text-muted-foreground text-sm">Trial reminders (J-3, J-1, expiré)</p>
-          <TrialRemindersButton />
-        </div>
-        <div className="nm-raised flex flex-col gap-2 rounded-xl px-4 py-3">
-          <p className="text-muted-foreground text-sm">Activation emails (Telegram non connecté +24h)</p>
-          <ActivationEmailsButton />
-        </div>
-        <div className="nm-raised flex flex-col gap-2 rounded-xl px-4 py-3">
-          <p className="text-muted-foreground text-sm">Re-engagement (Pro · Telegram · 0 delivery 7j)</p>
-          <ReengagementEmailsButton />
-        </div>
-        <div className="nm-raised flex flex-col gap-2 rounded-xl px-4 py-3">
-          <p className="text-muted-foreground text-sm">Referral trial emails (J-3 / J-1)</p>
-          <ReferralTrialEmailsButton />
-        </div>
-        <div className="nm-raised flex flex-col gap-2 rounded-xl border border-yellow-500/20 px-4 py-3">
-          <p className="text-muted-foreground text-sm">Onboarding apology (Feb 22–28 · one-time)</p>
-          <OnboardingApologyButton />
+          <p className="text-muted-foreground text-sm">
+            Envoyer un digest de test (24h) à ton compte
+          </p>
+          <DigestTriggerButton />
         </div>
       </div>
     </div>

@@ -11,6 +11,7 @@ import {
   type ReferralTrialResult,
 } from "@/lib/cron/referral-trial-emails";
 import { runOnboardingApologyEmails } from "@/lib/cron/onboarding-apology-emails";
+import { runDailyDigestForUser } from "@/lib/cron/daily-digest";
 
 type RunResult = { sent: number; skipped: number; errors: number };
 
@@ -50,6 +51,32 @@ export async function triggerReferralTrialEmails(): Promise<ReferralTrialResult>
 export async function triggerOnboardingApologyEmails(): Promise<RunResult> {
   await requireAdmin();
   return runOnboardingApologyEmails();
+}
+
+export async function triggerTestDailyDigest(): Promise<{
+  sent: boolean;
+  skipped: boolean;
+  reason?: string;
+  count?: number;
+}> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user?.id !== ADMIN_USER_ID) redirect("/dashboard");
+
+  const admin = createAdminClient();
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("preferred_language")
+    .eq("id", user.id)
+    .single();
+
+  return runDailyDigestForUser(
+    user.id,
+    user.email ?? "",
+    profile?.preferred_language ?? "fr",
+  );
 }
 
 export async function extendAllTrialsTo30Days(): Promise<{ updated: number }> {
