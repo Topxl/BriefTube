@@ -68,6 +68,7 @@
     "cmdk": "^1.1.1",
     "dayjs": "^1.11.19",
     "front-matter": "^4.0.2",
+    "inngest": "^4.0.0",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.561.0",
     "markdown-to-jsx": "^7.7.13",
