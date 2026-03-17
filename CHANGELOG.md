@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-03-17
+
+FEATURE: Daily newsletter digest — Inngest cron fan-out sends per-user email digest of last 24h summaries via Resend; React Email template with thumbnails, summaries and CTAs
+FEATURE: Profile settings — Daily digest toggle + UTC hour picker in Notifications section
+CHORE: Add newsletter_enabled + newsletter_hour columns to profiles table (Supabase migration)
+CHORE: Install inngest v4, add INNGEST_EVENT_KEY/INNGEST_SIGNING_KEY to env.ts
+
 ## 2026-03-16
 
 FIX: SEO — JSON-LD Organization logo pointait vers /images/icon.png (404) → corrigé vers /logo-hd.png

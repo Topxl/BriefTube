@@ -54,6 +54,8 @@ type Props = {
   initialPushEnabled: boolean;
   initialNewsletter: boolean;
   initialAnnouncements: boolean;
+  initialDailyDigest: boolean;
+  initialDigestHour: number;
 };
 
 export function ProfileContent({
@@ -79,6 +81,8 @@ export function ProfileContent({
   initialPushEnabled,
   initialNewsletter,
   initialAnnouncements,
+  initialDailyDigest,
+  initialDigestHour,
 }: Props) {
   const router = useRouter();
 
@@ -237,6 +241,8 @@ export function ProfileContent({
         initialPushEnabled={initialPushEnabled}
         initialNewsletter={initialNewsletter}
         initialAnnouncements={initialAnnouncements}
+        initialDailyDigest={initialDailyDigest}
+        initialDigestHour={initialDigestHour}
       />
 
       {/* Subscription */}

@@ -21,6 +21,9 @@ export const env = createEnv({
     GEMINI_API_KEY: z.string().optional(),
     WEBSUB_SECRET: z.string().optional(),
     CRON_SECRET: z.string().optional(),
+    // Inngest — workflow orchestration (daily newsletter digest)
+    INNGEST_EVENT_KEY: z.string().optional(),
+    INNGEST_SIGNING_KEY: z.string().optional(),
     ADMIN_USER_ID: z.string().optional(),
     // VPS worker remote API (admin panel logs)
     VPS_WORKER_URL: z.string().url().optional(),

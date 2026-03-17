@@ -464,6 +464,8 @@ export type Database = {
           favorite_languages: string[];
           id: string;
           max_channels: number | null;
+          newsletter_enabled: boolean | null;
+          newsletter_hour: number | null;
           notify_new_summaries_push: boolean | null;
           onboarding_completed: boolean | null;
           preferred_language: string | null;
@@ -487,6 +489,8 @@ export type Database = {
           favorite_languages?: string[];
           id: string;
           max_channels?: number | null;
+          newsletter_enabled?: boolean | null;
+          newsletter_hour?: number | null;
           notify_new_summaries_push?: boolean | null;
           onboarding_completed?: boolean | null;
           preferred_language?: string | null;
@@ -510,6 +514,8 @@ export type Database = {
           favorite_languages?: string[];
           id?: string;
           max_channels?: number | null;
+          newsletter_enabled?: boolean | null;
+          newsletter_hour?: number | null;
           notify_new_summaries_push?: boolean | null;
           onboarding_completed?: boolean | null;
           preferred_language?: string | null;
