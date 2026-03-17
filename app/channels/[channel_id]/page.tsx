@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { ExternalLink } from "lucide-react";
+
+export const revalidate = 3600;
 import { createAdminClient } from "@/lib/supabase/server";
 import { SiteConfig } from "@/site-config";
 import { Typography } from "@/components/nowts/typography";

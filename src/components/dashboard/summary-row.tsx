@@ -82,7 +82,7 @@ export function SummaryRow({
   delivery,
   resolvedTitle,
   favoriteLanguages = [],
-  onManageFavorites,
+  onManageFavorites: _onManageFavorites,
   onToggleFavorite,
 }: {
   delivery: EnrichedDelivery;

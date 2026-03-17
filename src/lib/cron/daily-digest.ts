@@ -71,7 +71,7 @@ export async function runDailyDigestForUser(
         title: v.video_title,
         youtubeUrl: v.video_url ?? `https://youtube.com/watch?v=${d.video_id}`,
         summary: v.summary,
-        briefUrl: `${SiteConfig.prodUrl}/videos/${d.video_id}`,
+        briefUrl: `${SiteConfig.prodUrl}/dashboard?video=${d.video_id}`,
       } satisfies NewsletterVideo;
     })
     .filter((v): v is NewsletterVideo => v !== null);
@@ -98,7 +98,7 @@ export async function runDailyDigestForUser(
   await resend.emails.send({
     from: env.EMAIL_FROM ?? `BriefTube <hello@${SiteConfig.domain}>`,
     to: email,
-    subject: `[TEST] Digest — ${date}`,
+    subject: `[TEST] Daily digest — ${date}`,
     html,
   });
 

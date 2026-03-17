@@ -2,32 +2,42 @@ import { redirect } from "next/navigation";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { env } from "@/lib/env";
 import { Resend } from "resend";
-import { Mail, Send, Activity, CheckCircle } from "@/lib/icons";
+import { Send, CheckCircle } from "@/lib/icons";
 import { AdminBreadcrumb } from "@/components/admin/admin-breadcrumb";
 import { DigestTriggerButton } from "@/components/admin/digest-trigger-button";
+import { EMAIL_WORKFLOWS } from "@/lib/email-workflows";
+import type { WorkflowDef, ConversionMetric } from "@/lib/email-workflows";
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+type RawLog = {
+  email_type: string;
+  sent_at: string;
+  opened_at: string | null;
+  profiles: {
+    email: string | null;
+    subscription_status: string | null;
+    telegram_connected: boolean | null;
+  } | null;
+};
 
-type EmailLogRow = { email_type: string | null; created_at: string | null };
-type EmailTypeStats = {
+type WorkflowData = {
   total: number;
   last30d: number;
+  opened: number;
   lastSentAt: string | null;
+  sparkline: number[];
+  conversionConverted: number;
+  conversionTotal: number;
+  eligibleNow: number;
 };
 
-const EMAIL_TYPE_LABELS: Record<string, string> = {
-  trial_reminder_j3: "Trial reminder J-3",
-  trial_reminder_j1: "Trial reminder J-1",
-  trial_expired: "Trial expiré",
-  activation_telegram: "Activation Telegram",
-  reengagement_7d: "Re-engagement 7j",
-  referral_trial_j3: "Parrainage J-3",
-  referral_trial_j1: "Parrainage J-1",
-  onboarding_apology: "Onboarding apology",
-  daily_digest: "Daily digest",
+type EligibleCounts = {
+  trial_j3: number;
+  trial_j1: number;
+  trial_expired: number;
+  activation: number;
+  reengagement: number;
+  digest_subscribers: number;
 };
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
@@ -37,58 +47,230 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
-type StatCardProps = {
-  label: string;
-  value: string | number;
-  sub?: string;
-  icon: React.ReactNode;
-  variant?: "default" | "success" | "warning" | "danger";
-};
+function timeAgo(iso: string) {
+  const diff = Date.now() - new Date(iso).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
 
-function StatCard({
+function buildSparkline(dayMap: Record<string, number>): number[] {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Array.from({ length: 14 }, (_, i) => {
+    const d = new Date(today);
+    d.setDate(d.getDate() - (13 - i));
+    return dayMap[d.toISOString().slice(0, 10)] ?? 0;
+  });
+}
+
+function isConverted(log: RawLog, metric: ConversionMetric): boolean {
+  if (!metric || !log.profiles) return false;
+  if (metric.field === "subscription_status") {
+    const m = metric as Extract<
+      ConversionMetric,
+      { field: "subscription_status" }
+    >;
+    return log.profiles.subscription_status === m.value;
+  }
+  const m = metric as Extract<
+    ConversionMetric,
+    { field: "telegram_connected" }
+  >;
+  return log.profiles.telegram_connected === m.value;
+}
+
+function TriggerBadge({ type }: { type: WorkflowDef["trigger"]["type"] }) {
+  const styles = {
+    inngest: "bg-violet-500/10 text-violet-400 border-violet-500/20",
+    cron: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+    manual: "bg-zinc-500/10 text-zinc-400 border-zinc-500/20",
+  };
+  const labels = { inngest: "Inngest", cron: "Cron", manual: "Manual" };
+  return (
+    <span
+      className={`rounded border px-1.5 py-0.5 text-[10px] font-medium ${styles[type]}`}
+    >
+      {labels[type]}
+    </span>
+  );
+}
+
+function Sparkline({ data }: { data: number[] }) {
+  const max = Math.max(...data, 1);
+  return (
+    <div className="flex h-5 items-end gap-px">
+      {data.map((v, i) => (
+        <div
+          key={i}
+          className={`flex-1 rounded-[1px] transition-all ${v > 0 ? "bg-white/30" : "bg-white/[0.05]"}`}
+          style={{ height: `${v > 0 ? Math.max((v / max) * 100, 12) : 6}%` }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function MiniRate({
   label,
   value,
   sub,
-  icon,
-  variant = "default",
-}: StatCardProps) {
-  const accent =
-    variant === "success"
-      ? "text-emerald-400"
-      : variant === "warning"
-        ? "text-yellow-400"
-        : variant === "danger"
-          ? "text-red-400"
-          : "text-foreground";
+  color = "bg-emerald-400",
+}: {
+  label: string;
+  value: number | null;
+  sub?: string;
+  color?: string;
+}) {
   return (
-    <div className="nm-raised flex flex-col gap-3 rounded-xl px-4 py-3">
-      <div className="flex items-center justify-between">
-        <p className="text-muted-foreground text-xs font-medium">{label}</p>
-        <div className="text-muted-foreground/40">{icon}</div>
+    <div className="flex flex-col gap-1">
+      <p className="text-muted-foreground/40 text-[10px] font-medium tracking-wide uppercase">
+        {label}
+      </p>
+      <p
+        className={`text-sm font-bold tabular-nums ${value !== null && value > 0 ? "text-foreground" : "text-muted-foreground/30"}`}
+      >
+        {value === null ? "—" : `${value}%`}
+      </p>
+      {value !== null && (
+        <div className="h-0.5 w-full rounded-full bg-white/[0.06]">
+          <div
+            className={`h-full rounded-full ${color}`}
+            style={{ width: `${Math.min(value, 100)}%` }}
+          />
+        </div>
+      )}
+      {sub && <p className="text-muted-foreground/40 text-[10px]">{sub}</p>}
+    </div>
+  );
+}
+
+function WorkflowCard({
+  workflow,
+  data,
+  isDigest = false,
+}: {
+  workflow: WorkflowDef;
+  data: WorkflowData;
+  isDigest?: boolean;
+}) {
+  const Icon = workflow.icon;
+  const isActive = data.last30d > 0;
+  const openRate =
+    data.total > 0 ? Math.round((data.opened / data.total) * 100) : null;
+  const convRate =
+    workflow.conversionMetric && data.conversionTotal > 0
+      ? Math.round((data.conversionConverted / data.conversionTotal) * 100)
+      : null;
+
+  return (
+    <div className="nm-raised flex flex-col gap-4 rounded-xl p-4">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-start gap-2.5">
+          <div className="nm-inset-sm mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg">
+            <Icon className="text-muted-foreground h-3.5 w-3.5" />
+          </div>
+          <div>
+            <p className="text-sm leading-tight font-semibold">
+              {workflow.name}
+            </p>
+            <p className="text-muted-foreground mt-0.5 text-[11px] leading-snug">
+              {workflow.description}
+            </p>
+          </div>
+        </div>
+        <div
+          className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${isActive ? "bg-emerald-400" : "bg-white/10"}`}
+          title={isActive ? "Active — sent in last 30d" : "No recent sends"}
+        />
       </div>
-      <div>
-        <p className={`text-2xl font-bold tabular-nums ${accent}`}>{value}</p>
-        {sub && (
-          <p className="text-muted-foreground mt-0.5 text-[11px]">{sub}</p>
+
+      <div className="flex flex-wrap items-center gap-1.5">
+        <TriggerBadge type={workflow.trigger.type} />
+        <span className="text-muted-foreground text-[11px]">
+          {workflow.trigger.label}
+        </span>
+        {workflow.trigger.schedule && (
+          <code className="text-muted-foreground/50 text-[10px]">
+            {workflow.trigger.schedule}
+          </code>
+        )}
+      </div>
+
+      <div className="grid grid-cols-3 gap-3">
+        <MiniRate label="Open rate" value={openRate} color="bg-blue-400" />
+        <MiniRate
+          label={workflow.conversionMetric ? `Converted` : "Conversion"}
+          value={convRate}
+          sub={workflow.conversionMetric?.label}
+          color="bg-emerald-400"
+        />
+        <div className="flex flex-col gap-1">
+          <p className="text-muted-foreground/40 text-[10px] font-medium tracking-wide uppercase">
+            Eligible now
+          </p>
+          <p
+            className={`text-sm font-bold tabular-nums ${data.eligibleNow > 0 ? "text-yellow-400" : "text-muted-foreground/30"}`}
+          >
+            {data.eligibleNow}
+          </p>
+          <p className="text-muted-foreground/40 text-[10px]">users</p>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <p className="text-muted-foreground/40 text-[10px] font-medium tracking-wide uppercase">
+          Last 14 days
+        </p>
+        <Sparkline data={data.sparkline} />
+      </div>
+
+      <div className="flex flex-col gap-0.5">
+        {workflow.conditions.map((c, i) => (
+          <p
+            key={i}
+            className="text-muted-foreground flex items-start gap-1.5 text-[11px]"
+          >
+            <span className="mt-[3px] shrink-0 text-[7px] opacity-40">▸</span>
+            {c}
+          </p>
+        ))}
+      </div>
+
+      <div className="flex items-center gap-4 border-t border-white/[0.04] pt-3">
+        <div>
+          <p className="text-muted-foreground/50 text-[10px]">30d</p>
+          <p
+            className={`text-sm font-bold tabular-nums ${data.last30d > 0 ? "text-emerald-400" : "text-muted-foreground/30"}`}
+          >
+            {data.last30d}
+          </p>
+        </div>
+        <div>
+          <p className="text-muted-foreground/50 text-[10px]">Total</p>
+          <p className="text-sm font-bold tabular-nums">{data.total}</p>
+        </div>
+        {data.lastSentAt && (
+          <div>
+            <p className="text-muted-foreground/50 text-[10px]">Last</p>
+            <p className="text-muted-foreground text-[11px] tabular-nums">
+              {timeAgo(data.lastSentAt)}
+            </p>
+          </div>
+        )}
+        {isDigest && (
+          <div className="ml-auto">
+            <DigestTriggerButton />
+          </div>
         )}
       </div>
     </div>
   );
 }
 
-function timeAgo(iso: string) {
-  const diff = Date.now() - new Date(iso).getTime();
-  const m = Math.floor(diff / 60000);
-  if (m < 60) return `${m}m`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h`;
-  return `${Math.floor(h / 24)}j`;
-}
-
-// ── Page ──────────────────────────────────────────────────────────────────────
-
 export default async function AdminEmailsPage() {
-  // Auth
   const supabase = await createClient();
   const {
     data: { user },
@@ -97,66 +279,150 @@ export default async function AdminEmailsPage() {
     redirect("/dashboard");
   }
 
+  const now = Date.now(); // eslint-disable-line react-hooks/purity
+  const h = 3_600_000;
+  const thirtyDaysAgo = new Date(now - 30 * 24 * 3600_000);
+
   const admin = createAdminClient();
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-  // ── Supabase: email_logs ──────────────────────────────────────────────────
-  const { data: emailLogsRaw } = await admin
+  const logsResult = await admin
     .from("email_logs")
-    .select("email_type, created_at");
-  const emailLogs = (emailLogsRaw as unknown as EmailLogRow[] | null) ?? [];
-  const totalEmailsSent = emailLogs.length;
+    .select(
+      "email_type, sent_at, opened_at, profiles(email, subscription_status, telegram_connected)",
+    )
+    .order("sent_at", { ascending: false });
+  const rawLogs = (logsResult.data || []) as RawLog[];
 
-  const emailTypeStatsMap: Partial<Record<string, EmailTypeStats>> = {};
-  for (const log of emailLogs) {
-    const type = log.email_type ?? "unknown";
-    const entry = emailTypeStatsMap[type];
-    const isRecent = log.created_at
-      ? new Date(log.created_at) >= thirtyDaysAgo
-      : false;
-    if (!entry) {
-      emailTypeStatsMap[type] = {
-        total: 1,
-        last30d: isRecent ? 1 : 0,
-        lastSentAt: log.created_at,
+  const [
+    { count: cTrialJ3 },
+    { count: cTrialJ1 },
+    { count: cTrialExp },
+    { count: cActivation },
+    { count: cDigest },
+  ] = await Promise.all([
+    admin
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .eq("subscription_status", "free")
+      .gte("trial_ends_at", new Date(now + 60 * h).toISOString())
+      .lte("trial_ends_at", new Date(now + 84 * h).toISOString()),
+    admin
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .eq("subscription_status", "free")
+      .gte("trial_ends_at", new Date(now + 12 * h).toISOString())
+      .lte("trial_ends_at", new Date(now + 36 * h).toISOString()),
+    admin
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .eq("subscription_status", "free")
+      .gte("trial_ends_at", new Date(now - 36 * h).toISOString())
+      .lte("trial_ends_at", new Date(now - 12 * h).toISOString()),
+    admin
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .eq("telegram_connected", false)
+      .gte("created_at", new Date(now - 36 * h).toISOString())
+      .lte("created_at", new Date(now - 12 * h).toISOString()),
+    admin
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .eq("newsletter_enabled", true),
+  ]);
+
+  const eligible: EligibleCounts = {
+    trial_j3: cTrialJ3 || 0,
+    trial_j1: cTrialJ1 || 0,
+    trial_expired: cTrialExp || 0,
+    activation: cActivation || 0,
+    reengagement: 0,
+    digest_subscribers: cDigest || 0,
+  };
+
+  type WMap = Record<
+    string,
+    {
+      total: number;
+      last30d: number;
+      opened: number;
+      lastSentAt: string | null;
+      dayMap: Record<string, number>;
+      conversionConverted: number;
+      conversionTotal: number;
+    }
+  >;
+
+  const wmap: WMap = {};
+  const conversionByType: Record<string, ConversionMetric> = {};
+  for (const wf of EMAIL_WORKFLOWS) {
+    conversionByType[wf.id] = wf.conversionMetric;
+  }
+
+  for (const log of rawLogs) {
+    const type = log.email_type;
+
+    if (!(type in wmap)) {
+      wmap[type] = {
+        total: 0,
+        last30d: 0,
+        opened: 0,
+        lastSentAt: null,
+        dayMap: {},
+        conversionConverted: 0,
+        conversionTotal: 0,
       };
-    } else {
+    }
+    const entry = wmap[type];
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    if (entry !== undefined) {
       entry.total++;
-      if (isRecent) entry.last30d++;
-      if (
-        log.created_at &&
-        (!entry.lastSentAt || log.created_at > entry.lastSentAt)
-      ) {
-        entry.lastSentAt = log.created_at;
+      if (new Date(log.sent_at) >= thirtyDaysAgo) entry.last30d++;
+      if (log.opened_at) entry.opened++;
+      if (!entry.lastSentAt || log.sent_at > entry.lastSentAt)
+        entry.lastSentAt = log.sent_at;
+
+      const dayKey = log.sent_at.slice(0, 10);
+      entry.dayMap[dayKey] = (entry.dayMap[dayKey] || 0) + 1;
+
+      const metric = conversionByType[type];
+      if (metric) {
+        entry.conversionTotal++;
+        if (isConverted(log, metric)) entry.conversionConverted++;
       }
     }
   }
-  const emailTypeStats = emailTypeStatsMap as Record<string, EmailTypeStats>;
-  const totalEmailsSent30d = Object.values(emailTypeStats).reduce(
-    (s, e) => s + e.last30d,
-    0,
-  );
 
-  // ── Newsletter digest stats ───────────────────────────────────────────────
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const digestLogs = emailLogs.filter((l) => l.email_type === "daily_digest");
-  const digestSentToday = digestLogs.filter(
-    (l) => l.created_at && new Date(l.created_at) >= today,
-  ).length;
-  const digestSent30d = digestLogs.filter(
-    (l) => l.created_at && new Date(l.created_at) >= thirtyDaysAgo,
-  ).length;
+  function toWorkflowData(id: string, eligibleId: string | null): WorkflowData {
+    const e = wmap[id] ?? {
+      total: 0,
+      last30d: 0,
+      opened: 0,
+      lastSentAt: null,
+      dayMap: {},
+      conversionConverted: 0,
+      conversionTotal: 0,
+    };
+    return {
+      total: e.total,
+      last30d: e.last30d,
+      opened: e.opened,
+      lastSentAt: e.lastSentAt,
+      sparkline: buildSparkline(e.dayMap),
+      conversionConverted: e.conversionConverted,
+      conversionTotal: e.conversionTotal,
 
-  const { data: digestSubscribers } = await admin
-    .from("profiles")
-    .select("id", { count: "exact", head: true })
-    .eq("newsletter_enabled", true);
-  const digestSubscriberCount =
-    (digestSubscribers as unknown as { count?: number } | null)?.count ?? 0;
+      eligibleNow: eligibleId
+        ? eligible[eligibleId as keyof EligibleCounts] || 0
+        : 0,
+    };
+  }
 
-  // ── Resend: recent sent emails ────────────────────────────────────────────
+  const totalSent30d = Object.values(wmap).reduce((s, e) => s + e.last30d, 0);
+  const totalOpened = Object.values(wmap).reduce((s, e) => s + e.opened, 0);
+  const totalSent = Object.values(wmap).reduce((s, e) => s + e.total, 0);
+  const avgOpenRate =
+    totalSent > 0 ? Math.round((totalOpened / totalSent) * 100) : 0;
+
   type ResendEmail = {
     id: string;
     to: string[];
@@ -175,208 +441,103 @@ export default async function AdminEmailsPage() {
       }
     }
   } catch {
-    // Resend not available — continue without
+    // Resend not available
   }
 
-  // Group Resend emails by subject (normalized)
-  const resendBySubject: Record<string, number> = {};
-  for (const e of resendEmails) {
-    const key = e.subject.replace(/^\[DEV\]\s*/, "").trim();
-    resendBySubject[key] = (resendBySubject[key] ?? 0) + 1;
-  }
   const deliveredCount = resendEmails.filter(
     (e) => (e.last_event ?? "delivered") === "delivered",
   ).length;
   const deliveryRate =
     resendEmails.length > 0
       ? Math.round((deliveredCount / resendEmails.length) * 100)
-      : 100;
+      : null;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-8">
       <AdminBreadcrumb />
 
-      {/* Header */}
       <div>
         <h1 className="text-lg font-semibold">Emails</h1>
         <p className="text-muted-foreground text-xs">
-          Campagnes internes · Historique Resend
+          {EMAIL_WORKFLOWS.length} automations · {totalSent30d} sent in 30d ·{" "}
+          {avgOpenRate}% avg open rate
+          {deliveryRate !== null && ` · ${deliveryRate}% Resend delivery`}
         </p>
       </div>
 
-      {/* ── Stats ── */}
       <div className="flex flex-col gap-2">
-        <SectionTitle>Vue d&apos;ensemble</SectionTitle>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <StatCard
-            label="Total envoyés"
-            value={totalEmailsSent}
-            icon={<Mail className="h-4 w-4" />}
-            variant={totalEmailsSent > 0 ? "success" : "default"}
-          />
-          <StatCard
-            label="30 derniers jours"
-            value={totalEmailsSent30d}
-            icon={<Send className="h-4 w-4" />}
-            variant={totalEmailsSent30d > 0 ? "success" : "default"}
-          />
-          <StatCard
-            label="Types distincts"
-            value={Object.keys(emailTypeStats).length}
-            icon={<Activity className="h-4 w-4" />}
-          />
-          <StatCard
-            label="Livraison Resend"
-            value={resendEmails.length > 0 ? `${deliveryRate}%` : "—"}
-            sub={
-              resendEmails.length > 0
-                ? `${resendEmails.length} emails`
-                : "Non configuré"
-            }
-            icon={<CheckCircle className="h-4 w-4" />}
-            variant={
-              deliveryRate >= 95
-                ? "success"
-                : deliveryRate >= 80
-                  ? "warning"
-                  : "danger"
-            }
-          />
+        <div className="flex items-center justify-between px-1">
+          <SectionTitle>Automations</SectionTitle>
+          <span className="text-muted-foreground text-[11px]">
+            {eligible.digest_subscribers} digest subscribers
+          </span>
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {EMAIL_WORKFLOWS.map((workflow) => (
+            <WorkflowCard
+              key={workflow.id}
+              workflow={workflow}
+              data={toWorkflowData(workflow.id, workflow.eligibleId)}
+              isDigest={workflow.id === "daily_digest"}
+            />
+          ))}
         </div>
       </div>
 
-      {/* ── Campagnes internes (email_logs) ── */}
-      <div className="flex flex-col gap-2">
-        <SectionTitle>Campagnes internes</SectionTitle>
-        <div className="nm-raised overflow-hidden rounded-xl">
-          <div className="flex items-center border-b border-white/[0.04] px-4 py-2">
-            <p className="text-muted-foreground flex-1 text-xs font-medium">
-              Campagne
-            </p>
-            <p className="text-muted-foreground w-10 text-right text-[10px]">
-              30j
-            </p>
-            <p className="text-muted-foreground w-12 text-right text-[10px]">
-              total
-            </p>
-          </div>
-          {Object.keys(emailTypeStats).length === 0 ? (
-            <p className="text-muted-foreground px-4 py-4 text-sm">
-              Aucun email envoyé
-            </p>
-          ) : (
-            <div className="divide-y divide-white/[0.04]">
-              {Object.entries(emailTypeStats)
-                .sort((a, b) => b[1].total - a[1].total)
-                .map(([type, stats]) => (
-                  <div
-                    key={type}
-                    className="flex items-center gap-2 px-4 py-2.5"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm">
-                        {EMAIL_TYPE_LABELS[type] ?? type}
-                      </p>
-                      {stats.lastSentAt && (
-                        <p className="text-muted-foreground text-[11px]">
-                          Dernier :{" "}
-                          {new Date(stats.lastSentAt).toLocaleDateString(
-                            "fr-FR",
-                            {
-                              day: "2-digit",
-                              month: "2-digit",
-                              year: "2-digit",
-                            },
-                          )}
-                        </p>
-                      )}
-                    </div>
-                    <span
-                      className={`w-10 text-right text-sm tabular-nums ${stats.last30d > 0 ? "text-emerald-400" : "text-muted-foreground/30"}`}
-                    >
-                      {stats.last30d}
-                    </span>
-                    <span className="w-12 text-right text-sm font-medium tabular-nums">
-                      {stats.total}
-                    </span>
-                  </div>
-                ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── Historique Resend ── */}
       {resendEmails.length > 0 && (
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between px-1">
-            <SectionTitle>Historique Resend</SectionTitle>
-            <span className="text-muted-foreground text-xs">
-              {resendEmails.length} emails
-            </span>
+            <SectionTitle>Recent sends</SectionTitle>
+            <div className="flex items-center gap-2">
+              {deliveryRate !== null && (
+                <span
+                  className={`text-xs font-medium ${deliveryRate >= 95 ? "text-emerald-400" : deliveryRate >= 80 ? "text-yellow-400" : "text-red-400"}`}
+                >
+                  <CheckCircle className="mr-1 inline h-3 w-3" />
+                  {deliveryRate}% delivered
+                </span>
+              )}
+              <span className="text-muted-foreground text-[11px]">
+                {resendEmails.length} emails
+              </span>
+            </div>
           </div>
-
-          {/* Par sujet */}
           <div className="nm-raised overflow-hidden rounded-xl">
             <div className="flex items-center border-b border-white/[0.04] px-4 py-2">
               <p className="text-muted-foreground flex-1 text-xs font-medium">
-                Sujet
+                Recipient
               </p>
-              <p className="text-muted-foreground w-12 text-right text-[10px]">
-                envoyés
+              <p className="text-muted-foreground hidden w-52 text-right text-[10px] sm:block">
+                Subject
               </p>
-            </div>
-            <div className="divide-y divide-white/[0.04]">
-              {Object.entries(resendBySubject)
-                .sort((a, b) => b[1] - a[1])
-                .map(([subject, count]) => (
-                  <div
-                    key={subject}
-                    className="flex items-center gap-2 px-4 py-2.5"
-                  >
-                    <p className="min-w-0 flex-1 truncate text-sm">{subject}</p>
-                    <span className="text-foreground w-12 text-right text-sm font-medium tabular-nums">
-                      {count}
-                    </span>
-                  </div>
-                ))}
-            </div>
-          </div>
-
-          {/* 10 derniers emails */}
-          <div className="nm-raised overflow-hidden rounded-xl">
-            <div className="flex items-center border-b border-white/[0.04] px-4 py-2">
-              <p className="text-muted-foreground flex-1 text-xs font-medium">
-                Destinataire
-              </p>
-              <p className="text-muted-foreground hidden w-40 text-right text-[10px] sm:block">
-                Sujet
-              </p>
-              <p className="text-muted-foreground w-12 text-right text-[10px]">
-                Envoyé
+              <p className="text-muted-foreground w-16 text-right text-[10px]">
+                Sent
               </p>
             </div>
             <div className="divide-y divide-white/[0.04]">
-              {resendEmails.slice(0, 15).map((email) => {
+              {resendEmails.slice(0, 20).map((email) => {
                 const to = Array.isArray(email.to) ? email.to[0] : email.to;
                 const isDev = email.subject.startsWith("[DEV]");
+                const isTest = email.subject.startsWith("[TEST]");
                 return (
                   <div
                     key={email.id}
                     className="flex items-center gap-2 px-4 py-2.5"
                   >
-                    <div className="min-w-0 flex-1">
+                    <div className="flex min-w-0 flex-1 items-center gap-1.5">
                       <p className="truncate text-sm">{to}</p>
-                      {isDev && (
-                        <span className="text-muted-foreground text-[10px]">
-                          DEV
+                      {(isDev || isTest) && (
+                        <span className="text-muted-foreground/40 shrink-0 text-[9px] font-medium uppercase">
+                          {isDev ? "dev" : "test"}
                         </span>
                       )}
                     </div>
-                    <p className="text-muted-foreground hidden w-40 truncate text-right text-[11px] sm:block">
-                      {email.subject.replace(/^\[DEV\]\s*/, "")}
+                    <p className="text-muted-foreground hidden w-52 truncate text-right text-[11px] sm:block">
+                      {email.subject
+                        .replace(/^\[DEV\]\s*/, "")
+                        .replace(/^\[TEST\]\s*/, "")}
                     </p>
-                    <span className="text-muted-foreground w-12 text-right text-[11px] tabular-nums">
+                    <span className="text-muted-foreground w-16 text-right text-[11px] tabular-nums">
                       {timeAgo(email.created_at)}
                     </span>
                   </div>
@@ -387,75 +548,14 @@ export default async function AdminEmailsPage() {
         </div>
       )}
 
-      {/* ── Newsletter digest ── */}
-      <div className="flex flex-col gap-2">
-        <SectionTitle>Newsletter digest</SectionTitle>
-        <div className="grid grid-cols-3 gap-2">
-          <StatCard
-            label="Abonnés actifs"
-            value={digestSubscriberCount}
-            icon={<Mail className="h-4 w-4" />}
-            variant={digestSubscriberCount > 0 ? "success" : "default"}
-          />
-          <StatCard
-            label="Envoyés aujourd'hui"
-            value={digestSentToday}
-            icon={<Send className="h-4 w-4" />}
-            variant={digestSentToday > 0 ? "success" : "default"}
-          />
-          <StatCard
-            label="Envoyés 30j"
-            value={digestSent30d}
-            icon={<Activity className="h-4 w-4" />}
-            variant={digestSent30d > 0 ? "success" : "default"}
-          />
-        </div>
-
-        {/* Derniers envois */}
-        {digestLogs.length > 0 && (
-          <div className="nm-raised overflow-hidden rounded-xl">
-            <div className="flex items-center border-b border-white/[0.04] px-4 py-2">
-              <p className="text-muted-foreground flex-1 text-xs font-medium">
-                User ID
-              </p>
-              <p className="text-muted-foreground w-16 text-right text-[10px]">
-                Envoyé
-              </p>
-            </div>
-            <div className="divide-y divide-white/[0.04]">
-              {digestLogs
-                .filter(
-                  (l): l is EmailLogRow & { created_at: string } =>
-                    !!l.created_at,
-                )
-                .sort(
-                  (a, b) =>
-                    new Date(b.created_at).getTime() -
-                    new Date(a.created_at).getTime(),
-                )
-                .slice(0, 10)
-                .map((log, i) => (
-                  <div key={i} className="flex items-center gap-2 px-4 py-2.5">
-                    <p className="text-muted-foreground min-w-0 flex-1 truncate font-mono text-xs">
-                      {log.created_at}
-                    </p>
-                    <span className="text-muted-foreground w-16 text-right text-[11px] tabular-nums">
-                      {timeAgo(log.created_at)}
-                    </span>
-                  </div>
-                ))}
-            </div>
-          </div>
-        )}
-
-        {/* Test manuel */}
-        <div className="nm-raised flex flex-col gap-2 rounded-xl px-4 py-3">
+      {resendEmails.length === 0 && (
+        <div className="nm-raised flex items-center gap-2 rounded-xl px-4 py-3">
+          <Send className="text-muted-foreground/30 h-4 w-4" />
           <p className="text-muted-foreground text-sm">
-            Envoyer un digest de test (24h) à ton compte
+            Resend history not available
           </p>
-          <DigestTriggerButton />
         </div>
-      </div>
+      )}
     </div>
   );
 }

@@ -30,7 +30,14 @@ export function NotificationsSection({
   const [newsletter, setNewsletter] = useState(initialNewsletter);
   const [announcements, setAnnouncements] = useState(initialAnnouncements);
   const [dailyDigest, setDailyDigest] = useState(initialDailyDigest);
-  const [digestHour, setDigestHour] = useState(initialDigestHour);
+  // Store and display digest hour in local time; DB stores UTC
+  const toLocalHour = (utc: number) =>
+    (((utc - new Date().getTimezoneOffset() / 60) % 24) + 24) % 24;
+  const toUtcHour = (local: number) =>
+    (((local + new Date().getTimezoneOffset() / 60) % 24) + 24) % 24;
+  const [digestHour, setDigestHour] = useState(() =>
+    toLocalHour(initialDigestHour),
+  );
   const [savingPush, setSavingPush] = useState(false);
   const [savingNewsletter, setSavingNewsletter] = useState(false);
   const [savingAnnouncements, setSavingAnnouncements] = useState(false);
@@ -148,8 +155,8 @@ export function NotificationsSection({
     }
   };
 
-  const handleDigestHourChange = async (hour: number) => {
-    setDigestHour(hour);
+  const handleDigestHourChange = async (localHour: number) => {
+    setDigestHour(localHour);
     try {
       const {
         data: { user },
@@ -157,15 +164,14 @@ export function NotificationsSection({
       if (!user) return;
       await supabase
         .from("profiles")
-        .update({ newsletter_hour: hour })
+        .update({ newsletter_hour: toUtcHour(localHour) })
         .eq("id", user.id);
     } catch {
       toast.error("Failed to update delivery time.");
     }
   };
 
-  // Format hour as "8:00", "14:00" etc.
-  const formatHour = (h: number) => `${String(h).padStart(2, "0")}:00 UTC`;
+  const formatHour = (h: number) => `${String(h).padStart(2, "0")}:00`;
 
   return (
     <section className="space-y-2">
@@ -274,20 +280,21 @@ export function NotificationsSection({
           </div>
           {dailyDigest && (
             <div className="mt-3 flex items-center gap-2 pl-[42px]">
-              <p className="text-muted-foreground text-xs">Delivery time</p>
-              <select
-                value={digestHour}
-                onChange={(e) =>
-                  void handleDigestHourChange(Number(e.target.value))
-                }
+              <p className="text-muted-foreground text-xs">
+                Delivery time (local)
+              </p>
+              <input
+                type="time"
+                value={`${formatHour(digestHour)}:00`.slice(0, 5)}
+                onChange={(e) => {
+                  const hour = parseInt(
+                    e.target.value.split(":")[0] ?? "0",
+                    10,
+                  );
+                  if (!isNaN(hour)) void handleDigestHourChange(hour);
+                }}
                 className="nm-inset text-foreground rounded-lg px-2 py-1 text-xs outline-none"
-              >
-                {Array.from({ length: 24 }, (_, h) => (
-                  <option key={h} value={h}>
-                    {formatHour(h)}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
           )}
         </div>

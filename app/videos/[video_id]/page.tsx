@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { createAdminClient } from "@/lib/supabase/server";
 import { SiteConfig } from "@/site-config";
 import { Navbar } from "@/components/landing/navbar";
 import { Footer } from "@/components/landing/footer";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "@/lib/icons";
+
+export const revalidate = 3600;
 
 type Props = {
   params: Promise<{ video_id: string }>;
@@ -163,10 +166,13 @@ export default async function VideoPage({ params }: Props) {
             {/* Video header */}
             <header className="nm-raised flex flex-col gap-4 rounded-2xl p-6">
               {/* Thumbnail */}
-              <img
+              <Image
                 src={`https://img.youtube.com/vi/${video_id}/hqdefault.jpg`}
                 alt={video.video_title ?? "Video"}
+                width={480}
+                height={360}
                 className="w-full rounded-xl object-cover"
+                priority
               />
 
               {/* Title */}
