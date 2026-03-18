@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
+  SheetClose,
   SheetContent,
   SheetHeader,
   SheetTitle,
@@ -18,6 +19,7 @@ import {
   TrendingUp,
   Inbox,
   Loader2,
+  X,
 } from "@/lib/icons";
 import { useSession } from "@/lib/auth-client";
 
@@ -192,6 +194,7 @@ export function StatsSheet() {
       </SheetTrigger>
       <SheetContent
         side={isMobile ? "bottom" : "right"}
+        showCloseButton={false}
         className={
           isMobile
             ? "h-[85dvh] gap-0 overflow-y-auto p-0"
@@ -199,7 +202,12 @@ export function StatsSheet() {
         }
       >
         <SheetHeader className="border-b border-white/[0.04] px-6 py-2">
-          <SheetTitle>Your stats</SheetTitle>
+          <div className="flex items-center justify-between">
+            <SheetTitle>Your stats</SheetTitle>
+            <SheetClose className="text-muted-foreground/50 hover:text-foreground transition-colors">
+              <X className="h-4 w-4" />
+            </SheetClose>
+          </div>
         </SheetHeader>
 
         {loading ? (
