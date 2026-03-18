@@ -530,11 +530,20 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
       {/* Toolbar: filter tabs OR selection controls */}
       {sources.length > 0 && !isYT && (
         <div className="flex items-center justify-between">
-          <span className="text-muted-foreground/50 text-xs tabular-nums">
-            {isPro
-              ? `${sources.length} channels`
-              : `${activeCount}/${maxChannels} active`}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground/50 text-xs tabular-nums">
+              {isPro
+                ? `${sources.length} channels`
+                : `${activeCount}/${maxChannels} active`}
+            </span>
+            <a
+              href="/api/youtube/auth"
+              className="flex items-center gap-1 rounded-full bg-red-500/10 px-2 py-0.5 text-[11px] font-medium text-red-400 transition-colors hover:bg-red-500/20"
+            >
+              <Youtube className="h-3 w-3" />
+              Import
+            </a>
+          </div>
           {anySelected ? (
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground text-xs tabular-nums">
