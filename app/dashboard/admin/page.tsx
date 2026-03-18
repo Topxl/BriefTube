@@ -2,12 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { env } from "@/lib/env";
 import Link from "next/link";
-import {
-  Shield,
-  Activity,
-  Mail,
-  ChevronRight,
-} from "@/lib/icons";
+import { Shield, Activity, Mail, ChevronRight } from "@/lib/icons";
 import {
   Item,
   ItemMedia,
@@ -17,6 +12,7 @@ import {
   ItemActions,
   ItemGroup,
 } from "@/components/ui/item";
+import { GrantTrialForm } from "@/components/admin/grant-trial-form";
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
@@ -39,13 +35,14 @@ export default async function AdminPage() {
         </div>
         <div>
           <h1 className="text-base font-semibold">Administration</h1>
-          <p className="text-muted-foreground text-xs">BriefTube · Panneau admin</p>
+          <p className="text-muted-foreground text-xs">
+            BriefTube · Panneau admin
+          </p>
         </div>
       </div>
 
       {/* Navigation sections */}
       <div className="flex flex-col gap-4">
-
         {/* Monitoring & analytics */}
         <div className="flex flex-col gap-2">
           <p className="text-muted-foreground/50 px-1 text-xs font-medium tracking-wide uppercase">
@@ -60,7 +57,8 @@ export default async function AdminPage() {
                 <ItemContent>
                   <ItemTitle>Monitoring</ItemTitle>
                   <ItemDescription>
-                    Worker, analytics, funnel d&apos;acquisition, conversion, revenus
+                    Worker, analytics, funnel d&apos;acquisition, conversion,
+                    revenus
                   </ItemDescription>
                 </ItemContent>
                 <ItemActions>
@@ -96,6 +94,16 @@ export default async function AdminPage() {
           </ItemGroup>
         </div>
 
+        {/* Utilisateurs */}
+        <div className="flex flex-col gap-2">
+          <p className="text-muted-foreground/50 px-1 text-xs font-medium tracking-wide uppercase">
+            Utilisateurs
+          </p>
+          <div className="nm-raised flex flex-col gap-3 rounded-xl px-4 py-3">
+            <p className="text-xs font-medium">Offrir un accès Pro</p>
+            <GrantTrialForm />
+          </div>
+        </div>
       </div>
     </div>
   );
