@@ -8,12 +8,17 @@ pnpm ts || exit 1
 echo "🔨 ESLint check..."
 pnpm lint || exit 1
 
-# Check Python syntax on staged worker files
+# Check Python syntax + run unit tests on staged worker files
 STAGED_PY=$(git diff --cached --name-only --diff-filter=ACM | grep '^worker/.*\.py$' || true)
 if [ -n "$STAGED_PY" ]; then
   echo "🐍 Python syntax check..."
   PYTHON=$(command -v python3 || command -v python || true)
-  if [ -n "$PYTHON" ]; then
+  VENV_PYTHON="worker/venv/bin/python"
+  if [ -f "$VENV_PYTHON" ]; then
+    echo "$STAGED_PY" | xargs "$VENV_PYTHON" -m py_compile && echo "   ✓ No syntax errors" || exit 1
+    echo "🧪 Python unit tests..."
+    (cd worker && venv/bin/python -m pytest tests/ -q --tb=short 2>&1) || exit 1
+  elif [ -n "$PYTHON" ]; then
     echo "$STAGED_PY" | xargs "$PYTHON" -m py_compile && echo "   ✓ No syntax errors" || exit 1
   fi
 fi

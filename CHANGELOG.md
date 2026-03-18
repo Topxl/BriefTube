@@ -3,6 +3,8 @@
 ## 2026-03-18
 
 FIX: bot — crash NoneType sur _upsert_delivery quand maybe_single() retourne None
+CHORE: tests — 22 tests unitaires pour bot_handler (upsert_delivery, _is_pro, _get_plan_label)
+CHORE: pre-commit — pytest lancé automatiquement sur les fichiers Python modifiés
 
 FEATURE: channels sheet — infinite scroll auto-loads more channels on scroll, 20 shown by default, channel count restored in toolbar
 REFACTOR: unified search/add input in channels sheet — filter existing OR add by YouTube URL/@handle from same input
