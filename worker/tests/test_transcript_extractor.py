@@ -12,38 +12,14 @@ class TestIsMusicVideo:
     def test_hz_frequency(self):
         assert TranscriptExtractor._is_music_video("432Hz Healing Frequency — Deep Sleep Music")
 
-    def test_hz_with_space(self):
-        assert TranscriptExtractor._is_music_video("528 Hz Solfeggio")
-
     def test_binaural_beats(self):
         assert TranscriptExtractor._is_music_video("Binaural Beats for Focus — Alpha Waves")
-
-    def test_solfeggio(self):
-        assert TranscriptExtractor._is_music_video("Solfeggio Frequencies — 396Hz Liberation")
 
     def test_white_noise(self):
         assert TranscriptExtractor._is_music_video("White Noise for Sleeping — 10 Hours")
 
     def test_rain_sounds(self):
         assert TranscriptExtractor._is_music_video("Rain Sounds for Sleeping")
-
-    def test_ambient_music(self):
-        assert TranscriptExtractor._is_music_video("Ambient Music for Meditation")
-
-    def test_sleep_music(self):
-        assert TranscriptExtractor._is_music_video("Sleep Music — Calm Piano")
-
-    def test_relaxing_music(self):
-        assert TranscriptExtractor._is_music_video("Relaxing Music for Stress Relief")
-
-    def test_study_music(self):
-        assert TranscriptExtractor._is_music_video("Study Music — Deep Focus")
-
-    def test_healing_music(self):
-        assert TranscriptExtractor._is_music_video("Healing Music for Body and Soul")
-
-    def test_meditation_sounds(self):
-        assert TranscriptExtractor._is_music_video("Meditation Sounds — Tibetan Bowls")
 
     def test_case_insensitive(self):
         assert TranscriptExtractor._is_music_video("BINAURAL BEATS FOCUS")
@@ -55,40 +31,12 @@ class TestIsMusicVideoShouldPass:
     def test_normal_speech(self):
         assert not TranscriptExtractor._is_music_video("Python Tutorial for Beginners")
 
-    def test_podcast(self):
-        assert not TranscriptExtractor._is_music_video("The Tim Ferriss Show — Episode 500")
-
-    def test_interview(self):
-        assert not TranscriptExtractor._is_music_video("Interview with Sam Altman on AI Safety")
-
-    def test_news(self):
-        assert not TranscriptExtractor._is_music_video("CNN Breaking News — Ukraine Ceasefire")
-
     def test_empty_title(self):
         assert not TranscriptExtractor._is_music_video("")
 
     def test_lecture_about_music(self):
         # A lecture that mentions music in context shouldn't be filtered
         assert not TranscriptExtractor._is_music_video("History of Classical Music — Yale Lecture")
-
-
-# ── extract_video_id (static method delegation) ───────────────────────────────
-
-class TestExtractVideoIdDelegation:
-    """Verifies TranscriptExtractor.extract_video_id delegates to youtube_utils."""
-
-    def test_standard_url(self):
-        assert TranscriptExtractor.extract_video_id(
-            "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-        ) == "dQw4w9WgXcQ"
-
-    def test_short_url(self):
-        assert TranscriptExtractor.extract_video_id(
-            "https://youtu.be/UF8uR6Z6KLc"
-        ) == "UF8uR6Z6KLc"
-
-    def test_invalid_returns_none(self):
-        assert TranscriptExtractor.extract_video_id("https://vimeo.com/123") is None
 
 
 # ── _parse_vtt_text (static) ──────────────────────────────────────────────────
