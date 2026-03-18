@@ -538,7 +538,7 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
             </span>
             <a
               href="/api/youtube/auth"
-              className="flex items-center gap-1 rounded-full bg-red-500/10 px-2 py-0.5 text-[11px] font-medium text-red-400 transition-colors hover:bg-red-500/20"
+              className="nm-raised-sm text-muted-foreground/60 hover:text-foreground flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium capitalize transition-colors"
             >
               <Youtube className="h-3 w-3" />
               Import
