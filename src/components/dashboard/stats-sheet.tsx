@@ -194,11 +194,11 @@ export function StatsSheet() {
         side={isMobile ? "bottom" : "right"}
         className={
           isMobile
-            ? "h-[85dvh] overflow-y-auto p-0"
-            : "overflow-y-auto p-0 sm:max-w-md"
+            ? "h-[85dvh] gap-0 overflow-y-auto p-0"
+            : "gap-0 overflow-y-auto p-0 sm:max-w-md"
         }
       >
-        <SheetHeader className="border-b border-white/[0.04] px-6 py-4">
+        <SheetHeader className="border-b border-white/[0.04] px-6 py-2">
           <SheetTitle>Your stats</SheetTitle>
         </SheetHeader>
 
@@ -207,7 +207,7 @@ export function StatsSheet() {
             <Loader2 className="text-muted-foreground h-5 w-5 animate-spin" />
           </div>
         ) : stats ? (
-          <div className="flex flex-col gap-4 p-6">
+          <div className="flex flex-col gap-4 px-6 pt-3 pb-6">
             {/* Stat cards */}
             <div className="grid grid-cols-2 gap-2">
               <div className="nm-raised flex flex-col gap-2 rounded-2xl px-3 py-2.5">
