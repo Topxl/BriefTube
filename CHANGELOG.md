@@ -2,6 +2,7 @@
 
 ## 2026-03-18
 
+FIX: channels sheet — bouton Import déplacé dans toolbar à côté du count, plus visible (rouge), espace header réduit
 CHORE: tests — remove redundant test cases from rss_scanner, youtube_utils, transcript_extractor (77 tests remain, all passing)
 FIX: bot — crash NoneType sur _upsert_delivery quand maybe_single() retourne None
 CHORE: tests — 22 tests unitaires pour bot_handler (upsert_delivery, _is_pro, _get_plan_label)
