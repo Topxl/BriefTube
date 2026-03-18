@@ -409,7 +409,7 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
   };
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-2">
       {/* Unified search / add input */}
       <div className="relative">
         {isYT ? (

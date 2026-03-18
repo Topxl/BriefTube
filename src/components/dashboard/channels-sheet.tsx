@@ -43,19 +43,19 @@ export function ChannelsSheet({ initialSources, maxChannels, isPro }: Props) {
             : "overflow-y-auto p-0 sm:max-w-md"
         }
       >
-        <SheetHeader className="border-b border-white/[0.04] px-6 py-4">
-          <div className="flex items-center justify-between">
-            <SheetTitle className="text-base">Channels</SheetTitle>
+        <SheetHeader className="border-b border-white/[0.04] px-4 py-3">
+          <div className="flex items-center gap-3 pr-8">
+            <SheetTitle className="text-sm">Channels</SheetTitle>
             <a
               href="/api/youtube/auth"
-              className="nm-raised-sm text-muted-foreground/60 hover:text-foreground flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors"
+              className="text-muted-foreground/40 hover:text-muted-foreground flex items-center gap-1 text-xs transition-colors"
             >
-              <Youtube className="h-3.5 w-3.5" />
-              Import from YouTube
+              <Youtube className="h-3 w-3" />
+              Import
             </a>
           </div>
         </SheetHeader>
-        <div className="p-6">
+        <div className="p-4">
           <SourcesSection
             initialSources={initialSources}
             maxChannels={maxChannels}
