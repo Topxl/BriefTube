@@ -467,6 +467,80 @@ async def log_toggle_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     await update.message.reply_text(f"Delivery mirroring {state}")
 
 
+async def cookies_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Show YouTube cookie health status (admin only)."""
+    chat_id = str(update.effective_chat.id)
+    if not _is_admin(chat_id):
+        await update.message.reply_text("⛔ Admin only command")
+        return
+
+    from transcript_extractor import validate_cookies, _COOKIES_FILE
+    health = validate_cookies()
+
+    icon = "✅" if health["ok"] else ("⚠️" if health["exists"] else "❌")
+    lines = [f"{icon} <b>YouTube Cookies</b>", "", health["summary"], ""]
+
+    if health["missing_critical"]:
+        lines.append(f"🔴 Missing critical: {', '.join(health['missing_critical'])}")
+    if health["missing_important"]:
+        lines.append(f"🟡 Missing (optional): {', '.join(health['missing_important'])}")
+    if health["expired"]:
+        lines.append(f"⏰ Expired: {', '.join(health['expired'])}")
+
+    lines += [
+        "",
+        f"📁 File: <code>{_COOKIES_FILE}</code>",
+        f"🍪 Total cookies: {health['total']}",
+        "",
+        "To refresh: send a <code>cookies.txt</code> file (Netscape format) to this bot.",
+    ]
+
+    await update.message.reply_text("\n".join(lines), parse_mode="HTML")
+
+
+async def handle_document_upload(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle admin uploading a cookies.txt file to refresh YouTube cookies."""
+    chat_id = str(update.effective_chat.id)
+    if not _is_admin(chat_id):
+        return
+
+    doc = update.message.document
+    if not doc:
+        return
+
+    filename = doc.file_name or ""
+    if not (filename.endswith(".txt") or "cookie" in filename.lower()):
+        await update.message.reply_text("⚠️ Please send a .txt cookie file in Netscape format.")
+        return
+
+    try:
+        file = await context.bot.get_file(doc.file_id)
+        from transcript_extractor import _COOKIES_FILE, validate_cookies
+        _COOKIES_FILE.parent.mkdir(parents=True, exist_ok=True)
+
+        # Download to a temp path first, validate, then replace
+        tmp_path = _COOKIES_FILE.with_suffix(".tmp")
+        await file.download_to_drive(str(tmp_path))
+
+        # Validate the new file before replacing
+        import shutil
+        old_path = _COOKIES_FILE.with_suffix(".bak")
+        if _COOKIES_FILE.exists():
+            shutil.copy2(str(_COOKIES_FILE), str(old_path))
+
+        shutil.move(str(tmp_path), str(_COOKIES_FILE))
+
+        health = validate_cookies()
+        icon = "✅" if health["ok"] else "⚠️"
+        await update.message.reply_text(
+            f"{icon} <b>Cookies updated</b>\n\n{health['summary']}\n\n"
+            + (f"⚠️ Still missing: {', '.join(health['missing_critical'])}" if health["missing_critical"] else ""),
+            parse_mode="HTML",
+        )
+    except Exception as e:
+        await update.message.reply_text(f"❌ Failed to save cookies: {e}")
+
+
 def _calc_success_rate(summary: dict) -> int:
     """Calculate success rate percentage."""
     total = summary['videos_processed'] + summary['videos_failed']
@@ -1607,6 +1681,7 @@ def create_bot_application() -> Application:
     app.add_handler(CommandHandler("monitor_stats", monitor_stats_command))
     app.add_handler(CommandHandler("monitor_logs", monitor_logs_command))
     app.add_handler(CommandHandler("log_toggle", log_toggle_command))
+    app.add_handler(CommandHandler("cookies", cookies_command))
 
     # Inline keyboard callbacks — options menu and sub-actions
     app.add_handler(CallbackQueryHandler(handle_options_callback, pattern=r"^options_"))
@@ -1622,6 +1697,9 @@ def create_bot_application() -> Application:
     app.add_handler(CallbackQueryHandler(handle_unsub_channel_callback, pattern=r"^unsub_"))
     app.add_handler(CallbackQueryHandler(handle_subch_callback, pattern=r"^subch_"))
     app.add_handler(CallbackQueryHandler(handle_unsubch_callback, pattern=r"^unsubch_"))
+
+    # File upload handler for admin to send cookies.txt
+    app.add_handler(MessageHandler(filters.Document.ALL, handle_document_upload))
 
     # Message handler LAST — catches non-command text messages
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))

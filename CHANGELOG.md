@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-03-18
+
+FEATURE: YouTube cookie validation at startup — alerts admin if cookies missing/expired
+FEATURE: /cookies bot command to check cookie health status
+FEATURE: Admin can refresh cookies by sending a .txt file directly to the log bot
+
 ## 2026-03-17
 
 FEATURE: Add email preview per workflow in admin emails dashboard

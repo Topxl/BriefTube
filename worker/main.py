@@ -22,7 +22,7 @@ import aiohttp
 import psutil
 
 from config import RSS_CHECK_INTERVAL, TELEGRAM_BOT_TOKEN, SUPABASE_URL, ADMIN_TELEGRAM_CHAT_ID, MAX_CONCURRENT_VIDEOS, MAX_CPU_PERCENT, MAX_LOAD_PER_CPU, MIN_FREE_RAM_MB, CPU_CHECK_INTERVAL, HEALTH_PORT, WORKER_INSTANCE, APP_URL, WORKER_API_SECRET, PUSH_NOTIFY_SECRET
-from transcript_extractor import TranscriptExtractor
+from transcript_extractor import TranscriptExtractor, validate_cookies
 from gemini_api import GeminiSummarizer
 from text_cleaner import clean_for_tts
 from tts_processor import text_to_audio, cleanup_audio_files
@@ -1440,6 +1440,30 @@ async def main():
             f"RSS interval: {RSS_CHECK_INTERVAL}s\n"
             "All systems operational",
             level="INFO"
+        )
+
+    # Check cookie health and alert if degraded
+    cookie_health = validate_cookies()
+    if not cookie_health["ok"]:
+        missing = cookie_health["missing_critical"]
+        expired = cookie_health["expired"]
+        parts = []
+        if missing:
+            parts.append(f"Missing critical: {', '.join(missing)}")
+        if expired:
+            parts.append(f"Expired: {', '.join(expired)}")
+        await alert_system.send_alert(
+            f"⚠️ <b>YouTube cookies degraded</b>\n\n"
+            f"{chr(10).join(parts)}\n\n"
+            f"Send a fresh <code>cookies.txt</code> file to this log bot to update.\n"
+            f"Export from Chrome: <i>EditThisCookie</i> or <i>Get cookies.txt LOCALLY</i> extension.\n"
+            f"Must be logged in to youtube.com.",
+            level="WARNING",
+        )
+    elif cookie_health.get("age_days", 0) > 14:
+        await alert_system.send_alert(
+            f"ℹ️ YouTube cookies are {cookie_health['age_days']} days old — consider refreshing.",
+            level="INFO",
         )
 
     try:
