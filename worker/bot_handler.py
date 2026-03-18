@@ -746,7 +746,7 @@ def _upsert_delivery(sb, user_id: str, video_id: str, language: str) -> None:
         .maybe_single()
         .execute()
     )
-    if existing.data:
+    if existing and existing.data:
         sb.table("deliveries").update({
             "status": "pending",
             "source": "on_demand",

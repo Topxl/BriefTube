@@ -2,6 +2,8 @@
 
 ## 2026-03-18
 
+FIX: bot — crash NoneType sur _upsert_delivery quand maybe_single() retourne None
+
 FEATURE: channels sheet — infinite scroll auto-loads more channels on scroll, 20 shown by default, channel count restored in toolbar
 REFACTOR: unified search/add input in channels sheet — filter existing OR add by YouTube URL/@handle from same input
 FEATURE: Admin — formulaire "Offrir un accès Pro" (email + durée 1-12 mois) avec email de remerciement automatique
