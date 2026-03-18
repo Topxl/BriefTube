@@ -532,10 +532,10 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
         <div className="flex items-center justify-between">
           <a
             href="/api/youtube/auth"
-            className="nm-raised-sm text-muted-foreground/60 hover:text-foreground flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium capitalize transition-colors"
+            className="nm-raised-sm flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium text-red-400 capitalize transition-colors hover:text-red-300"
           >
             <Youtube className="h-3 w-3" />
-            Import
+            Import from YouTube
           </a>
           {anySelected ? (
             <div className="flex items-center gap-2">
