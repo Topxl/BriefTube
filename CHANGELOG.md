@@ -2,7 +2,7 @@
 
 ## 2026-03-18
 
-FIX: channels sheet — remove count text from toolbar to reduce gap between search bar and channel list
+FIX: channels sheet — restore channel count in toolbar, show 20 channels by default, replace chevron with "Load X more" text button
 REFACTOR: unified search/add input in channels sheet — filter existing OR add by YouTube URL/@handle from same input
 FEATURE: Admin — formulaire "Offrir un accès Pro" (email + durée 1-12 mois) avec email de remerciement automatique
 FIX: Admin actions.ts — UUID admin hardcodé remplacé par env.ADMIN_USER_ID

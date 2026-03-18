@@ -8,7 +8,6 @@ import { toast } from "sonner";
 import {
   Search,
   Trash2,
-  ChevronDown,
   TriangleAlertIcon,
   X,
   Loader2,
@@ -25,7 +24,7 @@ import type { Tables } from "@/types/supabase";
 
 type Subscription = Tables<"subscriptions">;
 
-const INITIAL_VISIBLE = 5;
+const INITIAL_VISIBLE = 20;
 const LOAD_MORE_STEP = 10;
 
 function isYouTubeInput(val: string): boolean {
@@ -515,7 +514,12 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
 
       {/* Toolbar: filter tabs OR selection controls */}
       {sources.length > 0 && !isYT && (
-        <div className="flex items-center justify-end">
+        <div className="flex items-center justify-between">
+          <span className="text-muted-foreground/50 text-xs tabular-nums">
+            {isPro
+              ? `${sources.length} channels`
+              : `${activeCount}/${maxChannels} active`}
+          </span>
           {anySelected ? (
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground text-xs tabular-nums">
@@ -602,10 +606,9 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
           {hasMore && (
             <button
               onClick={() => setVisibleCount((n) => n + LOAD_MORE_STEP)}
-              className="text-muted-foreground/30 hover:text-muted-foreground flex w-full items-center justify-center py-1.5 transition-colors"
-              title={`Show ${Math.min(LOAD_MORE_STEP, remainingCount)} more`}
+              className="text-muted-foreground/40 hover:text-foreground w-full py-2 text-xs transition-colors"
             >
-              <ChevronDown className="h-4 w-4" />
+              Load {Math.min(LOAD_MORE_STEP, remainingCount)} more
             </button>
           )}
         </div>
