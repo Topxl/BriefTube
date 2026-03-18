@@ -2,6 +2,8 @@
 
 ## 2026-03-18
 
+FIX: channels-sheet — forceMount prevents SourcesSection remount on sheet close (fixes reactivation bug)
+FEATURE: import YouTube channels as inactive by default — user manually activates wanted channels
 FEATURE: YouTube cookie validation at startup — alerts admin if cookies missing/expired
 FEATURE: /cookies bot command to check cookie health status
 FEATURE: Admin can refresh cookies by sending a .txt file directly to the log bot

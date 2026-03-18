@@ -1,11 +1,9 @@
-import { SiteConfig } from "@/site-config";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import { logger } from "@/lib/logger";
-import { isProUser, getMaxChannels } from "@/lib/is-pro";
 
 type YouTubeSubscriptionItem = {
   snippet: {
@@ -139,32 +137,14 @@ export async function GET(request: NextRequest) {
 
   const { access_token } = (await tokenRes.json()) as { access_token: string };
 
-  // Fetch user profile for limits + existing subscriptions in parallel
-  const [profileRes, existingSubsRes, youtubeChannels] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("max_channels, subscription_status, trial_ends_at")
-      .eq("id", user.id)
-      .single(),
+  // Fetch existing subscriptions and YouTube channels in parallel
+  const [existingSubsRes, youtubeChannels] = await Promise.all([
     supabase
       .from("subscriptions")
       .select("channel_id, active")
       .eq("user_id", user.id),
     fetchAllSubscriptions(access_token),
   ]);
-
-  const profile = profileRes.data;
-  const isPro = profile ? isProUser(profile) : false;
-  const maxActiveChannels = profile
-    ? getMaxChannels(profile)
-    : SiteConfig.freeChannelsLimit;
-  const existingActiveCount = (existingSubsRes.data ?? []).filter(
-    (s) => s.active,
-  ).length;
-  // How many active slots are still available
-  const slotsAvailable = isPro
-    ? Infinity
-    : Math.max(0, maxActiveChannels - existingActiveCount);
 
   logger.info(`Fetched ${youtubeChannels.length} YouTube subscriptions`);
 
@@ -173,15 +153,15 @@ export async function GET(request: NextRequest) {
     (existingSubsRes.data ?? []).map((s) => s.channel_id),
   );
 
-  // Import ALL non-duplicate channels; only mark active for available slots
+  // Import ALL non-duplicate channels as inactive by default
   const toImport = youtubeChannels
     .filter((c) => !existingChannelIds.has(c.channelId))
-    .map((c, index) => ({
+    .map((c) => ({
       user_id: user.id,
       channel_id: c.channelId,
       channel_name: c.channelName,
       channel_avatar_url: c.avatarUrl,
-      active: isPro || index < slotsAvailable,
+      active: false,
     }));
 
   const skipped = youtubeChannels.length - toImport.length;
