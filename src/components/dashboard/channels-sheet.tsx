@@ -39,8 +39,8 @@ export function ChannelsSheet({ initialSources, maxChannels, isPro }: Props) {
         side={isMobile ? "bottom" : "right"}
         className={
           isMobile
-            ? "h-[85dvh] overflow-y-auto p-0"
-            : "overflow-y-auto p-0 sm:max-w-md"
+            ? "h-[85dvh] gap-0 overflow-y-auto p-0"
+            : "gap-0 overflow-y-auto p-0 sm:max-w-md"
         }
       >
         <SheetHeader className="border-b border-white/[0.04] px-4 py-2">
