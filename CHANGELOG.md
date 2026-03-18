@@ -2,6 +2,8 @@
 
 ## 2026-03-18
 
+FEATURE: Admin — formulaire "Offrir un accès Pro" (email + durée 1-12 mois) avec email de remerciement automatique
+FIX: Admin actions.ts — UUID admin hardcodé remplacé par env.ADMIN_USER_ID
 REFACTOR: channel management UX — search bar in sheet, nav bar is YouTube-only add
 FIX: channels-sheet — forceMount prevents SourcesSection remount on sheet close (fixes reactivation bug)
 FEATURE: import YouTube channels as inactive by default — user manually activates wanted channels

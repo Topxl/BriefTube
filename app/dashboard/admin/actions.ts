@@ -2,6 +2,9 @@
 
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { env } from "@/lib/env";
+import { sendEmail } from "@/lib/mail/send-email";
+import { GiftTrialEmail } from "@/components/emails/gift-trial-email";
 import { runTrialReminders } from "@/lib/cron/trial-reminders";
 import type { TrialRemindersResult } from "@/lib/cron/trial-reminders";
 import { runActivationEmails } from "@/lib/cron/activation-emails";
@@ -15,17 +18,70 @@ import { runDailyDigestForUser } from "@/lib/cron/daily-digest";
 
 type RunResult = { sent: number; skipped: number; errors: number };
 
-const ADMIN_USER_ID = "67320a39-948c-44d2-98e3-c0de49af1ec6";
-
 async function requireAdmin() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (user?.id !== ADMIN_USER_ID) {
+  if (!env.ADMIN_USER_ID || user?.id !== env.ADMIN_USER_ID) {
     redirect("/dashboard");
   }
+}
+
+export async function grantProTrial(
+  email: string,
+  months: number,
+): Promise<{ ok: true; trialEndsAt: string } | { ok: false; error: string }> {
+  await requireAdmin();
+
+  if (!email || months < 1 || months > 24) {
+    return { ok: false, error: "Paramètres invalides" };
+  }
+
+  const admin = createAdminClient();
+
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("id, email, trial_ends_at")
+    .eq("email", email.toLowerCase().trim())
+    .maybeSingle();
+
+  if (!profile) {
+    return { ok: false, error: "Utilisateur introuvable" };
+  }
+
+  // Extend from current trial end (if in the future) or from now
+  const base =
+    profile.trial_ends_at && new Date(profile.trial_ends_at) > new Date()
+      ? new Date(profile.trial_ends_at)
+      : new Date();
+
+  base.setMonth(base.getMonth() + months);
+  const trialEndsAt = base.toISOString();
+
+  const { error: updateError } = await admin
+    .from("profiles")
+    .update({ trial_ends_at: trialEndsAt, max_channels: 999 })
+    .eq("id", profile.id);
+
+  if (updateError) {
+    return { ok: false, error: updateError.message };
+  }
+
+  const formattedDate = base.toLocaleDateString("fr-FR", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+
+  await sendEmail({
+    to: profile.email ?? email, // eslint-disable-line @typescript-eslint/no-unnecessary-condition
+    subject: `${months === 1 ? "1 mois" : `${months} mois`} d'accès Pro BriefTube offerts`,
+    html: GiftTrialEmail({ months, trialEndsAt: formattedDate }),
+  });
+
+  return { ok: true, trialEndsAt: formattedDate };
 }
 
 export async function triggerTrialReminders(): Promise<TrialRemindersResult> {
@@ -63,7 +119,8 @@ export async function triggerTestDailyDigest(): Promise<{
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (user?.id !== ADMIN_USER_ID) redirect("/dashboard");
+  if (!env.ADMIN_USER_ID || user?.id !== env.ADMIN_USER_ID)
+    redirect("/dashboard");
 
   const admin = createAdminClient();
   const { data: profile } = await admin
