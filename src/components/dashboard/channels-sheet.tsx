@@ -10,7 +10,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Rss } from "@/lib/icons";
+import { Rss, Youtube } from "@/lib/icons";
 import { SourcesSection } from "@/components/dashboard/sources-section";
 import type { Tables } from "@/types/supabase";
 
@@ -44,7 +44,16 @@ export function ChannelsSheet({ initialSources, maxChannels, isPro }: Props) {
         }
       >
         <SheetHeader className="border-b border-white/[0.04] px-6 py-4">
-          <SheetTitle>Channels</SheetTitle>
+          <div className="flex items-center justify-between">
+            <SheetTitle className="text-base">Channels</SheetTitle>
+            <a
+              href="/api/youtube/auth"
+              className="nm-raised-sm text-muted-foreground/60 hover:text-foreground flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors"
+            >
+              <Youtube className="h-3.5 w-3.5" />
+              Import from YouTube
+            </a>
+          </div>
         </SheetHeader>
         <div className="p-6">
           <SourcesSection

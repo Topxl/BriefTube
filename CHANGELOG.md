@@ -2,6 +2,7 @@
 
 ## 2026-03-18
 
+REFACTOR: channel management UX — search bar in sheet, nav bar is YouTube-only add
 FIX: channels-sheet — forceMount prevents SourcesSection remount on sheet close (fixes reactivation bug)
 FEATURE: import YouTube channels as inactive by default — user manually activates wanted channels
 FEATURE: YouTube cookie validation at startup — alerts admin if cookies missing/expired

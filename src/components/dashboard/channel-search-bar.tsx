@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { useQueryState } from "nuqs";
 import { Input } from "@/components/ui/input";
 import { Search, Youtube, X, Loader2, Play, Check } from "@/lib/icons";
 import { toast } from "sonner";
@@ -31,7 +30,7 @@ type LinkPreview = {
 };
 
 export function ChannelSearchBar() {
-  const [q, setQ] = useQueryState("q", { defaultValue: "", shallow: true });
+  const [q, setQ] = useState("");
   const [preview, setPreview] = useState<LinkPreview | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [subscribing, setSubscribing] = useState(false);
@@ -126,7 +125,7 @@ export function ChannelSearchBar() {
           startedAt: Date.now(),
         });
       }
-      await setQ(null);
+      setQ("");
       router.refresh();
     } catch {
       toast.error("Something went wrong");
@@ -170,7 +169,7 @@ export function ChannelSearchBar() {
           }),
         );
       }
-      await setQ(null);
+      setQ("");
     } catch {
       toast.error("Something went wrong");
     } finally {
@@ -189,8 +188,8 @@ export function ChannelSearchBar() {
         <Input
           type="text"
           value={q}
-          onChange={(e) => void setQ(e.target.value || null)}
-          placeholder="Search channels or paste a YouTube URL…"
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Paste a YouTube URL or @handle…"
           className="scrollbar-fade-x placeholder:text-muted-foreground/60 h-9 rounded-full border-white/[0.07] bg-[oklch(0.18_0_0)]/50 pr-8 pl-8 text-sm shadow-[0_4px_16px_rgba(0,0,0,0.3)] backdrop-blur-xl focus-visible:border-white/[0.12] focus-visible:ring-0"
           autoComplete="off"
           data-1p-ignore
@@ -201,7 +200,7 @@ export function ChannelSearchBar() {
           <button
             type="button"
             onClick={() => {
-              void setQ(null);
+              setQ("");
               setPreview(null);
             }}
             className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2 transition-colors"
