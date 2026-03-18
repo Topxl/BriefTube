@@ -60,6 +60,91 @@ _MUSIC_TITLE_RE = re.compile(
 # Set YOUTUBE_COOKIES_FILE in .env, or place cookies at worker/cookies/youtube.txt.
 _COOKIES_FILE = Path(__file__).parent / "cookies" / "youtube.txt"
 
+# Critical cookies needed for authenticated YouTube access
+_CRITICAL_COOKIES = {"__Secure-3PSID", "__Secure-3PAPISID"}
+_IMPORTANT_COOKIES = {"SAPISID", "APISID", "SID", "HSID", "SSID"}
+
+def validate_cookies() -> dict:
+    """Parse the cookie file and return a health status dict.
+
+    Returns:
+        {
+            "ok": bool,
+            "exists": bool,
+            "total": int,
+            "present": set[str],
+            "missing_critical": list[str],
+            "missing_important": list[str],
+            "expired": list[str],
+            "age_days": int | None,   # days since file was last modified
+            "summary": str,           # one-line human-readable status
+        }
+    """
+    import time
+
+    if not _COOKIES_FILE.exists():
+        return {
+            "ok": False, "exists": False, "total": 0,
+            "present": set(), "missing_critical": sorted(_CRITICAL_COOKIES),
+            "missing_important": sorted(_IMPORTANT_COOKIES),
+            "expired": [], "age_days": None,
+            "summary": "Cookie file not found",
+        }
+
+    now = int(time.time())
+    age_days = int((now - _COOKIES_FILE.stat().st_mtime) / 86400)
+    present: set[str] = set()
+    expired: list[str] = []
+
+    try:
+        with open(_COOKIES_FILE, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                parts = line.split("\t")
+                if len(parts) < 7:
+                    continue
+                name = parts[5]
+                present.add(name)
+                try:
+                    expiry = int(parts[4])
+                    if 0 < expiry < now:
+                        expired.append(name)
+                except ValueError:
+                    pass
+    except Exception as e:
+        return {
+            "ok": False, "exists": True, "total": 0,
+            "present": set(), "missing_critical": sorted(_CRITICAL_COOKIES),
+            "missing_important": sorted(_IMPORTANT_COOKIES),
+            "expired": [], "age_days": age_days,
+            "summary": f"Could not parse cookie file: {e}",
+        }
+
+    missing_critical = sorted(_CRITICAL_COOKIES - present)
+    missing_important = sorted(_IMPORTANT_COOKIES - present)
+    ok = len(missing_critical) == 0 and len(expired) == 0
+
+    if not ok:
+        parts_msg = []
+        if missing_critical:
+            parts_msg.append(f"missing: {', '.join(missing_critical)}")
+        if expired:
+            parts_msg.append(f"expired: {', '.join(expired)}")
+        summary = f"Cookies invalid — {'; '.join(parts_msg)}"
+    elif age_days > 14:
+        summary = f"Cookies OK but {age_days}d old — consider refreshing"
+    else:
+        summary = f"Cookies OK ({len(present)} cookies, {age_days}d old)"
+
+    return {
+        "ok": ok, "exists": True, "total": len(present),
+        "present": present, "missing_critical": missing_critical,
+        "missing_important": missing_important, "expired": expired,
+        "age_days": age_days, "summary": summary,
+    }
+
 # Import Whisper transcriber (optional, only if API key is set)
 WHISPER_AVAILABLE = False
 try:
@@ -106,11 +191,15 @@ class TranscriptExtractor:
                 logger.error(f"Failed to initialize Whisper fallback: {e}")
                 self.enable_whisper_fallback = False
 
-        # Log whether cookies are available
-        if _COOKIES_FILE.exists():
-            logger.info(f"YouTube cookies loaded: {_COOKIES_FILE}")
+        # Validate cookies at startup
+        cookie_health = validate_cookies()
+        if cookie_health["ok"]:
+            logger.info(f"YouTube cookies: {cookie_health['summary']}")
+        elif cookie_health["exists"]:
+            logger.warning(f"YouTube cookies degraded: {cookie_health['summary']}")
         else:
-            logger.info("No YouTube cookies found — transcript API may be IP-blocked on cloud IPs")
+            logger.warning("No YouTube cookies found — transcript API may be IP-blocked on cloud IPs")
+        self._cookie_health = cookie_health
 
     def _get_api(self, use_proxy: bool = False) -> YouTubeTranscriptApi:
         """Return a YouTubeTranscriptApi instance.
