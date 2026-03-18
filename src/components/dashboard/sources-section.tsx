@@ -2,10 +2,9 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { useQueryState } from "nuqs";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
-import { Youtube, Trash2, ChevronDown, TriangleAlertIcon } from "@/lib/icons";
+import { Search, Trash2, ChevronDown, TriangleAlertIcon, X } from "@/lib/icons";
 import { dialogManager } from "@/features/dialog-manager/dialog-manager";
 import { openUpsellModal } from "@/components/dashboard/upsell-modal";
 import { Banner } from "@/components/nowts/banner";
@@ -150,7 +149,7 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
   const [filterStatus, setFilterStatus] = useState<"all" | "active" | "paused">(
     "all",
   );
-  const [q] = useQueryState("q", { defaultValue: "", shallow: true });
+  const [searchInput, setSearchInput] = useState("");
   const supabase = createClient();
 
   // Stable display order — active first, paused last — fixed at mount, never re-sorted
@@ -162,12 +161,7 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
   const activeCount = sources.filter((s) => s.active).length;
   const atActiveLimit = !isPro && activeCount >= maxChannels;
 
-  const isYouTubeQ =
-    q.includes("youtube.com") ||
-    q.includes("youtu.be") ||
-    q.startsWith("@") ||
-    /^UC[\w-]{10,}$/.test(q);
-  const searchNorm = q.trim().length > 0 && !isYouTubeQ ? q.toLowerCase() : "";
+  const searchNorm = searchInput.trim().toLowerCase();
 
   // Build ordered list using the stable display order
   const sourcesMap = new Map(sources.map((s) => [s.id, s]));
@@ -262,13 +256,6 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
           <span className="text-muted-foreground/50 text-xs tabular-nums">
             {isPro ? sources.length : `${activeCount}/${maxChannels}`}
           </span>
-          <a
-            href="/api/youtube/auth"
-            className="nm-raised-sm text-muted-foreground/60 hover:text-foreground flex items-center gap-1 rounded-full px-2 py-1 text-[10px] transition-colors"
-          >
-            <Youtube className="h-3 w-3" />
-            Import
-          </a>
         </div>
 
         {/* Selection controls OR filter tabs */}
@@ -313,6 +300,29 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
       </div>
 
       <>
+        {/* Search input — local, inside the sheet */}
+        {sources.length > 2 && (
+          <div className="relative px-6 py-3">
+            <Search className="text-muted-foreground/40 absolute top-1/2 left-9 h-3.5 w-3.5 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Filter channels…"
+              className="nm-inset text-foreground placeholder:text-muted-foreground/40 w-full rounded-full py-2 pr-8 pl-8 text-sm outline-none"
+            />
+            {searchInput && (
+              <button
+                type="button"
+                onClick={() => setSearchInput("")}
+                className="text-muted-foreground/40 hover:text-muted-foreground absolute top-1/2 right-9 -translate-y-1/2 transition-colors"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Active limit banner */}
         {atActiveLimit && (
           <Banner
@@ -366,7 +376,7 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
                 </div>
               ) : (
                 <p className="text-muted-foreground px-4 py-6 text-center text-sm">
-                  No channel matching &ldquo;{q}&rdquo;
+                  No channel matching &ldquo;{searchInput}&rdquo;
                 </p>
               )}
             </div>
