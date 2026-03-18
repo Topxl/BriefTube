@@ -66,6 +66,7 @@ function SourceRow({
   onToggle: (source: Subscription) => void;
   searchQuery: string;
 }) {
+  const [imgError, setImgError] = useState(false);
   const name = source.channel_name;
   const q = searchQuery.trim().toLowerCase();
   let nameEl: React.ReactNode = name;
@@ -95,7 +96,7 @@ function SourceRow({
         aria-label={selected ? "Deselect" : "Select"}
         className="relative shrink-0 cursor-pointer rounded-full transition-all"
       >
-        {source.channel_avatar_url ? (
+        {source.channel_avatar_url && !imgError ? (
           <Image
             src={source.channel_avatar_url}
             alt={source.channel_name}
@@ -104,6 +105,7 @@ function SourceRow({
             className={`h-8 w-8 rounded-full transition-all ${
               !source.active && !selected ? "opacity-35" : ""
             } ${selected ? "opacity-50" : ""}`}
+            onError={() => setImgError(true)}
             suppressHydrationWarning
           />
         ) : (
