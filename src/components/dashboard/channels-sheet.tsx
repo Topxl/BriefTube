@@ -44,8 +44,11 @@ export function ChannelsSheet({ initialSources, maxChannels, isPro }: Props) {
         }
       >
         <SheetHeader className="border-b border-white/[0.04] px-4 py-3">
-          <div className="flex items-center pr-8">
+          <div className="flex items-center gap-2 pr-8">
             <SheetTitle className="text-sm">Channels</SheetTitle>
+            <span className="text-muted-foreground/40 text-xs tabular-nums">
+              {initialSources.length}
+            </span>
           </div>
         </SheetHeader>
         <div className="px-4 pt-2 pb-4">
