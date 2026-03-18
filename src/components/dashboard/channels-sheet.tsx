@@ -51,7 +51,7 @@ export function ChannelsSheet({ initialSources, maxChannels, isPro }: Props) {
             </span>
           </div>
         </SheetHeader>
-        <div className="px-4 pt-2 pb-4">
+        <div className="px-4 pt-1.5 pb-4">
           <SourcesSection
             initialSources={initialSources}
             maxChannels={maxChannels}
