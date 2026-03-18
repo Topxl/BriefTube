@@ -2,7 +2,7 @@
 
 ## 2026-03-18
 
-FIX: channels sheet — restore channel count in toolbar, show 20 channels by default, replace chevron with "Load X more" text button
+FEATURE: channels sheet — infinite scroll auto-loads more channels on scroll, 20 shown by default, channel count restored in toolbar
 REFACTOR: unified search/add input in channels sheet — filter existing OR add by YouTube URL/@handle from same input
 FEATURE: Admin — formulaire "Offrir un accès Pro" (email + durée 1-12 mois) avec email de remerciement automatique
 FIX: Admin actions.ts — UUID admin hardcodé remplacé par env.ADMIN_USER_ID

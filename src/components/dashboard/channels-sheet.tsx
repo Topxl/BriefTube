@@ -51,7 +51,7 @@ export function ChannelsSheet({ initialSources, maxChannels, isPro }: Props) {
               className="text-muted-foreground/40 hover:text-muted-foreground flex items-center gap-1 text-xs transition-colors"
             >
               <Youtube className="h-3 w-3" />
-              Import
+              Import from YouTube
             </a>
           </div>
         </SheetHeader>

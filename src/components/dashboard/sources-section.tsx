@@ -182,7 +182,21 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
   const [subscribing, setSubscribing] = useState(false);
   const [summarizing, setSummarizing] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
   const supabase = createClient();
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) setVisibleCount((n) => n + LOAD_MORE_STEP);
+      },
+      { threshold: 0.1 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [sentinelRef]);
 
   const trimmed = searchInput.trim();
   const isYT = trimmed.length > 0 && isYouTubeInput(trimmed);
@@ -342,7 +356,6 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
       )
     : filteredByStatus.slice(0, visibleCount);
 
-  const remainingCount = filteredByStatus.length - visibleCount;
   const hasMore = !searchNorm && visibleCount < filteredByStatus.length;
   const anySelected = selectedIds.size > 0;
 
@@ -603,14 +616,7 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
               </p>
             )}
           </div>
-          {hasMore && (
-            <button
-              onClick={() => setVisibleCount((n) => n + LOAD_MORE_STEP)}
-              className="text-muted-foreground/40 hover:text-foreground w-full py-2 text-xs transition-colors"
-            >
-              Load {Math.min(LOAD_MORE_STEP, remainingCount)} more
-            </button>
-          )}
+          {hasMore && <div ref={sentinelRef} className="h-4" />}
         </div>
       ) : null}
     </div>
