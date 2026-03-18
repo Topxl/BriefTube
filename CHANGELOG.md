@@ -2,6 +2,7 @@
 
 ## 2026-03-18
 
+REFACTOR: unified search/add input in channels sheet — filter existing OR add by YouTube URL/@handle from same input
 FEATURE: Admin — formulaire "Offrir un accès Pro" (email + durée 1-12 mois) avec email de remerciement automatique
 FIX: Admin actions.ts — UUID admin hardcodé remplacé par env.ADMIN_USER_ID
 REFACTOR: channel management UX — search bar in sheet, nav bar is YouTube-only add
