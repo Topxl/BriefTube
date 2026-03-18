@@ -409,7 +409,7 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
   };
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-1.5">
       {/* Unified search / add input */}
       <div className="relative">
         {isYT ? (
@@ -515,12 +515,7 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
 
       {/* Toolbar: filter tabs OR selection controls */}
       {sources.length > 0 && !isYT && (
-        <div className="flex items-center justify-between">
-          <span className="text-muted-foreground/50 text-xs tabular-nums">
-            {isPro
-              ? `${sources.length} channels`
-              : `${activeCount}/${maxChannels} active`}
-          </span>
+        <div className="flex items-center justify-end">
           {anySelected ? (
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground text-xs tabular-nums">
