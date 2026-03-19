@@ -37,6 +37,8 @@ export function SummariesFeed() {
   const [hasMore, setHasMore] = useState(false);
   const [page, setPage] = useState(0);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  // IDs déjà tentés (succès ou échec) — évite de re-fetcher sur chaque update realtime
+  const fetchedRef = useRef<Set<string>>(new Set());
   const [titles, setTitles] = useState<Record<string, string>>({});
   const [favLangs, setFavLangs] = useState<string[]>([]);
   const [preferredLang, setPreferredLang] = useState("fr");
@@ -238,12 +240,16 @@ export function SummariesFeed() {
     const missing = deliveries.filter(
       (d) =>
         !titles[d.video_id] &&
+        !fetchedRef.current.has(d.video_id) &&
         // No title, or title is just the raw videoId (inserted without metadata)
         (!d.video?.video_title || d.video.video_title === d.video_id),
     );
     if (missing.length === 0) return;
 
     const ids = [...new Set(missing.map((d) => d.video_id))];
+    // Marquer immédiatement comme tentés pour éviter les doublons (realtime, pagination)
+    for (const id of ids) fetchedRef.current.add(id);
+
     const fetchTitle = async (videoId: string) => {
       const videoIdClean = videoId.replace(/[^a-zA-Z0-9_-]/g, "");
       if (!videoIdClean) return;
