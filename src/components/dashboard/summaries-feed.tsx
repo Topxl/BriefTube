@@ -1,20 +1,16 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Button } from "@/components/ui/button";
 import { Inbox } from "@/lib/icons";
 import { SummaryRow } from "@/components/dashboard/summary-row";
 import { LanguagePicker } from "@/components/dashboard/language-picker";
 import { dialogManager } from "@/features/dialog-manager/dialog-manager";
 import { toast } from "sonner";
-import { t } from "@/locales";
 import type {
   EnrichedDelivery,
   ProcessedVideo,
 } from "@/components/dashboard/summary-row";
-
-const tl = t.dashboard.summaries;
 
 const PAGE_SIZE = 20;
 
@@ -40,6 +36,7 @@ export function SummariesFeed() {
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(false);
   const [page, setPage] = useState(0);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
   const [titles, setTitles] = useState<Record<string, string>>({});
   const [favLangs, setFavLangs] = useState<string[]>([]);
   const [preferredLang, setPreferredLang] = useState("fr");
@@ -127,6 +124,20 @@ export function SummariesFeed() {
   useEffect(() => {
     void loadDeliveries(0);
   }, [loadDeliveries]);
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && hasMore && !loading)
+          void loadDeliveries(page + 1);
+      },
+      { threshold: 0.1 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [sentinelRef, hasMore, loading, page, loadDeliveries]);
 
   const toggleFavorite = useCallback(
     (code: string) => {
@@ -291,17 +302,7 @@ export function SummariesFeed() {
           ))}
       </div>
 
-      {hasMore && !loading && (
-        <div className="flex justify-center">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={async () => loadDeliveries(page + 1)}
-          >
-            {tl.loadMore}
-          </Button>
-        </div>
-      )}
+      {hasMore && <div ref={sentinelRef} className="h-4" />}
     </div>
   );
 }
