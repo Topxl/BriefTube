@@ -145,6 +145,10 @@ export function EditListForm({
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
+    if (channels.length === 0) {
+      toast.error("A list must contain at least one channel");
+      return;
+    }
     setSubmitting(true);
     try {
       // 1. Update list metadata
@@ -257,7 +261,7 @@ export function EditListForm({
             <Button
               type="submit"
               form="edit-list-form"
-              disabled={submitting || !name.trim()}
+              disabled={submitting || !name.trim() || channels.length === 0}
               size="sm"
               className="rounded-full bg-red-600 hover:bg-red-500"
             >

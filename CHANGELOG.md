@@ -2,6 +2,8 @@
 
 ## 2026-03-19
 
+FIX: lists — impossible de sauvegarder une liste sans channels (bouton désactivé + toast d'erreur)
+
 FEATURE: summaries feed — infinite scroll via IntersectionObserver, remplace le bouton "Load more"
 CHORE: perf — ISR revalidate=3600 sur landing page (TTFB: 1.6s → ~50ms depuis CDN Vercel)
 CHORE: perf — optimizePackageImports pour lucide-react, supabase, date-fns, tanstack-query, motion (réduit JS inutilisé 278 KiB)
