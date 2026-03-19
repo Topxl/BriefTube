@@ -8,6 +8,13 @@ const nextConfig: NextConfig = {
       dynamic: 30,
       static: 180,
     },
+    optimizePackageImports: [
+      "lucide-react",
+      "@supabase/supabase-js",
+      "date-fns",
+      "@tanstack/react-query",
+      "motion",
+    ],
   },
   cacheComponents: true,
   typedRoutes: true,

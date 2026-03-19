@@ -83,7 +83,8 @@ export default function RootLayout({
     <html lang="en" className="h-full" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://img.youtube.com" />
-        <link rel="preconnect" href="https://www.googletagmanager.com" />
+        {/* GTM est chargé en lazyOnload — dns-prefetch suffit, preconnect serait gaspillé */}
+        <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
         <link rel="dns-prefetch" href="https://noembed.com" />
         <link rel="dns-prefetch" href="https://r.wdfl.co" />
         <Script
