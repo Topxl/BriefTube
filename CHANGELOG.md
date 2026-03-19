@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-03-19
+
+FEATURE: summaries feed — infinite scroll via IntersectionObserver, remplace le bouton "Load more"
+CHORE: perf — ISR revalidate=3600 sur landing page (TTFB: 1.6s → ~50ms depuis CDN Vercel)
+CHORE: perf — optimizePackageImports pour lucide-react, supabase, date-fns, tanstack-query, motion (réduit JS inutilisé 278 KiB)
+CHORE: perf — .browserslistrc ciblant navigateurs modernes (supprime legacy JS 44 KiB)
+CHORE: perf — preconnect GTM remplacé par dns-prefetch (GTM est lazyOnload, connexion TCP était gaspillée)
+
 ## 2026-03-18
 
 FIX: channels sheet — bouton Import déplacé dans toolbar à côté du count, plus visible (rouge), espace header réduit
