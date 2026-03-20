@@ -267,6 +267,23 @@ async def _notify_push(
         logger.debug(f"Push notify failed for user {user_id}: {e}")
 
 
+async def _notify_first_summary(
+    session: aiohttp.ClientSession,
+    user_id: str,
+    video_id: str,
+) -> None:
+    """Best-effort first-summary email trigger after a successful delivery."""
+    try:
+        await session.post(
+            f"{APP_URL}/api/email/first-summary",
+            json={"userId": user_id, "videoId": video_id},
+            headers={"x-push-secret": PUSH_NOTIFY_SECRET},
+            timeout=aiohttp.ClientTimeout(total=5),
+        )
+    except Exception as e:
+        logger.debug(f"First-summary email notify failed for user {user_id}: {e}")
+
+
 # ── Loop 1: RSS Scanner ───────────────────────────────────────
 
 async def rss_loop(alert_system: MonitoringAlert):
@@ -948,6 +965,11 @@ async def delivery_loop(alert_system: MonitoringAlert):
                                     user_id=d["user_id"],
                                     video_id=video_id,
                                     video_title=d["video_title"],
+                                ))
+                                asyncio.create_task(_notify_first_summary(
+                                    session=_http_session,
+                                    user_id=d["user_id"],
+                                    video_id=video_id,
                                 ))
                     elif result is None:
                         # send_audio_to_user returned None: permanent rejection

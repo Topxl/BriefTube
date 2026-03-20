@@ -2,6 +2,8 @@
 
 ## 2026-03-20
 
+FEATURE: Onboarding emails — J+1 ("Add more channels") and J+3 ("Languages") sequences via Inngest cron, registered in inngest route and email-workflows registry
+FEATURE: First summary email — worker triggers /api/email/first-summary after each delivery; dedup via email_logs ensures it sends once per user
 FEATURE: Podcast RSS feed — /api/feed/[token] generates a personal podcast feed (RSS 2.0 + iTunes) from the user's audio deliveries; URL displayed in profile settings with one-click copy
 CHORE: DB — add rss_token uuid column to profiles (auto-generated, unique index)
 CHORE: Types Supabase regénérés (profiles.rss_token)
