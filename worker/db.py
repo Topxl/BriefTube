@@ -1249,22 +1249,17 @@ def get_stale_r2_urls(days: int = 7, limit: int = 100) -> list[dict]:
     sb = get_client()
     cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
 
-    # Fetch candidates: R2 URLs older than cutoff
+    # Fetch candidates: R2 URLs older than cutoff (filter at SQL level)
     res = (
         sb.table("processed_videos")
         .select("video_id, language, audio_url")
         .eq("status", "completed")
-        .not_.is_("audio_url", "null")
         .lt("processed_at", cutoff)
+        .or_("audio_url.like.%r2.dev%,audio_url.like.%brief-tube.com%")
         .limit(limit * 3)  # Fetch extra to account for unsafe ones filtered below
         .execute()
     )
-    candidates = [
-        r for r in (res.data or [])
-        if r.get("audio_url") and (
-            "r2.dev" in r["audio_url"] or "brief-tube.com" in r["audio_url"]
-        )
-    ]
+    candidates = list(res.data or [])
     if not candidates:
         return []
 
