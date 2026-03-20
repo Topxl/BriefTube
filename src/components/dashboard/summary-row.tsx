@@ -169,7 +169,7 @@ export function SummaryRow({
       }
     } else {
       await navigator.clipboard.writeText(url);
-      toast.success("Lien copié !");
+      toast.success("Link copied!");
     }
   }, [title, delivery.video_id]);
 
@@ -189,7 +189,7 @@ export function SummaryRow({
           }),
         });
         if (!res.ok) {
-          toast.error("Erreur lors de la génération");
+          toast.error("Generation error");
           return;
         }
         const data = (await res.json()) as { queued?: boolean };
@@ -199,12 +199,12 @@ export function SummaryRow({
             title: title ?? delivery.video_id,
             startedAt: Date.now(),
           });
-          toast.success("Génération lancée !");
+          toast.success("Generation started!");
         } else {
-          toast.info("Résumé déjà disponible dans cette langue");
+          toast.info("Summary already available in this language");
         }
       } catch {
-        toast.error("Erreur réseau");
+        toast.error("Network error");
       } finally {
         setGeneratingLang(null);
       }
@@ -215,7 +215,7 @@ export function SummaryRow({
   const handleOpenLangPicker = useCallback(() => {
     if (!onToggleFavorite) return;
     dialogManager.custom({
-      title: "Générer dans une autre langue",
+      title: "Generate in another language",
       size: "sm",
       children: (
         <LanguagePicker
@@ -336,7 +336,7 @@ export function SummaryRow({
                     className="flex items-center gap-2"
                   >
                     <ExternalLink className="h-3.5 w-3.5" />
-                    Ouvrir sur YouTube
+                    Open on YouTube
                   </a>
                 </DropdownMenuItem>
               )}
@@ -345,7 +345,7 @@ export function SummaryRow({
                 className="flex items-center gap-2"
               >
                 <Share2 className="h-3.5 w-3.5" />
-                Partager le résumé
+                Share summary
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               {favoriteLanguages
@@ -365,8 +365,8 @@ export function SummaryRow({
                         fill="currentColor"
                       />
                       {generatingLang === code
-                        ? "Génération…"
-                        : `Générer en ${lang.nativeName}`}
+                        ? "Generating…"
+                        : `Generate in ${new Intl.DisplayNames(["en"], { type: "language" }).of(code) ?? lang.name}`}
                     </DropdownMenuItem>
                   );
                 })}
@@ -375,7 +375,7 @@ export function SummaryRow({
                 className="flex items-center gap-2"
               >
                 <Languages className="h-3.5 w-3.5" />
-                Autre langue…
+                Other language…
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

@@ -32,7 +32,7 @@ export function GrantTrialForm() {
         setStatus("error");
       }
     } catch {
-      setResult({ error: "Erreur inattendue" });
+      setResult({ error: "Unexpected error" });
       setStatus("error");
     }
   };
@@ -60,7 +60,7 @@ export function GrantTrialForm() {
         >
           {DURATIONS.map((d) => (
             <option key={d} value={d}>
-              {d} mois
+              {d} month{d > 1 ? "s" : ""}
             </option>
           ))}
         </select>

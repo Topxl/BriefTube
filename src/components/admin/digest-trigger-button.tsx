@@ -34,10 +34,10 @@ export function DigestTriggerButton() {
           className="nm-raised-sm flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
         >
           <Mail className="h-3.5 w-3.5" />
-          {status === "loading" ? "Envoi..." : "Envoyer un digest test"}
+          {status === "loading" ? "Sending..." : "Send test digest"}
         </button>
         {status === "error" && (
-          <span className="text-destructive text-xs">Erreur — réessayer</span>
+          <span className="text-destructive text-xs">Error — retry</span>
         )}
       </div>
       {status === "success" && result && (

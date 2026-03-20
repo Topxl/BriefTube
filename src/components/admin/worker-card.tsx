@@ -118,7 +118,7 @@ export function WorkerCard() {
   const isBusy = actionMutation.isPending;
 
   const lastUpdated = dataUpdatedAt
-    ? new Date(dataUpdatedAt).toLocaleTimeString("fr-FR")
+    ? new Date(dataUpdatedAt).toLocaleTimeString("en-US")
     : null;
 
   return (
@@ -137,11 +137,11 @@ export function WorkerCard() {
           />
           <div>
             <p className="text-sm font-medium">
-              {isLoading ? "Chargement…" : (worker?.status ?? "unknown")}
+              {isLoading ? "Loading…" : (worker?.status ?? "unknown")}
             </p>
             {worker?.since && (
               <p className="text-muted-foreground text-[11px]">
-                depuis {worker.since}
+                since {worker.since}
               </p>
             )}
           </div>
@@ -214,7 +214,7 @@ export function WorkerCard() {
 
         <div className="ml-auto flex items-center gap-1.5 text-[10px] text-white/20">
           <Activity className="h-3 w-3" />
-          {lastUpdated ? `Mis à jour ${lastUpdated}` : "…"}
+          {lastUpdated ? `Updated ${lastUpdated}` : "…"}
         </div>
       </div>
 
@@ -224,21 +224,20 @@ export function WorkerCard() {
           <div className="mb-2 flex items-center gap-1.5">
             <AlertCircle className="h-3.5 w-3.5 text-red-400" />
             <p className="text-xs font-medium text-red-400">
-              {data?.errorCount} erreur
-              {(data?.errorCount ?? 0) > 1 ? "s" : ""} récente
+              {data?.errorCount} recent error
               {(data?.errorCount ?? 0) > 1 ? "s" : ""}
             </p>
             <button
               onClick={copyErrors}
               className="ml-auto flex items-center gap-1 rounded px-1 py-0.5 text-[10px] text-red-400/60 transition-colors hover:text-red-400"
-              title="Copier les erreurs"
+              title="Copy errors"
             >
               {copiedErrors ? (
                 <Check className="h-3 w-3 text-emerald-400" />
               ) : (
                 <Copy className="h-3 w-3" />
               )}
-              {copiedErrors ? "Copié" : "Copier"}
+              {copiedErrors ? "Copied" : "Copy"}
             </button>
           </div>
           <div className="flex flex-col gap-0.5">
@@ -280,7 +279,7 @@ export function WorkerCard() {
           {isLoading ? (
             <div className="flex items-center gap-2 py-4">
               <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
-              <span className="text-muted-foreground text-xs">Chargement…</span>
+              <span className="text-muted-foreground text-xs">Loading…</span>
             </div>
           ) : (
             <div className="flex flex-col">
