@@ -785,6 +785,30 @@ async def _dispatch_delivery(d: dict, audio_path: Path) -> bool:
         return False
 
 
+def _cleanup_stale_r2_audio(days: int = 7, batch: int = 100) -> None:
+    """Delete R2 audio files older than `days` days whose deliveries are all sent."""
+    from config import R2_PUBLIC_URL
+    if not storage.is_configured():
+        return
+    rows = db.get_stale_r2_urls(days=days, limit=batch)
+    if not rows:
+        return
+    logger.info(f"R2 cleanup: {len(rows)} files to delete (> {days} days, fully delivered)")
+    deleted = 0
+    for row in rows:
+        audio_url = row["audio_url"]
+        # Extract storage key: strip the public base URL prefix
+        if R2_PUBLIC_URL and audio_url.startswith(R2_PUBLIC_URL.rstrip("/")):
+            key = audio_url[len(R2_PUBLIC_URL.rstrip("/")) + 1:]
+        else:
+            parts = audio_url.rsplit("/", 2)
+            key = "/".join(parts[-2:]) if len(parts) >= 2 else audio_url
+        storage.delete_audio(key)
+        db.clear_audio_url(row["video_id"], row["language"])
+        deleted += 1
+    logger.info(f"R2 cleanup done: {deleted} files deleted")
+
+
 async def delivery_loop(alert_system: MonitoringAlert):
     """Send completed audio to subscribed users."""
     logger.info("Telegram Deliverer started")
@@ -792,6 +816,7 @@ async def delivery_loop(alert_system: MonitoringAlert):
     _cleanup_counter = 0       # Run delivery cleanup every N cycles
     _recover_counter = 0       # Run delivery recovery every N cycles
     _audio_cleanup_counter = 0  # Run audio file cleanup every N cycles
+    _last_r2_cleanup = datetime.now(timezone.utc)  # R2 audio cleanup (every 6h)
 
     # Persistent HTTP session for audio downloads — reused across all deliveries
     # to avoid the overhead of a new TCP+TLS handshake per audio file.
@@ -947,6 +972,15 @@ async def delivery_loop(alert_system: MonitoringAlert):
             if _audio_cleanup_counter >= 40:
                 _audio_cleanup_counter = 0
                 cleanup_audio_files(max_age_hours=1)
+
+            # Cleanup stale R2 audio files every 6 hours (files > 7 days, all delivered)
+            _now = datetime.now(timezone.utc)
+            if (_now - _last_r2_cleanup).total_seconds() >= 6 * 3600:
+                _last_r2_cleanup = _now
+                try:
+                    await asyncio.to_thread(_cleanup_stale_r2_audio)
+                except Exception as e:
+                    logger.warning(f"R2 audio cleanup error (non-fatal): {e}")
 
         except Exception as e:
             error_msg = str(e)
