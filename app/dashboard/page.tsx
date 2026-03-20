@@ -58,7 +58,7 @@ export default async function DashboardPage() {
 
   // Trial logic — Server Component, Date.now() is safe here (not a client hook)
   const trialEndsAt = profile.trial_ends_at ?? null;
-  const nowMs = Date.now(); // eslint-disable-line react-hooks/purity
+  const nowMs = Date.now();  
   const trialDaysLeft = trialEndsAt
     ? Math.ceil((new Date(trialEndsAt).getTime() - nowMs) / 86400000)
     : 0;

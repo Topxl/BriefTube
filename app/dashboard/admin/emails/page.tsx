@@ -291,7 +291,7 @@ export default async function AdminEmailsPage() {
     redirect("/dashboard");
   }
 
-  const now = Date.now(); // eslint-disable-line react-hooks/purity
+  const now = Date.now();  
   const h = 3_600_000;
   const thirtyDaysAgo = new Date(now - 30 * 24 * 3600_000);
 
