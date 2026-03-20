@@ -9,6 +9,7 @@ import tempfile
 from pathlib import Path
 
 from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup, LinkPreviewOptions
+from telegram.error import BadRequest, ChatMigrated, Forbidden
 
 from config import TELEGRAM_BOT_TOKEN
 
@@ -69,7 +70,7 @@ async def send_audio_to_user(
     video_id: str,
     channel_id: str,
     language: str = "fr",
-) -> bool:
+) -> bool | None:
     """Deliver an audio summary to a Telegram user as two visually linked messages.
 
     Message 1 — text with YouTube URL
@@ -82,8 +83,9 @@ async def send_audio_to_user(
         Appears as a reply to message 1 so both are visually grouped.
         Carries the ⋯ Options inline button.
 
-    Returns True if the audio was delivered (or at least the preview link was sent).
-    Returns False only if nothing reached the user at all.
+    Returns True  — delivered successfully.
+    Returns False — temporary failure (timeout, network error); do NOT disconnect user.
+    Returns None  — permanent failure (bot blocked, chat not found); disconnect user.
     """
     try:
         chat_id_int = int(chat_id)
@@ -115,6 +117,14 @@ async def send_audio_to_user(
             parse_mode="HTML",
             link_preview_options=LinkPreviewOptions(prefer_large_media=True),
         )
+    except (Forbidden, ChatMigrated) as e:
+        logger.warning(f"Preview message permanently failed for chat {chat_id}: {e}")
+        return None
+    except BadRequest as e:
+        if "chat not found" in str(e).lower() or "user not found" in str(e).lower():
+            logger.warning(f"Preview message — chat not found for {chat_id}: {e}")
+            return None
+        logger.warning(f"Preview message failed for chat {chat_id}: {e}")
     except Exception as e:
         logger.warning(f"Preview message failed for chat {chat_id}: {e}")
 
@@ -136,6 +146,18 @@ async def send_audio_to_user(
         logger.info(f"Delivered to chat {chat_id}: {(video_title or '')[:60]}")
         return True
 
+    except (Forbidden, ChatMigrated) as e:
+        logger.error(f"send_voice permanently failed for chat {chat_id}: {e}")
+        if ogg_path:
+            ogg_path.unlink(missing_ok=True)
+        return None
+    except BadRequest as e:
+        if "chat not found" in str(e).lower() or "user not found" in str(e).lower():
+            logger.error(f"send_voice — chat not found for {chat_id}: {e}")
+            if ogg_path:
+                ogg_path.unlink(missing_ok=True)
+            return None
+        logger.error(f"send_voice failed for chat {chat_id}: {e}")
     except Exception as e:
         logger.error(f"send_voice failed for chat {chat_id}: {e}")
 
