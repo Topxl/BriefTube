@@ -12,16 +12,23 @@ export async function GET() {
     stripe.prices.retrieve(env.STRIPE_PRO_ANNUAL_PRICE_ID),
   ]);
 
-  return NextResponse.json({
-    monthly: {
-      amount: monthly.unit_amount ?? 0,
-      currency: monthly.currency,
-      interval: "month",
+  return NextResponse.json(
+    {
+      monthly: {
+        amount: monthly.unit_amount ?? 0,
+        currency: monthly.currency,
+        interval: "month",
+      },
+      annual: {
+        amount: annual.unit_amount ?? 0,
+        currency: annual.currency,
+        interval: "year",
+      },
     },
-    annual: {
-      amount: annual.unit_amount ?? 0,
-      currency: annual.currency,
-      interval: "year",
+    {
+      headers: {
+        "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
+      },
     },
-  });
+  );
 }

@@ -2,6 +2,10 @@
 
 ## 2026-03-20
 
+PERF: Remove unused fonts (Space Grotesk, Geist Mono) from root layout — variables were defined but never referenced in any CSS rule
+PERF: Reduce Hero blur orb values on mobile (80px→60px, 60px→40px) to reduce paint cost on low-end devices
+PERF: Cache /api/stripe/price at CDN level (s-maxage=3600) to avoid hitting Stripe on every mount
+CHORE: Add @next/bundle-analyzer (ANALYZE=true pnpm build to inspect bundles)
 PERF: SocialProof — convert from async server component to client-side fetch (/api/stats) so homepage has no SSR blocking; stats cached 1h at CDN level
 PERF: Remove ineffective manual preload hint for YouTube thumbnail (Next.js Image priority already handles it)
 

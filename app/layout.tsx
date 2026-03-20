@@ -6,7 +6,7 @@ import { ServerToaster } from "@/features/server-sonner/server-toaster";
 import { cn } from "@/lib/utils";
 import { SiteConfig } from "@/site-config";
 import type { Metadata } from "next";
-import { Geist_Mono, Inter, Space_Grotesk } from "next/font/google";
+import { Inter } from "next/font/google";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { Suspense } from "react";
 import "./globals.css";
@@ -55,22 +55,10 @@ export const metadata: Metadata = {
   },
 };
 
-const CaptionFont = Space_Grotesk({
-  subsets: ["latin"],
-  variable: "--font-caption",
-  display: "optional",
-});
-
 const GeistSans = Inter({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
   variable: "--font-geist-sans",
-  display: "optional",
-});
-
-const GeistMono = Geist_Mono({
-  subsets: ["latin"],
-  variable: "--font-geist-mono",
   display: "optional",
 });
 
@@ -106,9 +94,7 @@ export default function RootLayout({
         suppressHydrationWarning
         className={cn(
           "bg-background h-full font-sans antialiased",
-          GeistMono.variable,
           GeistSans.variable,
-          CaptionFont.variable,
         )}
       >
         <NuqsAdapter>
