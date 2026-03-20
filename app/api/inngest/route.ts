@@ -4,8 +4,21 @@ import {
   dailyNewsletterTrigger,
   sendUserNewsletter,
 } from "@/inngest/newsletter";
+import {
+  onboardingJ1Trigger,
+  sendOnboardingJ1,
+  onboardingJ3Trigger,
+  sendOnboardingJ3,
+} from "@/inngest/onboarding";
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
-  functions: [dailyNewsletterTrigger, sendUserNewsletter],
+  functions: [
+    dailyNewsletterTrigger,
+    sendUserNewsletter,
+    onboardingJ1Trigger,
+    sendOnboardingJ1,
+    onboardingJ3Trigger,
+    sendOnboardingJ3,
+  ],
 });

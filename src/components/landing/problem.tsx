@@ -1,5 +1,3 @@
-"use client";
-
 import { ScrollReveal } from "@/components/ui/scroll-reveal";
 import { t } from "@/locales";
 
@@ -67,16 +65,32 @@ export function Problem() {
             {tl.items.map((item, i) => (
               <div
                 key={item.title}
-                style={{ display: "flex", flexDirection: "column", padding: "20px" }}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  padding: "20px",
+                }}
                 className="rounded-2xl border border-white/[0.08] border-t-white/[0.15] bg-white/[0.04] shadow-[0_8px_32px_rgba(0,0,0,0.3)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:border-white/[0.12] hover:shadow-[0_12px_40px_rgba(0,0,0,0.35)]"
               >
                 <div
-                  style={{ width: "40px", height: "40px", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "12px" }}
+                  style={{
+                    width: "40px",
+                    height: "40px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginBottom: "12px",
+                  }}
                   className="rounded-xl border border-white/[0.08] bg-white/[0.06] text-red-500 backdrop-blur-sm"
                 >
                   {painIcons[i]}
                 </div>
-                <h3 style={{ marginBottom: "6px" }} className="text-base font-semibold">{item.title}</h3>
+                <h3
+                  style={{ marginBottom: "6px" }}
+                  className="text-base font-semibold"
+                >
+                  {item.title}
+                </h3>
                 <p className="text-muted-foreground text-sm leading-relaxed">
                   {item.description}
                 </p>

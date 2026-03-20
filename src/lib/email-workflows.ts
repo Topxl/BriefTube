@@ -32,6 +32,9 @@ export type EligibleId =
   | "activation"
   | "reengagement"
   | "digest_subscribers"
+  | "first_summary"
+  | "onboarding_j1"
+  | "onboarding_j3"
   | null;
 
 export type WorkflowDef = {
@@ -216,6 +219,65 @@ export const EMAIL_WORKFLOWS: WorkflowDef[] = [
       label: "upgraded",
     },
     eligibleId: null,
+  },
+  {
+    id: "first_summary",
+    name: "First Summary Ready",
+    description:
+      "Triggered when a user receives their very first audio delivery",
+    subject: "Your first BriefTube summary is ready",
+    trigger: { type: "manual", label: "Worker HTTP POST — per delivery" },
+    audience: "All new users",
+    conditions: [
+      "User just received their first delivery",
+      "Once per user lifetime",
+    ],
+    dedup: "once",
+    icon: Zap,
+    conversionMetric: null,
+    eligibleId: "first_summary",
+  },
+  {
+    id: "onboarding_j1",
+    name: "Onboarding J+1 — Add more channels",
+    description: "Encourages users to add more channels after their first day",
+    subject: "Getting the most out of BriefTube",
+    trigger: {
+      type: "inngest",
+      label: "Inngest cron — every hour",
+      schedule: "30 * * * *",
+    },
+    audience: "Users 24–48h after signup with ≥1 delivery",
+    conditions: [
+      "created_at between 24h and 48h ago",
+      "≥1 delivery with status=sent",
+      "Once per user",
+    ],
+    dedup: "once",
+    icon: Zap,
+    conversionMetric: null,
+    eligibleId: "onboarding_j1",
+  },
+  {
+    id: "onboarding_j3",
+    name: "Onboarding J+3 — Languages",
+    description: "Highlights multilingual support 3 days after signup",
+    subject: "BriefTube works in any language",
+    trigger: {
+      type: "inngest",
+      label: "Inngest cron — every hour",
+      schedule: "45 * * * *",
+    },
+    audience: "Users 72–96h after signup with ≥1 delivery",
+    conditions: [
+      "created_at between 72h and 96h ago",
+      "≥1 delivery with status=sent",
+      "Once per user",
+    ],
+    dedup: "once",
+    icon: Mail,
+    conversionMetric: null,
+    eligibleId: "onboarding_j3",
   },
   {
     id: "early_users_thank_you",

@@ -266,8 +266,12 @@ export function Hero() {
                           }}
                         >
                           <div
-                            className="h-1 rounded-full bg-red-500 transition-[width] duration-100"
-                            style={{ width: `${progress * 100}%` }}
+                            className="h-1 w-full rounded-full bg-red-500 duration-100"
+                            style={{
+                              transform: `scaleX(${progress})`,
+                              transformOrigin: "left",
+                              transition: "transform 0.1s linear",
+                            }}
                           />
                         </div>
 
