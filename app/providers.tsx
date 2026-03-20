@@ -20,13 +20,6 @@ const PostHogPageView = dynamic(
     })),
   { ssr: false },
 );
-const PostHogIdentify = dynamic(
-  async () =>
-    import("@/components/posthog/posthog-identify").then((m) => ({
-      default: m.PostHogIdentify,
-    })),
-  { ssr: false },
-);
 
 function makeQueryClient() {
   return new QueryClient({
@@ -61,9 +54,6 @@ export const Providers = ({ children }: PropsWithChildren) => {
       <QueryClientProvider client={queryClient}>
         <Suspense fallback={null}>
           <PostHogPageView />
-        </Suspense>
-        <Suspense fallback={null}>
-          <PostHogIdentify />
         </Suspense>
         <Toaster />
         <DialogManagerRenderer />

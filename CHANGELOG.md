@@ -2,6 +2,8 @@
 
 ## 2026-03-20
 
+PERF: Move PostHogIdentify to dashboard layout — removes Supabase client (~251KB) from landing page bundle
+PERF: Add browserslist (modern browsers) to reduce transpiled JS by ~43KB
 PERF: Self-host Hero demo thumbnails (/public/) — use plain img with fetchpriority=high + preload hint so browser discovers LCP image immediately
 PERF: Remove unused fonts (Space Grotesk, Geist Mono) from root layout — variables were defined but never referenced in any CSS rule
 PERF: Reduce Hero blur orb values on mobile (80px→60px, 60px→40px) to reduce paint cost on low-end devices
