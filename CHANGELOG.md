@@ -2,6 +2,7 @@
 
 ## 2026-03-20
 
+PERF: Self-host Hero demo thumbnails (/public/) to eliminate external YouTube DNS+fetch on LCP path
 PERF: Remove unused fonts (Space Grotesk, Geist Mono) from root layout — variables were defined but never referenced in any CSS rule
 PERF: Reduce Hero blur orb values on mobile (80px→60px, 60px→40px) to reduce paint cost on low-end devices
 PERF: Cache /api/stripe/price at CDN level (s-maxage=3600) to avoid hitting Stripe on every mount
