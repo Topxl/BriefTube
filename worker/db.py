@@ -1269,13 +1269,13 @@ def get_stale_r2_urls(days: int = 7, limit: int = 100) -> list[dict]:
     if not candidates:
         return []
 
-    # Find video_ids that still have non-sent deliveries (unsafe to delete)
+    # Find video_ids with pending deliveries (failed = already abandoned, safe to delete)
     video_ids = list({r["video_id"] for r in candidates})
     unsafe_res = (
         sb.table("deliveries")
         .select("video_id")
         .in_("video_id", video_ids)
-        .neq("status", "sent")
+        .eq("status", "pending")
         .execute()
     )
     unsafe_ids = {r["video_id"] for r in (unsafe_res.data or [])}
