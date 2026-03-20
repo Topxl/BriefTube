@@ -750,7 +750,7 @@ async def processor_loop(alert_system: MonitoringAlert):
 
 # ── Loop 5: Telegram Deliverer ─────────────────────────────────
 
-async def _dispatch_delivery(d: dict, audio_path: Path) -> bool:
+async def _dispatch_delivery(d: dict, audio_path: Path) -> bool | None:
     """Dispatch a delivery to the appropriate platform handler."""
     platform = d.get("platform", "telegram")
     if platform == "telegram":
@@ -907,9 +907,9 @@ async def delivery_loop(alert_system: MonitoringAlert):
                             await asyncio.to_thread(db.mark_delivery_failed, d["delivery_id"])
                             continue
 
-                    success = await _dispatch_delivery(d, audio_path)
+                    result = await _dispatch_delivery(d, audio_path)
 
-                    if success:
+                    if result:
                         # Retry marking as sent to survive transient Supabase errors.
                         _sent_marked = False
                         for _attempt in range(3):
@@ -949,11 +949,16 @@ async def delivery_loop(alert_system: MonitoringAlert):
                                     video_id=video_id,
                                     video_title=d["video_title"],
                                 ))
-                    else:
-                        # send_audio_to_user returned False: Telegram permanently
-                        # rejected the send (user blocked bot, invalid chat, etc.).
+                    elif result is None:
+                        # send_audio_to_user returned None: permanent rejection
+                        # (bot blocked, chat not found). Disconnect the user.
                         await asyncio.to_thread(db.mark_delivery_failed, d["delivery_id"])
                         await asyncio.to_thread(db.mark_user_platform_disconnected, d["user_id"], d.get("platform", "telegram"))
+                        stats.record_delivery_failed()
+                    else:
+                        # send_audio_to_user returned False: temporary failure
+                        # (timeout, network error). Keep user connected, retry later.
+                        logger.warning(f"Temporary delivery failure for {d['delivery_id']} — keeping user connected")
                         stats.record_delivery_failed()
 
                     await asyncio.sleep(0.05)
