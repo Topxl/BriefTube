@@ -978,7 +978,7 @@ async def delivery_loop(alert_system: MonitoringAlert):
             if (_now - _last_r2_cleanup).total_seconds() >= 2 * 24 * 3600:
                 _last_r2_cleanup = _now
                 try:
-                    await asyncio.to_thread(lambda: _cleanup_stale_r2_audio(days=3))
+                    await asyncio.to_thread(_cleanup_stale_r2_audio)
                 except Exception as e:
                     logger.warning(f"R2 audio cleanup error (non-fatal): {e}")
 
