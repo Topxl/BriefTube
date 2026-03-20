@@ -2,6 +2,9 @@
 
 ## 2026-03-20
 
+FEATURE: Podcast RSS feed — /api/feed/[token] generates a personal podcast feed (RSS 2.0 + iTunes) from the user's audio deliveries; URL displayed in profile settings with one-click copy
+CHORE: DB — add rss_token uuid column to profiles (auto-generated, unique index)
+CHORE: Types Supabase regénérés (profiles.rss_token)
 FIX: worker — timeout réseau Telegram ne déconnecte plus l'utilisateur (None=permanent, False=temporaire)
 CHORE: R2 cleanup frequency changed to every 2 days, retention extended to 3 days so users can replay recent summaries
 CHORE: translate French hardcoded strings to English (processing-video-card, summary-row, summaries-feed, worker-card, digest-trigger-button, grant-trial-form, services-health)

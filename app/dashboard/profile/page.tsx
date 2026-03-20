@@ -25,7 +25,7 @@ export default async function ProfilePage(props: {
       supabase
         .from("profiles")
         .select(
-          "subscription_status, trial_ends_at, stripe_customer_id, tts_voice, preferred_language, favorite_languages, max_channels, referral_code, notify_new_summaries_push, email_newsletter, email_announcements, newsletter_enabled, newsletter_hour",
+          "subscription_status, trial_ends_at, stripe_customer_id, tts_voice, preferred_language, favorite_languages, max_channels, referral_code, notify_new_summaries_push, email_newsletter, email_announcements, newsletter_enabled, newsletter_hour, rss_token",
         )
         .eq("id", user.id)
         .single(),
@@ -56,6 +56,7 @@ export default async function ProfilePage(props: {
     (platformConns ?? []).find((c) => c.platform === "whatsapp")?.external_id ??
     "";
 
+  const rssToken = profile?.rss_token ?? "";
   const isActivePro = profile?.subscription_status === "active";
 
   const isTrial =
@@ -126,6 +127,7 @@ export default async function ProfilePage(props: {
       initialAnnouncements={profile?.email_announcements ?? true}
       initialDailyDigest={profile?.newsletter_enabled ?? true}
       initialDigestHour={profile?.newsletter_hour ?? 8}
+      rssToken={rssToken}
     />
   );
 }

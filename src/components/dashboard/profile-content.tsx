@@ -8,9 +8,68 @@ import { NotificationsSection } from "@/components/dashboard/notifications-secti
 import { ReferralSection } from "@/components/dashboard/referral-section";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { LogOut, Trash2, ShieldAlert, Loader2 } from "@/lib/icons";
+import {
+  LogOut,
+  Trash2,
+  ShieldAlert,
+  Loader2,
+  Rss,
+  Copy,
+  Check,
+} from "@/lib/icons";
+import { SiteConfig } from "@/site-config";
 import { formatCurrency } from "@/lib/format";
 import { logger } from "@/lib/logger";
+
+function PodcastFeedSection({ rssToken }: { rssToken: string }) {
+  const feedUrl = `${SiteConfig.prodUrl}/api/feed/${rssToken}`;
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(feedUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <section className="space-y-2">
+      <h2 className="text-muted-foreground/50 px-1 text-xs font-medium tracking-wide uppercase">
+        Podcast feed
+      </h2>
+      <div className="nm-raised overflow-hidden rounded-2xl">
+        <div className="flex items-center gap-3 px-4 py-3.5">
+          <div className="nm-inset-sm flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-orange-500/[0.12]">
+            <Rss className="h-4 w-4 text-orange-400" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium">Listen in your podcast app</p>
+            <p className="text-muted-foreground mt-0.5 text-[11px]">
+              Add this URL to Pocket Casts, Overcast, Apple Podcasts…
+            </p>
+          </div>
+        </div>
+        <div className="border-t border-white/[0.04] px-4 py-3">
+          <div className="nm-inset flex items-center gap-2 rounded-xl px-3 py-2">
+            <span className="text-muted-foreground min-w-0 flex-1 truncate font-mono text-[11px]">
+              {feedUrl}
+            </span>
+            <button
+              onClick={() => void handleCopy()}
+              className="text-muted-foreground hover:text-foreground shrink-0 transition-colors"
+              aria-label="Copy feed URL"
+            >
+              {copied ? (
+                <Check className="h-3.5 w-3.5 text-green-400" />
+              ) : (
+                <Copy className="h-3.5 w-3.5" />
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 type Interval = "month" | "year";
 
@@ -56,6 +115,7 @@ type Props = {
   initialAnnouncements: boolean;
   initialDailyDigest: boolean;
   initialDigestHour: number;
+  rssToken: string;
 };
 
 export function ProfileContent({
@@ -83,6 +143,7 @@ export function ProfileContent({
   initialAnnouncements,
   initialDailyDigest,
   initialDigestHour,
+  rssToken,
 }: Props) {
   const router = useRouter();
 
@@ -244,6 +305,9 @@ export function ProfileContent({
         initialDailyDigest={initialDailyDigest}
         initialDigestHour={initialDigestHour}
       />
+
+      {/* Podcast feed */}
+      {rssToken && <PodcastFeedSection rssToken={rssToken} />}
 
       {/* Subscription */}
       <section className="space-y-2">
