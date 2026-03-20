@@ -2,6 +2,9 @@
 
 ## 2026-03-20
 
+PERF: SocialProof — convert from async server component to client-side fetch (/api/stats) so homepage has no SSR blocking; stats cached 1h at CDN level
+PERF: Remove ineffective manual preload hint for YouTube thumbnail (Next.js Image priority already handles it)
+
 FEATURE: Onboarding emails — J+1 ("Add more channels") and J+3 ("Languages") sequences via Inngest cron, registered in inngest route and email-workflows registry
 FEATURE: First summary email — worker triggers /api/email/first-summary after each delivery; dedup via email_logs ensures it sends once per user
 FEATURE: Podcast RSS feed — /api/feed/[token] generates a personal podcast feed (RSS 2.0 + iTunes) from the user's audio deliveries; URL displayed in profile settings with one-click copy

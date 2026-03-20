@@ -119,13 +119,6 @@ const jsonLd = [
 export default function Home() {
   return (
     <main className="bg-background min-h-screen">
-      {/* Preload LCP image (first Hero card YouTube thumbnail) */}
-      <link
-        rel="preload"
-        as="image"
-        href="https://img.youtube.com/vi/qp0HIF3SfI4/hqdefault.jpg"
-        fetchPriority="high"
-      />
       {jsonLd.map((schema, i) => (
         <script
           key={i}
