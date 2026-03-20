@@ -1,7 +1,7 @@
 """Supabase database client for the worker."""
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import httpx
 from supabase import create_client, Client, ClientOptions
 
@@ -1237,3 +1237,58 @@ def load_worker_stats(date: str) -> dict | None:
     sb = get_client()
     res = sb.table("worker_stats").select("*").eq("date", date).execute()
     return res.data[0] if res.data else None
+
+
+def get_stale_r2_urls(days: int = 7, limit: int = 100) -> list[dict]:
+    """Return R2 audio files that are old enough and safe to delete.
+
+    A file is safe to delete when:
+    - processed_at is older than `days` days
+    - every delivery for this video_id has status='sent'
+    """
+    sb = get_client()
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+
+    # Fetch candidates: R2 URLs older than cutoff
+    res = (
+        sb.table("processed_videos")
+        .select("video_id, language, audio_url")
+        .eq("status", "completed")
+        .not_.is_("audio_url", "null")
+        .lt("processed_at", cutoff)
+        .limit(limit * 3)  # Fetch extra to account for unsafe ones filtered below
+        .execute()
+    )
+    candidates = [
+        r for r in (res.data or [])
+        if r.get("audio_url") and (
+            "r2.dev" in r["audio_url"] or "brief-tube.com" in r["audio_url"]
+        )
+    ]
+    if not candidates:
+        return []
+
+    # Find video_ids that still have non-sent deliveries (unsafe to delete)
+    video_ids = list({r["video_id"] for r in candidates})
+    unsafe_res = (
+        sb.table("deliveries")
+        .select("video_id")
+        .in_("video_id", video_ids)
+        .neq("status", "sent")
+        .execute()
+    )
+    unsafe_ids = {r["video_id"] for r in (unsafe_res.data or [])}
+
+    return [r for r in candidates if r["video_id"] not in unsafe_ids][:limit]
+
+
+def clear_audio_url(video_id: str, language: str) -> None:
+    """Set audio_url = NULL after the R2 file has been deleted."""
+    sb = get_client()
+    (
+        sb.table("processed_videos")
+        .update({"audio_url": None})
+        .eq("video_id", video_id)
+        .eq("language", language)
+        .execute()
+    )
