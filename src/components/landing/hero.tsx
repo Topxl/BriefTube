@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState, useCallback } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { t } from "@/locales";
@@ -189,14 +188,14 @@ export function Hero() {
                     key={i}
                     className="nm-inset relative overflow-hidden rounded-xl p-3"
                   >
-                    {/* Thumbnail background */}
-                    <Image
+                    {/* Thumbnail background — plain img so preload hint matches exactly */}
+                    {}
+                    <img
                       src={demo.thumb}
                       alt=""
-                      fill
-                      sizes="384px"
-                      priority={i === 0}
-                      className="object-cover opacity-[0.15]"
+                      fetchPriority={i === 0 ? "high" : "low"}
+                      loading={i === 0 ? "eager" : "lazy"}
+                      className="absolute inset-0 h-full w-full object-cover opacity-[0.15]"
                     />
 
                     {/* Hidden audio element — preload metadata for duration */}
