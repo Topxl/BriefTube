@@ -2,6 +2,7 @@
 
 ## 2026-03-20
 
+CHORE: R2 cleanup frequency changed to every 2 days, retention extended to 3 days so users can replay recent summaries
 CHORE: translate French hardcoded strings to English (processing-video-card, summary-row, summaries-feed, worker-card, digest-trigger-button, grant-trial-form, services-health)
 
 ## 2026-03-19
