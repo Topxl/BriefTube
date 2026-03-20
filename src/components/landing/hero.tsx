@@ -23,14 +23,14 @@ const DEMO_CARDS = [
   {
     channel: tl.mockupVideo1Channel,
     title: tl.mockupVideo1Title,
-    thumb: "/demo-thumb-1.jpg",
+    thumb: "/demo-thumb-1.webp",
     src: `${R2}/audio/qp0HIF3SfI4_en.mp3`,
     fallbackDuration: 167, // 2:47
   },
   {
     channel: tl.mockupVideo2Channel,
     title: tl.mockupVideo2Title,
-    thumb: "/demo-thumb-2.jpg",
+    thumb: "/demo-thumb-2.webp",
     src: `${R2}/audio/nm1TxQj9IsQ_en.mp3`,
     fallbackDuration: 203, // 3:23
   },
@@ -193,6 +193,8 @@ export function Hero() {
                     <img
                       src={demo.thumb}
                       alt=""
+                      width={480}
+                      height={360}
                       fetchPriority={i === 0 ? "high" : "low"}
                       loading={i === 0 ? "eager" : "lazy"}
                       className="absolute inset-0 h-full w-full object-cover opacity-[0.15]"

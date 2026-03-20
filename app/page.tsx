@@ -126,11 +126,11 @@ export default function Home() {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
         />
       ))}
-      {/* Preload LCP image — local file served from same CDN, no external fetch */}
+      {/* Preload LCP image — WebP, local file served from same CDN, no external fetch */}
       <link
         rel="preload"
         as="image"
-        href="/demo-thumb-1.jpg"
+        href="/demo-thumb-1.webp"
         fetchPriority="high"
       />
       <Navbar />
