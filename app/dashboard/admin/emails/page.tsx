@@ -37,6 +37,9 @@ type EligibleCounts = {
   activation: number;
   reengagement: number;
   digest_subscribers: number;
+  first_summary: number;
+  onboarding_j1: number;
+  onboarding_j3: number;
 };
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
@@ -308,6 +311,8 @@ export default async function AdminEmailsPage() {
     { count: cTrialExp },
     { count: cActivation },
     { count: cDigest },
+    { count: cOJ1 },
+    { count: cOJ3 },
   ] = await Promise.all([
     admin
       .from("profiles")
@@ -337,6 +342,18 @@ export default async function AdminEmailsPage() {
       .from("profiles")
       .select("*", { count: "exact", head: true })
       .eq("newsletter_enabled", true),
+    // Onboarding J+1 — created 24-48h ago
+    admin
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .gte("created_at", new Date(now - 48 * h).toISOString())
+      .lte("created_at", new Date(now - 24 * h).toISOString()),
+    // Onboarding J+3 — created 72-96h ago
+    admin
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .gte("created_at", new Date(now - 96 * h).toISOString())
+      .lte("created_at", new Date(now - 72 * h).toISOString()),
   ]);
 
   const eligible: EligibleCounts = {
@@ -346,6 +363,9 @@ export default async function AdminEmailsPage() {
     activation: cActivation || 0,
     reengagement: 0,
     digest_subscribers: cDigest || 0,
+    first_summary: 0,
+    onboarding_j1: cOJ1 || 0,
+    onboarding_j3: cOJ3 || 0,
   };
 
   type WMap = Record<
