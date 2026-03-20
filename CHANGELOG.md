@@ -1,10 +1,17 @@
 # Changelog
 
+## 2026-03-20
+
+CHORE: translate French hardcoded strings to English (processing-video-card, summary-row, summaries-feed, worker-card, digest-trigger-button, grant-trial-form, services-health)
+
 ## 2026-03-19
 
 FIX: lists — impossible de sauvegarder une liste sans channels (bouton désactivé + toast d'erreur)
 
 FEATURE: summaries feed — infinite scroll via IntersectionObserver, remplace le bouton "Load more"
+CHORE: perf — remove "use client" from Problem, HowItWorks, FinalCTA (Server Components, élimine JS inutile)
+CHORE: perf — progress bar hero: transition-[width] → scaleX() GPU-accéléré
+CHORE: perf — suppression keyframes CSS inutilisés (float, shimmer, glow-pulse) — ~900 bytes CSS
 CHORE: perf — ISR revalidate=3600 sur landing page (TTFB: 1.6s → ~50ms depuis CDN Vercel)
 CHORE: perf — optimizePackageImports pour lucide-react, supabase, date-fns, tanstack-query, motion (réduit JS inutilisé 278 KiB)
 CHORE: perf — .browserslistrc ciblant navigateurs modernes (supprime legacy JS 44 KiB)

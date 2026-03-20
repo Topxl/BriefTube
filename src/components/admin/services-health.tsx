@@ -1,7 +1,14 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { CheckCircle, XCircleIcon, AlertCircle, RefreshCw, Loader2, ChevronDown } from "@/lib/icons";
+import {
+  CheckCircle,
+  XCircleIcon,
+  AlertCircle,
+  RefreshCw,
+  Loader2,
+  ChevronDown,
+} from "@/lib/icons";
 
 type ServiceStatus = {
   name: string;
@@ -43,13 +50,29 @@ function StatusIcon({
   className?: string;
 }) {
   if (status === "ok")
-    return <CheckCircle className={`h-3 w-3 shrink-0 text-emerald-400 ${className ?? ""}`} />;
+    return (
+      <CheckCircle
+        className={`h-3 w-3 shrink-0 text-emerald-400 ${className ?? ""}`}
+      />
+    );
   if (status === "warning")
-    return <AlertCircle className={`h-3 w-3 shrink-0 text-yellow-400 ${className ?? ""}`} />;
+    return (
+      <AlertCircle
+        className={`h-3 w-3 shrink-0 text-yellow-400 ${className ?? ""}`}
+      />
+    );
   if (status === "error")
-    return <XCircleIcon className={`h-3 w-3 shrink-0 text-red-400 ${className ?? ""}`} />;
+    return (
+      <XCircleIcon
+        className={`h-3 w-3 shrink-0 text-red-400 ${className ?? ""}`}
+      />
+    );
   // not_configured
-  return <AlertCircle className={`h-3 w-3 shrink-0 text-white/20 ${className ?? ""}`} />;
+  return (
+    <AlertCircle
+      className={`h-3 w-3 shrink-0 text-white/20 ${className ?? ""}`}
+    />
+  );
 }
 
 function statusColor(status: GroupHealth | ServiceStatus["status"]) {
@@ -61,8 +84,8 @@ function statusColor(status: GroupHealth | ServiceStatus["status"]) {
 
 function statusLabel(status: ServiceStatus["status"], detail?: string) {
   if (status === "ok") return detail ?? "OK";
-  if (status === "not_configured") return "non configuré";
-  return detail ?? "erreur";
+  if (status === "not_configured") return "not configured";
+  return detail ?? "error";
 }
 
 function ServiceRow({ svc, isLast }: { svc: ServiceStatus; isLast: boolean }) {
@@ -71,7 +94,9 @@ function ServiceRow({ svc, isLast }: { svc: ServiceStatus; isLast: boolean }) {
     <div className="flex items-start gap-2">
       {/* Tree connector */}
       <div className="mt-[3px] flex shrink-0 flex-col items-center">
-        <div className={`h-3 w-px ${isLast ? "bg-transparent" : "bg-white/[0.08]"}`} />
+        <div
+          className={`h-3 w-px ${isLast ? "bg-transparent" : "bg-white/[0.08]"}`}
+        />
         <div className="h-px w-3 bg-white/[0.08]" />
         {!isLast && <div className="w-px flex-1 bg-white/[0.08]" />}
       </div>
@@ -107,11 +132,11 @@ function PipelineStage({
 
   const badgeLabel =
     health === "warning"
-      ? "dégradé"
+      ? "degraded"
       : health === "error"
-        ? "erreur"
+        ? "error"
         : health === "not_configured"
-          ? "non configuré"
+          ? "not configured"
           : null;
 
   return (
@@ -123,15 +148,21 @@ function PipelineStage({
           <StatusIcon status={health} />
           <p className="text-xs font-medium">{group.label}</p>
           {badgeLabel && (
-            <span className={`ml-auto text-[10px] ${color} opacity-70`}>{badgeLabel}</span>
+            <span className={`ml-auto text-[10px] ${color} opacity-70`}>
+              {badgeLabel}
+            </span>
           )}
         </div>
 
         {/* Services tree */}
         {group.services.length > 0 && (
-          <div className="ml-5 mt-2 flex flex-col gap-1">
+          <div className="mt-2 ml-5 flex flex-col gap-1">
             {group.services.map((svc, i) => (
-              <ServiceRow key={svc.name} svc={svc} isLast={i === group.services.length - 1} />
+              <ServiceRow
+                key={svc.name}
+                svc={svc}
+                isLast={i === group.services.length - 1}
+              />
             ))}
           </div>
         )}
@@ -161,17 +192,17 @@ export function ServicesHealth() {
     });
 
   const lastUpdated = dataUpdatedAt
-    ? new Date(dataUpdatedAt).toLocaleTimeString("fr-FR")
+    ? new Date(dataUpdatedAt).toLocaleTimeString("en-US")
     : null;
 
   return (
     <div className="nm-raised overflow-hidden rounded-xl">
       <div className="flex items-center justify-between border-b border-white/[0.04] px-4 py-2.5">
-        <p className="text-xs font-medium">Pipeline de traitement</p>
+        <p className="text-xs font-medium">Processing pipeline</p>
         <button
           onClick={() => void refetch()}
           className="text-muted-foreground/40 hover:text-muted-foreground transition-colors"
-          title="Rafraîchir"
+          title="Refresh"
         >
           {isFetching ? (
             <Loader2 className="h-3 w-3 animate-spin" />
@@ -184,12 +215,12 @@ export function ServicesHealth() {
       {isLoading ? (
         <div className="flex items-center gap-2 px-4 py-4">
           <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
-          <p className="text-muted-foreground text-sm">Vérification…</p>
+          <p className="text-muted-foreground text-sm">Checking…</p>
         </div>
       ) : !data?.groups ? (
         <div className="flex items-center gap-2 px-4 py-4">
           <XCircleIcon className="h-4 w-4 text-red-400" />
-          <p className="text-sm text-red-400">Worker injoignable</p>
+          <p className="text-sm text-red-400">Worker unreachable</p>
         </div>
       ) : (
         <div className="divide-y divide-white/[0.04]">
@@ -205,7 +236,7 @@ export function ServicesHealth() {
 
       {lastUpdated && (
         <p className="text-muted-foreground/30 border-t border-white/[0.04] px-4 py-1.5 text-[10px]">
-          Mis à jour {lastUpdated}
+          Updated {lastUpdated}
         </p>
       )}
     </div>

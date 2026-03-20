@@ -11,15 +11,15 @@ import {
 
 // Stages calibrated to real worker timing (median 69s, P75 119s, P90 200s)
 const STAGES = [
-  { until: 30, label: "Extraction de la transcription…", step: 0 },
-  { until: 70, label: "Analyse du contenu…", step: 1 },
-  { until: 110, label: "Génération du résumé IA…", step: 1 },
-  { until: 150, label: "Synthèse vocale en cours…", step: 2 },
-  { until: 190, label: "Upload de l'audio…", step: 2 },
-  { until: Infinity, label: "Livraison en cours…", step: 3 },
+  { until: 30, label: "Extracting transcript…", step: 0 },
+  { until: 70, label: "Analyzing content…", step: 1 },
+  { until: 110, label: "Generating AI summary…", step: 1 },
+  { until: 150, label: "Generating audio…", step: 2 },
+  { until: 190, label: "Uploading audio…", step: 2 },
+  { until: Infinity, label: "Delivering…", step: 3 },
 ] as const;
 
-const STEP_LABELS = ["Transcription", "Résumé", "Audio", "Livraison"] as const;
+const STEP_LABELS = ["Transcript", "Summary", "Audio", "Delivery"] as const;
 
 function getStage(elapsedSeconds: number) {
   return (
@@ -119,7 +119,7 @@ function ProcessingCard({ video }: { video: ProcessingVideo }) {
           <div className="min-w-0">
             <p className="line-clamp-1 text-xs font-medium">{video.title}</p>
             <p className="mt-0.5 text-[11px] text-emerald-400">
-              Résumé envoyé sur Telegram !
+              Summary sent to Telegram!
             </p>
           </div>
         </div>

@@ -163,7 +163,7 @@ export function SummariesFeed() {
 
   const openLangPicker = useCallback(() => {
     dialogManager.custom({
-      title: "Langues favorites",
+      title: "Favorite languages",
       size: "sm",
       children: (
         <LanguagePicker
@@ -181,7 +181,7 @@ export function SummariesFeed() {
                 .from("profiles")
                 .update({ preferred_language: lang.code })
                 .eq("id", user.id);
-              toast.success("Langue mise à jour");
+              toast.success("Language updated");
             })();
           }}
           onToggleFavorite={toggleFavorite}
@@ -281,9 +281,9 @@ export function SummariesFeed() {
         <div className="nm-inset mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl">
           <Inbox className="text-muted-foreground/50 h-4 w-4" />
         </div>
-        <p className="text-sm font-medium">Aucun résumé pour l'instant</p>
+        <p className="text-sm font-medium">No summaries yet</p>
         <p className="text-muted-foreground mt-1 text-xs">
-          Ajoutez des chaînes YouTube pour recevoir vos premiers résumés audio.
+          Add YouTube channels to receive your first audio summaries.
         </p>
       </div>
     );
