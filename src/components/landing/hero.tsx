@@ -24,14 +24,14 @@ const DEMO_CARDS = [
   {
     channel: tl.mockupVideo1Channel,
     title: tl.mockupVideo1Title,
-    videoId: "qp0HIF3SfI4",
+    thumb: "/demo-thumb-1.jpg",
     src: `${R2}/audio/qp0HIF3SfI4_en.mp3`,
     fallbackDuration: 167, // 2:47
   },
   {
     channel: tl.mockupVideo2Channel,
     title: tl.mockupVideo2Title,
-    videoId: "nm1TxQj9IsQ",
+    thumb: "/demo-thumb-2.jpg",
     src: `${R2}/audio/nm1TxQj9IsQ_en.mp3`,
     fallbackDuration: 203, // 3:23
   },
@@ -191,7 +191,7 @@ export function Hero() {
                   >
                     {/* Thumbnail background */}
                     <Image
-                      src={`https://img.youtube.com/vi/${demo.videoId}/hqdefault.jpg`}
+                      src={demo.thumb}
                       alt=""
                       fill
                       sizes="384px"
