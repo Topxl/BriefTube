@@ -1,8 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import { SiteConfig } from "@/site-config";
 import type { NextRequest } from "next/server";
-
-export const dynamic = "force-dynamic";
+import { connection } from "next/server";
 
 function escapeXml(str: string): string {
   return str
@@ -21,6 +20,7 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ token: string }> },
 ) {
+  await connection();
   const { token } = await params;
 
   const admin = createAdminClient();
