@@ -54,7 +54,7 @@ Audio is synthesized via Microsoft Edge Neural TTS with 40+ natural-sounding voi
 - Automatic YouTube channel monitoring (RSS-based, checks every 5 minutes)
 - AI video summarization with Google Gemini
 - Neural audio synthesis with 40+ voices (Microsoft Edge TTS)
-- Languages: English and French, with more in development
+- Languages: 55 languages supported including English, French, Spanish, German, Japanese, and Arabic
 - Cross-language summaries (receive in any supported language regardless of original)
 - Unlimited channel subscriptions on Pro plan
 - Channel grouping into curated lists
@@ -126,7 +126,7 @@ Yes. Connect BriefTube to a shared Discord server channel or Slack workspace, an
 Google Gemini for summarization. Microsoft Edge Neural TTS for voice synthesis.
 
 **Does BriefTube work for YouTube channels in any language?**
-BriefTube can process videos in any language that has transcript availability. Summaries can be generated in English or French regardless of the original video's language.
+BriefTube supports 55 languages including English, French, Spanish, German, Japanese, and Arabic. It detects the video language automatically and generates the summary in the same language. Pro users can choose a different output language or a specific voice.
 
 ## Key pages
 
