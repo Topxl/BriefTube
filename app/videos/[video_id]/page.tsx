@@ -105,6 +105,7 @@ export default async function VideoPage({ params }: Props) {
       ? new Date(video.created_at).toISOString()
       : new Date().toISOString(),
     embedUrl: `https://www.youtube.com/embed/${video_id}`,
+    contentUrl: `https://youtu.be/${video_id}`,
     publisher: {
       "@type": "Organization",
       name: "BriefTube",

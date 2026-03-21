@@ -75,14 +75,6 @@ const jsonLd = [
     "@type": "WebSite",
     name: SiteConfig.title,
     url: SiteConfig.prodUrl,
-    potentialAction: {
-      "@type": "SearchAction",
-      target: {
-        "@type": "EntryPoint",
-        urlTemplate: `${SiteConfig.prodUrl}/channels?q={search_term_string}`,
-      },
-      "query-input": "required name=search_term_string",
-    },
   },
   {
     "@context": "https://schema.org",
@@ -131,7 +123,7 @@ const jsonLd = [
       contactType: "customer support",
       email: "contact@brief-tube.com",
     },
-    sameAs: ["https://t.me/brief_tube_bot", "https://twitter.com/brieftube"],
+    sameAs: ["https://t.me/brief_tube_bot", "https://x.com/brieftube"],
   },
   {
     "@context": "https://schema.org",
@@ -142,7 +134,7 @@ const jsonLd = [
         name: "How does BriefTube actually work?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Each channel you follow gets checked automatically through YouTube's RSS feed. The moment a new video appears, BriefTube reads its transcript, generates a summary, converts it to audio, and sends it to your Telegram — usually within a few minutes. No manual steps on your end.",
+          text: "Each channel you follow gets checked automatically through YouTube's RSS feed. The moment a new video appears, BriefTube reads its transcript, generates a summary, converts it to audio, and sends it to your Telegram, Discord, or Slack. It usually takes a few minutes. No manual steps on your end.",
         },
       },
       {
@@ -150,7 +142,7 @@ const jsonLd = [
         name: "Which languages work?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "French and English voices are available right now. More are in the pipeline. If you're on Pro, you can pick a specific voice — there are a few to choose from in each language.",
+          text: "55 languages are supported, including English, French, Spanish, German, Japanese, and Arabic. BriefTube detects the video language automatically. Pro users can pick a specific voice from several options per language.",
         },
       },
       {
@@ -158,7 +150,7 @@ const jsonLd = [
         name: "Do I need to set up a Telegram bot?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "No. You click a connect link, it opens @brief_tube_bot in Telegram, you send /start. That's the whole process — maybe 15 seconds if you type slowly.",
+          text: "No. For Telegram, you click a connect link, it opens @brief_tube_bot, you send /start and you're done. For Discord or Slack, you authorize the integration in a few clicks. Either way, it takes under a minute.",
         },
       },
       {

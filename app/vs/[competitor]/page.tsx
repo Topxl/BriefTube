@@ -190,7 +190,7 @@ export default async function ComparisonPage({ params }: PageProps) {
             <section className="flex flex-col gap-4 rounded-xl border border-white/[0.08] bg-red-600/10 p-6">
               <Typography variant="h2">Ready to try BriefTube?</Typography>
               <Typography variant="p">
-                Get started free with 3 channels, or try Pro for 7 days to
+                Get started free with 5 channels, or try Pro for 7 days to
                 unlock unlimited channels and never miss an update.
               </Typography>
               <div>

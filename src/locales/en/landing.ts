@@ -172,7 +172,7 @@ export const landing = {
       {
         question: "Which languages work?",
         answer:
-          "French and English voices are available right now. More are in the pipeline. If you're on Pro, you can pick a specific voice. There are a few to choose from in each language.",
+          "55 languages are supported, including English, French, Spanish, German, Japanese, and Arabic. BriefTube detects the language of the video and matches it automatically. Pro users can also pick a specific voice from several options per language.",
       },
       {
         question: "How do I receive my summaries?",
