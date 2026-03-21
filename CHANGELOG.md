@@ -2,6 +2,9 @@
 
 ## 2026-03-22
 
+FIX: Getting-started widget — show Discord/Slack/Telegram options instead of Telegram only
+FIX: Onboarding stepper step 1 — fix wrong link (/dashboard/settings → /dashboard/profile)
+FIX: Stepper locale — rename "Connect Telegram" to "Connect a delivery channel"
 CHORE: Remove all em dashes from landing page copy and automated email templates
 FEATURE: Announcement system — batch email sending for opted-in users via admin panel with rate limiting (600ms between sends)
 FEATURE: AnnouncementEmail template — dark theme matching UpgradeEmail, announces Discord/Slack/RSS features with CTA

@@ -271,24 +271,45 @@ export function GettingStarted({ hasChannel, hasConnection, language }: Props) {
           </div>
         )}
 
-        {/* Connect Telegram — masqué une fois fait */}
+        {/* Connect a delivery channel — masqué une fois fait */}
         {!hasConnection && (
-          <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-start justify-between gap-3 px-4 py-3">
             <div className="flex items-center gap-3">
-              <CircleIcon className="text-muted-foreground h-4 w-4 shrink-0" />
+              <CircleIcon className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
               <div>
-                <p className="text-sm font-medium">Connect Telegram</p>
+                <p className="text-sm font-medium">
+                  Connect a delivery channel
+                </p>
                 <p className="text-muted-foreground text-[11px]">
-                  Receive audio summaries automatically
+                  Choose where to receive your summaries
                 </p>
               </div>
             </div>
-            <button
-              onClick={openTelegramDialog}
-              className="nm-raised-sm text-muted-foreground hover:text-foreground rounded-full px-3 py-1 text-xs transition-all"
-            >
-              Connect
-            </button>
+            <div className="flex shrink-0 flex-col items-end gap-1.5">
+              <div className="flex items-center gap-1.5">
+                <a
+                  href="/api/connect/discord"
+                  className="nm-raised-sm text-muted-foreground hover:text-foreground rounded-full px-2.5 py-1 text-xs transition-all"
+                >
+                  Discord
+                </a>
+                <a
+                  href="/api/connect/slack"
+                  className="nm-raised-sm text-muted-foreground hover:text-foreground rounded-full px-2.5 py-1 text-xs transition-all"
+                >
+                  Slack
+                </a>
+                <button
+                  onClick={openTelegramDialog}
+                  className="nm-raised-sm text-muted-foreground hover:text-foreground rounded-full px-2.5 py-1 text-xs transition-all"
+                >
+                  Telegram
+                </button>
+              </div>
+              <p className="text-muted-foreground/50 text-[10px]">
+                Discord & Slack connect in one click
+              </p>
+            </div>
           </div>
         )}
 

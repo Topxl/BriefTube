@@ -42,8 +42,8 @@ export const dashboard = {
   },
   stepper: {
     progressLabel: (completed: number) => `Setup ${completed}/3`,
-    step1Title: "Connect Telegram",
-    step1Desc: "Receive audio summaries",
+    step1Title: "Connect a delivery channel",
+    step1Desc: "Discord, Slack or Telegram",
     step1Cta: "Connect",
     step2Title: "Add a channel",
     step2Desc: "Subscribe to YouTube channels",
