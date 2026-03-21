@@ -144,8 +144,8 @@ export const comparisons: ComparisonData[] = [
         competitor: "Text only",
       },
       {
-        feature: "Telegram delivery",
-        briefTube: "Yes",
+        feature: "Push delivery",
+        briefTube: "Telegram, Discord, Slack, podcast RSS",
         competitor: "No",
       },
       {
@@ -305,8 +305,8 @@ export const comparisons: ComparisonData[] = [
         competitor: "No — text only",
       },
       {
-        feature: "Telegram delivery",
-        briefTube: "Yes",
+        feature: "Push delivery",
+        briefTube: "Telegram, Discord, Slack, podcast RSS",
         competitor: "No",
       },
       {
@@ -398,8 +398,8 @@ export const comparisons: ComparisonData[] = [
         competitor: "No",
       },
       {
-        feature: "Telegram delivery",
-        briefTube: "Yes",
+        feature: "Push delivery",
+        briefTube: "Telegram, Discord, Slack, podcast RSS",
         competitor: "No",
       },
       {
@@ -668,8 +668,8 @@ export const comparisons: ComparisonData[] = [
         competitor: "No — text only",
       },
       {
-        feature: "Telegram delivery",
-        briefTube: "Yes",
+        feature: "Push delivery",
+        briefTube: "Telegram, Discord, Slack, podcast RSS",
         competitor: "No",
       },
       {
@@ -752,6 +752,6 @@ export const comparisons: ComparisonData[] = [
     competitorBestFor:
       "Active web users who discover content while browsing and want to bookmark and summarize it on demand",
     briefTubeBestFor:
-      "YouTube subscribers who want audio summaries pushed to Telegram automatically without opening a browser or extension",
+      "YouTube subscribers who want audio summaries delivered automatically without opening a browser or extension",
   },
 ];
