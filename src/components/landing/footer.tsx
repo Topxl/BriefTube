@@ -24,7 +24,8 @@ export async function Footer() {
               <span className="text-base font-semibold">BriefTube</span>
             </Link>
             <p className="text-muted-foreground max-w-[220px] text-sm leading-relaxed">
-              YouTube videos, summarized as audio, delivered to your Telegram.
+              AI summaries of your YouTube channels, delivered as audio wherever
+              you listen.
             </p>
           </div>
 

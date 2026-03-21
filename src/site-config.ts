@@ -5,7 +5,7 @@ export const SiteConfig = {
   defaultTtsVoice: "en-US-JennyNeural",
   defaultLanguage: "en",
   description:
-    "YouTube videos, summarized as audio, delivered to your Telegram",
+    "BriefTube monitors your YouTube channels and delivers a short audio summary for every new video, to Telegram, Discord or Slack. Free for up to 5 channels.",
   prodUrl: "https://www.brief-tube.com",
   appId: "brieftube",
   domain: "brief-tube.com",
