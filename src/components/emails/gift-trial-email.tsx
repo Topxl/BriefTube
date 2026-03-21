@@ -21,7 +21,7 @@ export function GiftTrialEmail({ months, trialEndsAt }: Props) {
   return (
     <Html>
       <Head />
-      <Preview>{`Bonne nouvelle — ${label} d'accès Pro BriefTube offerts`}</Preview>
+      <Preview>{`Bonne nouvelle : ${label} d'accès Pro BriefTube offerts`}</Preview>
       <Body
         style={{
           backgroundColor: "#0a0a0a",

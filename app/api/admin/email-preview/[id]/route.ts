@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { env } from "@/lib/env";
 import { render } from "@react-email/render";
+import { AnnouncementEmail } from "@/components/emails/announcement-email";
 import { DailyNewsletterEmail } from "@email/daily-newsletter";
 import { TrialReminderEmail } from "@/components/emails/trial-reminder-email";
 import { TrialExpiredEmail } from "@/components/emails/trial-expired-email";
@@ -94,6 +95,8 @@ async function renderPreview(id: string): Promise<string | null> {
           ) +
           signature(),
       );
+    case "announcement":
+      return render(AnnouncementEmail());
     default:
       return null;
   }
