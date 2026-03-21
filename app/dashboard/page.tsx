@@ -13,6 +13,12 @@ import { PendingVideoProcessor } from "@/components/dashboard/pending-video-proc
 import { StatsSheet } from "@/components/dashboard/stats-sheet";
 import { ChannelsSheet } from "@/components/dashboard/channels-sheet";
 import { VideoHighlighter } from "@/components/dashboard/video-highlighter";
+import type {
+  EnrichedDelivery,
+  ProcessedVideo,
+} from "@/components/dashboard/summary-row";
+
+const FEED_PAGE_SIZE = 20;
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -24,27 +30,61 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  const [{ data: profile }, { data: sources }, { data: connections }] =
-    await Promise.all([
-      supabase
-        .from("profiles")
-        .select(
-          "subscription_status, trial_ends_at, max_channels, preferred_language",
-        )
-        .eq("id", user.id)
-        .single(),
-      supabase
-        .from("subscriptions")
-        .select("*")
-        .eq("user_id", user.id)
-        .or("source_type.is.null,source_type.eq.youtube_channel")
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("platform_connections")
-        .select("platform")
-        .eq("user_id", user.id)
-        .eq("connected", true),
-    ]);
+  const [
+    { data: profile },
+    { data: sources },
+    { data: connections },
+    { data: deliveryData },
+  ] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select(
+        "subscription_status, trial_ends_at, max_channels, preferred_language, favorite_languages",
+      )
+      .eq("id", user.id)
+      .single(),
+    supabase
+      .from("subscriptions")
+      .select("*")
+      .eq("user_id", user.id)
+      .or("source_type.is.null,source_type.eq.youtube_channel")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("platform_connections")
+      .select("platform")
+      .eq("user_id", user.id)
+      .eq("connected", true),
+    supabase
+      .from("deliveries")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .range(0, FEED_PAGE_SIZE - 1),
+  ]);
+
+  // Prefetch videos for the first page of deliveries
+  let initialDeliveries: EnrichedDelivery[] = [];
+  if (deliveryData && deliveryData.length > 0) {
+    const videoIds = [...new Set(deliveryData.map((d) => d.video_id))];
+    const languages = [...new Set(deliveryData.map((d) => d.language))];
+    const { data: videos } = await supabase
+      .from("processed_videos")
+      .select(
+        "video_id, language, video_title, video_url, summary, audio_url, channel_id, status",
+      )
+      .in("video_id", videoIds)
+      .in("language", languages);
+
+    const videoMap: Record<string, ProcessedVideo> = {};
+    for (const v of videos ?? []) {
+      videoMap[`${v.video_id}:${v.language}`] = v;
+      videoMap[v.video_id] ??= v;
+    }
+    initialDeliveries = deliveryData.map((d) => ({
+      ...d,
+      video: videoMap[`${d.video_id}:${d.language}`] ?? videoMap[d.video_id],
+    }));
+  }
 
   if (!profile) {
     redirect("/login");
@@ -56,9 +96,14 @@ export default async function DashboardPage() {
       new Date(profile.trial_ends_at) > new Date());
   const maxChannels = profile.max_channels ?? SiteConfig.freeChannelsLimit;
 
+  const preferredLang = profile.preferred_language ?? "fr";
+  const initialFavLangs = [
+    ...new Set([...profile.favorite_languages, preferredLang]),
+  ];
+
   // Trial logic — Server Component, Date.now() is safe here (not a client hook)
   const trialEndsAt = profile.trial_ends_at ?? null;
-  const nowMs = Date.now();  
+  const nowMs = Date.now();
   const trialDaysLeft = trialEndsAt
     ? Math.ceil((new Date(trialEndsAt).getTime() - nowMs) / 86400000)
     : 0;
@@ -104,7 +149,11 @@ export default async function DashboardPage() {
         </Suspense>
         <SectionErrorBoundary>
           <Suspense fallback={<SummariesFeedSkeleton />}>
-            <SummariesFeed />
+            <SummariesFeed
+              initialDeliveries={initialDeliveries}
+              initialPreferredLang={preferredLang}
+              initialFavLangs={initialFavLangs}
+            />
           </Suspense>
         </SectionErrorBoundary>
       </div>

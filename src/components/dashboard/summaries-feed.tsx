@@ -14,6 +14,12 @@ import type {
 
 const PAGE_SIZE = 20;
 
+type Props = {
+  initialDeliveries?: EnrichedDelivery[];
+  initialPreferredLang?: string;
+  initialFavLangs?: string[];
+};
+
 function SummaryRowSkeleton() {
   return (
     <div className="nm-raised animate-pulse overflow-hidden rounded-2xl">
@@ -31,17 +37,24 @@ function SummaryRowSkeleton() {
   );
 }
 
-export function SummariesFeed() {
-  const [deliveries, setDeliveries] = useState<EnrichedDelivery[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [hasMore, setHasMore] = useState(false);
+export function SummariesFeed({
+  initialDeliveries = [],
+  initialPreferredLang = "fr",
+  initialFavLangs = [],
+}: Props) {
+  const [deliveries, setDeliveries] =
+    useState<EnrichedDelivery[]>(initialDeliveries);
+  const [loading, setLoading] = useState(initialDeliveries.length === 0);
+  const [hasMore, setHasMore] = useState(
+    initialDeliveries.length === PAGE_SIZE,
+  );
   const [page, setPage] = useState(0);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   // IDs déjà tentés (succès ou échec) — évite de re-fetcher sur chaque update realtime
   const fetchedRef = useRef<Set<string>>(new Set());
   const [titles, setTitles] = useState<Record<string, string>>({});
-  const [favLangs, setFavLangs] = useState<string[]>([]);
-  const [preferredLang, setPreferredLang] = useState("fr");
+  const [favLangs, setFavLangs] = useState<string[]>(initialFavLangs);
+  const [preferredLang, setPreferredLang] = useState(initialPreferredLang);
   const supabase = useMemo(() => createClient(), []);
 
   const loadDeliveries = useCallback(
@@ -124,7 +137,10 @@ export function SummariesFeed() {
   );
 
   useEffect(() => {
-    void loadDeliveries(0);
+    if (initialDeliveries.length === 0) {
+      void loadDeliveries(0);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadDeliveries]);
 
   useEffect(() => {

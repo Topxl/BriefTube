@@ -29,6 +29,8 @@ from tts_processor import text_to_audio, cleanup_audio_files
 from telegram_deliverer import send_audio_to_user
 from notion_deliverer import send_to_notion
 from whatsapp_deliverer import send_to_whatsapp
+from discord_deliverer import send_to_discord
+from slack_deliverer import send_to_slack
 from bot_handler import create_bot_application, setup_bot_commands, MonitoringAlert, send_daily_report
 from monitoring import stats
 import rss_scanner
@@ -796,6 +798,24 @@ async def _dispatch_delivery(d: dict, audio_path: Path) -> bool | None:
             video_title=d["video_title"],
             video_id=d["video_id"],
             audio_url=d.get("audio_url", ""),
+        )
+    elif platform == "discord":
+        return await send_to_discord(
+            webhook_url=d["external_id"],
+            video_title=d["video_title"],
+            video_id=d["video_id"],
+            summary=d.get("summary", ""),
+            audio_url=d.get("audio_url", ""),
+            language=d.get("language", "en"),
+        )
+    elif platform == "slack":
+        return await send_to_slack(
+            webhook_url=d["external_id"],
+            video_title=d["video_title"],
+            video_id=d["video_id"],
+            summary=d.get("summary", ""),
+            audio_url=d.get("audio_url", ""),
+            language=d.get("language", "en"),
         )
     else:
         logger.error(f"Unknown delivery platform: {platform}")
