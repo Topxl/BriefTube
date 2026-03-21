@@ -38,33 +38,84 @@ const Footer = dynamic(async () =>
 );
 
 export const metadata: Metadata = {
+  title: {
+    absolute:
+      "BriefTube | YouTube Summaries as Audio for Telegram, Discord & Slack",
+  },
+  description:
+    "BriefTube monitors your YouTube channels and delivers a short audio summary for every new video, straight to Telegram, Discord or Slack. Free for up to 5 channels. No watching required.",
   alternates: {
     canonical: SiteConfig.prodUrl,
+  },
+  openGraph: {
+    title:
+      "BriefTube | YouTube Summaries as Audio for Telegram, Discord & Slack",
+    description:
+      "Stop falling behind on your YouTube channels. BriefTube turns every new video into a short audio brief and delivers it automatically to Telegram, Discord or Slack. Free for 5 channels.",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "BriefTube — YouTube audio summaries delivered to Telegram, Discord and Slack",
+      },
+    ],
+  },
+  twitter: {
+    title:
+      "BriefTube | YouTube Summaries as Audio for Telegram, Discord & Slack",
+    description:
+      "Stop falling behind on your YouTube channels. BriefTube turns every new video into a short audio brief and delivers it automatically to Telegram, Discord or Slack. Free for 5 channels.",
   },
 };
 
 const jsonLd = [
   {
     "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: SiteConfig.title,
+    url: SiteConfig.prodUrl,
+    potentialAction: {
+      "@type": "SearchAction",
+      target: {
+        "@type": "EntryPoint",
+        urlTemplate: `${SiteConfig.prodUrl}/channels?q={search_term_string}`,
+      },
+      "query-input": "required name=search_term_string",
+    },
+  },
+  {
+    "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     name: SiteConfig.title,
     applicationCategory: "UtilitiesApplication",
-    operatingSystem: "Web, Telegram",
+    operatingSystem: "Web Browser",
     description: SiteConfig.description,
     url: SiteConfig.prodUrl,
+    image: `${SiteConfig.prodUrl}/logo-hd.png`,
+    featureList: [
+      "AI-powered YouTube video summarization",
+      "Text-to-speech audio conversion",
+      "Automatic delivery to Telegram, Discord or Slack",
+      "Multi-language support",
+      "Monitor up to 5 channels for free",
+    ],
     offers: [
       {
         "@type": "Offer",
         price: "0",
         priceCurrency: "USD",
         name: "Free",
+        availability: "https://schema.org/InStock",
+        url: `${SiteConfig.prodUrl}/pricing`,
       },
       {
         "@type": "Offer",
         price: "9",
         priceCurrency: "USD",
         name: "Pro",
-        billingIncrement: "P1M",
+        availability: "https://schema.org/InStock",
+        url: `${SiteConfig.prodUrl}/pricing`,
       },
     ],
   },
@@ -74,7 +125,13 @@ const jsonLd = [
     name: SiteConfig.title,
     url: SiteConfig.prodUrl,
     logo: `${SiteConfig.prodUrl}/logo-hd.png`,
-    sameAs: [`https://t.me/brief_tube_bot`],
+    email: "contact@brief-tube.com",
+    contactPoint: {
+      "@type": "ContactPoint",
+      contactType: "customer support",
+      email: "contact@brief-tube.com",
+    },
+    sameAs: ["https://t.me/brief_tube_bot", "https://twitter.com/brieftube"],
   },
   {
     "@context": "https://schema.org",
@@ -135,35 +192,35 @@ export default function Home() {
       />
       <Navbar />
       <Hero />
-      <Suspense fallback={null}>
+      <Suspense fallback={<div className="h-16" />}>
         <SocialProof />
       </Suspense>
       <div className="section-divider" />
-      <Suspense fallback={null}>
+      <Suspense fallback={<div className="h-64" />}>
         <Problem />
       </Suspense>
-      <Suspense fallback={null}>
+      <Suspense fallback={<div className="h-64" />}>
         <HowItWorks />
       </Suspense>
       <div className="section-divider" />
-      <Suspense fallback={null}>
+      <Suspense fallback={<div className="h-64" />}>
         <Demo />
       </Suspense>
       <div className="section-divider" />
-      <Suspense fallback={null}>
+      <Suspense fallback={<div className="h-64" />}>
         <Features />
       </Suspense>
-      <Suspense fallback={null}>
+      <Suspense fallback={<div className="h-64" />}>
         <Pricing />
       </Suspense>
       <div className="section-divider" />
-      <Suspense fallback={null}>
+      <Suspense fallback={<div className="h-64" />}>
         <FAQ />
       </Suspense>
-      <Suspense fallback={null}>
+      <Suspense fallback={<div className="h-32" />}>
         <FinalCTA />
       </Suspense>
-      <Suspense fallback={null}>
+      <Suspense fallback={<div className="h-32" />}>
         <Footer />
       </Suspense>
     </main>

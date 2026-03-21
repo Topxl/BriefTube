@@ -48,10 +48,26 @@ export default async function ComparisonPage({ params }: PageProps) {
     "@type": "Article",
     headline: data.title,
     description: data.description,
-    datePublished: data.lastUpdated,
+    image: `${SiteConfig.prodUrl}/opengraph-image`,
+    datePublished: new Date(data.lastUpdated).toISOString(),
+    dateModified: new Date(data.lastUpdated).toISOString(),
+    url: `${SiteConfig.prodUrl}/vs/${competitor}`,
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": `${SiteConfig.prodUrl}/vs/${competitor}`,
+    },
     author: {
       "@type": "Organization",
       name: "BriefTube",
+    },
+    publisher: {
+      "@type": "Organization",
+      name: "BriefTube",
+      url: SiteConfig.prodUrl,
+      logo: {
+        "@type": "ImageObject",
+        url: `${SiteConfig.prodUrl}/logo-120.png`,
+      },
     },
   };
 

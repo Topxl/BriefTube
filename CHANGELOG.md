@@ -2,6 +2,26 @@
 
 ## 2026-03-22
 
+FIX: Add security headers (X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy) to vercel.json
+FIX: Add noindex to /s/[short_id] shared summary pages (ephemeral, should not be indexed)
+FIX: Add noindex to /r/[code] referral pages (thin content, should not be indexed)
+FIX: Correct pricing meta description ("3 channels" → "5 channels")
+FIX: Add WebPage JSON-LD schema to /pricing page
+FIX: Remove priority/changeFrequency from sitemap (ignored by Google)
+FIX: Replace new Date() lastmod on /channels sitemap entry with hardcoded date
+FIX: Add /lists page to sitemap
+FIX: Fix SoftwareApplication schema (operatingSystem, offers availability/url, remove invalid billingIncrement, add image/featureList)
+FIX: Improve Organization schema (add email, contactPoint, Twitter sameAs)
+FIX: Add SearchAction potentialAction to WebSite schema
+FIX: Replace Suspense fallback={null} with height-reserving divs to prevent CLS
+FIX: Add image, dateModified, url, mainEntityOfPage to Article schema on blog pages
+FIX: Add image, dateModified, publisher, url, mainEntityOfPage to Article schema on /vs comparison pages
+FIX: Fix VideoObject schema (explicit ISO 8601 uploadDate, add publisher)
+FIX: Add itemListOrder to ItemList schema on channel pages
+CHORE: GEO — rewrite llms.txt with full feature coverage, Discord/Slack/RSS delivery, FAQ section, 18 blog articles, 14 comparison pages and competitive positioning
+FEATURE: Podcast feed — add one-click "Open in" buttons for Overcast, Pocket Casts, Apple Podcasts and Castro
+CHORE: SEO blog — add 14 new articles (6 → 20 total) covering tech/finance/productivity/AI tools channels and YouTube consumption guides
+CHORE: SEO homepage — add WebSite schema (JSON-LD), title tag with keywords + pipe separator, meta/OG/Twitter descriptions mentioning Telegram, Discord & Slack (150+ chars)
 FIX: Getting-started widget — show Discord/Slack/Telegram options instead of Telegram only
 FIX: Onboarding stepper step 1 — fix wrong link (/dashboard/settings → /dashboard/profile)
 FIX: Stepper locale — rename "Connect Telegram" to "Connect a delivery channel"

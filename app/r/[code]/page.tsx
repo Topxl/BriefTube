@@ -1,8 +1,13 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/server";
 import { SiteConfig } from "@/site-config";
 import { CheckCircle } from "@/lib/icons";
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 const features = [
   "AI summaries of any YouTube channel delivered to Telegram",

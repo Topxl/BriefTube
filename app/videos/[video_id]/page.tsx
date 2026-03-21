@@ -101,8 +101,19 @@ export default async function VideoPage({ params }: Props) {
     name: video.video_title,
     description: video.summary?.slice(0, 200),
     thumbnailUrl: `https://img.youtube.com/vi/${video_id}/hqdefault.jpg`,
-    uploadDate: video.created_at,
+    uploadDate: video.created_at
+      ? new Date(video.created_at).toISOString()
+      : new Date().toISOString(),
     embedUrl: `https://www.youtube.com/embed/${video_id}`,
+    publisher: {
+      "@type": "Organization",
+      name: "BriefTube",
+      url: SiteConfig.prodUrl,
+      logo: {
+        "@type": "ImageObject",
+        url: `${SiteConfig.prodUrl}/logo-120.png`,
+      },
+    },
   };
 
   const breadcrumbLd = {
