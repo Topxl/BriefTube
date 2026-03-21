@@ -28,7 +28,7 @@ export async function GET(
   // Resolve user by rss_token
   const { data: profile } = await admin
     .from("profiles")
-    .select("id, email")
+    .select("id, email, preferred_language")
     .eq("rss_token", token)
     .single();
 
@@ -36,46 +36,46 @@ export async function GET(
     return new Response("Not found", { status: 404 });
   }
 
-  // Fetch last 50 sent deliveries
-  const { data: deliveries } = await admin
-    .from("deliveries")
-    .select("video_id, sent_at, language")
+  // Fetch active subscriptions for the user
+  const { data: subscriptions } = await admin
+    .from("subscriptions")
+    .select("channel_id")
     .eq("user_id", profile.id)
-    .eq("status", "sent")
-    .order("sent_at", { ascending: false })
-    .limit(50);
+    .eq("active", true);
 
-  if (!deliveries || deliveries.length === 0) {
+  if (!subscriptions || subscriptions.length === 0) {
     return buildFeed(profile.email, []);
   }
 
-  const videoIds = [...new Set(deliveries.map((d) => d.video_id))];
+  const channelIds = subscriptions.map((s) => s.channel_id);
+  const lang = profile.preferred_language ?? "en";
 
+  // Fetch last 50 completed videos for those channels in the user's language
   const { data: videos } = await admin
     .from("processed_videos")
-    .select("video_id, video_title, video_url, summary, audio_url, channel_id")
-    .in("video_id", videoIds)
+    .select(
+      "video_id, video_title, video_url, summary, audio_url, processed_at, language",
+    )
+    .in("channel_id", channelIds)
     .eq("status", "completed")
-    .not("audio_url", "is", null);
+    .eq("language", lang)
+    .not("audio_url", "is", null)
+    .order("processed_at", { ascending: false })
+    .limit(50);
 
-  const videoMap = new Map((videos ?? []).map((v) => [v.video_id, v]));
+  if (!videos || videos.length === 0) {
+    return buildFeed(profile.email, []);
+  }
 
-  const items = deliveries
-    .map((d) => {
-      const v = videoMap.get(d.video_id);
-      if (!v?.audio_url) return null;
-      return {
-        videoId: d.video_id,
-        title: v.video_title ?? d.video_id,
-        audioUrl: v.audio_url,
-        videoUrl:
-          v.video_url ?? `https://www.youtube.com/watch?v=${d.video_id}`,
-        summary: v.summary ?? "",
-        sentAt: d.sent_at ?? new Date().toISOString(),
-        language: d.language,
-      };
-    })
-    .filter((i): i is NonNullable<typeof i> => i !== null);
+  const items = videos.map((v) => ({
+    videoId: v.video_id,
+    title: v.video_title ?? v.video_id,
+    audioUrl: v.audio_url as string,
+    videoUrl: v.video_url ?? `https://www.youtube.com/watch?v=${v.video_id}`,
+    summary: v.summary ?? "",
+    sentAt: v.processed_at ?? new Date().toISOString(),
+    language: v.language,
+  }));
 
   return buildFeed(profile.email, items);
 }

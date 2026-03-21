@@ -2,6 +2,7 @@
 
 ## 2026-03-22
 
+FIX: RSS feed — read from subscriptions+processed_videos instead of deliveries, works for all users independently of Telegram/Discord/Slack
 REFACTOR: profil — section Subscription déplacée en haut de page
 
 FIX: CLS — SocialProof returns placeholder div instead of null, HeroPlayer min-h reservation
