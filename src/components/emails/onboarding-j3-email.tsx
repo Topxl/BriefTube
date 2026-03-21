@@ -21,7 +21,7 @@ export function OnboardingJ3Email({ profileUrl, trackingPixelUrl }: Props) {
     <Html>
       <Head />
       <Preview>
-        BriefTube works in any language — French, Spanish, Japanese and more
+        BriefTube works in any language: French, Spanish, Japanese and more
       </Preview>
       <Body
         style={{
@@ -60,7 +60,7 @@ export function OnboardingJ3Email({ profileUrl, trackingPixelUrl }: Props) {
               margin: "0 0 16px",
             }}
           >
-            Whether the YouTube channel is in English, Spanish, or Japanese —
+            Whether the YouTube channel is in English, Spanish, or Japanese,
             BriefTube can summarize it and read it back to you in any language
             you choose.
           </Text>

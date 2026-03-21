@@ -59,7 +59,7 @@ export function OnboardingJ1Email({ dashboardUrl, trackingPixelUrl }: Props) {
             }}
           >
             You received your first summaries yesterday. The real value kicks in
-            when you add 3–5 channels — you wake up to a full daily briefing
+            when you add 3 to 5 channels. You wake up to a full daily briefing
             from everything you follow.
           </Text>
           <Text
