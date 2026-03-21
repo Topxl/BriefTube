@@ -18,7 +18,7 @@ const steps = [
     title: tl.step1Title,
     description: tl.step1Desc,
     cta: tl.step1Cta,
-    href: "/dashboard/settings",
+    href: "/dashboard/profile",
   },
   {
     title: tl.step2Title,
