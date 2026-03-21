@@ -553,10 +553,14 @@ def cleanup_undeliverable_deliveries() -> int:
     cleaned = 0
 
     # Skipped videos → DELETE silently (expected behaviour, not an error)
+    # Only look at recently processed videos — older ones are already cleaned up
+    recent_cutoff = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+
     skipped_videos = (
         sb.table("processed_videos")
         .select("video_id")
         .eq("status", "skipped")
+        .gte("processed_at", recent_cutoff)
         .execute()
     )
     if skipped_videos.data:
@@ -577,6 +581,7 @@ def cleanup_undeliverable_deliveries() -> int:
         sb.table("processed_videos")
         .select("video_id")
         .eq("status", "failed")
+        .gte("processed_at", recent_cutoff)
         .execute()
     )
     if failed_videos.data:
@@ -652,28 +657,41 @@ def recover_failed_deliveries() -> int:
     """
     sb = get_client()
 
-    # Find all completed video IDs that have audio
+    # Start from failed deliveries (small set) instead of scanning all completed videos
+    failed_deliveries = (
+        sb.table("deliveries")
+        .select("id, video_id")
+        .eq("status", "failed")
+        .is_("sent_at", "null")
+        .limit(200)
+        .execute()
+        .data or []
+    )
+    if not failed_deliveries:
+        return 0
+
+    # Check which of those video_ids are now completed with audio
+    video_ids = list({d["video_id"] for d in failed_deliveries})
     completed = (
         sb.table("processed_videos")
         .select("video_id")
         .eq("status", "completed")
         .not_.is_("audio_url", "null")
+        .in_("video_id", video_ids)
         .execute()
     )
-    if not completed.data:
+    completed_ids = {r["video_id"] for r in (completed.data or [])}
+    if not completed_ids:
         return 0
 
-    completed_ids = [r["video_id"] for r in completed.data]
+    delivery_ids = [d["id"] for d in failed_deliveries if d["video_id"] in completed_ids]
     recovered = 0
-
-    for i in range(0, len(completed_ids), 100):
-        batch = completed_ids[i : i + 100]
+    for i in range(0, len(delivery_ids), 100):
+        batch = delivery_ids[i : i + 100]
         res = (
             sb.table("deliveries")
             .update({"status": "pending"})
-            .eq("status", "failed")
-            .is_("sent_at", "null")      # Never actually sent — safe to retry
-            .in_("video_id", batch)
+            .in_("id", batch)
             .execute()
         )
         recovered += len(res.data or [])
