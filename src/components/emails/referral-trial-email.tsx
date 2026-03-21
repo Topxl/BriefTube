@@ -72,7 +72,7 @@ export function ReferralTrialEmail({
             {referrerName} invited you to BriefTube and uses Pro every day.{" "}
             {isLastDay
               ? "Your trial ends tomorrow. Join them before you lose access."
-              : `Your trial ends in ${daysLeft} days. Join them and keep getting AI-powered audio summaries in your Telegram.`}
+              : `Your trial ends in ${daysLeft} days. Join them and keep getting AI-powered audio summaries in Discord, Slack or Telegram.`}
           </Text>
           <Text
             style={{
@@ -85,7 +85,7 @@ export function ReferralTrialEmail({
           >
             · Unlimited YouTube channels
             <br />
-            · Daily audio summaries in your Telegram
+            · Daily audio summaries in Discord, Slack or Telegram
             <br />
             · Multi-language TTS voices
             <br />· All future features

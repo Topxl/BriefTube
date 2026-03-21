@@ -59,19 +59,16 @@ async function renderPreview(id: string): Promise<string | null> {
       return founderEmail(
         p("Hey,") +
           p(
-            "I noticed you signed up for BriefTube yesterday but didn't connect your Telegram yet, so you haven't received any audio summaries.",
+            "I noticed you signed up for BriefTube yesterday but haven't connected a delivery channel yet, so you haven't received any audio summaries.",
           ) +
           p(
-            "I wanted to reach out personally to ask: <strong>why didn't you connect Telegram?</strong>",
+            "I wanted to reach out personally to ask: <strong>what stopped you?</strong>",
           ) +
           p(
-            "Is it because you don't use Telegram? Would you prefer to receive your summaries somewhere else, like WhatsApp or email? Or is there something else that stopped you?",
+            "You can now connect Discord or Slack in one click, no bot setup needed. Or Telegram if you prefer. Just go here and pick what works for you: <a href='https://www.brief-tube.com/dashboard/profile' style='color:#1a1a1a;'>brief-tube.com/dashboard/profile</a>",
           ) +
           p(
-            "Just hit reply and tell me. I read every response and this directly shapes what we build next.",
-          ) +
-          p(
-            "If you want to give it a try, connecting Telegram takes 30 seconds: <a href='https://www.brief-tube.com/dashboard' style='color:#1a1a1a;'>brief-tube.com/dashboard</a>",
+            "If something else is blocking you, just hit reply and tell me. I read every response.",
           ) +
           signature(),
       );
@@ -85,7 +82,7 @@ async function renderPreview(id: string): Promise<string | null> {
             "That usually means the channels you follow haven't posted new videos recently. Completely normal for some creators.",
           ) +
           p(
-            "If that's the case, it might be worth adding a few more active channels to your list. The more you track, the more summaries land in your Telegram.",
+            "If that's the case, it might be worth adding a few more active channels to your list. The more you track, the more summaries arrive.",
           ) +
           p(
             "You can add channels directly from your dashboard: <a href='https://www.brief-tube.com/dashboard' style='color:#1a1a1a;'>brief-tube.com/dashboard</a>",

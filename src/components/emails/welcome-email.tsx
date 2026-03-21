@@ -57,7 +57,7 @@ export function WelcomeEmail({ trialDays = 30 }: Props) {
             }}
           >
             Your {trialDays}-day trial is now active. Subscribe to YouTube
-            channels and receive AI-powered audio summaries directly in your
+            channels and receive AI-powered audio summaries in Discord, Slack or
             Telegram, automatically.
           </Text>
           <Button
