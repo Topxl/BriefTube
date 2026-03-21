@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-03-22
+
+FEATURE: Announcement system — batch email sending for opted-in users via admin panel with rate limiting (600ms between sends)
+FEATURE: AnnouncementEmail template — dark theme matching UpgradeEmail, announces Discord/Slack/RSS features with CTA
+CHORE: Admin emails page — add Broadcasts section with announcement send button
+
 ## 2026-03-21
 
 REFACTOR: Landing page — de-emphasize Telegram (now optional), highlight multi-delivery (RSS podcast, Discord, Slack, Telegram, more coming); update hero, how-it-works, features, FAQ, demo upsell, pricing

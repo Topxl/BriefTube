@@ -5,6 +5,7 @@ import { Resend } from "resend";
 import { Send, CheckCircle, Eye } from "@/lib/icons";
 import { AdminBreadcrumb } from "@/components/admin/admin-breadcrumb";
 import { DigestTriggerButton } from "@/components/admin/digest-trigger-button";
+import { AnnouncementSendButton } from "@/components/admin/announcement-send-button";
 import { EMAIL_WORKFLOWS } from "@/lib/email-workflows";
 import type { WorkflowDef, ConversionMetric } from "@/lib/email-workflows";
 
@@ -291,7 +292,7 @@ export default async function AdminEmailsPage() {
     redirect("/dashboard");
   }
 
-  const now = Date.now();  
+  const now = Date.now();
   const h = 3_600_000;
   const thirtyDaysAgo = new Date(now - 30 * 24 * 3600_000);
 
@@ -492,6 +493,23 @@ export default async function AdminEmailsPage() {
           {avgOpenRate}% avg open rate
           {deliveryRate !== null && ` · ${deliveryRate}% Resend delivery`}
         </p>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <SectionTitle>Broadcasts</SectionTitle>
+        <div className="nm-raised flex flex-col gap-3 rounded-xl p-4">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <p className="text-sm leading-tight font-semibold">
+                Platform delivery announcement
+              </p>
+              <p className="text-muted-foreground mt-0.5 text-[11px] leading-snug">
+                Discord, Slack & RSS — 61 users opted in
+              </p>
+            </div>
+          </div>
+          <AnnouncementSendButton />
+        </div>
       </div>
 
       <div className="flex flex-col gap-2">
