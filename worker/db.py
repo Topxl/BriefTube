@@ -436,12 +436,13 @@ def get_pending_deliveries(limit: int = 20) -> list[dict]:
     sb = get_client()
 
     # 1. Collect all completed video IDs (paginate past the 1000-row limit)
+    # Only fetch video_id — summary/audio_url are large and fetched later only for needed videos
     completed_ids: list[str] = []
     offset = 0
     while True:
         res = (
             sb.table("processed_videos")
-            .select("video_id, video_title, channel_id, summary, audio_url")
+            .select("video_id")
             .eq("status", "completed")
             .range(offset, offset + 999)
             .execute()
