@@ -195,7 +195,7 @@ export default async function ComparisonPage({ params }: PageProps) {
               </Typography>
               <div>
                 <Link href="/login">
-                  <Button size="lg">Sign up free — 7-day Pro trial</Button>
+                  <Button size="lg">Sign up free — 30-day Pro trial</Button>
                 </Link>
               </div>
             </section>

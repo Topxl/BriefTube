@@ -20,7 +20,7 @@ export function SocialProof() {
     gcTime: 1000 * 60 * 60 * 24,
   });
 
-  if (!data?.stats.length) return <div className="py-8" />;
+  if (!data?.stats.length) return <div className="h-[110px]" />;
 
   return (
     <div className="py-8">

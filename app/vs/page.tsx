@@ -15,31 +15,49 @@ export const metadata: Metadata = {
 };
 
 export default function ComparisonsPage() {
-  const breadcrumbLd = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    itemListElement: [
-      {
-        "@type": "ListItem",
-        position: 1,
-        name: "Home",
-        item: SiteConfig.prodUrl,
+  const schemaLd = [
+    {
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      name: "BriefTube Comparisons",
+      url: `${SiteConfig.prodUrl}/vs`,
+      description:
+        "See how BriefTube compares to other YouTube summarizer tools like Eightify, NoteGPT, Kagi, and more.",
+      isPartOf: {
+        "@type": "WebSite",
+        name: "BriefTube",
+        url: SiteConfig.prodUrl,
       },
-      {
-        "@type": "ListItem",
-        position: 2,
-        name: "Comparisons",
-        item: `${SiteConfig.prodUrl}/vs`,
-      },
-    ],
-  };
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        {
+          "@type": "ListItem",
+          position: 1,
+          name: "Home",
+          item: SiteConfig.prodUrl,
+        },
+        {
+          "@type": "ListItem",
+          position: 2,
+          name: "Comparisons",
+          item: `${SiteConfig.prodUrl}/vs`,
+        },
+      ],
+    },
+  ];
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
-      />
+      {schemaLd.map((schema, i) => (
+        <script
+          key={i}
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+        />
+      ))}
 
       <div className="bg-background min-h-screen">
         <Navbar />

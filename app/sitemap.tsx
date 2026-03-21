@@ -70,7 +70,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Blog
     {
       url: `${SiteConfig.prodUrl}/blog`,
-      lastModified: new Date("2026-03-16"),
+      lastModified: new Date(
+        articles.reduce(
+          (max, a) => (a.date > max ? a.date : max),
+          articles[0].date,
+        ),
+      ),
     },
     ...articles.map((article) => ({
       url: `${SiteConfig.prodUrl}/blog/${article.slug}`,
@@ -79,7 +84,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Comparisons
     {
       url: `${SiteConfig.prodUrl}/vs`,
-      lastModified: new Date("2026-03-16"),
+      lastModified: new Date(
+        comparisons.reduce(
+          (max, c) => (c.lastUpdated > max ? c.lastUpdated : max),
+          comparisons[0].lastUpdated,
+        ),
+      ),
     },
     ...comparisons.map((comp) => ({
       url: `${SiteConfig.prodUrl}/vs/${comp.slug}`,
