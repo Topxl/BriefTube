@@ -71,7 +71,14 @@ export default async function ArticlePage({ params }: PageProps) {
     "@type": "Article",
     headline: article.title,
     description: article.description,
-    datePublished: article.date,
+    image: `${SiteConfig.prodUrl}/opengraph-image`,
+    datePublished: new Date(article.date).toISOString(),
+    dateModified: new Date(article.date).toISOString(),
+    url: `${SiteConfig.prodUrl}/blog/${article.slug}`,
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": `${SiteConfig.prodUrl}/blog/${article.slug}`,
+    },
     author: {
       "@type": "Organization",
       name: "BriefTube",

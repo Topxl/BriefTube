@@ -40,73 +40,56 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     {
       url: `${SiteConfig.prodUrl}`,
-      lastModified: new Date("2026-03-16"),
-      changeFrequency: "weekly",
-      priority: 1,
+      lastModified: new Date("2026-03-22"),
     },
     {
       url: `${SiteConfig.prodUrl}/pricing`,
       lastModified: new Date("2026-03-16"),
-      changeFrequency: "monthly",
-      priority: 0.8,
     },
     {
       url: `${SiteConfig.prodUrl}/privacy`,
       lastModified: new Date("2026-03-16"),
-      changeFrequency: "yearly",
-      priority: 0.3,
     },
     {
       url: `${SiteConfig.prodUrl}/terms`,
       lastModified: new Date("2026-03-16"),
-      changeFrequency: "yearly",
-      priority: 0.3,
     },
     {
       url: `${SiteConfig.prodUrl}/support`,
       lastModified: new Date("2026-03-16"),
-      changeFrequency: "monthly",
-      priority: 0.4,
     },
     // Blog
     {
       url: `${SiteConfig.prodUrl}/blog`,
       lastModified: new Date("2026-03-16"),
-      changeFrequency: "weekly",
-      priority: 0.7,
     },
     ...articles.map((article) => ({
       url: `${SiteConfig.prodUrl}/blog/${article.slug}`,
       lastModified: new Date(article.date),
-      changeFrequency: "monthly" as const,
-      priority: 0.7,
     })),
     // Comparisons
     {
       url: `${SiteConfig.prodUrl}/vs`,
       lastModified: new Date("2026-03-16"),
-      changeFrequency: "monthly",
-      priority: 0.6,
     },
     ...comparisons.map((comp) => ({
       url: `${SiteConfig.prodUrl}/vs/${comp.slug}`,
       lastModified: new Date(comp.lastUpdated),
-      changeFrequency: "monthly" as const,
-      priority: 0.6,
     })),
+    // Lists index
+    {
+      url: `${SiteConfig.prodUrl}/lists`,
+      lastModified: new Date("2026-03-22"),
+    },
     // Public lists
     ...(publicLists ?? []).map((list) => ({
       url: `${SiteConfig.prodUrl}/lists/${list.id}`,
       lastModified: new Date(list.created_at ?? Date.now()),
-      changeFrequency: "weekly" as const,
-      priority: 0.6,
     })),
     // Channel index
     {
       url: `${SiteConfig.prodUrl}/channels`,
-      lastModified: new Date(),
-      changeFrequency: "daily" as const,
-      priority: 0.7,
+      lastModified: new Date("2026-03-22"),
     },
     // Programmatic channel pages — only channels with at least one completed summary
     ...Object.keys(lastSummaryByChannel)
@@ -114,8 +97,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .map((channelId) => ({
         url: `${SiteConfig.prodUrl}/channels/${channelId}`,
         lastModified: new Date(lastSummaryByChannel[channelId]),
-        changeFrequency: "daily" as const,
-        priority: 0.5,
       })),
     // Programmatic video summary pages
     ...(lastVideos ?? [])
@@ -123,8 +104,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .map((v) => ({
         url: `${SiteConfig.prodUrl}/videos/${v.video_id}`,
         lastModified: new Date(v.created_at ?? Date.now()),
-        changeFrequency: "never" as const,
-        priority: 0.6,
       })),
   ];
 }

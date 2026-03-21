@@ -27,7 +27,8 @@ export async function generateMetadata({
     .eq("short_id", short_id)
     .single();
 
-  if (!share) return { title: SiteConfig.title };
+  if (!share)
+    return { title: SiteConfig.title, robots: { index: false, follow: false } };
 
   const language = lang ?? share.language;
 
@@ -38,7 +39,8 @@ export async function generateMetadata({
     .eq("language", language)
     .single();
 
-  if (!video) return { title: SiteConfig.title };
+  if (!video)
+    return { title: SiteConfig.title, robots: { index: false, follow: false } };
 
   const ogTitle = `AI Summary: ${video.video_title}`;
   const ogDescription = (video.summary ?? "").slice(0, 160);
@@ -47,6 +49,7 @@ export async function generateMetadata({
   return {
     title: ogTitle,
     description: ogDescription,
+    robots: { index: false, follow: false },
     openGraph: {
       title: ogTitle,
       description: ogDescription,

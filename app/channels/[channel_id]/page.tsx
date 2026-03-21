@@ -137,6 +137,7 @@ export default async function ChannelPage({ params }: Props) {
     "@type": "ItemList",
     name: `${channelName} — AI Audio Summaries`,
     description: `AI-generated summaries of ${channelName} videos, delivered as audio.`,
+    itemListOrder: "https://schema.org/ItemListOrderDescending",
     itemListElement: videos.map((v, i) => ({
       "@type": "ListItem",
       position: i + 1,
