@@ -2,6 +2,7 @@
 
 ## 2026-03-22
 
+CHORE: Remove all em dashes from landing page copy and automated email templates
 FEATURE: Announcement system — batch email sending for opted-in users via admin panel with rate limiting (600ms between sends)
 FEATURE: AnnouncementEmail template — dark theme matching UpgradeEmail, announces Discord/Slack/RSS features with CTA
 CHORE: Admin emails page — add Broadcasts section with announcement send button

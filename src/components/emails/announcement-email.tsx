@@ -1,117 +1,25 @@
-import {
-  Body,
-  Button,
-  Container,
-  Head,
-  Heading,
-  Hr,
-  Html,
-  Preview,
-  Text,
-} from "@react-email/components";
+import { founderEmail, p, signature } from "@/lib/mail/founder-email";
 
-export function AnnouncementEmail() {
-  return (
-    <Html>
-      <Head />
-      <Preview>New on BriefTube: Discord, Slack and RSS feed</Preview>
-      <Body
-        style={{
-          backgroundColor: "#0a0a0a",
-          fontFamily:
-            '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-          margin: "0",
-          padding: "0",
-        }}
-      >
-        <Container
-          style={{
-            maxWidth: "520px",
-            margin: "40px auto",
-            padding: "32px",
-            backgroundColor: "#111111",
-            borderRadius: "12px",
-            border: "1px solid rgba(255,255,255,0.06)",
-          }}
-        >
-          <Heading
-            style={{
-              color: "#ffffff",
-              fontSize: "22px",
-              fontWeight: "700",
-              margin: "0 0 8px",
-            }}
-          >
-            What&apos;s new on BriefTube
-          </Heading>
-          <Text
-            style={{
-              color: "#a1a1aa",
-              fontSize: "15px",
-              lineHeight: "1.6",
-              margin: "0 0 16px",
-            }}
-          >
-            We&apos;ve added three new ways to get your summaries:
-          </Text>
-          <Text
-            style={{
-              color: "#a1a1aa",
-              fontSize: "14px",
-              lineHeight: "1.8",
-              margin: "0 0 24px",
-              paddingLeft: "16px",
-            }}
-          >
-            · Discord delivery
-            <br />
-            · Slack delivery
-            <br />· RSS podcast feed
-          </Text>
-          <Button
-            href="https://www.brief-tube.com/dashboard/profile"
-            style={{
-              backgroundColor: "#dc2626",
-              color: "#ffffff",
-              padding: "12px 24px",
-              borderRadius: "8px",
-              fontSize: "14px",
-              fontWeight: "600",
-              textDecoration: "none",
-              display: "inline-block",
-            }}
-          >
-            Connect Discord or Slack
-          </Button>
-          <Hr
-            style={{
-              borderColor: "rgba(255,255,255,0.06)",
-              margin: "32px 0 24px",
-            }}
-          />
-          <Text
-            style={{
-              color: "#71717a",
-              fontSize: "12px",
-              lineHeight: "1.5",
-              margin: "0",
-            }}
-          >
-            BriefTube · YouTube, summarized as audio
-            <br />
-            <a
-              href="https://www.brief-tube.com/dashboard/profile"
-              style={{
-                color: "#71717a",
-                textDecoration: "underline",
-                fontSize: "12px",
-              }}
-            >
-              Unsubscribe
-            </a>
-          </Text>
-        </Container>
-      </Body>
-    </Html>
+export function AnnouncementEmail(): string {
+  return founderEmail(
+    `${
+      p("Hey,") +
+      p(
+        "I wanted to reach out personally. We just shipped a few things I think you'll find useful.",
+      ) +
+      p(
+        "You can now receive your BriefTube summaries directly in <strong>Discord</strong> or <strong>Slack</strong>. One click to connect, no setup needed. If you're already using one of those for work or personal stuff, your audio summaries will land there automatically whenever a channel you follow posts a new video.",
+      ) +
+      p(
+        "We also added a personal <strong>RSS podcast feed</strong>. You get a private URL you can drop into any podcast app (Overcast, Pocket Casts, Apple Podcasts, whatever you use) and your BriefTube summaries show up as episodes.",
+      ) +
+      p(
+        "To connect Discord or Slack, or to grab your RSS feed, just go here: <a href='https://www.brief-tube.com/dashboard/profile' style='color:#1a1a1a;'>brief-tube.com/dashboard/profile</a>",
+      ) +
+      p(
+        "As always, if anything feels off or you have a feature request, just hit reply. I read everything.",
+      ) +
+      signature()
+    }<p style="margin:32px 0 0;font-size:12px;color:#999999;"><a href="https://www.brief-tube.com/dashboard/profile" style="color:#999999;">Unsubscribe</a></p>`,
   );
 }

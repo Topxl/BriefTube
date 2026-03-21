@@ -35,7 +35,7 @@ export const POST = async (req: NextRequest) => {
 
     const result = await sendEmail({
       to: email,
-      subject: "[TEST] New on BriefTube — Discord, Slack & RSS feed",
+      subject: "[TEST] A few new things on BriefTube",
       html: AnnouncementEmail(),
       headers: {
         "List-Unsubscribe":
@@ -83,7 +83,7 @@ export const POST = async (req: NextRequest) => {
     // eslint-disable-next-line no-await-in-loop
     const result = await sendEmail({
       to: email,
-      subject: "New on BriefTube — Discord, Slack & RSS feed",
+      subject: "A few new things on BriefTube",
       html: AnnouncementEmail(),
       headers: {
         "List-Unsubscribe":

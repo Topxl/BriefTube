@@ -63,7 +63,7 @@ export function GiftTrialEmail({ months, trialEndsAt }: Props) {
             <strong style={{ color: "#ffffff" }}>
               {label} d&apos;accès Pro BriefTube
             </strong>{" "}
-            — sans frais, sans engagement.
+            sans frais, sans engagement.
           </Text>
           <Text
             style={{

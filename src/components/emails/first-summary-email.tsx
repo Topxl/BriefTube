@@ -25,7 +25,7 @@ export function FirstSummaryEmail({
   return (
     <Html>
       <Head />
-      <Preview>Your first BriefTube summary is ready — listen now</Preview>
+      <Preview>Your first BriefTube summary is ready. Listen now.</Preview>
       <Body
         style={{
           backgroundColor: "#0a0a0a",
