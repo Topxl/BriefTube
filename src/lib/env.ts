@@ -40,6 +40,10 @@ export const env = createEnv({
     NOTION_CLIENT_ID: z.string().optional(),
     NOTION_CLIENT_SECRET: z.string().optional(),
     NOTION_REDIRECT_URI: z.string().url().optional(),
+    // Discord OAuth integration
+    DISCORD_CLIENT_ID: z.string().optional(),
+    DISCORD_CLIENT_SECRET: z.string().optional(),
+    DISCORD_REDIRECT_URI: z.string().url().optional(),
     // WhatsApp via Twilio — only auth token needed here (webhook signature validation)
     // TWILIO_ACCOUNT_SID and TWILIO_WHATSAPP_FROM live on the worker only
     TWILIO_AUTH_TOKEN: z.string().optional(),

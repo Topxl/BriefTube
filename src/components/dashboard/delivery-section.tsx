@@ -328,7 +328,6 @@ export function DeliverySection({
   const [discordConnected, setDiscordConnected] = useState(
     initialDiscordConnected,
   );
-  const [discordSaving, setDiscordSaving] = useState(false);
   const [slackConnected, setSlackConnected] = useState(initialSlackConnected);
   const [slackSaving, setSlackSaving] = useState(false);
   // Masquer Notion + WhatsApp en attente d'approbation — passer à true pour réactiver
@@ -538,15 +537,13 @@ export function DeliverySection({
       action: {
         label: "Save",
         onClick: async (value) => {
-          if (platform === "discord") setDiscordSaving(true);
-          else setSlackSaving(true);
+          setSlackSaving(true);
           const res = await fetch(`/api/connect/${platform}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ webhookUrl: value }),
           });
-          if (platform === "discord") setDiscordSaving(false);
-          else setSlackSaving(false);
+          setSlackSaving(false);
           if (!res.ok) {
             const err = (await res.json()) as { error?: string };
             toast.error(err.error ?? "Invalid webhook URL");
@@ -775,24 +772,12 @@ export function DeliverySection({
               Disconnect
             </button>
           ) : (
-            <button
-              disabled={discordSaving}
-              onClick={() =>
-                openWebhookDialog(
-                  "discord",
-                  "Discord",
-                  "https://discord.com/api/webhooks/…",
-                  () => setDiscordConnected(true),
-                )
-              }
-              className="nm-raised-sm text-muted-foreground hover:text-foreground flex items-center gap-1.5 rounded-full px-3 py-1 text-xs transition-all disabled:opacity-50"
+            <a
+              href="/api/connect/discord"
+              className="nm-raised-sm text-muted-foreground hover:text-foreground rounded-full px-3 py-1 text-xs transition-all"
             >
-              {discordSaving ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                "Connect"
-              )}
-            </button>
+              Connect
+            </a>
           )}
         </div>
 

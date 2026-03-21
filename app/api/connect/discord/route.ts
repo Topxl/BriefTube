@@ -1,29 +1,26 @@
-import { authRoute } from "@/lib/zod-route";
-import { createClient } from "@/lib/supabase/server";
-import { z } from "zod";
+import { getRequiredUser } from "@/lib/auth/auth-user";
+import { env } from "@/lib/env";
+import { createHmac } from "crypto";
+import { redirect } from "next/navigation";
 
-export const POST = authRoute
-  .body(
-    z.object({
-      webhookUrl: z
-        .string()
-        .url()
-        .refine((u) => u.startsWith("https://discord.com/api/webhooks/"), {
-          message: "Must be a Discord webhook URL",
-        }),
-    }),
-  )
-  .handler(async (_req, { body, ctx }) => {
-    const supabase = await createClient();
-    const { webhookUrl } = body as { webhookUrl: string };
-    await supabase.from("platform_connections").upsert(
-      {
-        user_id: ctx.user.id,
-        platform: "discord",
-        external_id: webhookUrl,
-        connected: true,
-      },
-      { onConflict: "user_id,platform" },
-    );
-    return { ok: true };
+export async function GET() {
+  const user = await getRequiredUser();
+
+  if (!env.DISCORD_CLIENT_ID || !env.DISCORD_REDIRECT_URI) {
+    redirect("/dashboard/profile?error=discord_not_configured");
+  }
+
+  const state = createHmac("sha256", env.DISCORD_CLIENT_SECRET ?? "secret")
+    .update(user.id)
+    .digest("hex");
+
+  const params = new URLSearchParams({
+    client_id: env.DISCORD_CLIENT_ID,
+    redirect_uri: env.DISCORD_REDIRECT_URI,
+    response_type: "code",
+    scope: "webhook.incoming",
+    state: `${user.id}.${state}`,
   });
+
+  redirect(`https://discord.com/api/oauth2/authorize?${params}`);
+}
