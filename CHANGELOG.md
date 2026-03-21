@@ -2,6 +2,10 @@
 
 ## 2026-03-22
 
+FIX: Schema — remove deprecated HowTo (Sept 2023), add @id to Organization, BreadcrumbList on /pricing, CollectionPage on /vs
+FIX: Sitemap — blog and /vs lastmod now dynamic from articles/comparisons arrays
+FIX: Trial duration inconsistency — /vs CTA "7-day" corrected to "30-day"
+FIX: CLS — SocialProof placeholder height h-[110px] to fully reserve stat grid height
 FEATURE: Redirect new users to profile page after signup — boost activation by showing connection options first
 FEATURE: Activation banner — warn users without delivery channel connected, show on every dashboard visit (dismissible 24h, non-intrusive)
 UPDATE: Comparison pages — replaced Telegram-only positioning with platform-agnostic copy mentioning Telegram, Discord, Slack, and podcast RSS

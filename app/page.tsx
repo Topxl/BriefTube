@@ -78,42 +78,6 @@ const jsonLd = [
   },
   {
     "@context": "https://schema.org",
-    "@type": "HowTo",
-    name: "How to get automatic YouTube video summaries with BriefTube",
-    description:
-      "Set up BriefTube in three steps and receive AI audio summaries of every new video from your YouTube channels, delivered to Telegram, Discord, Slack, or a podcast app.",
-    step: [
-      {
-        "@type": "HowToStep",
-        position: 1,
-        name: "Add your channels",
-        text: "Sign in with Google, then paste a YouTube channel URL into the dashboard. No RSS setup, no API keys required.",
-        url: `${SiteConfig.prodUrl}/login`,
-      },
-      {
-        "@type": "HowToStep",
-        position: 2,
-        name: "Connect a delivery destination",
-        text: "Link your Telegram account, Discord server, Slack workspace, or use the built-in private podcast RSS feed. Takes under a minute.",
-        url: `${SiteConfig.prodUrl}/login`,
-      },
-      {
-        "@type": "HowToStep",
-        position: 3,
-        name: "Receive summaries automatically",
-        text: "BriefTube monitors your channels around the clock. When a new video is published, it extracts the transcript, generates an AI summary with Google Gemini, converts it to audio, and delivers it within minutes. No manual steps.",
-      },
-    ],
-    tool: [
-      {
-        "@type": "HowToTool",
-        name: "BriefTube account",
-      },
-    ],
-    totalTime: "PT5M",
-  },
-  {
-    "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     name: SiteConfig.title,
     applicationCategory: "UtilitiesApplication",
@@ -150,6 +114,7 @@ const jsonLd = [
   {
     "@context": "https://schema.org",
     "@type": "Organization",
+    "@id": `${SiteConfig.prodUrl}/#organization`,
     name: SiteConfig.title,
     url: SiteConfig.prodUrl,
     logo: `${SiteConfig.prodUrl}/logo-hd.png`,
