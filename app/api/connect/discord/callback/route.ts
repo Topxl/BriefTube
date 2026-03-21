@@ -84,5 +84,31 @@ export async function GET(req: NextRequest) {
     { onConflict: "user_id,platform" },
   );
 
+  // Send a welcome message to confirm the channel is working
+  await fetch(webhookUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      username: "BriefTube",
+      embeds: [
+        {
+          title: "BriefTube connected",
+          description:
+            "This channel will receive your audio summaries as soon as a subscribed YouTube channel publishes a new video.",
+          color: 0xdc2626,
+          fields: [
+            {
+              name: "What to expect",
+              value:
+                "Each summary includes the video title, a text excerpt, and a link to listen to the full audio.",
+            },
+          ],
+        },
+      ],
+    }),
+  }).catch(() => {
+    // Non-blocking — don't fail the redirect if the message fails
+  });
+
   redirect("/dashboard/profile?discord=connected");
 }
