@@ -27,15 +27,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const allChannelIds = new Set((channelRows ?? []).map((r) => r.channel_id));
 
+  // Deduplicate videos by video_id — processed_videos has one row per (video_id, language)
+  const seenVideoIds = new Set<string>();
+  const uniqueVideos = (lastVideos ?? []).filter((v) => {
+    if (!v.video_id || seenVideoIds.has(v.video_id)) return false;
+    seenVideoIds.add(v.video_id);
+    return true;
+  });
+
   // Index of last summary date per channel
-  const lastSummaryByChannel = (lastVideos ?? []).reduce<
-    Record<string, string>
-  >((acc, v) => {
-    if (!acc[v.channel_id] && v.created_at) {
-      acc[v.channel_id] = v.created_at;
-    }
-    return acc;
-  }, {});
+  const lastSummaryByChannel = uniqueVideos.reduce<Record<string, string>>(
+    (acc, v) => {
+      if (!acc[v.channel_id] && v.created_at) {
+        acc[v.channel_id] = v.created_at;
+      }
+      return acc;
+    },
+    {},
+  );
 
   return [
     {
@@ -99,11 +108,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         lastModified: new Date(lastSummaryByChannel[channelId]),
       })),
     // Programmatic video summary pages
-    ...(lastVideos ?? [])
-      .filter((v) => v.video_id)
-      .map((v) => ({
-        url: `${SiteConfig.prodUrl}/videos/${v.video_id}`,
-        lastModified: new Date(v.created_at ?? Date.now()),
-      })),
+    ...uniqueVideos.map((v) => ({
+      url: `${SiteConfig.prodUrl}/videos/${v.video_id}`,
+      lastModified: new Date(v.created_at ?? Date.now()),
+    })),
   ];
 }

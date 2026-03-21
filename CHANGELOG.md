@@ -2,6 +2,15 @@
 
 ## 2026-03-22
 
+FIX: Sitemap — deduplicate video URLs (processed_videos has one row per video+language)
+FIX: Schema — remove SearchAction (target /channels?q= is auth-gated, not a public search)
+FIX: Schema — update Twitter sameAs from twitter.com to x.com
+FIX: Schema — add contentUrl to VideoObject for richer Google video rich results
+FIX: FAQ JSON-LD — mention Telegram, Discord and Slack (was Telegram-only)
+FIX: Language contradiction — FAQ now says "55 languages" to match Features section
+FIX: /vs CTA "3 channels" corrected to "5 channels"
+FIX: Activation email cron — exclude users with Discord/Slack connected, update copy to mention all delivery platforms
+CHORE: Copy — login subtitle, pricing free features, footer tagline, blog CTA, FAQ answer and article #3 rewritten to position BriefTube as YouTube summarizer first, Telegram/Discord/Slack as delivery options
 FIX: Add security headers (X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy) to vercel.json
 FIX: Add noindex to /s/[short_id] shared summary pages (ephemeral, should not be indexed)
 FIX: Add noindex to /r/[code] referral pages (thin content, should not be indexed)
