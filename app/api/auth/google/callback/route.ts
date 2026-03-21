@@ -82,6 +82,8 @@ export async function GET(request: Request) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  let isNewUser = false;
+
   if (user) {
     const { data: profile } = await supabase
       .from("profiles")
@@ -91,6 +93,7 @@ export async function GET(request: Request) {
 
     // Set trial for new users (skip if email previously deleted an account)
     if (profile?.trial_ends_at === null) {
+      isNewUser = true;
       const admin = createAdminClient();
       let deletedAccount = null;
       if (user.email) {
@@ -181,7 +184,9 @@ export async function GET(request: Request) {
     }
   }
 
-  const response = NextResponse.redirect(`${baseUrl}/dashboard`);
+  // Redirect new users to profile page to connect delivery channel
+  const redirectPath = isNewUser ? "/dashboard/profile" : "/dashboard";
+  const response = NextResponse.redirect(`${baseUrl}${redirectPath}`);
   response.cookies.delete(STATE_COOKIE);
   response.cookies.delete(REFERRAL_COOKIE);
   return response;
