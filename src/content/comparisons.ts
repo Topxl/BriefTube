@@ -21,7 +21,7 @@ export const comparisons: ComparisonData[] = [
     competitor: "Eightify",
     title: "BriefTube vs Eightify: which YouTube summarizer is right for you?",
     description:
-      "Eightify helps when you're actively watching YouTube—click the button, get a quick text summary in your sidebar. BriefTube works differently: it watches your channels for you and sends audio summaries to Telegram automatically. Choose based on your workflow, not the tool.",
+      "Eightify helps when you're actively watching YouTube—click the button, get a quick text summary in your sidebar. BriefTube works differently: it watches your channels for you and sends audio summaries automatically, wherever you listen. Choose based on your workflow, not the tool.",
     lastUpdated: "2026-02-24",
     competitorDescription:
       "Eightify is a browser extension that uses GPT to summarize YouTube videos while you're watching. Click a button, and it drops a text summary right in your sidebar. No setup, no commitment—you decide when to use it.",
@@ -37,8 +37,8 @@ export const comparisons: ComparisonData[] = [
         competitor: "Text only",
       },
       {
-        feature: "Telegram delivery",
-        briefTube: "Yes, delivered to Telegram",
+        feature: "Push delivery",
+        briefTube: "Yes, Telegram, Discord, Slack, podcast RSS",
         competitor: "No",
       },
       {
@@ -63,7 +63,7 @@ export const comparisons: ComparisonData[] = [
       },
     ],
     verdict:
-      "Eightify shines if you're already watching videos and want a quick text snapshot. But if you'd rather have YouTube keep up with you—not the other way around—BriefTube removes that friction entirely. You get audio dropped into Telegram without lifting a finger.",
+      "Eightify shines if you're already watching videos and want a quick text snapshot. But if you'd rather have YouTube keep up with you—not the other way around—BriefTube removes that friction entirely. You get audio delivered wherever you listen without lifting a finger.",
     competitorBestFor:
       "People who actively watch YouTube and like having context before diving deeper into a video",
     briefTubeBestFor:
@@ -86,7 +86,7 @@ export const comparisons: ComparisonData[] = [
       },
       {
         feature: "Audio delivery",
-        briefTube: "Yes, neural TTS to Telegram",
+        briefTube: "Yes, neural TTS to Telegram, Discord, Slack",
         competitor: "No",
       },
       {
@@ -95,7 +95,7 @@ export const comparisons: ComparisonData[] = [
         competitor: "Yes — highlights, flashcards",
       },
       {
-        feature: "Telegram integration",
+        feature: "Push delivery",
         briefTube: "Yes",
         competitor: "No",
       },
@@ -194,7 +194,7 @@ export const comparisons: ComparisonData[] = [
       },
       {
         feature: "Audio output",
-        briefTube: "Yes, neural TTS to Telegram",
+        briefTube: "Yes, neural TTS to Telegram, Discord, Slack",
         competitor: "No",
       },
       {
@@ -203,7 +203,7 @@ export const comparisons: ComparisonData[] = [
         competitor: "Yes — follow users, shared highlights",
       },
       {
-        feature: "Telegram integration",
+        feature: "Push delivery",
         briefTube: "Yes",
         competitor: "No",
       },
@@ -228,14 +228,14 @@ export const comparisons: ComparisonData[] = [
     competitorBestFor:
       "Active readers and students who want to highlight, annotate, and organize what they discover",
     briefTubeBestFor:
-      "Busy people who follow YouTube channels but need summaries in audio form delivered automatically to Telegram",
+      "Busy people who follow YouTube channels but need summaries in audio form delivered automatically wherever they listen",
   },
   {
     slug: "merlin",
     competitor: "Merlin AI",
     title: "BriefTube vs Merlin AI: channel automation vs browser AI assistant",
     description:
-      "Merlin is a jack-of-all-trades browser extension—summarize anything, chat with PDFs, write content. BriefTube does one specific thing well: monitor YouTube channels and send you audio summaries via Telegram. Generalist versus specialist.",
+      "Merlin is a jack-of-all-trades browser extension—summarize anything, chat with PDFs, write content. BriefTube does one specific thing well: monitor YouTube channels and send you audio summaries automatically. Generalist versus specialist.",
     lastUpdated: "2026-03-03",
     competitorDescription:
       "Merlin AI is a browser extension that acts like an AI assistant for everything. Need to summarize a page? Chat with a document? Generate content? Merlin can handle it all, including occasional YouTube video summaries. It's useful when you want AI help without leaving your browser.",
@@ -246,7 +246,7 @@ export const comparisons: ComparisonData[] = [
         competitor: "No — manual trigger",
       },
       {
-        feature: "Audio delivery to Telegram",
+        feature: "Audio push delivery",
         briefTube: "Yes",
         competitor: "No",
       },
@@ -281,7 +281,7 @@ export const comparisons: ComparisonData[] = [
     competitorBestFor:
       "Power users who want quick AI help for writing, research, and various summarization tasks across the web",
     briefTubeBestFor:
-      "YouTube subscribers who want audio summaries automatically sent to Telegram—no extension required, no extra steps",
+      "YouTube subscribers who want audio summaries automatically sent to them, no extension required, no extra steps",
   },
   {
     slug: "tubesummary",
@@ -458,11 +458,11 @@ export const comparisons: ComparisonData[] = [
       },
       {
         feature: "Audio output",
-        briefTube: "Yes, TTS audio to Telegram",
+        briefTube: "Yes, TTS audio to Telegram, Discord, Slack",
         competitor: "Text summaries + transcripts",
       },
       {
-        feature: "Telegram delivery",
+        feature: "Push delivery",
         briefTube: "Yes",
         competitor: "Email digest",
       },
@@ -482,7 +482,7 @@ export const comparisons: ComparisonData[] = [
     competitorBestFor:
       "Podcast listeners who want summaries and digests automatically delivered so they can stay aware without time commitment",
     briefTubeBestFor:
-      "YouTube channel subscribers who want audio summaries delivered to Telegram so they can stay current hands-free",
+      "YouTube channel subscribers who want audio summaries delivered automatically so they can stay current hands-free",
   },
   {
     slug: "snipd",
@@ -502,11 +502,11 @@ export const comparisons: ComparisonData[] = [
       },
       {
         feature: "Audio summaries",
-        briefTube: "Yes — TTS delivered to Telegram",
+        briefTube: "Yes, TTS delivered to Telegram, Discord, Slack",
         competitor: "Chapter summaries within app",
       },
       {
-        feature: "Telegram delivery",
+        feature: "Push delivery",
         briefTube: "Yes",
         competitor: "No — in-app only",
       },
@@ -522,7 +522,7 @@ export const comparisons: ComparisonData[] = [
       },
       {
         feature: "Mobile app",
-        briefTube: "Via Telegram",
+        briefTube: "Via Telegram, Discord, or Slack",
         competitor: "Yes, dedicated iOS/Android app",
       },
       {
@@ -536,7 +536,7 @@ export const comparisons: ComparisonData[] = [
     competitorBestFor:
       "Dedicated podcast listeners who want to capture highlights and share insights while actually listening to episodes",
     briefTubeBestFor:
-      "Busy YouTube subscribers who want summaries delivered as audio to Telegram without dedicating active listening time",
+      "Busy YouTube subscribers who want summaries delivered as audio automatically without dedicating active listening time",
   },
   {
     slug: "tubeonai",
@@ -544,7 +544,7 @@ export const comparisons: ComparisonData[] = [
     title:
       "BriefTube vs TubeOnAI: which automated YouTube summarizer is right for you?",
     description:
-      "TubeOnAI and BriefTube solve the same problem—monitoring channels and generating audio—but in different philosophies. TubeOnAI wants to be your main app for all content. BriefTube wants to be invisible: summaries arrive in Telegram where you already are. One is a content hub; the other is a notification system.",
+      "TubeOnAI and BriefTube solve the same problem—monitoring channels and generating audio—but in different philosophies. TubeOnAI wants to be your main app for all content. BriefTube wants to be invisible: summaries arrive wherever you already are. One is a content hub; the other is a notification system.",
     lastUpdated: "2026-03-07",
     competitorDescription:
       "TubeOnAI is an all-in-one content hub: monitor YouTube channels, podcasts, articles, PDFs—all in one place. New content gets summarized automatically, and you can listen to the audio summaries right inside their app. It's designed to become your content consumption center.",
@@ -560,8 +560,8 @@ export const comparisons: ComparisonData[] = [
         competitor: "Yes — in-app TTS",
       },
       {
-        feature: "Telegram delivery",
-        briefTube: "Yes — audio file sent to Telegram",
+        feature: "Push delivery",
+        briefTube: "Yes, Telegram, Discord, Slack, podcast RSS",
         competitor: "No — in-app only, must open their app",
       },
       {
@@ -586,11 +586,11 @@ export const comparisons: ComparisonData[] = [
       },
     ],
     verdict:
-      "TubeOnAI is probably the closest competitor—both automate channels and create audio. But the philosophy is different: TubeOnAI wants to become your app, asking you to open it and listen. BriefTube wants to vanish, pushing summaries into Telegram where you're already spending time. If you follow both YouTube and podcasts and enjoy dedicated apps, TubeOnAI wins. If you just want summaries without opening another app, BriefTube wins.",
+      "TubeOnAI is probably the closest competitor—both automate channels and create audio. But the philosophy is different: TubeOnAI wants to become your app, asking you to open it and listen. BriefTube wants to vanish, pushing summaries directly to you wherever you already are. If you follow both YouTube and podcasts and enjoy dedicated apps, TubeOnAI wins. If you just want summaries without opening another app, BriefTube wins.",
     competitorBestFor:
       "Users who follow both YouTube channels and podcasts and want everything in one dedicated app for content",
     briefTubeBestFor:
-      "YouTube subscribers who live in Telegram and want summaries delivered there—no app switching, just audio files",
+      "YouTube subscribers who want summaries delivered wherever they already are, no app switching, just audio files",
   },
   {
     slug: "snipcast",
@@ -615,7 +615,7 @@ export const comparisons: ComparisonData[] = [
       },
       {
         feature: "Delivery channel",
-        briefTube: "Telegram (audio file)",
+        briefTube: "Telegram, Discord, Slack (audio)",
         competitor: "Email (text digest)",
       },
       {
@@ -640,11 +640,11 @@ export const comparisons: ComparisonData[] = [
       },
     ],
     verdict:
-      "Snipcast has proven the model works—people absolutely want their channels summarized without having to visit YouTube. But there's a real-world difference: text summaries get buried in your email inbox; audio files in Telegram are ready to play immediately on your commute. Plus, Snipcast's 10-channel cap is a genuine constraint if you follow more creators. On Pro, BriefTube has no ceiling.",
+      "Snipcast has proven the model works—people absolutely want their channels summarized without having to visit YouTube. But there's a real-world difference: text summaries get buried in your email inbox; audio files delivered to Telegram, Discord, or Slack are ready to play immediately on your commute. Plus, Snipcast's 10-channel cap is a genuine constraint if you follow more creators. On Pro, BriefTube has no ceiling.",
     competitorBestFor:
       "Email-focused users who like text summaries and also follow Spotify or Apple Podcasts alongside YouTube",
     briefTubeBestFor:
-      "People who want hands-free audio summaries in Telegram and follow more than 10 YouTube channels without hitting a limit",
+      "People who want hands-free audio summaries and follow more than 10 YouTube channels without hitting a limit",
   },
   {
     slug: "summarize-tech",
@@ -698,7 +698,7 @@ export const comparisons: ComparisonData[] = [
     competitorBestFor:
       "Casual browsers who randomly encounter videos and want quick, no-signup text summaries without committing",
     briefTubeBestFor:
-      "Channel subscribers who follow specific creators and want audio summaries arriving automatically via Telegram",
+      "Channel subscribers who follow specific creators and want audio summaries arriving automatically",
   },
   {
     slug: "kome",
@@ -718,11 +718,11 @@ export const comparisons: ComparisonData[] = [
       },
       {
         feature: "Audio output",
-        briefTube: "Yes, neural TTS delivered to Telegram",
+        briefTube: "Yes, neural TTS delivered to Telegram, Discord, Slack",
         competitor: "No — text only",
       },
       {
-        feature: "Telegram delivery",
+        feature: "Push delivery",
         briefTube: "Yes",
         competitor: "No",
       },

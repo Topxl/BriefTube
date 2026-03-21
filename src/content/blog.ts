@@ -118,93 +118,72 @@ export const articles: Article[] = [
 
   {
     slug: "youtube-telegram-ai-summaries-guide",
-    title: "How to get AI audio summaries of your YouTube channels in Telegram",
+    title: "How to get automatic AI audio summaries of your YouTube channels",
     description:
-      "A step-by-step guide to setting up automatic AI-generated audio summaries for any YouTube channel, delivered to Telegram.",
+      "A step-by-step guide to setting up automatic AI-generated audio summaries for any YouTube channel, delivered to Telegram, Discord, Slack, or your podcast app.",
     date: "2026-02-20",
     readingTime: "5 min read",
     category: "Guide",
-    content: `<p>YouTube has become where learning happens. But actually keeping up with multiple channels is nearly impossible. Here's how to solve that problem: get automatic AI-generated audio summaries delivered to Telegram the moment new videos appear.</p>
+    content: `<p>YouTube is where learning happens. But keeping up with multiple channels is nearly impossible — videos pile up, notifications get dismissed, and valuable content disappears into a backlog you'll never clear. Here's how to solve that: get automatic AI-generated audio summaries of every new video, delivered wherever you already spend time.</p>
 
-<h2>The Problem We're Solving</h2>
+<h2>What You're Setting Up</h2>
 
-<p>You subscribe to channels because the content matters. Huberman Lab for science. Fireship for dev tutorials. Y Combinator for startup insights. But the second you hit subscribe, you're in a trap. A video drops, your notification sits unread, a week passes, and you've got 30 unwatched videos guilt-tripping you.</p>
-
-<p>The answer isn't watching less. It's changing how you consume. Instead of 20-minute YouTube videos, imagine 3-5 minute audio summaries that capture the essential ideas. No fluff. Just the important bits delivered while you're commuting or cooking.</p>
+<p>BriefTube monitors YouTube channels and automatically generates a short audio summary every time a new video is published. You subscribe to channels once, and summaries arrive automatically — no manual triggering, no opening YouTube. Depending on your preference, summaries land in Telegram, Discord, Slack, or a private podcast feed you can listen to in any podcast app.</p>
 
 <h2>Step 1: Create Your BriefTube Account</h2>
 
-<p>Head to BriefTube and sign in with your Google account. That's it. No email passwords, no complicated forms. You're in within 10 seconds.</p>
+<p>Sign in at BriefTube with your Google account. No password, no forms — one click and you're in. Free accounts include 5 channels. Pro unlocks unlimited channels.</p>
 
-<p>Your account comes with 3 free channel slots. That's enough to test the system with your favorite creators. Want unlimited channels? Upgrade to Pro.</p>
+<h2>Step 2: Connect Your Delivery Platform</h2>
 
-<h2>Step 2: Connect Your Telegram</h2>
+<p>BriefTube can deliver audio summaries to four places. Choose what fits your existing habits:</p>
 
-<p>Open your Telegram settings and start a conversation with the BriefTube bot. Give it permission to send you messages. Then return to BriefTube and click "Connect Telegram" to verify the link.</p>
+<ul>
+<li><strong>Telegram:</strong> Connect @brief_tube_bot. Summaries arrive as voice messages in your Telegram.</li>
+<li><strong>Discord:</strong> Connect your Discord server. Summaries post to a channel of your choice.</li>
+<li><strong>Slack:</strong> Connect your Slack workspace. Summaries post to a workspace channel.</li>
+<li><strong>Podcast app:</strong> Copy your personal RSS feed URL from your profile and add it to Overcast, Pocket Casts, Apple Podcasts, or any podcast app.</li>
+</ul>
 
-<p>This takes 60 seconds. BriefTube will never spam you. It only sends summaries for videos you've actually subscribed to.</p>
+<p>Pick the one you check most. You can connect multiple platforms or switch later — the summaries are the same regardless of where they land.</p>
 
 <h2>Step 3: Add Your First Channels</h2>
 
-<p>In the BriefTube dashboard, click "Add Channel." Search for any YouTube channel and subscribe. You can either add channels manually or import your entire YouTube subscription list with one click.</p>
-
-<p>Pro tip: Start with 3-5 channels that upload frequently. You want to feel the system working within a few days, not weeks.</p>
+<p>In the BriefTube dashboard, click "Add Channel" and search for any YouTube channel by name or paste its URL. Start with 3–5 channels that publish frequently. You want to feel the system working within days, not weeks.</p>
 
 <h2>Step 4: Wait for New Content</h2>
 
-<p>BriefTube monitors your subscribed channels continuously. When a new video appears, the system automatically:</p>
+<p>BriefTube monitors your subscribed channels automatically. When a new video appears, the system:</p>
 
 <ol>
-<li>Downloads the video</li>
-<li>Extracts or transcribes the audio</li>
-<li>Generates an AI summary using Google Gemini</li>
-<li>Converts the summary to natural-sounding audio (supports 40+ languages)</li>
-<li>Sends the audio to your Telegram</li>
+<li>Detects the upload via YouTube's RSS feed (checked every 5 minutes)</li>
+<li>Extracts or transcribes the video's audio</li>
+<li>Generates an AI summary with Google Gemini</li>
+<li>Converts the summary to natural-sounding audio via neural TTS</li>
+<li>Delivers the audio to your connected platform</li>
 </ol>
 
-<p>All of this happens automatically. You don't click anything. The audio just arrives as a voice message in Telegram.</p>
+<p>The whole process runs automatically and typically completes within 30 minutes of a video going live. You don't click anything.</p>
 
-<h2>Step 5: Customize Your Experience</h2>
+<h2>Step 5: Customize Voice and Language</h2>
 
-<p>In your account settings, you can choose:</p>
-
-<ul>
-<li><strong>TTS Voice:</strong> Pick any of 40+ neural voices across multiple languages. English, French, Spanish, Mandarin — choose what sounds natural to you.</li>
-<li><strong>Summary Length:</strong> Want shorter summaries? Longer deep dives? Adjust based on your commute length.</li>
-<li><strong>Language:</strong> If the video is in a different language, summaries can be generated in your preferred language.</li>
-</ul>
-
-<p>These settings apply to all your channels, but you can customize per-channel settings if needed.</p>
+<p>In your settings, choose your preferred TTS voice (40+ options across English, French, and more) and your summary language. You can follow English channels and receive French summaries, or any other combination. Settings apply globally but can be adjusted per channel.</p>
 
 <h2>Real-World Example</h2>
 
-<p>Let's say you subscribe to Huberman Lab. A new episode drops: "Optimizing Sleep for Athletic Performance."</p>
+<p>A new Huberman Lab episode drops: "Optimizing Sleep for Athletic Performance." It's 2 hours long.</p>
 
-<p>Normally? You'd see the 2-hour notification, think "I'll watch that later," and it sits in your watch-later playlist forever.</p>
+<p>Without BriefTube: the notification gets swiped away, the video joins a playlist you'll never watch, and the insight is lost.</p>
 
-<p>With BriefTube? Within 30 minutes, a 4-minute AI summary arrives in your Telegram. You're walking to the gym, you tap play, and you're caught up on the key insights before you finish your warm-up. If it's interesting, you can watch the full video later. If it's not, you've saved 1 hour 56 minutes.</p>
+<p>With BriefTube: within 30 minutes, a 4-minute AI audio summary lands in wherever you connected — Telegram, Discord, Slack, or your podcast app. You listen during your commute, understand what the episode covers, and decide whether it's worth watching in full. If it is, you open YouTube for that specific video. If it isn't, you've saved nearly two hours.</p>
 
-<p>Multiply that across 10 channels and you've recovered hours per week.</p>
-
-<h2>Pro Tips</h2>
-
-<p><strong>Share Summaries:</strong> Good summary? Your Telegram makes it easy to forward it to friends or group chats. Sharing knowledge is one of those summaries' best features.</p>
-
-<p><strong>Archive What Matters:</strong> Save particularly useful summaries to your Telegram Saved Messages. Build a personal knowledge library without any extra work.</p>
-
-<p><strong>Multi-Language Setup:</strong> Follow English tech channels but want summaries in French? You can have different language preferences per-channel or switch it globally anytime.</p>
+<p>Multiply across 10 channels and you've recovered significant time every week.</p>
 
 <h2>Why This Works</h2>
 
-<p>The fundamental insight: you don't need to watch every video. You need to know what's worth your time. AI summaries give you that signal in 1/5th the time it takes to watch the original.</p>
+<p>The core insight: you don't need to watch every video. You need to know what's worth your time. AI summaries give you that signal in a fraction of the time — delivered automatically to the app you already use, in an audio format you can consume while doing anything else.</p>
 
-<p>And because summaries arrive as audio in Telegram — the app you already use constantly — there's zero friction. No new habit to build. No extra app to check. The content just arrives where your attention already lives.</p>
-
-<h2>Getting Started</h2>
-
-<p>Sign up for BriefTube today. You get 7 days free to test it with 3 channels. No credit card required. Connect Telegram, add your favorite creators, and wait for the next video to drop.</p>
-
-<p>Within a week, you'll see how much time this reclaims. And once you do, going back to checking YouTube manually feels impossible.</p>`,
+<p>Sign up free, connect your preferred platform, add a few channels, and wait for the next video to drop. Within a week, going back to checking YouTube manually feels like a step backwards.</p>`,
   },
 
   {

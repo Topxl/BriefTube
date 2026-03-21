@@ -220,8 +220,8 @@ export default async function VideoPage({ params }: Props) {
               </p>
               <p className="text-muted-foreground text-sm leading-relaxed">
                 BriefTube monitors your YouTube channels, generates AI-powered
-                summaries, and delivers audio to your Telegram — fully
-                automated.
+                audio summaries, and delivers them wherever you listen.
+                Telegram, Discord, Slack, or your podcast app. Fully automated.
               </p>
               <Button
                 className="w-fit bg-red-600 shadow-[0_0_20px_rgba(239,68,68,0.25)] hover:bg-red-500"

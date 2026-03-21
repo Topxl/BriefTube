@@ -177,8 +177,8 @@ export default async function ArticlePage({ params }: PageProps) {
               </p>
               <p className="text-muted-foreground text-sm leading-relaxed">
                 Try BriefTube free for {SiteConfig.trialDays} days. Get AI audio
-                summaries of your favorite YouTube channels delivered to
-                Telegram.
+                summaries of your favorite YouTube channels, delivered to
+                Telegram, Discord, Slack, or your podcast app.
               </p>
               <Button
                 className="w-fit bg-red-600 shadow-[0_0_20px_rgba(239,68,68,0.25)] hover:bg-red-500"
