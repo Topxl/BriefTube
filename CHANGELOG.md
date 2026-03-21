@@ -2,6 +2,9 @@
 
 ## 2026-03-21
 
+FEATURE: Discord delivery — webhook-based, sends rich embed (title, summary excerpt, audio link) to any Discord channel
+FEATURE: Slack delivery — incoming webhook, sends Block Kit message with summary and "Listen" button
+CHORE: delivery-section — Discord + Slack rows with connect dialog (paste webhook URL) and disconnect
 FIX: Dashboard — default preferred language fallback changed from "fr" to "en"
 PERF: Dashboard — server-side prefetch deliveries + videos in page.tsx, pass as initialDeliveries to SummariesFeed — eliminates 4 client-side Supabase queries on mount
 PERF: Whisper audio download — limit bitrate to 64kbps max (was bestaudio/best ≈160kbps) — reduces Webshare proxy bandwidth ~3x

@@ -325,6 +325,12 @@ export function DeliverySection({
   const [whatsappPhone, setWhatsappPhone] = useState(initialWhatsappPhone);
   const [waLink, setWaLink] = useState<string | null>(null);
   const [waConnecting, setWaConnecting] = useState(false);
+  const [discordConnected, setDiscordConnected] = useState(
+    initialDiscordConnected,
+  );
+  const [discordSaving, setDiscordSaving] = useState(false);
+  const [slackConnected, setSlackConnected] = useState(initialSlackConnected);
+  const [slackSaving, setSlackSaving] = useState(false);
   // Masquer Notion + WhatsApp en attente d'approbation — passer à true pour réactiver
   const showExperimentalPlatforms = false as boolean;
   const [voice, setVoice] = useState(initialVoice);
@@ -516,6 +522,52 @@ export function DeliverySection({
     toast.success("WhatsApp disconnected");
   };
 
+  const openWebhookDialog = (
+    platform: "discord" | "slack",
+    label: string,
+    placeholder: string,
+    onSaved: () => void,
+  ) => {
+    dialogManager.input({
+      title: `Connect ${label}`,
+      input: {
+        label: "Incoming webhook URL",
+        placeholder,
+        defaultValue: "",
+      },
+      action: {
+        label: "Save",
+        onClick: async (value) => {
+          if (platform === "discord") setDiscordSaving(true);
+          else setSlackSaving(true);
+          const res = await fetch(`/api/connect/${platform}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ webhookUrl: value }),
+          });
+          if (platform === "discord") setDiscordSaving(false);
+          else setSlackSaving(false);
+          if (!res.ok) {
+            const err = (await res.json()) as { error?: string };
+            toast.error(err.error ?? "Invalid webhook URL");
+            return;
+          }
+          onSaved();
+          toast.success(`${label} connected`);
+        },
+      },
+    });
+  };
+
+  const disconnectWebhook = async (platform: "discord" | "slack") => {
+    await fetch(`/api/connect/${platform}/disconnect`, { method: "POST" });
+    if (platform === "discord") setDiscordConnected(false);
+    else setSlackConnected(false);
+    toast.success(
+      `${platform === "discord" ? "Discord" : "Slack"} disconnected`,
+    );
+  };
+
   return (
     <section className="space-y-2">
       <h2 className="text-muted-foreground/50 px-1 text-xs font-medium tracking-wide uppercase">
@@ -691,6 +743,110 @@ export function DeliverySection({
             )}
           </div>
         )}
+
+        {/* Discord row */}
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-2.5">
+            <div
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${discordConnected ? "nm-inset-sm bg-emerald-500/[0.08]" : "nm-inset-sm"}`}
+            >
+              <svg
+                className={`h-4 w-4 ${discordConnected ? "text-emerald-400" : "text-muted-foreground"}`}
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057c.002.022.015.043.032.054a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm font-medium">Discord</p>
+              <p
+                className={`text-[11px] ${discordConnected ? "text-emerald-400" : "text-muted-foreground"}`}
+              >
+                {discordConnected ? "Connected" : "Not connected"}
+              </p>
+            </div>
+          </div>
+          {discordConnected ? (
+            <button
+              onClick={() => void disconnectWebhook("discord")}
+              className="nm-raised-sm text-muted-foreground hover:text-foreground rounded-full px-3 py-1 text-xs transition-all"
+            >
+              Disconnect
+            </button>
+          ) : (
+            <button
+              disabled={discordSaving}
+              onClick={() =>
+                openWebhookDialog(
+                  "discord",
+                  "Discord",
+                  "https://discord.com/api/webhooks/…",
+                  () => setDiscordConnected(true),
+                )
+              }
+              className="nm-raised-sm text-muted-foreground hover:text-foreground flex items-center gap-1.5 rounded-full px-3 py-1 text-xs transition-all disabled:opacity-50"
+            >
+              {discordSaving ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                "Connect"
+              )}
+            </button>
+          )}
+        </div>
+
+        {/* Slack row */}
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-2.5">
+            <div
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${slackConnected ? "nm-inset-sm bg-emerald-500/[0.08]" : "nm-inset-sm"}`}
+            >
+              <svg
+                className={`h-4 w-4 ${slackConnected ? "text-emerald-400" : "text-muted-foreground"}`}
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zM15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm font-medium">Slack</p>
+              <p
+                className={`text-[11px] ${slackConnected ? "text-emerald-400" : "text-muted-foreground"}`}
+              >
+                {slackConnected ? "Connected" : "Not connected"}
+              </p>
+            </div>
+          </div>
+          {slackConnected ? (
+            <button
+              onClick={() => void disconnectWebhook("slack")}
+              className="nm-raised-sm text-muted-foreground hover:text-foreground rounded-full px-3 py-1 text-xs transition-all"
+            >
+              Disconnect
+            </button>
+          ) : (
+            <button
+              disabled={slackSaving}
+              onClick={() =>
+                openWebhookDialog(
+                  "slack",
+                  "Slack",
+                  "https://hooks.slack.com/services/…",
+                  () => setSlackConnected(true),
+                )
+              }
+              className="nm-raised-sm text-muted-foreground hover:text-foreground flex items-center gap-1.5 rounded-full px-3 py-1 text-xs transition-all disabled:opacity-50"
+            >
+              {slackSaving ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                "Connect"
+              )}
+            </button>
+          )}
+        </div>
 
         {/* Language row */}
         <div className="flex items-center justify-between px-4 py-3">
