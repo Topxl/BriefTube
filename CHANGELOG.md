@@ -2,6 +2,10 @@
 
 ## 2026-03-22
 
+REFACTOR: profil — section Subscription déplacée en haut de page
+
+FIX: CLS — SocialProof returns placeholder div instead of null, HeroPlayer min-h reservation
+CHORE: SEO — add HowTo schema to homepage (3-step setup, feeds Perplexity and Google AIO)
 CHORE: SEO GEO round 3 — robots.ts explicit AI crawler rules, llms.txt language fix, FAQPage 4→10 questions, LCP image long-cache header
 FIX: Sitemap — deduplicate video URLs (processed_videos has one row per video+language)
 FIX: Schema — remove SearchAction (target /channels?q= is auth-gated, not a public search)
