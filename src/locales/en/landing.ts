@@ -162,7 +162,7 @@ export const landing = {
       {
         question: "How does it actually work?",
         answer:
-          "Each channel you follow gets checked automatically through YouTube's RSS feed. The moment a new video appears, BriefTube reads its transcript, generates a summary, and converts it to audio, usually within a few minutes. You can play it from your dashboard, or connect Telegram to get it delivered straight to your phone. No manual steps on your end.",
+          "Each channel you follow gets checked automatically through YouTube's RSS feed. The moment a new video appears, BriefTube reads its transcript, generates a summary, and converts it to audio, usually within a few minutes. You can play it from your dashboard, or have it pushed to Telegram, Discord, Slack, or your podcast app. No manual steps on your end.",
       },
       {
         question: "",

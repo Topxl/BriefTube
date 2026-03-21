@@ -21,6 +21,27 @@ import { SiteConfig } from "@/site-config";
 import { formatCurrency } from "@/lib/format";
 import { logger } from "@/lib/logger";
 
+const PODCAST_APPS = [
+  {
+    name: "Overcast",
+    href: (url: string) =>
+      `https://overcast.fm/x-callback-url/add?url=${encodeURIComponent(url)}`,
+  },
+  {
+    name: "Pocket Casts",
+    href: (url: string) => `https://pca.st/add?feed=${encodeURIComponent(url)}`,
+  },
+  {
+    name: "Apple Podcasts",
+    href: (url: string) => `podcast://${url.replace(/^https?:\/\//, "")}`,
+  },
+  {
+    name: "Castro",
+    href: (url: string) =>
+      `castro://subscribe/${url.replace(/^https?:\/\//, "")}`,
+  },
+] as const;
+
 function PodcastFeedSection({ rssToken }: { rssToken: string }) {
   const feedUrl = `${SiteConfig.prodUrl}/api/feed/${rssToken}`;
   const [copied, setCopied] = useState(false);
@@ -44,11 +65,11 @@ function PodcastFeedSection({ rssToken }: { rssToken: string }) {
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium">Listen in your podcast app</p>
             <p className="text-muted-foreground mt-0.5 text-[11px]">
-              Add this URL to Pocket Casts, Overcast, Apple Podcasts…
+              Add your personal feed to any podcast app
             </p>
           </div>
         </div>
-        <div className="border-t border-white/[0.04] px-4 py-3">
+        <div className="flex flex-col gap-3 border-t border-white/[0.04] px-4 py-3">
           <div className="nm-inset flex items-center gap-2 rounded-xl px-3 py-2">
             <span className="text-muted-foreground min-w-0 flex-1 truncate font-mono text-[11px]">
               {feedUrl}
@@ -64,6 +85,19 @@ function PodcastFeedSection({ rssToken }: { rssToken: string }) {
                 <Copy className="h-3.5 w-3.5" />
               )}
             </button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {PODCAST_APPS.map((app) => (
+              <a
+                key={app.name}
+                href={app.href(feedUrl)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="nm-raised-sm text-muted-foreground hover:text-foreground rounded-full px-3 py-1 text-xs transition-colors"
+              >
+                {app.name}
+              </a>
+            ))}
           </div>
         </div>
       </div>
