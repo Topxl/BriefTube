@@ -272,83 +272,6 @@ export function ProfileContent({
 
   return (
     <div className="space-y-6">
-      {/* Account */}
-      <section className="space-y-2">
-        <h2 className="text-muted-foreground/50 px-1 text-xs font-medium tracking-wide uppercase">
-          Account
-        </h2>
-        <div className="nm-raised overflow-hidden rounded-2xl">
-          <div className="flex items-center gap-3 px-4 py-3.5">
-            <div className="nm-inset-sm flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-500/[0.12] text-sm font-bold text-red-400">
-              {email.charAt(0).toUpperCase()}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium">{email}</p>
-              <p className="text-muted-foreground mt-0.5 text-[11px]">
-                {isActivePro
-                  ? "Pro — unlimited channels"
-                  : isTrial
-                    ? `Trial · ${trialDaysLeft}d left · ${maxChannels} channels max`
-                    : `Free · ${maxChannels} channels max`}
-              </p>
-            </div>
-            <span
-              className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase ${
-                isActivePro
-                  ? "bg-red-600 text-white"
-                  : isTrial
-                    ? "nm-inset-sm text-amber-400"
-                    : "nm-raised-sm text-muted-foreground"
-              }`}
-            >
-              {isActivePro ? "Pro" : isTrial ? "Trial" : "Free"}
-            </span>
-          </div>
-          <div className="flex items-center justify-between border-t border-white/[0.04] px-4 py-2.5">
-            <button
-              onClick={handleDeleteAccount}
-              className="nm-raised-sm text-muted-foreground hover:text-destructive flex items-center gap-1.5 rounded-full px-3 py-1 text-xs transition-all"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-              Delete account
-            </button>
-            <button
-              onClick={() => void handleLogout()}
-              className="nm-raised-sm text-muted-foreground hover:text-foreground flex items-center gap-1.5 rounded-full px-3 py-1 text-xs transition-all"
-            >
-              <LogOut className="h-3.5 w-3.5" />
-              Sign out
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* Delivery */}
-      <DeliverySection
-        initialTelegramConnected={initialTelegramConnected}
-        initialNotionConnected={initialNotionConnected}
-        initialNotionDatabaseName={initialNotionDatabaseName}
-        initialWhatsappConnected={initialWhatsappConnected}
-        initialWhatsappPhone={initialWhatsappPhone}
-        initialDiscordConnected={initialDiscordConnected}
-        initialSlackConnected={initialSlackConnected}
-        initialVoice={initialVoice}
-        initialLanguage={initialLanguage}
-        initialFavorites={initialFavorites}
-      />
-
-      {/* Notifications */}
-      <NotificationsSection
-        initialPushEnabled={initialPushEnabled}
-        initialNewsletter={initialNewsletter}
-        initialAnnouncements={initialAnnouncements}
-        initialDailyDigest={initialDailyDigest}
-        initialDigestHour={initialDigestHour}
-      />
-
-      {/* Podcast feed */}
-      {rssToken && <PodcastFeedSection rssToken={rssToken} />}
-
       {/* Subscription */}
       <section className="space-y-2">
         <h2 className="text-muted-foreground/50 px-1 text-xs font-medium tracking-wide uppercase">
@@ -479,6 +402,83 @@ export function ProfileContent({
           )}
         </div>
       </section>
+
+      {/* Account */}
+      <section className="space-y-2">
+        <h2 className="text-muted-foreground/50 px-1 text-xs font-medium tracking-wide uppercase">
+          Account
+        </h2>
+        <div className="nm-raised overflow-hidden rounded-2xl">
+          <div className="flex items-center gap-3 px-4 py-3.5">
+            <div className="nm-inset-sm flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-500/[0.12] text-sm font-bold text-red-400">
+              {email.charAt(0).toUpperCase()}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium">{email}</p>
+              <p className="text-muted-foreground mt-0.5 text-[11px]">
+                {isActivePro
+                  ? "Pro — unlimited channels"
+                  : isTrial
+                    ? `Trial · ${trialDaysLeft}d left · ${maxChannels} channels max`
+                    : `Free · ${maxChannels} channels max`}
+              </p>
+            </div>
+            <span
+              className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase ${
+                isActivePro
+                  ? "bg-red-600 text-white"
+                  : isTrial
+                    ? "nm-inset-sm text-amber-400"
+                    : "nm-raised-sm text-muted-foreground"
+              }`}
+            >
+              {isActivePro ? "Pro" : isTrial ? "Trial" : "Free"}
+            </span>
+          </div>
+          <div className="flex items-center justify-between border-t border-white/[0.04] px-4 py-2.5">
+            <button
+              onClick={handleDeleteAccount}
+              className="nm-raised-sm text-muted-foreground hover:text-destructive flex items-center gap-1.5 rounded-full px-3 py-1 text-xs transition-all"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Delete account
+            </button>
+            <button
+              onClick={() => void handleLogout()}
+              className="nm-raised-sm text-muted-foreground hover:text-foreground flex items-center gap-1.5 rounded-full px-3 py-1 text-xs transition-all"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              Sign out
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Delivery */}
+      <DeliverySection
+        initialTelegramConnected={initialTelegramConnected}
+        initialNotionConnected={initialNotionConnected}
+        initialNotionDatabaseName={initialNotionDatabaseName}
+        initialWhatsappConnected={initialWhatsappConnected}
+        initialWhatsappPhone={initialWhatsappPhone}
+        initialDiscordConnected={initialDiscordConnected}
+        initialSlackConnected={initialSlackConnected}
+        initialVoice={initialVoice}
+        initialLanguage={initialLanguage}
+        initialFavorites={initialFavorites}
+      />
+
+      {/* Notifications */}
+      <NotificationsSection
+        initialPushEnabled={initialPushEnabled}
+        initialNewsletter={initialNewsletter}
+        initialAnnouncements={initialAnnouncements}
+        initialDailyDigest={initialDailyDigest}
+        initialDigestHour={initialDigestHour}
+      />
+
+      {/* Podcast feed */}
+      {rssToken && <PodcastFeedSection rssToken={rssToken} />}
 
       {/* Referral */}
       <ReferralSection

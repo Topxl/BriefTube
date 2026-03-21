@@ -113,7 +113,7 @@ export function HeroPlayer() {
   );
 
   return (
-    <div className="mx-auto mt-16 max-w-sm">
+    <div className="mx-auto mt-16 min-h-[230px] max-w-sm">
       <div className="nm-raised rounded-2xl p-4">
         <div className="mb-3 flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-600 shadow-[0_0_16px_rgba(239,68,68,0.3)]">
