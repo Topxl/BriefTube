@@ -55,6 +55,12 @@ export default async function ProfilePage(props: {
   const whatsappPhone =
     (platformConns ?? []).find((c) => c.platform === "whatsapp")?.external_id ??
     "";
+  const discordConnected = (platformConns ?? []).some(
+    (c) => c.platform === "discord",
+  );
+  const slackConnected = (platformConns ?? []).some(
+    (c) => c.platform === "slack",
+  );
 
   const rssToken = profile?.rss_token ?? "";
   const isActivePro = profile?.subscription_status === "active";
@@ -111,6 +117,8 @@ export default async function ProfilePage(props: {
       initialNotionDatabaseName={notionDatabaseName?.database_name ?? ""}
       initialWhatsappConnected={whatsappConnected}
       initialWhatsappPhone={whatsappPhone}
+      initialDiscordConnected={discordConnected}
+      initialSlackConnected={slackConnected}
       initialVoice={profile?.tts_voice ?? SiteConfig.defaultTtsVoice}
       initialLanguage={
         profile?.preferred_language ?? SiteConfig.defaultLanguage

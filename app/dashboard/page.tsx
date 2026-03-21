@@ -96,7 +96,7 @@ export default async function DashboardPage() {
       new Date(profile.trial_ends_at) > new Date());
   const maxChannels = profile.max_channels ?? SiteConfig.freeChannelsLimit;
 
-  const preferredLang = profile.preferred_language ?? "fr";
+  const preferredLang = profile.preferred_language ?? "en";
   const initialFavLangs = [
     ...new Set([...profile.favorite_languages, preferredLang]),
   ];
@@ -114,7 +114,7 @@ export default async function DashboardPage() {
       <GettingStarted
         hasChannel={(sources ?? []).length > 0}
         hasConnection={(connections ?? []).length > 0}
-        language={profile.preferred_language ?? "fr"}
+        language={profile.preferred_language ?? "en"}
       />
 
       {/* Deep-link from email digest — highlights the target video */}

@@ -292,6 +292,8 @@ type Props = {
   initialNotionDatabaseName?: string;
   initialWhatsappConnected: boolean;
   initialWhatsappPhone?: string;
+  initialDiscordConnected: boolean;
+  initialSlackConnected: boolean;
   initialVoice: string;
   initialLanguage: string;
   initialFavorites?: string[];
@@ -303,6 +305,8 @@ export function DeliverySection({
   initialNotionDatabaseName = "",
   initialWhatsappConnected,
   initialWhatsappPhone = "",
+  initialDiscordConnected,
+  initialSlackConnected,
   initialVoice,
   initialLanguage,
   initialFavorites = [],
