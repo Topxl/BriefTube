@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-03-21
+
+FIX: DB — RLS policies: auth.uid() → (select auth.uid()) pour évaluation unique par requête (cancellation_feedbacks, push_subscriptions, platform_connections, whatsapp_verifications)
+FIX: DB — whatsapp_verifications: suppression des 3 policies redondantes, conserve uniquement la policy ALL
+
 ## 2026-03-20
 
 PERF: Disable PostHog session recording, surveys, dead clicks — removes ~128KB third-party JS from main thread
