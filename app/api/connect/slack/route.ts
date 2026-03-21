@@ -1,29 +1,25 @@
-import { authRoute } from "@/lib/zod-route";
-import { createClient } from "@/lib/supabase/server";
-import { z } from "zod";
+import { getRequiredUser } from "@/lib/auth/auth-user";
+import { env } from "@/lib/env";
+import { createHmac } from "crypto";
+import { redirect } from "next/navigation";
 
-export const POST = authRoute
-  .body(
-    z.object({
-      webhookUrl: z
-        .string()
-        .url()
-        .refine((u) => u.startsWith("https://hooks.slack.com/services/"), {
-          message: "Must be a Slack incoming webhook URL",
-        }),
-    }),
-  )
-  .handler(async (_req, { body, ctx }) => {
-    const supabase = await createClient();
-    const { webhookUrl } = body as { webhookUrl: string };
-    await supabase.from("platform_connections").upsert(
-      {
-        user_id: ctx.user.id,
-        platform: "slack",
-        external_id: webhookUrl,
-        connected: true,
-      },
-      { onConflict: "user_id,platform" },
-    );
-    return { ok: true };
+export async function GET() {
+  const user = await getRequiredUser();
+
+  if (!env.SLACK_CLIENT_ID || !env.SLACK_REDIRECT_URI) {
+    redirect("/dashboard/profile?error=slack_not_configured");
+  }
+
+  const state = createHmac("sha256", env.SLACK_CLIENT_SECRET ?? "secret")
+    .update(user.id)
+    .digest("hex");
+
+  const params = new URLSearchParams({
+    client_id: env.SLACK_CLIENT_ID,
+    scope: "incoming-webhook",
+    redirect_uri: env.SLACK_REDIRECT_URI,
+    state: `${user.id}.${state}`,
   });
+
+  redirect(`https://slack.com/oauth/v2/authorize?${params}`);
+}
