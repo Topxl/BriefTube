@@ -581,7 +581,7 @@ export const comparisons: ComparisonData[] = [
       },
       {
         feature: "Requires dedicated app",
-        briefTube: "No — delivered via Telegram",
+        briefTube: "No — summaries come to you",
         competitor: "Yes — must open TubeOnAI app or website",
       },
     ],
@@ -595,10 +595,9 @@ export const comparisons: ComparisonData[] = [
   {
     slug: "snipcast",
     competitor: "Snipcast",
-    title:
-      "BriefTube vs Snipcast: audio Telegram delivery vs text email digests",
+    title: "BriefTube vs Snipcast: audio push delivery vs text email digests",
     description:
-      "Both automate monitoring and deliver summaries. Snipcast sends text to your email inbox with a hard cap of 10 channels; BriefTube sends audio to Telegram with unlimited channels on Pro. Different mediums, different limits. It comes down to how you prefer to consume content and whether you have a channel cap ceiling.",
+      "Both automate monitoring and deliver summaries. Snipcast sends text to your email inbox with a hard cap of 10 channels; BriefTube sends audio to Telegram, Discord, or Slack with unlimited channels on Pro. Different mediums, different limits. It comes down to how you prefer to consume content and whether you have a channel cap ceiling.",
     lastUpdated: "2026-03-07",
     competitorDescription:
       "Snipcast monitors YouTube channels and podcasts, then emails you text summaries of new content. It supports Spotify and Apple Podcasts too. The paid tier ($5.99/month) lets you follow up to 10 subscriptions with full transcripts. Built for inbox-based discovery.",
