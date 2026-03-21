@@ -70,7 +70,7 @@ export function Problem() {
                   flexDirection: "column",
                   padding: "20px",
                 }}
-                className="rounded-2xl border border-white/[0.08] border-t-white/[0.15] bg-white/[0.04] shadow-[0_8px_32px_rgba(0,0,0,0.3)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:border-white/[0.12] hover:shadow-[0_12px_40px_rgba(0,0,0,0.35)]"
+                className="rounded-2xl border border-white/[0.08] border-t-white/[0.15] bg-white/[0.04] shadow-[0_8px_32px_rgba(0,0,0,0.3)] backdrop-blur-xl transition-transform duration-300 hover:-translate-y-0.5 hover:border-white/[0.12] hover:shadow-[0_12px_40px_rgba(0,0,0,0.35)]"
               >
                 <div
                   style={{
