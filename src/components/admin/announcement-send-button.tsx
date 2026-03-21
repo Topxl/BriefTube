@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Mail } from "@/lib/icons";
+import { Mail, Eye } from "@/lib/icons";
 
 export function AnnouncementSendButton() {
   const [status, setStatus] = useState<
@@ -38,16 +38,48 @@ export function AnnouncementSendButton() {
     }
   };
 
+  const handleTest = async () => {
+    setStatus("loading");
+    setSent(null);
+    try {
+      const response = await fetch("/api/admin/send-announcement?test=true", {
+        method: "POST",
+      });
+      if (!response.ok) throw new Error();
+      setStatus("success");
+      setSent(1);
+    } catch {
+      setStatus("error");
+    }
+  };
+
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-3">
+        <a
+          href="/api/admin/email-preview/announcement"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="nm-raised-sm text-muted-foreground flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-opacity hover:opacity-80"
+        >
+          <Eye className="h-3.5 w-3.5" />
+          Preview
+        </a>
+        <button
+          onClick={() => void handleTest()}
+          disabled={status === "loading"}
+          className="nm-raised-sm text-muted-foreground flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
+        >
+          <Mail className="h-3.5 w-3.5" />
+          {status === "loading" ? "Sending..." : "Send test"}
+        </button>
         <button
           onClick={() => void handleSend()}
           disabled={status === "loading"}
           className="nm-raised-sm flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
         >
           <Mail className="h-3.5 w-3.5" />
-          {status === "loading" ? "Sending..." : "Send now"}
+          Send to all
         </button>
         {status === "error" && (
           <span className="text-destructive text-xs">Error — retry</span>

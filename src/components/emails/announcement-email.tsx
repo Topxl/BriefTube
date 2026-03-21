@@ -14,7 +14,7 @@ export function AnnouncementEmail() {
   return (
     <Html>
       <Head />
-      <Preview>New on BriefTube — Discord, Slack & RSS feed</Preview>
+      <Preview>New on BriefTube: Discord, Slack and RSS feed</Preview>
       <Body
         style={{
           backgroundColor: "#0a0a0a",
