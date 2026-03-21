@@ -101,6 +101,8 @@ type Props = {
   initialNotionDatabaseName?: string;
   initialWhatsappConnected: boolean;
   initialWhatsappPhone?: string;
+  initialDiscordConnected: boolean;
+  initialSlackConnected: boolean;
   initialVoice: string;
   initialLanguage: string;
   initialFavorites?: string[];
@@ -129,6 +131,8 @@ export function ProfileContent({
   initialNotionDatabaseName,
   initialWhatsappConnected,
   initialWhatsappPhone,
+  initialDiscordConnected,
+  initialSlackConnected,
   initialVoice,
   initialLanguage,
   initialFavorites,
@@ -292,6 +296,8 @@ export function ProfileContent({
         initialNotionDatabaseName={initialNotionDatabaseName}
         initialWhatsappConnected={initialWhatsappConnected}
         initialWhatsappPhone={initialWhatsappPhone}
+        initialDiscordConnected={initialDiscordConnected}
+        initialSlackConnected={initialSlackConnected}
         initialVoice={initialVoice}
         initialLanguage={initialLanguage}
         initialFavorites={initialFavorites}

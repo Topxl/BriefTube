@@ -39,7 +39,7 @@ function SummaryRowSkeleton() {
 
 export function SummariesFeed({
   initialDeliveries = [],
-  initialPreferredLang = "fr",
+  initialPreferredLang = "en",
   initialFavLangs = [],
 }: Props) {
   const [deliveries, setDeliveries] =
@@ -71,7 +71,7 @@ export function SummariesFeed({
           .select("favorite_languages, preferred_language")
           .eq("id", user.id)
           .single();
-        const pref = profile?.preferred_language ?? "fr";
+        const pref = profile?.preferred_language ?? "en";
         setPreferredLang(pref);
         const langs = [
           ...new Set([...(profile?.favorite_languages ?? []), pref]),
