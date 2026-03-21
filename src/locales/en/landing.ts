@@ -19,7 +19,7 @@ export const landing = {
     heading: "Stay on top of your YouTube channels",
     headingHighlight: "without watching a single video",
     subtitle:
-      "Add your channels, connect your Telegram, and that's it. BriefTube tracks new uploads, summarizes them with AI, and sends you the audio, usually within a few minutes of the video going live.",
+      "Add your channels, and BriefTube handles the rest. Every new upload gets summarized by AI and turned into a short audio file — listen from the dashboard, subscribe as a private podcast, or get it pushed to Telegram, Discord, or Slack.",
     ctaPrimary: "Get my summaries for free",
     ctaSecondary: "Try without signing up",
     socialProof: "No credit card · Cancel anytime · 7-day Pro trial",
@@ -66,16 +66,16 @@ export const landing = {
           "When something new drops, BriefTube pulls the transcript and generates a summary. Takes under a minute for most videos.",
       },
       {
-        title: "You get a Telegram message",
+        title: "Get it wherever you are",
         description:
-          "An audio file lands in your chat, ready to play. Works while driving, walking, doing dishes.",
+          "Your audio summary is ready within minutes. Listen from the dashboard, subscribe to your private podcast RSS feed, or get it pushed to Telegram, Discord, or Slack. More integrations coming.",
       },
     ],
   },
   features: {
     heading: "What you actually get",
     subtitle:
-      "No dashboard to check. No notifications to manage. It just shows up.",
+      "Set it up once. New summaries appear automatically, ready to play.",
     items: [
       {
         title: "Summaries that go beyond the title",
@@ -103,9 +103,9 @@ export const landing = {
           "Follow as many channels as you want. We don't arbitrarily cap it.",
       },
       {
-        title: "Telegram works offline",
+        title: "Delivered your way",
         description:
-          "Audio files download to your phone. No internet needed once they're in your chat.",
+          "Dashboard, private podcast RSS feed, Telegram, Discord, Slack — pick what works for you. More delivery options are on the way.",
       },
     ],
   },
@@ -116,7 +116,8 @@ export const landing = {
     placeholder: "https://youtube.com/watch?v=...",
     submit: "Summarize",
     error: "An error occurred.",
-    upsellText: "Want to receive this automatically as audio on Telegram?",
+    upsellText:
+      "Want this delivered automatically — as a podcast, on Discord, Slack, or Telegram?",
     upsellCta: "Create a free account. 7-day Pro trial included.",
     hint: "3 free tries · Works on videos with subtitles",
   },
@@ -133,7 +134,8 @@ export const landing = {
         features: [
           `${FREE} YouTube channels`,
           "AI audio summaries",
-          "Telegram delivery",
+          "Dashboard + podcast RSS feed",
+          "Telegram, Discord & Slack",
           "Standard processing",
         ],
         cta: "Start Free",
@@ -160,7 +162,7 @@ export const landing = {
       {
         question: "How does it actually work?",
         answer:
-          "Each channel you follow gets checked automatically through YouTube's RSS feed. The moment a new video appears, BriefTube reads its transcript, generates a summary, converts it to audio, and sends it to your Telegram, usually within a few minutes. No manual steps on your end.",
+          "Each channel you follow gets checked automatically through YouTube's RSS feed. The moment a new video appears, BriefTube reads its transcript, generates a summary, and converts it to audio — usually within a few minutes. You can play it from your dashboard, or connect Telegram to get it delivered straight to your phone. No manual steps on your end.",
       },
       {
         question: "",
@@ -173,9 +175,9 @@ export const landing = {
           "French and English voices are available right now. More are in the pipeline. If you're on Pro, you can pick a specific voice. There are a few to choose from in each language.",
       },
       {
-        question: "Do I need to set up a Telegram bot?",
+        question: "How do I receive my summaries?",
         answer:
-          "No. You click a connect link, it opens @brief_tube_bot in Telegram, you send /start. That's the whole process, maybe 15 seconds if you type slowly.",
+          "However you prefer. They're always in your BriefTube dashboard. You can also subscribe to a private podcast RSS feed and listen in any podcast app, or connect Telegram, Discord, or Slack to get them pushed directly. All of it is optional — use what fits your workflow.",
       },
       {
         question: "What happens if I cancel?",
