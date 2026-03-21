@@ -21,7 +21,7 @@ type Props = {
 const FREE_FEATURES = [
   "5 YouTube channels",
   "AI audio summaries",
-  "Telegram delivery",
+  "Telegram, Discord & Slack",
 ];
 
 const PRO_FEATURES = [

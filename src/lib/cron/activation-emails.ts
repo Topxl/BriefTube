@@ -23,8 +23,8 @@ export async function runActivationEmails(): Promise<RunResult> {
   const { from, to } = getSignupWindow();
   const result: RunResult = { sent: 0, skipped: 0, errors: 0 };
 
-  // Users who signed up ~24h ago and still haven't connected Telegram
-  const { data: usersData, error } = await admin
+  // Users who signed up ~24h ago and still haven't connected Telegram (legacy field)
+  const { data: candidates, error } = await admin
     .from("profiles")
     .select("id, email")
     .eq("telegram_connected", false)
@@ -35,6 +35,26 @@ export async function runActivationEmails(): Promise<RunResult> {
     logger.error("Error fetching activation candidates:", error);
     return result;
   }
+
+  if (candidates.length === 0) {
+    return result;
+  }
+
+  const candidateIds = candidates.map((u) => u.id);
+
+  // Exclude users who already connected Discord or Slack
+  const { data: platformConns } = await admin
+    .from("platform_connections")
+    .select("user_id")
+    .in("platform", ["discord", "slack", "telegram"])
+    .eq("connected", true)
+    .in("user_id", candidateIds);
+
+  const alreadyConnectedIds = new Set(
+    (platformConns ?? []).map((c) => c.user_id),
+  );
+
+  const usersData = candidates.filter((u) => !alreadyConnectedIds.has(u.id));
 
   if (usersData.length === 0) {
     return result;
@@ -72,19 +92,16 @@ export async function runActivationEmails(): Promise<RunResult> {
       const html = founderEmail(
         p("Hey,") +
           p(
-            "I noticed you signed up for BriefTube yesterday but didn't connect your Telegram yet, so you haven't received any audio summaries.",
+            "I noticed you signed up for BriefTube yesterday but haven't connected a delivery channel yet, so you haven't received any audio summaries.",
           ) +
           p(
-            "I wanted to reach out personally to ask: <strong>why didn't you connect Telegram?</strong>",
+            "BriefTube can deliver your summaries to <strong>Telegram, Discord, or Slack</strong>, whichever you already use. There's also a private podcast RSS feed if you prefer listening in Overcast, Pocket Casts, or Apple Podcasts.",
           ) +
           p(
-            "Is it because you don't use Telegram? Would you prefer to receive your summaries somewhere else, like WhatsApp or email? Or is there something else that stopped you?",
+            "It takes about 30 seconds to connect: <a href='https://www.brief-tube.com/dashboard/profile' style='color:#1a1a1a;'>brief-tube.com/dashboard/profile</a>",
           ) +
           p(
-            "Just hit reply and tell me. I read every response and this directly shapes what we build next.",
-          ) +
-          p(
-            "If you want to give it a try, connecting Telegram takes 30 seconds: <a href='https://www.brief-tube.com/dashboard' style='color:#1a1a1a;'>brief-tube.com/dashboard</a>",
+            "If something stopped you — wrong platform, unclear setup, something else — just hit reply. I read every response and it directly shapes what we build.",
           ) +
           signature() +
           trackingPixel,

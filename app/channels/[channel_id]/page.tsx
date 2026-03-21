@@ -313,11 +313,12 @@ export default async function ChannelPage({ params }: Props) {
         {/* CTA block */}
         <div className="nm-raised mt-12 rounded-2xl p-6 text-center">
           <Typography variant="h3">
-            Get summaries for YOUR channels, automatically in Telegram
+            Get automatic AI summaries for all your channels
           </Typography>
           <Typography variant="muted" className="mt-3">
-            BriefTube monitors your YouTube channels, generates AI-powered
-            summaries, and delivers audio to your Telegram — fully automated.
+            BriefTube monitors your YouTube channels, generates AI-powered audio
+            summaries, and delivers them wherever you listen. Telegram, Discord,
+            Slack, or your podcast app. Fully automated.
           </Typography>
           <Button
             asChild

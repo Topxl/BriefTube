@@ -10,14 +10,14 @@ import { Users } from "lucide-react";
 export const metadata: Metadata = {
   title: "YouTube Channels with AI Audio Summaries",
   description:
-    "Discover the most popular YouTube channels on BriefTube. Get AI-powered audio summaries delivered automatically to your Telegram.",
+    "Discover the most popular YouTube channels on BriefTube. Get AI-powered audio summaries delivered automatically to Telegram, Discord, Slack, or your podcast app.",
   alternates: {
     canonical: `${SiteConfig.prodUrl}/channels`,
   },
   openGraph: {
     title: "YouTube Channels with AI Audio Summaries — BriefTube",
     description:
-      "Discover the most popular YouTube channels on BriefTube. Get AI-powered audio summaries delivered automatically to your Telegram.",
+      "Discover the most popular YouTube channels on BriefTube. Get AI-powered audio summaries delivered automatically to Telegram, Discord, Slack, or your podcast app.",
     type: "website",
   },
 };
@@ -84,7 +84,7 @@ export default async function ChannelsIndexPage() {
           </Typography>
           <Typography variant="muted" className="mt-2">
             The most followed YouTube channels on BriefTube — get AI-powered
-            audio summaries delivered to your Telegram automatically.
+            audio summaries delivered automatically wherever you listen.
           </Typography>
         </div>
 
@@ -140,7 +140,8 @@ export default async function ChannelsIndexPage() {
           </Typography>
           <Typography variant="muted" className="mt-3">
             BriefTube monitors your YouTube channels and sends AI-powered audio
-            summaries to your Telegram — automatically.
+            summaries as audio, automatically. Listen in Telegram, Discord,
+            Slack, or your podcast app.
           </Typography>
           <Button
             asChild

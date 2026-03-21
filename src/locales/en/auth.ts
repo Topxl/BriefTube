@@ -1,7 +1,8 @@
 export const auth = {
   login: {
     heading: "Welcome to BriefTube",
-    subtitle: "Get YouTube summaries delivered to your Telegram",
+    subtitle:
+      "AI audio summaries of your YouTube channels, delivered automatically",
     terms:
       "By signing in, you agree to our Terms of Service and Privacy Policy",
   },
