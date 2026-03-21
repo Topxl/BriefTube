@@ -428,52 +428,37 @@ def create_deliveries_for_video(video_id: str, channel_id: str, language: str = 
 def get_pending_deliveries(limit: int = 20) -> list[dict]:
     """Get pending deliveries for completed videos.
 
-    Starts from completed videos (not from the delivery queue) so that a large
-    backlog of unprocessed-video deliveries cannot starve ready-to-send ones.
-    Paginates processed_videos to handle tables larger than PostgREST's 1000-row
-    default limit.
+    Queries deliveries first (tiny set, usually 0-20 rows), then verifies
+    their videos are completed. This is far cheaper than scanning all 16k+
+    completed videos to find the handful of pending deliveries.
     """
     sb = get_client()
 
-    # 1. Collect all completed video IDs (paginate past the 1000-row limit)
-    # Only fetch video_id — summary/audio_url are large and fetched later only for needed videos
-    completed_ids: list[str] = []
-    offset = 0
-    while True:
-        res = (
-            sb.table("processed_videos")
-            .select("video_id")
-            .eq("status", "completed")
-            .range(offset, offset + 999)
-            .execute()
-        )
-        if not res.data:
-            break
-        for row in res.data:
-            completed_ids.append(row["video_id"])
-        if len(res.data) < 1000:
-            break
-        offset += 1000
+    # 1. Fetch pending deliveries directly — small set, indexed on (status, created_at)
+    raw_deliveries = (
+        sb.table("deliveries")
+        .select("id, user_id, video_id, language, platform")
+        .eq("status", "pending")
+        .order("created_at")
+        .limit(limit * 5)
+        .execute()
+        .data or []
+    )
 
-    if not completed_ids:
+    if not raw_deliveries:
         return []
 
-    # 2. Find pending deliveries for those videos (batch by 100 to stay within URL limits)
-    raw_deliveries: list[dict] = []
-    for i in range(0, len(completed_ids), 100):
-        batch = completed_ids[i : i + 100]
-        res = (
-            sb.table("deliveries")
-            .select("id, user_id, video_id, language, platform")
-            .eq("status", "pending")
-            .in_("video_id", batch)
-            .order("created_at")
-            .limit(limit * 5)
-            .execute()
-        )
-        raw_deliveries.extend(res.data or [])
-        if len(raw_deliveries) >= limit * 5:
-            break
+    # 2. Verify their videos are actually completed (guard against deliveries created before processing)
+    video_ids = list({d["video_id"] for d in raw_deliveries})
+    completed_res = (
+        sb.table("processed_videos")
+        .select("video_id")
+        .eq("status", "completed")
+        .in_("video_id", video_ids)
+        .execute()
+    )
+    completed_ids = {r["video_id"] for r in (completed_res.data or [])}
+    raw_deliveries = [d for d in raw_deliveries if d["video_id"] in completed_ids]
 
     # Deduplicate by (user_id, video_id) — guard against duplicate delivery rows
     # that could cause the same video to be sent multiple times to the same user.
