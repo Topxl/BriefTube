@@ -15,6 +15,7 @@ type EmailParams = {
   cc?: string | string[];
   bcc?: string | string[];
   attachments?: Attachment[];
+  headers?: Record<string, string>;
   html: string;
 };
 

@@ -13,7 +13,9 @@ export const resendMailAdapter: MailAdapter = {
     if (!resendInstance) {
       throw new Error("Resend is not configured. Set RESEND_API_KEY.");
     }
-    const result = await resendInstance.emails.send(params);
+    const { headers, ...rest } = params;
+    const sendParams = headers ? { ...rest, headers } : rest;
+    const result = await resendInstance.emails.send(sendParams);
 
     if (result.error) {
       return { error: new Error(result.error.message), data: null };
