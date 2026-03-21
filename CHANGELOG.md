@@ -2,6 +2,8 @@
 
 ## 2026-03-22
 
+FEATURE: Activation banner — warn users without delivery channel connected, show on every dashboard visit (dismissible 24h, non-intrusive)
+UPDATE: Comparison pages — replaced Telegram-only positioning with platform-agnostic copy mentioning Telegram, Discord, Slack, and podcast RSS
 FIX: RSS feed — read from subscriptions+processed_videos instead of deliveries, works for all users independently of Telegram/Discord/Slack
 REFACTOR: profil — section Subscription déplacée en haut de page
 

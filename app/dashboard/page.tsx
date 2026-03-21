@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { SummariesFeed } from "@/components/dashboard/summaries-feed";
 import { SummariesFeedSkeleton } from "@/components/dashboard/summaries-feed-skeleton";
 import { TrialBanner } from "@/components/dashboard/trial-banner";
+import { ActivationBanner } from "@/components/dashboard/activation-banner";
 import { SectionErrorBoundary } from "@/components/nowts/section-error-boundary";
 import { PushNotificationBanner } from "@/components/dashboard/push-notification-banner";
 import { GettingStarted } from "@/components/dashboard/getting-started";
@@ -110,6 +111,9 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Activation banner — prompt to connect delivery channel */}
+      <ActivationBanner hasConnection={(connections ?? []).length > 0} />
+
       {/* Getting started — only if needed */}
       <GettingStarted
         hasChannel={(sources ?? []).length > 0}
