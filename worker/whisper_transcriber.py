@@ -126,7 +126,7 @@ class WhisperTranscriber:
                 # max_filesize: abort if raw audio exceeds 150 MB (≈ ~5h at 64kbps)
                 # before postprocessing — prevents infinite HLS live downloads.
                 ydl_opts: dict = {
-                    'format': 'bestaudio/best',
+                    'format': 'bestaudio[abr<=64]/bestaudio[abr<=96]/bestaudio/best',
                     'postprocessors': [{
                         'key': 'FFmpegExtractAudio',
                         'preferredcodec': 'opus',  # libopus: 2-3x faster than libmp3lame
@@ -214,7 +214,7 @@ class WhisperTranscriber:
                 "Audio download: all clients blocked, retrying with proxy (bandwidth cost)..."
             )
             proxy_opts: dict = {
-                'format': 'bestaudio/best',
+                'format': 'bestaudio[abr<=64]/bestaudio[abr<=96]/bestaudio/best',
                 'postprocessors': [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'opus'}],
                 'outtmpl': str(output_path.with_suffix('')),
                 'quiet': True,

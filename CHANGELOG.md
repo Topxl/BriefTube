@@ -2,6 +2,8 @@
 
 ## 2026-03-21
 
+PERF: Whisper audio download — limit bitrate to 64kbps max (was bestaudio/best ≈160kbps) — reduces Webshare proxy bandwidth ~3x
+
 PERF: Add will-change to scroll-reveal, replace grid-template-rows accordion with max-height/opacity, fix transition-all on problem cards
 PERF: Force-disable PostHog dead-clicks via loaded callback to prevent lazy script fetch
 PERF: Split Hero into Server Component (h1, CTA) + HeroPlayer Client Component — h1 renders at FCP without waiting for JS hydration, reducing LCP
