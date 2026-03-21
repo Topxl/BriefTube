@@ -790,10 +790,12 @@ html.dark .shiki span {
 .scroll-reveal {
   opacity: 0;
   transform: translateY(24px);
+  will-change: transform, opacity;
 }
 
 .scroll-reveal.revealed {
   animation: fade-in-up 0.6s ease-out forwards;
+  will-change: auto;
 }
 
 /* Display font for marketing headings */

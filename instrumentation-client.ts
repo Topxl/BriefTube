@@ -12,4 +12,8 @@ posthog.init(key, {
   disable_session_recording: true,
   disable_surveys: true,
   capture_dead_clicks: false,
+  loaded: (ph) => {
+    // Force-disable after server-side config is applied (project config may override init options)
+    ph.set_config({ capture_dead_clicks: false });
+  },
 });

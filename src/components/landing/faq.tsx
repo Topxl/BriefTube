@@ -49,13 +49,12 @@ export function FAQ() {
                   </svg>
                 </button>
                 <div
-                  className="grid transition-all duration-300 ease-out"
-                  style={{ gridTemplateRows: open === i ? "1fr" : "0fr" }}
+                  className={`overflow-hidden transition-[max-height,opacity] duration-300 ease-out ${
+                    open === i ? "max-h-40 opacity-100" : "max-h-0 opacity-0"
+                  }`}
                 >
-                  <div className="overflow-hidden">
-                    <div className="text-muted-foreground px-5 pb-4 text-sm">
-                      {faq.answer}
-                    </div>
+                  <div className="text-muted-foreground px-5 pb-4 text-sm">
+                    {faq.answer}
                   </div>
                 </div>
               </div>
