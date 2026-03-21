@@ -3,6 +3,7 @@
 ## 2026-03-21
 
 PERF: Split Hero into Server Component (h1, CTA) + HeroPlayer Client Component — h1 renders at FCP without waiting for JS hydration, reducing LCP
+FIX: DB — index manquants sur cancellation_feedbacks.user_id et push_subscriptions.user_id (foreign keys non indexées)
 FIX: DB — RLS policies: auth.uid() → (select auth.uid()) pour évaluation unique par requête (cancellation_feedbacks, push_subscriptions, platform_connections, whatsapp_verifications)
 FIX: DB — whatsapp_verifications: suppression des 3 policies redondantes, conserve uniquement la policy ALL
 
