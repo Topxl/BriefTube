@@ -2,6 +2,9 @@
 
 ## 2026-03-20
 
+PERF: Disable PostHog session recording, surveys, dead clicks — removes ~128KB third-party JS from main thread
+PERF: Remove unused preconnect to img.youtube.com
+PERF: Update browserslist to Safari 15.4+ to eliminate Array.prototype.at / Object.hasOwn polyfills (~44KB)
 PERF: Convert Hero demo thumbnails to WebP (24KB+27KB → 12KB+14KB, -50%) and add explicit dimensions
 PERF: Move PostHogIdentify to dashboard layout — removes Supabase client (~251KB) from landing page bundle
 PERF: Add browserslist (modern browsers) to reduce transpiled JS by ~43KB

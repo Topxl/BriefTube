@@ -162,9 +162,9 @@
     ]
   },
   "browserslist": [
-    "chrome >= 87",
-    "firefox >= 78",
-    "safari >= 14",
-    "edge >= 88"
+    "chrome >= 93",
+    "firefox >= 90",
+    "safari >= 15.4",
+    "edge >= 93"
   ]
 }

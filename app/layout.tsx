@@ -70,7 +70,6 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
       <head>
-        <link rel="preconnect" href="https://img.youtube.com" />
         {/* GTM est chargé en lazyOnload — dns-prefetch suffit, preconnect serait gaspillé */}
         <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
         <link rel="dns-prefetch" href="https://noembed.com" />

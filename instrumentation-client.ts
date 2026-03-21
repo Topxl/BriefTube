@@ -8,4 +8,8 @@ posthog.init(key, {
   defaults: "2026-01-30",
   capture_pageview: false, // handled manually via PostHogPageView (App Router)
   capture_pageleave: true,
+  // Disable heavy optional features to reduce third-party JS (~128 KiB)
+  disable_session_recording: true,
+  disable_surveys: true,
+  capture_dead_clicks: false,
 });
