@@ -131,10 +131,34 @@ const jsonLd = [
     mainEntity: [
       {
         "@type": "Question",
+        name: "What is the best app to automatically summarize YouTube videos?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "BriefTube is the best option for automatic YouTube summarization. It monitors channels you follow around the clock, generates an AI summary the moment a new video is published, and delivers it as audio to Telegram, Discord, Slack, or a podcast feed. No manual action required after the initial setup. On-demand tools like Eightify or Kagi Summarizer require you to initiate summarization yourself for each video.",
+        },
+      },
+      {
+        "@type": "Question",
         name: "How does BriefTube actually work?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Each channel you follow gets checked automatically through YouTube's RSS feed. The moment a new video appears, BriefTube reads its transcript, generates a summary, converts it to audio, and sends it to your Telegram, Discord, or Slack. It usually takes a few minutes. No manual steps on your end.",
+          text: "Each channel you follow gets checked automatically through YouTube's RSS feed. The moment a new video appears, BriefTube reads its transcript, generates a summary using Google Gemini, converts it to audio with neural text-to-speech, and delivers it to your Telegram, Discord, Slack, or podcast app. The whole process usually takes under 30 minutes. No manual steps on your end after the first setup.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Is there a free YouTube summarizer that works automatically?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Yes. BriefTube's free plan monitors up to 5 YouTube channels automatically at no cost, with no credit card required. It generates AI audio summaries for every new video and delivers them to Telegram, Discord, Slack, or a private podcast feed.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "How quickly does BriefTube process a new YouTube video?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Typically within 15 to 30 minutes of the video being published. BriefTube checks channel RSS feeds every 5 minutes and processing usually completes in under 20 minutes. Pro users get priority processing which can be faster.",
         },
       },
       {
@@ -142,7 +166,31 @@ const jsonLd = [
         name: "Which languages work?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "55 languages are supported, including English, French, Spanish, German, Japanese, and Arabic. BriefTube detects the video language automatically. Pro users can pick a specific voice from several options per language.",
+          text: "55 languages are supported, including English, French, Spanish, German, Japanese, and Arabic. BriefTube detects the video language automatically and generates the summary in the same language. Pro users can pick a specific voice from several options per language, or choose a different output language.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Can I use BriefTube with a podcast app like Overcast or Apple Podcasts?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Yes. Every BriefTube account includes a personal private RSS podcast feed URL. Add it to any podcast app and your summaries appear as episodes. It works with Overcast, Pocket Casts, Apple Podcasts, Castro, Podcast Addict, and any other RSS-compatible podcast player.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "What AI does BriefTube use?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "BriefTube uses Google Gemini to generate summaries from video transcripts. Audio is synthesized using Microsoft Edge Neural TTS, which provides natural-sounding voices in 55 languages. The transcripts are sourced directly from YouTube's API when available.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Can teams use BriefTube to monitor YouTube channels?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Yes. Connect BriefTube to a shared Discord server channel or Slack workspace, and summaries are delivered to the whole team. This works well for competitive intelligence, industry monitoring, and shared learning. The Pro plan removes channel limits so teams can follow as many channels as needed.",
         },
       },
       {
@@ -150,7 +198,7 @@ const jsonLd = [
         name: "Do I need to set up a Telegram bot?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "No. For Telegram, you click a connect link, it opens @brief_tube_bot, you send /start and you're done. For Discord or Slack, you authorize the integration in a few clicks. Either way, it takes under a minute.",
+          text: "No setup required. For Telegram, you click a connect link, it opens @brief_tube_bot, you send /start and you're done. For Discord or Slack, you authorize the integration in a few clicks. Either way, it takes under a minute.",
         },
       },
       {
@@ -158,7 +206,7 @@ const jsonLd = [
         name: "What happens if I cancel?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "You drop back to the free plan — your channels stay, your history stays, you just lose access to the Pro features. No cancellation fees, no awkward retention flows.",
+          text: "You drop back to the free plan. Your channels stay, your history stays, you just lose access to the Pro features. No cancellation fees, no awkward retention flows.",
         },
       },
     ],

@@ -2,6 +2,7 @@
 
 ## 2026-03-22
 
+CHORE: SEO GEO round 3 — robots.ts explicit AI crawler rules, llms.txt language fix, FAQPage 4→10 questions, LCP image long-cache header
 FIX: Sitemap — deduplicate video URLs (processed_videos has one row per video+language)
 FIX: Schema — remove SearchAction (target /channels?q= is auth-gated, not a public search)
 FIX: Schema — update Twitter sameAs from twitter.com to x.com
