@@ -2,6 +2,7 @@
 
 ## 2026-03-21
 
+PERF: Dashboard — server-side prefetch deliveries + videos in page.tsx, pass as initialDeliveries to SummariesFeed — eliminates 4 client-side Supabase queries on mount
 PERF: Whisper audio download — limit bitrate to 64kbps max (was bestaudio/best ≈160kbps) — reduces Webshare proxy bandwidth ~3x
 
 PERF: Add will-change to scroll-reveal, replace grid-template-rows accordion with max-height/opacity, fix transition-all on problem cards
