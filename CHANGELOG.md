@@ -2,7 +2,7 @@
 
 ## 2026-03-21
 
-REFACTOR: Landing page — de-emphasize Telegram (now optional), focus copy on core value (AI audio summaries); update hero subtitle, how-it-works step 3, features, FAQ, demo upsell, pricing
+REFACTOR: Landing page — de-emphasize Telegram (now optional), highlight multi-delivery (RSS podcast, Discord, Slack, Telegram, more coming); update hero, how-it-works, features, FAQ, demo upsell, pricing
 
 FEATURE: Discord delivery — webhook-based, sends rich embed (title, summary excerpt, audio link) to any Discord channel
 FEATURE: Slack delivery — incoming webhook, sends Block Kit message with summary and "Listen" button

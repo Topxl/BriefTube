@@ -329,7 +329,6 @@ export function DeliverySection({
     initialDiscordConnected,
   );
   const [slackConnected, setSlackConnected] = useState(initialSlackConnected);
-  const [slackSaving, setSlackSaving] = useState(false);
   // Masquer Notion + WhatsApp en attente d'approbation — passer à true pour réactiver
   const showExperimentalPlatforms = false as boolean;
   const [voice, setVoice] = useState(initialVoice);
@@ -519,41 +518,6 @@ export function DeliverySection({
     setWhatsappConnected(false);
     setWhatsappPhone("");
     toast.success("WhatsApp disconnected");
-  };
-
-  const openWebhookDialog = (
-    platform: "discord" | "slack",
-    label: string,
-    placeholder: string,
-    onSaved: () => void,
-  ) => {
-    dialogManager.input({
-      title: `Connect ${label}`,
-      input: {
-        label: "Incoming webhook URL",
-        placeholder,
-        defaultValue: "",
-      },
-      action: {
-        label: "Save",
-        onClick: async (value) => {
-          setSlackSaving(true);
-          const res = await fetch(`/api/connect/${platform}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ webhookUrl: value }),
-          });
-          setSlackSaving(false);
-          if (!res.ok) {
-            const err = (await res.json()) as { error?: string };
-            toast.error(err.error ?? "Invalid webhook URL");
-            return;
-          }
-          onSaved();
-          toast.success(`${label} connected`);
-        },
-      },
-    });
   };
 
   const disconnectWebhook = async (platform: "discord" | "slack") => {
@@ -812,24 +776,12 @@ export function DeliverySection({
               Disconnect
             </button>
           ) : (
-            <button
-              disabled={slackSaving}
-              onClick={() =>
-                openWebhookDialog(
-                  "slack",
-                  "Slack",
-                  "https://hooks.slack.com/services/…",
-                  () => setSlackConnected(true),
-                )
-              }
-              className="nm-raised-sm text-muted-foreground hover:text-foreground flex items-center gap-1.5 rounded-full px-3 py-1 text-xs transition-all disabled:opacity-50"
+            <a
+              href="/api/connect/slack"
+              className="nm-raised-sm text-muted-foreground hover:text-foreground rounded-full px-3 py-1 text-xs transition-all"
             >
-              {slackSaving ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                "Connect"
-              )}
-            </button>
+              Connect
+            </a>
           )}
         </div>
 

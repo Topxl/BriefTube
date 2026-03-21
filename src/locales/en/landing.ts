@@ -19,7 +19,7 @@ export const landing = {
     heading: "Stay on top of your YouTube channels",
     headingHighlight: "without watching a single video",
     subtitle:
-      "Add your channels, and BriefTube handles the rest. Every new upload gets summarized by AI and turned into a short audio file — listen from the dashboard, subscribe as a private podcast, or get it pushed to Telegram, Discord, or Slack.",
+      "Add your channels, and BriefTube handles the rest. Every new upload gets summarized by AI and turned into a short audio file. Listen from the dashboard, subscribe as a private podcast, or get it pushed to Telegram, Discord, or Slack.",
     ctaPrimary: "Get my summaries for free",
     ctaSecondary: "Try without signing up",
     socialProof: "No credit card · Cancel anytime · 7-day Pro trial",
@@ -105,7 +105,7 @@ export const landing = {
       {
         title: "Delivered your way",
         description:
-          "Dashboard, private podcast RSS feed, Telegram, Discord, Slack — pick what works for you. More delivery options are on the way.",
+          "Dashboard, private podcast RSS feed, Telegram, Discord, Slack. Pick what works for you. More delivery options are on the way.",
       },
     ],
   },
@@ -117,7 +117,7 @@ export const landing = {
     submit: "Summarize",
     error: "An error occurred.",
     upsellText:
-      "Want this delivered automatically — as a podcast, on Discord, Slack, or Telegram?",
+      "Want this delivered automatically? As a podcast, on Discord, Slack, or Telegram.",
     upsellCta: "Create a free account. 7-day Pro trial included.",
     hint: "3 free tries · Works on videos with subtitles",
   },
@@ -162,7 +162,7 @@ export const landing = {
       {
         question: "How does it actually work?",
         answer:
-          "Each channel you follow gets checked automatically through YouTube's RSS feed. The moment a new video appears, BriefTube reads its transcript, generates a summary, and converts it to audio — usually within a few minutes. You can play it from your dashboard, or connect Telegram to get it delivered straight to your phone. No manual steps on your end.",
+          "Each channel you follow gets checked automatically through YouTube's RSS feed. The moment a new video appears, BriefTube reads its transcript, generates a summary, and converts it to audio, usually within a few minutes. You can play it from your dashboard, or connect Telegram to get it delivered straight to your phone. No manual steps on your end.",
       },
       {
         question: "",
@@ -177,7 +177,7 @@ export const landing = {
       {
         question: "How do I receive my summaries?",
         answer:
-          "However you prefer. They're always in your BriefTube dashboard. You can also subscribe to a private podcast RSS feed and listen in any podcast app, or connect Telegram, Discord, or Slack to get them pushed directly. All of it is optional — use what fits your workflow.",
+          "However you prefer. They're always in your BriefTube dashboard. You can also subscribe to a private podcast RSS feed and listen in any podcast app, or connect Telegram, Discord, or Slack to get them pushed directly. All of it is optional, use what fits your workflow.",
       },
       {
         question: "What happens if I cancel?",

@@ -44,6 +44,10 @@ export const env = createEnv({
     DISCORD_CLIENT_ID: z.string().optional(),
     DISCORD_CLIENT_SECRET: z.string().optional(),
     DISCORD_REDIRECT_URI: z.string().url().optional(),
+    // Slack OAuth integration
+    SLACK_CLIENT_ID: z.string().optional(),
+    SLACK_CLIENT_SECRET: z.string().optional(),
+    SLACK_REDIRECT_URI: z.string().url().optional(),
     // WhatsApp via Twilio — only auth token needed here (webhook signature validation)
     // TWILIO_ACCOUNT_SID and TWILIO_WHATSAPP_FROM live on the worker only
     TWILIO_AUTH_TOKEN: z.string().optional(),
