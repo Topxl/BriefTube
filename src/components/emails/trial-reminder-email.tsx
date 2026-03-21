@@ -67,8 +67,8 @@ export function TrialReminderEmail({ daysLeft, trackingPixelUrl }: Props) {
             }}
           >
             {isLastDay
-              ? "This is your last chance to keep getting AI-powered audio summaries from your YouTube channels delivered to Telegram, every day, automatically."
-              : "You still have time to keep enjoying AI-powered audio summaries from your YouTube channels. After your trial, your Telegram deliveries will stop."}
+              ? "This is your last chance to keep getting AI-powered audio summaries from your YouTube channels, delivered every day, automatically."
+              : "You still have time to keep enjoying AI-powered audio summaries from your YouTube channels. After your trial, your deliveries will stop."}
           </Text>
           <Text
             style={{
@@ -81,7 +81,7 @@ export function TrialReminderEmail({ daysLeft, trackingPixelUrl }: Props) {
           >
             · Unlimited YouTube channels
             <br />
-            · Daily audio summaries in your Telegram
+            · Daily audio summaries in Discord, Slack or Telegram
             <br />
             · Multi-language TTS voices
             <br />· All future features

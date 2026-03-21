@@ -57,8 +57,8 @@ export function TrialExpiredEmail({ trackingPixelUrl }: Props = {}) {
               margin: "0 0 16px",
             }}
           >
-            Your BriefTube trial is over. Your Telegram audio deliveries have
-            been paused, but all your channels and settings are still saved.
+            Your BriefTube trial is over. Your audio deliveries have been
+            paused, but all your channels and settings are still saved.
           </Text>
           <Text
             style={{
@@ -69,7 +69,7 @@ export function TrialExpiredEmail({ trackingPixelUrl }: Props = {}) {
             }}
           >
             Upgrade to Pro to resume receiving daily AI-powered summaries of
-            your YouTube channels, directly in Telegram.
+            your YouTube channels in Discord, Slack or Telegram.
           </Text>
           <Button
             href="https://www.brief-tube.com/dashboard/billing"

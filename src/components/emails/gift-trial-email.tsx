@@ -76,7 +76,8 @@ export function GiftTrialEmail({ months, trialEndsAt }: Props) {
             Votre accès est actif jusqu&apos;au{" "}
             <strong style={{ color: "#ffffff" }}>{trialEndsAt}</strong>.
             Profitez de toutes les fonctionnalités Pro : chaînes illimitées,
-            résumés en audio, livraison Telegram automatique.
+            résumés en audio, livraison automatique sur Discord, Slack ou
+            Telegram.
           </Text>
           <Button
             href="https://www.brief-tube.com/dashboard"
