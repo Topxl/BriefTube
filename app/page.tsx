@@ -209,10 +209,10 @@ const jsonLd = [
       },
       {
         "@type": "Question",
-        name: "What happens if I cancel?",
+        name: "Where do the transcripts come from?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "You drop back to the free plan. Your channels stay, your history stays, you just lose access to the Pro features. No cancellation fees, no awkward retention flows.",
+          text: "BriefTube pulls the transcript directly from YouTube when one is available, which is free and instant. If a video has no transcript at all (which is rare), it falls back to Whisper, an AI model that transcribes the audio. Either way, the summary is always based on what was actually said in the video, nothing is invented.",
         },
       },
     ],
