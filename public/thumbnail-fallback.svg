@@ -1,0 +1,11 @@
+<svg width="320" height="180" viewBox="0 0 320 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="320" height="180" fill="#111113"/>
+  <!-- logo centered at 160,90 — icon is 40x40 so offset -20,-20 -->
+  <g transform="translate(140, 70)">
+    <rect width="40" height="40" rx="8" fill="#dc2626"/>
+    <g transform="translate(10, 12)">
+      <path d="M0 0L9 8L0 16V0Z" fill="white"/>
+      <path d="M11 0L20 8L11 16V0Z" fill="white" opacity="0.85"/>
+    </g>
+  </g>
+</svg>
