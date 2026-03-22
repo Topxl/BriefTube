@@ -212,7 +212,7 @@ const jsonLd = [
         name: "Where do the transcripts come from?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "BriefTube pulls the transcript directly from YouTube when one is available, which is free and instant. If a video has no transcript at all (which is rare), it falls back to Whisper, an AI model that transcribes the audio. Either way, the summary is always based on what was actually said in the video, nothing is invented.",
+          text: "BriefTube uses the word-for-word transcript of the video, pulled directly from YouTube. If no transcript is available (rare), Whisper transcribes the audio. The summary is always built exclusively from what was said in the video, nothing is added or invented.",
         },
       },
     ],
