@@ -81,7 +81,7 @@ export default async function ArticlePage({ params }: PageProps) {
     },
     author: {
       "@type": "Person",
-      name: "Topxl",
+      name: "Vin",
       url: "https://x.com/brieftube",
     },
     publisher: {
@@ -159,7 +159,7 @@ export default async function ArticlePage({ params }: PageProps) {
               </p>
 
               <div className="text-muted-foreground flex items-center gap-3 border-t border-white/[0.05] pt-3 text-xs">
-                <span>By Topxl</span>
+                <span>By Vin</span>
                 <span className="text-white/20">·</span>
                 <span>{article.date}</span>
                 <span className="text-white/20">·</span>
