@@ -306,7 +306,7 @@ export function SummariesFeed({
   return (
     <div className="space-y-2.5">
       <div className="space-y-2.5">
-        {deliveries.map((delivery) => (
+        {deliveries.map((delivery, i) => (
           <SummaryRow
             key={delivery.id}
             delivery={delivery}
@@ -314,6 +314,7 @@ export function SummariesFeed({
             favoriteLanguages={favLangs}
             onManageFavorites={openLangPicker}
             onToggleFavorite={toggleFavorite}
+            priority={i === 0}
           />
         ))}
         {loading &&
