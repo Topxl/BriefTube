@@ -205,6 +205,7 @@ export function NotificationsSection({
             checked={pushEnabled && !permissionDenied}
             disabled={savingPush || permissionDenied}
             onCheckedChange={(checked) => void handlePushToggle(checked)}
+            className="data-[state=checked]:bg-red-400"
           />
         </div>
 
@@ -227,6 +228,7 @@ export function NotificationsSection({
             checked={newsletter}
             disabled={savingNewsletter}
             onCheckedChange={(checked) => void handleNewsletterToggle(checked)}
+            className="data-[state=checked]:bg-red-400"
           />
         </div>
 
@@ -251,6 +253,7 @@ export function NotificationsSection({
             onCheckedChange={(checked) =>
               void handleAnnouncementsToggle(checked)
             }
+            className="data-[state=checked]:bg-red-400"
           />
         </div>
 
@@ -276,6 +279,7 @@ export function NotificationsSection({
               onCheckedChange={(checked) =>
                 void handleDailyDigestToggle(checked)
               }
+              className="data-[state=checked]:bg-red-400"
             />
           </div>
           {dailyDigest && (
