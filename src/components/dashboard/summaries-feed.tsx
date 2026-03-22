@@ -80,14 +80,12 @@ export function SummariesFeed({
       }
 
       const from = pageNum * PAGE_SIZE;
-      const to = from + PAGE_SIZE - 1;
 
-      const { data: deliveryData } = await supabase
-        .from("deliveries")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .range(from, to);
+      const { data: deliveryData } = await supabase.rpc("get_feed_deliveries", {
+        p_user_id: user.id,
+        p_limit: PAGE_SIZE,
+        p_offset: from,
+      });
 
       if (!deliveryData) {
         setLoading(false);

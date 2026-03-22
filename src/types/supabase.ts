@@ -833,6 +833,24 @@ export type Database = {
       };
     };
     Functions: {
+      get_feed_deliveries: {
+        Args: {
+          p_user_id: string;
+          p_limit: number;
+          p_offset: number;
+        };
+        Returns: {
+          created_at: string | null;
+          id: string;
+          language: string;
+          platform: string;
+          sent_at: string | null;
+          source: string | null;
+          status: string | null;
+          user_id: string;
+          video_id: string;
+        }[];
+      };
       pick_next_processing_job: {
         Args: never;
         Returns: {

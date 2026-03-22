@@ -55,12 +55,11 @@ export default async function DashboardPage() {
       .select("platform")
       .eq("user_id", user.id)
       .eq("connected", true),
-    supabase
-      .from("deliveries")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .range(0, FEED_PAGE_SIZE - 1),
+    supabase.rpc("get_feed_deliveries", {
+      p_user_id: user.id,
+      p_limit: FEED_PAGE_SIZE,
+      p_offset: 0,
+    }),
   ]);
 
   // Prefetch videos for the first page of deliveries
