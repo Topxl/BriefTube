@@ -93,6 +93,7 @@ export function SummaryRow({
 }) {
   const video = delivery.video;
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const thumbnailFallbackRef = useRef(false);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState<(typeof SPEEDS)[number]>(1);
   const [progress, setProgress] = useState(0);
@@ -259,11 +260,14 @@ export function SummaryRow({
             suppressHydrationWarning
             className="object-cover opacity-80 transition-opacity group-hover:opacity-100"
             sizes="(min-width: 640px) 128px, 114px"
-            onError={() =>
-              setThumbnailUrl(
-                `https://img.youtube.com/vi/${delivery.video_id}/default.jpg`,
-              )
-            }
+            onError={() => {
+              if (!thumbnailFallbackRef.current) {
+                thumbnailFallbackRef.current = true;
+                setThumbnailUrl(
+                  `https://img.youtube.com/vi/${delivery.video_id}/default.jpg`,
+                );
+              }
+            }}
           />
           <div className="absolute inset-0 flex items-center justify-center">
             <div
