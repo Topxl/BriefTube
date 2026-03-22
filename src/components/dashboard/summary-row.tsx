@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState, useCallback } from "react";
-import Image from "next/image";
 import { formatDate } from "@/lib/format";
 import {
   ChevronDown,
@@ -84,14 +83,12 @@ export function SummaryRow({
   favoriteLanguages = [],
   onManageFavorites: _onManageFavorites,
   onToggleFavorite,
-  priority = false,
 }: {
   delivery: EnrichedDelivery;
   resolvedTitle?: string;
   favoriteLanguages?: string[];
   onManageFavorites?: () => void;
   onToggleFavorite?: (code: string) => void;
-  priority?: boolean;
 }) {
   const video = delivery.video;
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -108,10 +105,7 @@ export function SummaryRow({
   );
 
   const title = video?.video_title ?? resolvedTitle ?? null;
-  const [thumbnailUrl] = useState(
-    `https://img.youtube.com/vi/${delivery.video_id}/default.jpg`,
-  );
-  const [thumbnailFailed, setThumbnailFailed] = useState(false);
+  const thumbnailUrl = `https://img.youtube.com/vi/${delivery.video_id}/default.jpg`;
 
   const togglePlay = useCallback(() => {
     const audio = audioRef.current;
@@ -254,21 +248,10 @@ export function SummaryRow({
           onClick={togglePlay}
           className="group relative h-[64px] w-[114px] shrink-0 overflow-hidden rounded-lg bg-black/30 sm:h-[72px] sm:w-[128px]"
         >
-          {!thumbnailFailed ? (
-            <Image
-              src={thumbnailUrl}
-              alt={video?.video_title ?? ""}
-              fill
-              unoptimized
-              priority={priority}
-              suppressHydrationWarning
-              className="object-cover opacity-80 transition-opacity group-hover:opacity-100"
-              sizes="(min-width: 640px) 128px, 114px"
-              onError={() => setThumbnailFailed(true)}
-            />
-          ) : (
-            <div className="h-full w-full bg-white/[0.06]" />
-          )}
+          <div
+            className="h-full w-full bg-cover bg-center opacity-80 transition-opacity group-hover:opacity-100"
+            style={{ backgroundImage: `url(${thumbnailUrl})` }}
+          />
           <div className="absolute inset-0 flex items-center justify-center">
             <div
               className={`flex h-10 w-10 items-center justify-center rounded-full border border-white/[0.1] backdrop-blur-sm transition-all duration-200 ${
