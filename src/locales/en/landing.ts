@@ -180,9 +180,9 @@ export const landing = {
           "However you prefer. They're always in your BriefTube dashboard. You can also subscribe to a private podcast RSS feed and listen in any podcast app, or connect Telegram, Discord, or Slack to get them pushed directly. All of it is optional, use what fits your workflow.",
       },
       {
-        question: "What happens if I cancel?",
+        question: "Where do the transcripts come from?",
         answer:
-          "You drop back to the free plan. Your channels stay, your history stays, you just lose access to the Pro features. No cancellation fees, no awkward retention flows.",
+          "BriefTube pulls the transcript directly from YouTube when one is available, which is free and instant. If a video has no transcript at all (which is rare), it falls back to Whisper, an AI model that transcribes the audio. Either way, the summary is always based on what was actually said in the video.",
       },
     ],
   },

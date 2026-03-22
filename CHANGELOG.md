@@ -2,6 +2,7 @@
 
 ## 2026-03-22
 
+UPDATE(faq): replace "What happens if I cancel?" with "Where do the transcripts come from?" — more informative for users questioning transcript quality
 FIX: Thumbnail 404 console errors — replace img/Image with CSS background-image (CSS failures are silent)
 FIX: Thumbnail quality — switch back to mqdefault.jpg (320x180) now that CSS background silently handles 404s
 FIX: Thumbnail 404 console errors — proxy via /api/thumbnail/[id] which returns BriefTube logo fallback (320x180 SVG) on missing thumbnails
