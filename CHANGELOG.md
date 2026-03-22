@@ -2,6 +2,7 @@
 
 ## 2026-03-22
 
+FIX: Thumbnail 404 in /_next/image — add unoptimized prop so browser requests YouTube directly; onError fallback to default.jpg handles missing mqdefault.jpg natively
 FIX: Dashboard feed showing duplicate videos (one per platform) — added get_feed_deliveries RPC with DISTINCT ON (video_id)
 FIX: CSP violations — add PostHog (us-assets.i.posthog.com, us.i.posthog.com) and Google Ads (googleads, googleadservices) domains
 FIX: Hide progress bar in summary row when audio has not been started (only show when playing or progress > 0)
