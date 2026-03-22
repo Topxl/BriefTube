@@ -2,6 +2,7 @@
 
 ## 2026-03-22
 
+FIX: Thumbnail fallback to gray placeholder when 404 occurs (for invalid/missing video IDs)
 FIX: Thumbnail onError infinite loop — guard with ref so fallback to default.jpg fires at most once
 FIX: Thumbnail 404 in /_next/image — add unoptimized prop so browser requests YouTube directly; onError fallback to default.jpg handles missing mqdefault.jpg natively
 FIX: Dashboard feed showing duplicate videos (one per platform) — added get_feed_deliveries RPC with DISTINCT ON (video_id)
