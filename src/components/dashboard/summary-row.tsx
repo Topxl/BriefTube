@@ -247,7 +247,7 @@ export function SummaryRow({
         {/* Thumbnail with play overlay */}
         <button
           onClick={togglePlay}
-          className="group relative h-[72px] w-[72px] shrink-0 overflow-hidden rounded-lg bg-black/30 sm:h-[88px] sm:w-[88px]"
+          className="group relative h-[64px] w-[114px] shrink-0 overflow-hidden rounded-lg bg-black/30 sm:h-[72px] sm:w-[128px]"
         >
           <Image
             src={thumbnailUrl}
@@ -255,7 +255,7 @@ export function SummaryRow({
             fill
             suppressHydrationWarning
             className="object-cover opacity-80 transition-opacity group-hover:opacity-100"
-            sizes="72px"
+            sizes="(min-width: 640px) 128px, 114px"
           />
           <div className="absolute inset-0 flex items-center justify-center">
             <div
