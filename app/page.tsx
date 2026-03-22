@@ -117,7 +117,12 @@ const jsonLd = [
     "@id": `${SiteConfig.prodUrl}/#organization`,
     name: SiteConfig.title,
     url: SiteConfig.prodUrl,
-    logo: `${SiteConfig.prodUrl}/logo-hd.png`,
+    logo: {
+      "@type": "ImageObject",
+      url: `${SiteConfig.prodUrl}/logo-hd.png`,
+      width: 512,
+      height: 512,
+    },
     email: "contact@brief-tube.com",
     contactPoint: {
       "@type": "ContactPoint",
@@ -233,7 +238,7 @@ export default function Home() {
       />
       <Navbar />
       <Hero />
-      <Suspense fallback={<div className="h-16" />}>
+      <Suspense fallback={<div className="h-[110px]" />}>
         <SocialProof />
       </Suspense>
       <div className="section-divider" />
