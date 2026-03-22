@@ -460,12 +460,12 @@ def get_pending_deliveries(limit: int = 20) -> list[dict]:
     completed_ids = {r["video_id"] for r in (completed_res.data or [])}
     raw_deliveries = [d for d in raw_deliveries if d["video_id"] in completed_ids]
 
-    # Deduplicate by (user_id, video_id) — guard against duplicate delivery rows
-    # that could cause the same video to be sent multiple times to the same user.
-    seen_pairs: set[tuple[str, str]] = set()
+    # Deduplicate by (user_id, video_id, platform) — guard against duplicate delivery rows.
+    # Must include platform: one user can have both Telegram and Discord deliveries for the same video.
+    seen_pairs: set[tuple[str, str, str]] = set()
     deduped: list[dict] = []
     for d in raw_deliveries:
-        pair = (d["user_id"], d["video_id"])
+        pair = (d["user_id"], d["video_id"], d.get("platform", "telegram"))
         if pair not in seen_pairs:
             seen_pairs.add(pair)
             deduped.append(d)
