@@ -6,6 +6,7 @@ FIX: Dashboard feed showing duplicate videos (one per platform) — added get_fe
 FIX: CSP violations — add PostHog (us-assets.i.posthog.com, us.i.posthog.com) and Google Ads (googleads, googleadservices) domains
 FIX: Hide progress bar in summary row when audio has not been started (only show when playing or progress > 0)
 FIX: Audio blocked in prod — add Cloudflare R2 domain to media-src CSP (audio files are on r2.dev, not Supabase)
+FIX: Thumbnail black bars — use mqdefault.jpg (16:9, 320x180) instead of default.jpg (4:3 with letterboxing)
 FIX: Google Ads img-src CSP — use *.google.com wildcard to cover all country TLDs
 
 REVERT: Restore --sidebar-primary: red in dark mode (intentional design — notification toggles are red)
