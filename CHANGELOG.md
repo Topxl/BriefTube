@@ -2,6 +2,8 @@
 
 ## 2026-03-22
 
+FIX: Dashboard feed showing duplicate videos (one per platform) — added get_feed_deliveries RPC with DISTINCT ON (video_id)
+
 REVERT: Restore --sidebar-primary: red in dark mode (intentional design — notification toggles are red)
 FIX: Newsletter icon was text-blue-400 instead of text-red-400 in notifications section
 FIX: Notification Switch buttons now explicitly red via data-[state=checked]:bg-red-400 (not relying on --sidebar-primary)
