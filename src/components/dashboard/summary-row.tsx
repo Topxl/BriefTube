@@ -255,6 +255,7 @@ export function SummaryRow({
             src={thumbnailUrl}
             alt={video?.video_title ?? ""}
             fill
+            unoptimized
             suppressHydrationWarning
             className="object-cover opacity-80 transition-opacity group-hover:opacity-100"
             sizes="(min-width: 640px) 128px, 114px"
