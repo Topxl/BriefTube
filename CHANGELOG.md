@@ -2,6 +2,10 @@
 
 ## 2026-03-22
 
+REVERT: Restore --sidebar-primary: red in dark mode (intentional design — notification toggles are red)
+FIX: Newsletter icon was text-blue-400 instead of text-red-400 in notifications section
+FIX: Notification Switch buttons now explicitly red via data-[state=checked]:bg-red-400 (not relying on --sidebar-primary)
+REFACTOR: Replace hardcoded platform colors in delivery section with PLATFORM_COLORS constant — added whatsapp entry
 FEATURE(security): add Content-Security-Policy header in vercel.json — covers GTM, Stripe, Supabase, Rewardful, Vercel Analytics, noembed, YouTube images
 FIX: Apex redirect 307 → 308 — add permanent redirect in vercel.json at edge layer
 FIX: CLS — Suspense fallback h-16 → h-[110px] for SocialProof (matches client placeholder)

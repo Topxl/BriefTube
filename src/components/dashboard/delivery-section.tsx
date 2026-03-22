@@ -11,6 +11,37 @@ import { languages } from "@/lib/languages";
 import type { Language } from "@/lib/languages";
 
 // -----------------------------------------------------------------
+// Platform brand colors — update here to change all platform rows
+// -----------------------------------------------------------------
+const PLATFORM_COLORS = {
+  telegram: {
+    icon: "text-[#2AABEE]",
+    bg: "bg-[#2AABEE]/10",
+    text: "text-[#2AABEE]",
+  },
+  discord: {
+    icon: "text-[#5865F2]",
+    bg: "bg-[#5865F2]/10",
+    text: "text-[#5865F2]",
+  },
+  slack: {
+    icon: "text-[#E01E5A]",
+    bg: "bg-[#E01E5A]/10",
+    text: "text-[#E01E5A]",
+  },
+  notion: {
+    icon: "text-foreground",
+    bg: "bg-white/[0.06]",
+    text: "text-foreground",
+  },
+  whatsapp: {
+    icon: "text-emerald-400",
+    bg: "bg-emerald-500/[0.08]",
+    text: "text-emerald-400",
+  },
+} as const;
+
+// -----------------------------------------------------------------
 // Voice helpers
 // -----------------------------------------------------------------
 
@@ -542,12 +573,12 @@ export function DeliverySection({
             <div
               className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
                 telegramConnected
-                  ? "nm-inset-sm bg-emerald-500/[0.08]"
+                  ? `nm-inset-sm ${PLATFORM_COLORS.telegram.bg}`
                   : "nm-inset-sm"
               }`}
             >
               <svg
-                className={`h-4 w-4 ${telegramConnected ? "text-emerald-400" : "text-muted-foreground"}`}
+                className={`h-4 w-4 ${telegramConnected ? PLATFORM_COLORS.telegram.icon : "text-muted-foreground"}`}
                 viewBox="0 0 24 24"
                 fill="currentColor"
               >
@@ -557,7 +588,7 @@ export function DeliverySection({
             <div>
               <p className="text-sm font-medium">Telegram</p>
               <p
-                className={`text-[11px] ${telegramConnected ? "text-emerald-400" : "text-muted-foreground"}`}
+                className={`text-[11px] ${telegramConnected ? PLATFORM_COLORS.telegram.text : "text-muted-foreground"}`}
               >
                 {telegramConnected ? "Connected" : "Not connected"}
               </p>
@@ -587,12 +618,12 @@ export function DeliverySection({
               <div
                 className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
                   notionConnected
-                    ? "nm-inset-sm bg-emerald-500/[0.08]"
+                    ? `nm-inset-sm ${PLATFORM_COLORS.notion.bg}`
                     : "nm-inset-sm"
                 }`}
               >
                 <svg
-                  className={`h-4 w-4 ${notionConnected ? "text-emerald-400" : "text-muted-foreground"}`}
+                  className={`h-4 w-4 ${notionConnected ? PLATFORM_COLORS.notion.icon : "text-muted-foreground"}`}
                   viewBox="0 0 24 24"
                   fill="currentColor"
                 >
@@ -602,7 +633,7 @@ export function DeliverySection({
               <div>
                 <p className="text-sm font-medium">Notion</p>
                 <p
-                  className={`text-[11px] ${notionConnected ? "text-emerald-400" : "text-muted-foreground"}`}
+                  className={`text-[11px] ${notionConnected ? PLATFORM_COLORS.notion.text : "text-muted-foreground"}`}
                 >
                   {notionConnected
                     ? notionDbName
@@ -637,12 +668,12 @@ export function DeliverySection({
               <div
                 className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
                   whatsappConnected
-                    ? "nm-inset-sm bg-emerald-500/[0.08]"
+                    ? `nm-inset-sm ${PLATFORM_COLORS.whatsapp.bg}`
                     : "nm-inset-sm"
                 }`}
               >
                 <svg
-                  className={`h-4 w-4 ${whatsappConnected ? "text-emerald-400" : "text-muted-foreground"}`}
+                  className={`h-4 w-4 ${whatsappConnected ? PLATFORM_COLORS.whatsapp.icon : "text-muted-foreground"}`}
                   viewBox="0 0 24 24"
                   fill="currentColor"
                 >
@@ -652,7 +683,7 @@ export function DeliverySection({
               <div>
                 <p className="text-sm font-medium">WhatsApp</p>
                 <p
-                  className={`text-[11px] ${whatsappConnected ? "text-emerald-400" : "text-muted-foreground"}`}
+                  className={`text-[11px] ${whatsappConnected ? PLATFORM_COLORS.whatsapp.text : "text-muted-foreground"}`}
                 >
                   {whatsappConnected
                     ? `Connected · ${whatsappPhone}`
@@ -709,10 +740,10 @@ export function DeliverySection({
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2.5">
             <div
-              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${discordConnected ? "nm-inset-sm bg-emerald-500/[0.08]" : "nm-inset-sm"}`}
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${discordConnected ? `nm-inset-sm ${PLATFORM_COLORS.discord.bg}` : "nm-inset-sm"}`}
             >
               <svg
-                className={`h-4 w-4 ${discordConnected ? "text-emerald-400" : "text-muted-foreground"}`}
+                className={`h-4 w-4 ${discordConnected ? PLATFORM_COLORS.discord.icon : "text-muted-foreground"}`}
                 viewBox="0 0 24 24"
                 fill="currentColor"
               >
@@ -722,7 +753,7 @@ export function DeliverySection({
             <div>
               <p className="text-sm font-medium">Discord</p>
               <p
-                className={`text-[11px] ${discordConnected ? "text-emerald-400" : "text-muted-foreground"}`}
+                className={`text-[11px] ${discordConnected ? PLATFORM_COLORS.discord.text : "text-muted-foreground"}`}
               >
                 {discordConnected ? "Connected" : "Not connected"}
               </p>
@@ -749,10 +780,10 @@ export function DeliverySection({
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2.5">
             <div
-              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${slackConnected ? "nm-inset-sm bg-emerald-500/[0.08]" : "nm-inset-sm"}`}
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${slackConnected ? `nm-inset-sm ${PLATFORM_COLORS.slack.bg}` : "nm-inset-sm"}`}
             >
               <svg
-                className={`h-4 w-4 ${slackConnected ? "text-emerald-400" : "text-muted-foreground"}`}
+                className={`h-4 w-4 ${slackConnected ? PLATFORM_COLORS.slack.icon : "text-muted-foreground"}`}
                 viewBox="0 0 24 24"
                 fill="currentColor"
               >
@@ -762,7 +793,7 @@ export function DeliverySection({
             <div>
               <p className="text-sm font-medium">Slack</p>
               <p
-                className={`text-[11px] ${slackConnected ? "text-emerald-400" : "text-muted-foreground"}`}
+                className={`text-[11px] ${slackConnected ? PLATFORM_COLORS.slack.text : "text-muted-foreground"}`}
               >
                 {slackConnected ? "Connected" : "Not connected"}
               </p>
