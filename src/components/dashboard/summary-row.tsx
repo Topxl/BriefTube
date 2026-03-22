@@ -109,6 +109,7 @@ export function SummaryRow({
   const [thumbnailUrl] = useState(
     `https://img.youtube.com/vi/${delivery.video_id}/default.jpg`,
   );
+  const [thumbnailFailed, setThumbnailFailed] = useState(false);
 
   const togglePlay = useCallback(() => {
     const audio = audioRef.current;
@@ -251,15 +252,20 @@ export function SummaryRow({
           onClick={togglePlay}
           className="group relative h-[64px] w-[114px] shrink-0 overflow-hidden rounded-lg bg-black/30 sm:h-[72px] sm:w-[128px]"
         >
-          <Image
-            src={thumbnailUrl}
-            alt={video?.video_title ?? ""}
-            fill
-            unoptimized
-            suppressHydrationWarning
-            className="object-cover opacity-80 transition-opacity group-hover:opacity-100"
-            sizes="(min-width: 640px) 128px, 114px"
-          />
+          {!thumbnailFailed ? (
+            <Image
+              src={thumbnailUrl}
+              alt={video?.video_title ?? ""}
+              fill
+              unoptimized
+              suppressHydrationWarning
+              className="object-cover opacity-80 transition-opacity group-hover:opacity-100"
+              sizes="(min-width: 640px) 128px, 114px"
+              onError={() => setThumbnailFailed(true)}
+            />
+          ) : (
+            <div className="h-full w-full bg-white/[0.06]" />
+          )}
           <div className="absolute inset-0 flex items-center justify-center">
             <div
               className={`flex h-10 w-10 items-center justify-center rounded-full border border-white/[0.1] backdrop-blur-sm transition-all duration-200 ${
