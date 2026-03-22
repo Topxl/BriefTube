@@ -106,7 +106,9 @@ export function SummaryRow({
   );
 
   const title = video?.video_title ?? resolvedTitle ?? null;
-  const thumbnailUrl = `https://img.youtube.com/vi/${delivery.video_id}/mqdefault.jpg`;
+  const [thumbnailUrl, setThumbnailUrl] = useState(
+    `https://img.youtube.com/vi/${delivery.video_id}/mqdefault.jpg`,
+  );
 
   const togglePlay = useCallback(() => {
     const audio = audioRef.current;
@@ -256,6 +258,11 @@ export function SummaryRow({
             suppressHydrationWarning
             className="object-cover opacity-80 transition-opacity group-hover:opacity-100"
             sizes="(min-width: 640px) 128px, 114px"
+            onError={() =>
+              setThumbnailUrl(
+                `https://img.youtube.com/vi/${delivery.video_id}/default.jpg`,
+              )
+            }
           />
           <div className="absolute inset-0 flex items-center justify-center">
             <div
