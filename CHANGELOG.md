@@ -2,6 +2,7 @@
 
 ## 2026-03-22
 
+FEATURE(security): add Content-Security-Policy header in vercel.json — covers GTM, Stripe, Supabase, Rewardful, Vercel Analytics, noembed, YouTube images
 FIX: Apex redirect 307 → 308 — add permanent redirect in vercel.json at edge layer
 FIX: CLS — Suspense fallback h-16 → h-[110px] for SocialProof (matches client placeholder)
 FIX: Schema — Organization logo changed to ImageObject with width/height
