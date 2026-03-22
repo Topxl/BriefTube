@@ -105,7 +105,7 @@ export function SummaryRow({
   );
 
   const title = video?.video_title ?? resolvedTitle ?? null;
-  const thumbnailUrl = `https://img.youtube.com/vi/${delivery.video_id}/mqdefault.jpg`;
+  const thumbnailUrl = `/api/thumbnail/${delivery.video_id}`;
 
   const togglePlay = useCallback(() => {
     const audio = audioRef.current;
