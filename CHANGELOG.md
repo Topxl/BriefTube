@@ -2,6 +2,8 @@
 
 ## 2026-03-22
 
+CHORE(seo): pricing page — add 5 FAQ sections (~400 words) to fix thin content
+CHORE(seo): blog articles — named author "Topxl" in JSON-LD (Person) and visible byline
 FIX: Worker — deduplication in get_pending_deliveries now includes platform (user_id, video_id, platform) — was blocking Discord deliveries if a Telegram delivery existed for same video
 FIX: DB — unique constraint deliveries_user_video_unique now includes platform column, allows one delivery per platform per user per video
 FIX: Schema — remove deprecated HowTo (Sept 2023), add @id to Organization, BreadcrumbList on /pricing, CollectionPage on /vs
