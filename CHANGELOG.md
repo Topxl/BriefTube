@@ -2,6 +2,8 @@
 
 ## 2026-03-22
 
+FIX: Worker — deduplication in get_pending_deliveries now includes platform (user_id, video_id, platform) — was blocking Discord deliveries if a Telegram delivery existed for same video
+FIX: DB — unique constraint deliveries_user_video_unique now includes platform column, allows one delivery per platform per user per video
 FIX: Schema — remove deprecated HowTo (Sept 2023), add @id to Organization, BreadcrumbList on /pricing, CollectionPage on /vs
 FIX: Sitemap — blog and /vs lastmod now dynamic from articles/comparisons arrays
 FIX: Trial duration inconsistency — /vs CTA "7-day" corrected to "30-day"
