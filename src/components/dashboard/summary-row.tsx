@@ -394,8 +394,8 @@ export function SummaryRow({
         />
       )}
 
-      {/* Progress bar — always visible as a track */}
-      {video?.audio_url && (
+      {/* Progress bar — only visible when audio has been started */}
+      {video?.audio_url && (playing || progress > 0) && (
         <div
           className="mx-3 mb-2.5 h-1 cursor-pointer overflow-hidden rounded-full bg-white/[0.06]"
           onClick={handleSeek}
