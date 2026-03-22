@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
+import { readFileSync } from "fs";
+import { join } from "path";
 
-// 1×1 transparent PNG — fallback when YouTube has no thumbnail for this video
-const TRANSPARENT_PNG = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
-  "base64",
+const FALLBACK_SVG = readFileSync(
+  join(process.cwd(), "public/thumbnail-fallback.svg"),
 );
+
+const FALLBACK_HEADERS = {
+  "Content-Type": "image/svg+xml",
+  "Cache-Control": "public, max-age=86400",
+};
 
 export async function GET(
   _req: Request,
@@ -13,26 +18,15 @@ export async function GET(
   const { id } = await params;
   const clean = id.replace(/[^a-zA-Z0-9_-]/g, "");
   if (!clean) {
-    return new NextResponse(TRANSPARENT_PNG, {
-      headers: {
-        "Content-Type": "image/png",
-        "Cache-Control": "public, max-age=86400",
-      },
-    });
+    return new NextResponse(FALLBACK_SVG, { headers: FALLBACK_HEADERS });
   }
 
-  const res = await fetch(
-    `https://img.youtube.com/vi/${clean}/mqdefault.jpg`,
-    { next: { revalidate: 604800 } }, // cache 1 week
-  );
+  const res = await fetch(`https://img.youtube.com/vi/${clean}/mqdefault.jpg`, {
+    next: { revalidate: 604800 },
+  });
 
   if (!res.ok) {
-    return new NextResponse(TRANSPARENT_PNG, {
-      headers: {
-        "Content-Type": "image/png",
-        "Cache-Control": "public, max-age=86400",
-      },
-    });
+    return new NextResponse(FALLBACK_SVG, { headers: FALLBACK_HEADERS });
   }
 
   const img = await res.arrayBuffer();
