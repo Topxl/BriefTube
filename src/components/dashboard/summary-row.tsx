@@ -84,12 +84,14 @@ export function SummaryRow({
   favoriteLanguages = [],
   onManageFavorites: _onManageFavorites,
   onToggleFavorite,
+  priority = false,
 }: {
   delivery: EnrichedDelivery;
   resolvedTitle?: string;
   favoriteLanguages?: string[];
   onManageFavorites?: () => void;
   onToggleFavorite?: (code: string) => void;
+  priority?: boolean;
 }) {
   const video = delivery.video;
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -258,6 +260,7 @@ export function SummaryRow({
               alt={video?.video_title ?? ""}
               fill
               unoptimized
+              priority={priority}
               suppressHydrationWarning
               className="object-cover opacity-80 transition-opacity group-hover:opacity-100"
               sizes="(min-width: 640px) 128px, 114px"
