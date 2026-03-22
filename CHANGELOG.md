@@ -2,6 +2,9 @@
 
 ## 2026-03-22
 
+FIX: Apex redirect 307 → 308 — add permanent redirect in vercel.json at edge layer
+FIX: CLS — Suspense fallback h-16 → h-[110px] for SocialProof (matches client placeholder)
+FIX: Schema — Organization logo changed to ImageObject with width/height
 CHORE(seo): pricing page — add 5 FAQ sections (~400 words) to fix thin content
 CHORE(seo): blog articles — named author "Topxl" in JSON-LD (Person) and visible byline
 FIX: Worker — deduplication in get_pending_deliveries now includes platform (user_id, video_id, platform) — was blocking Discord deliveries if a Telegram delivery existed for same video
