@@ -85,8 +85,16 @@ export const sendUserNewsletter = inngest.createFunction(
 
       if (!deliveries || deliveries.length === 0) return [];
 
-      const videoIds = [...new Set(deliveries.map((d) => d.video_id))];
-      const deliveryLanguages = [...new Set(deliveries.map((d) => d.language))];
+      // Deduplicate by video_id — one delivery per video regardless of platform count
+      const uniqueDeliveries = deliveries.filter(
+        (d, idx, arr) =>
+          arr.findIndex((x) => x.video_id === d.video_id) === idx,
+      );
+
+      const videoIds = [...new Set(uniqueDeliveries.map((d) => d.video_id))];
+      const deliveryLanguages = [
+        ...new Set(uniqueDeliveries.map((d) => d.language)),
+      ];
 
       // Same two-step approach as summaries-feed (processed_videos has composite key)
       const { data: pvideos } = await supabase
@@ -104,7 +112,7 @@ export const sendUserNewsletter = inngest.createFunction(
         if (!map.has(v.video_id)) map.set(v.video_id, v);
       }
 
-      return deliveries
+      return uniqueDeliveries
         .map((d) => {
           const v =
             map.get(`${d.video_id}:${d.language}`) ?? map.get(d.video_id);
