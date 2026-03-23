@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-03-24
+
+FIX: Newsletter digest duplicate videos — deduplicate deliveries by video_id before mapping (one row per platform was creating 3x duplicates)
+
 ## 2026-03-22
 
 UPDATE(faq): replace "What happens if I cancel?" with "Where do the transcripts come from?" — more informative for users questioning transcript quality
