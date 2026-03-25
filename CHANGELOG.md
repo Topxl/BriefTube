@@ -2,6 +2,8 @@
 
 ## 2026-03-26
 
+FEATURE: Auto-restore all channels to active when subscription is reactivated (Stripe webhook + admin gift pro) — user never loses their curated channel list
+
 FIX: Worker — delete pending deliveries when subscription is paused or removed after delivery creation (orphaned deliveries were still sent)
 REFACTOR: Sources section — full row clickable for selection; bulk actions in toolbar (All / Play / Pause / Delete); remove separate bulk toggle
 REFACTOR: Simplify bulk-action UX in sources section — tabs no longer have hover tricks; contextual "Pause all" / "Activate all" button appears below toolbar instead
