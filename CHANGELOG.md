@@ -2,6 +2,7 @@
 
 ## 2026-03-25
 
+FEATURE: Channels sheet — filter tabs show active/paused counts; "Pause all" / "Activate all" button appears contextually when a filter is active
 FIX: Reengagement email — remove telegram_connected=true requirement, now targets all Pro users with 0 deliveries in 7 days regardless of platform
 FIX: Activation email — replace telegram_connected=false filter with platform-agnostic check (any connected platform excludes user)
 FIX: Referral notification — add email fallback for referrers without Telegram connected

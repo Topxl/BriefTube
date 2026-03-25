@@ -396,6 +396,37 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
     }
   };
 
+  const handleBulkToggleAll = async (tab: "active" | "paused") => {
+    const targetActive = tab === "paused"; // paused tab → activate all
+    const affected = filteredByStatus.filter((s) => s.active !== targetActive);
+    if (!affected.length) return;
+
+    if (targetActive && !isPro && activeCount + affected.length > maxChannels) {
+      openUpsellModal();
+      return;
+    }
+
+    const affectedIds = affected.map((s) => s.id);
+    setSources((prev) =>
+      prev.map((s) =>
+        affectedIds.includes(s.id) ? { ...s, active: targetActive } : s,
+      ),
+    );
+    const { error } = await supabase
+      .from("subscriptions")
+      .update({ active: targetActive })
+      .in("id", affectedIds);
+
+    if (error) {
+      setSources((prev) =>
+        prev.map((s) =>
+          affectedIds.includes(s.id) ? { ...s, active: !targetActive } : s,
+        ),
+      );
+      toast.error("Failed to update channels");
+    }
+  };
+
   const handleBulkDelete = () => {
     const count = selectedIds.size;
     const ids = [...selectedIds];
@@ -558,19 +589,44 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
             </div>
           ) : (
             <div className="flex items-center gap-1">
-              {(["all", "active", "paused"] as const).map((status) => (
+              {(["all", "active", "paused"] as const).map((status) => {
+                const count =
+                  status === "active"
+                    ? activeCount
+                    : status === "paused"
+                      ? sources.length - activeCount
+                      : null;
+                return (
+                  <button
+                    key={status}
+                    onClick={() => setFilterStatus(status)}
+                    className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium capitalize transition-colors ${
+                      filterStatus === status
+                        ? "nm-inset text-foreground"
+                        : "nm-raised-sm text-muted-foreground/60 hover:text-foreground"
+                    }`}
+                  >
+                    {status}
+                    {count !== null && (
+                      <span className="text-muted-foreground/40 tabular-nums">
+                        {count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+              {filterStatus !== "all" && (
                 <button
-                  key={status}
-                  onClick={() => setFilterStatus(status)}
-                  className={`rounded-full px-2.5 py-1 text-xs font-medium capitalize transition-colors ${
-                    filterStatus === status
-                      ? "nm-inset text-foreground"
-                      : "nm-raised-sm text-muted-foreground/60 hover:text-foreground"
-                  }`}
+                  onClick={() =>
+                    void handleBulkToggleAll(
+                      filterStatus as "active" | "paused",
+                    )
+                  }
+                  className="nm-raised-sm text-muted-foreground/50 hover:text-foreground ml-0.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors"
                 >
-                  {status}
+                  {filterStatus === "active" ? "Pause all" : "Activate all"}
                 </button>
-              ))}
+              )}
             </div>
           )}
         </div>
