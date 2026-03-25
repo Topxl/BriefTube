@@ -596,37 +596,51 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
                     : status === "paused"
                       ? sources.length - activeCount
                       : null;
+                const isSelected = filterStatus === status;
+                const canBulk = isSelected && status !== "all";
                 return (
                   <button
                     key={status}
-                    onClick={() => setFilterStatus(status)}
-                    className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium capitalize transition-colors ${
-                      filterStatus === status
+                    onClick={() => {
+                      if (canBulk) {
+                        void handleBulkToggleAll(status as "active" | "paused");
+                      } else {
+                        setFilterStatus(status);
+                      }
+                    }}
+                    className={`group/tab flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium capitalize transition-colors ${
+                      isSelected
                         ? "nm-inset text-foreground"
                         : "nm-raised-sm text-muted-foreground/60 hover:text-foreground"
                     }`}
                   >
-                    {status}
-                    {count !== null && (
-                      <span className="text-muted-foreground/40 tabular-nums">
-                        {count}
-                      </span>
+                    {canBulk ? (
+                      <>
+                        <span className="group-hover/tab:hidden">
+                          {status}
+                          {count !== null && (
+                            <span className="text-muted-foreground/40 ml-1 tabular-nums">
+                              {count}
+                            </span>
+                          )}
+                        </span>
+                        <span className="hidden group-hover/tab:inline">
+                          {status === "active" ? "Pause all" : "Activate all"}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        {status}
+                        {count !== null && (
+                          <span className="text-muted-foreground/40 tabular-nums">
+                            {count}
+                          </span>
+                        )}
+                      </>
                     )}
                   </button>
                 );
               })}
-              {filterStatus !== "all" && (
-                <button
-                  onClick={() =>
-                    void handleBulkToggleAll(
-                      filterStatus as "active" | "paused",
-                    )
-                  }
-                  className="nm-raised-sm text-muted-foreground/50 hover:text-foreground ml-0.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors"
-                >
-                  {filterStatus === "active" ? "Pause all" : "Activate all"}
-                </button>
-              )}
             </div>
           )}
         </div>
