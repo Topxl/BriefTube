@@ -69,6 +69,12 @@ export async function grantProTrial(
     return { ok: false, error: updateError.message };
   }
 
+  // Restore all channels to active so the user doesn't lose their curated list
+  await admin
+    .from("subscriptions")
+    .update({ active: true })
+    .eq("user_id", profile.id);
+
   const formattedDate = base.toLocaleDateString("fr-FR", {
     day: "numeric",
     month: "long",
