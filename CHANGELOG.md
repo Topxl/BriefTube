@@ -2,6 +2,8 @@
 
 ## 2026-03-25
 
+FIX: Worker — create 'web' delivery (status=sent) for users without platform connection so their dashboard feed and daily digest work without Telegram/Discord/Slack
+FIX: Backfill — 2418 web deliveries inserted for 13 users who had active subscriptions but no platform connected (last 7 days)
 FEATURE: Summary cards — ⋯ menu moved to absolute top-right corner, speed button stays inline, date format uses Today/Yesterday/DD/MM/YY
 
 ## 2026-03-24
