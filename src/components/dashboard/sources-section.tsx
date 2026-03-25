@@ -12,6 +12,7 @@ import {
   X,
   Loader2,
   Play,
+  Pause,
   Check,
   Youtube,
 } from "@/lib/icons";
@@ -87,14 +88,14 @@ function SourceRow({
 
   return (
     <div
-      className={`group flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-white/[0.02] ${
+      onClick={() => onSelect(source.id)}
+      className={`group flex cursor-pointer items-center gap-3 px-4 py-2.5 transition-colors hover:bg-white/[0.02] ${
         selected ? "bg-white/[0.04]" : ""
       }`}
     >
-      <button
-        onClick={() => onSelect(source.id)}
-        aria-label={selected ? "Deselect" : "Select"}
-        className="relative shrink-0 cursor-pointer rounded-full transition-all"
+      <div
+        aria-hidden
+        className="relative shrink-0 rounded-full transition-all"
       >
         {source.channel_avatar_url && !imgError ? (
           <Image
@@ -124,7 +125,7 @@ function SourceRow({
         ) : (
           <span className="absolute inset-0 rounded-full bg-white/0 transition-colors group-hover:bg-white/10" />
         )}
-      </button>
+      </div>
 
       <div className="min-w-0 flex-1">
         <p
@@ -138,6 +139,7 @@ function SourceRow({
           href={`https://www.youtube.com/channel/${source.channel_id}`}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
           className="text-muted-foreground/40 hover:text-muted-foreground text-[11px] transition-colors"
         >
           YouTube
@@ -145,7 +147,10 @@ function SourceRow({
       </div>
 
       <button
-        onClick={() => onToggle(source)}
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggle(source);
+        }}
         className={`group/toggle flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-medium transition-all ${
           source.active
             ? "hover:text-muted-foreground/50 border-green-500/20 text-green-500/60 hover:border-white/10"
@@ -396,16 +401,20 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
     }
   };
 
-  const handleBulkToggleAll = async (tab: "active" | "paused") => {
-    const targetActive = tab === "paused"; // paused tab → activate all
-    const affected = filteredByStatus.filter((s) => s.active !== targetActive);
-    if (!affected.length) return;
+  const selectAll = () => {
+    setSelectedIds(new Set(filteredByStatus.map((s) => s.id)));
+  };
 
-    if (targetActive && !isPro && activeCount + affected.length > maxChannels) {
+  const handleBulkToggleSelected = async (targetActive: boolean) => {
+    const ids = [...selectedIds];
+    const affected = sources.filter(
+      (s) => ids.includes(s.id) && s.active !== targetActive,
+    );
+    if (!affected.length) return;
+    if (targetActive && atActiveLimit) {
       openUpsellModal();
       return;
     }
-
     const affectedIds = affected.map((s) => s.id);
     setSources((prev) =>
       prev.map((s) =>
@@ -416,7 +425,6 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
       .from("subscriptions")
       .update({ active: targetActive })
       .in("id", affectedIds);
-
     if (error) {
       setSources((prev) =>
         prev.map((s) =>
@@ -569,20 +577,40 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
             Import from YouTube
           </a>
           {anySelected ? (
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground text-xs tabular-nums">
-                {selectedIds.size} selected
+            <div className="flex items-center gap-1.5">
+              <span className="text-muted-foreground/50 text-xs tabular-nums">
+                {selectedIds.size}
               </span>
               <button
+                onClick={selectAll}
+                className="nm-raised-sm text-muted-foreground/60 hover:text-foreground rounded-full px-2.5 py-1 text-[10px] font-medium transition-colors"
+              >
+                All
+              </button>
+              <button
+                onClick={() => void handleBulkToggleSelected(true)}
+                title="Activate"
+                className="nm-raised-sm text-muted-foreground/60 hover:text-foreground rounded-full p-1.5 transition-colors"
+              >
+                <Play className="h-3 w-3" />
+              </button>
+              <button
+                onClick={() => void handleBulkToggleSelected(false)}
+                title="Pause"
+                className="nm-raised-sm text-muted-foreground/60 hover:text-foreground rounded-full p-1.5 transition-colors"
+              >
+                <Pause className="h-3 w-3" />
+              </button>
+              <button
                 onClick={handleBulkDelete}
-                className="nm-raised-sm flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-medium text-red-400 transition-colors hover:bg-red-500/10"
+                title="Delete"
+                className="nm-raised-sm rounded-full p-1.5 text-red-400 transition-colors hover:bg-red-500/10"
               >
                 <Trash2 className="h-3 w-3" />
-                Delete
               </button>
               <button
                 onClick={clearSelection}
-                className="text-muted-foreground/40 hover:text-foreground text-xs transition-colors"
+                className="text-muted-foreground/40 hover:text-foreground transition-colors"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -619,25 +647,6 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
           )}
         </div>
       )}
-
-      {/* Bulk toggle — right-aligned below filter tabs */}
-      {sources.length > 0 &&
-        !isYT &&
-        !anySelected &&
-        filterStatus !== "all" && (
-          <div className="flex justify-end">
-            <button
-              onClick={() =>
-                void handleBulkToggleAll(filterStatus as "active" | "paused")
-              }
-              className="text-muted-foreground/40 hover:text-foreground text-xs underline underline-offset-2 transition-colors"
-            >
-              {filterStatus === "active"
-                ? `Pause all ${activeCount}`
-                : `Activate all ${sources.length - activeCount}`}
-            </button>
-          </div>
-        )}
 
       {/* Active limit banner */}
       {atActiveLimit && (
