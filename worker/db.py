@@ -613,6 +613,8 @@ def cleanup_undeliverable_deliveries() -> int:
                          not a real failure — keeps the admin dashboard clean)
     - Failed videos    → mark as 'failed' (real processing error, worth tracking)
     - Disconnected platform connection → mark as 'failed'
+    - Inactive/deleted subscription → DELETE the delivery (user paused or removed
+                         the channel after the delivery was created)
 
     Returns the number of deliveries cleaned up.
     """
@@ -689,6 +691,61 @@ def cleanup_undeliverable_deliveries() -> int:
                     .execute()
                 )
                 cleaned += len(res.data or [])
+
+    # Inactive or deleted subscriptions → DELETE pending deliveries
+    # A delivery is orphaned when the user paused or removed the channel
+    # AFTER the delivery row was created but BEFORE it was sent.
+    all_pending = (
+        sb.table("deliveries")
+        .select("id, user_id, video_id")
+        .eq("status", "pending")
+        .execute()
+        .data or []
+    )
+    if all_pending:
+        pv_video_ids = list({d["video_id"] for d in all_pending})
+        pv_rows = (
+            sb.table("processed_videos")
+            .select("video_id, channel_id")
+            .in_("video_id", pv_video_ids)
+            .execute()
+            .data or []
+        )
+        channel_map = {pv["video_id"]: pv["channel_id"] for pv in pv_rows}
+
+        orphan_channel_ids = list({pv["channel_id"] for pv in pv_rows})
+        orphan_user_ids = list({d["user_id"] for d in all_pending})
+        if orphan_channel_ids and orphan_user_ids:
+            active_subs = (
+                sb.table("subscriptions")
+                .select("user_id, channel_id")
+                .eq("active", True)
+                .in_("channel_id", orphan_channel_ids)
+                .in_("user_id", orphan_user_ids)
+                .execute()
+                .data or []
+            )
+            active_set = {(s["user_id"], s["channel_id"]) for s in active_subs}
+
+            orphan_ids = [
+                d["id"]
+                for d in all_pending
+                if (channel_id := channel_map.get(d["video_id"]))
+                and (d["user_id"], channel_id) not in active_set
+            ]
+            for i in range(0, len(orphan_ids), 100):
+                batch = orphan_ids[i : i + 100]
+                res = (
+                    sb.table("deliveries")
+                    .delete()
+                    .in_("id", batch)
+                    .execute()
+                )
+                cleaned += len(res.data or [])
+            if orphan_ids:
+                logger.info(
+                    f"cleanup: deleted {len(orphan_ids)} deliveries for inactive/removed subscriptions"
+                )
 
     return cleaned
 
