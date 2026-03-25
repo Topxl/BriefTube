@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-03-25
+
+FEATURE: Summary cards — ⋯ menu moved to absolute top-right corner, speed button stays inline, date format uses Today/Yesterday/DD/MM/YY
+
 ## 2026-03-24
 
 FIX: Newsletter digest duplicate videos — deduplicate deliveries by video_id before mapping (one row per platform was creating 3x duplicates)

@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState, useCallback } from "react";
-import { formatDate } from "@/lib/format";
 import {
   ChevronDown,
   ExternalLink,
@@ -27,6 +26,20 @@ import { LanguagePicker } from "@/components/dashboard/language-picker";
 import { dialogManager } from "@/features/dialog-manager/dialog-manager";
 
 const tl = t.dashboard.summaries;
+
+function formatSummaryDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const toDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(toDay.getTime() - 86400000);
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  if (d.getTime() === toDay.getTime()) return "Today";
+  if (d.getTime() === yesterday.getTime()) return "Yesterday";
+  const dd = String(date.getDate()).padStart(2, "0");
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const yy = String(date.getFullYear()).slice(2);
+  return `${dd}/${mm}/${yy}`;
+}
 
 export type Delivery = {
   id: string;
@@ -237,7 +250,7 @@ export function SummaryRow({
 
   return (
     <div
-      className={`nm-raised overflow-hidden rounded-2xl transition-all duration-200 ${
+      className={`nm-raised relative overflow-hidden rounded-2xl transition-all duration-200 ${
         playing ? "ring-1 ring-red-500/25" : ""
       }`}
     >
@@ -279,7 +292,9 @@ export function SummaryRow({
           </p>
           <div className="mt-1 flex items-center gap-2">
             <span className="text-muted-foreground text-xs">
-              {delivery.created_at ? formatDate(delivery.created_at) : ""}
+              {delivery.created_at
+                ? formatSummaryDate(delivery.created_at)
+                : ""}
             </span>
             {video && video.status !== "completed" && (
               <span
@@ -308,73 +323,71 @@ export function SummaryRow({
         </button>
 
         {/* Right-side actions */}
-        <div className="flex shrink-0 items-center gap-1.5">
-          <button
-            onClick={cycleSpeed}
-            className="nm-raised-sm text-muted-foreground hover:text-foreground rounded-md px-1.5 py-0.5 text-[10px] font-semibold tabular-nums transition-all"
-          >
-            x{speed}
-          </button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="text-muted-foreground hover:text-foreground flex h-6 w-6 items-center justify-center rounded-md transition-colors">
-                <MoreHorizontal className="h-4 w-4" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52">
-              {video?.video_url && (
-                <DropdownMenuItem asChild>
-                  <a
-                    href={video.video_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
+        <button
+          onClick={cycleSpeed}
+          className="nm-raised-sm text-muted-foreground hover:text-foreground shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold tabular-nums transition-all"
+        >
+          x{speed}
+        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="text-muted-foreground hover:text-foreground absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-md transition-colors">
+              <MoreHorizontal className="h-4 w-4" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-52">
+            {video?.video_url && (
+              <DropdownMenuItem asChild>
+                <a
+                  href={video.video_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  Open on YouTube
+                </a>
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem
+              onClick={() => void handleShare()}
+              className="flex items-center gap-2"
+            >
+              <Share2 className="h-3.5 w-3.5" />
+              Share summary
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {favoriteLanguages
+              .filter((l) => l !== delivery.language)
+              .map((code) => {
+                const lang = LANGUAGES.find((l) => l.code === code);
+                if (!lang) return null;
+                return (
+                  <DropdownMenuItem
+                    key={code}
+                    disabled={generatingLang === code}
+                    onClick={() => void handleGenerateLang(code)}
                     className="flex items-center gap-2"
                   >
-                    <ExternalLink className="h-3.5 w-3.5" />
-                    Open on YouTube
-                  </a>
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuItem
-                onClick={() => void handleShare()}
-                className="flex items-center gap-2"
-              >
-                <Share2 className="h-3.5 w-3.5" />
-                Share summary
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              {favoriteLanguages
-                .filter((l) => l !== delivery.language)
-                .map((code) => {
-                  const lang = LANGUAGES.find((l) => l.code === code);
-                  if (!lang) return null;
-                  return (
-                    <DropdownMenuItem
-                      key={code}
-                      disabled={generatingLang === code}
-                      onClick={() => void handleGenerateLang(code)}
-                      className="flex items-center gap-2"
-                    >
-                      <Star
-                        className="h-3 w-3 shrink-0 text-yellow-400"
-                        fill="currentColor"
-                      />
-                      {generatingLang === code
-                        ? "Generating…"
-                        : `Generate in ${new Intl.DisplayNames(["en"], { type: "language" }).of(code) ?? lang.name}`}
-                    </DropdownMenuItem>
-                  );
-                })}
-              <DropdownMenuItem
-                onClick={handleOpenLangPicker}
-                className="flex items-center gap-2"
-              >
-                <Languages className="h-3.5 w-3.5" />
-                Other language…
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+                    <Star
+                      className="h-3 w-3 shrink-0 text-yellow-400"
+                      fill="currentColor"
+                    />
+                    {generatingLang === code
+                      ? "Generating…"
+                      : `Generate in ${new Intl.DisplayNames(["en"], { type: "language" }).of(code) ?? lang.name}`}
+                  </DropdownMenuItem>
+                );
+              })}
+            <DropdownMenuItem
+              onClick={handleOpenLangPicker}
+              className="flex items-center gap-2"
+            >
+              <Languages className="h-3.5 w-3.5" />
+              Other language…
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Audio element */}
