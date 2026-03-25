@@ -3,6 +3,7 @@ import { stripe } from "@/lib/stripe";
 import { env } from "@/lib/env";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { getOrFindStripeCustomerId } from "@/lib/stripe/helpers";
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
@@ -29,9 +30,14 @@ export async function POST(req: NextRequest) {
     .eq("id", user.id)
     .single();
 
-  // Create or get Stripe customer
-  let customerId = profile?.stripe_customer_id;
+  // Get or find Stripe customer
+  let customerId = await getOrFindStripeCustomerId(
+    supabase,
+    user.id,
+    user.email ?? profile?.email ?? "",
+  );
 
+  // If still no customer, create one
   if (!customerId) {
     const customer = await stripe.customers.create({
       email: user.email ?? profile?.email ?? "",

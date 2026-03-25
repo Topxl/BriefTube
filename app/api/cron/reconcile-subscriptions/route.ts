@@ -2,7 +2,7 @@ import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/server";
 import { stripe } from "@/lib/stripe";
-import { SiteConfig } from "@/site-config";
+import { updateSubscriptionStatus } from "@/lib/stripe/helpers";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
@@ -36,13 +36,7 @@ export const GET = async (req: NextRequest) => {
   }): Promise<"fixed" | "ok"> => {
     if (!profile.stripe_subscription_id) {
       // Profile claims active but has no subscription ID — revert to free
-      await admin
-        .from("profiles")
-        .update({
-          subscription_status: "free",
-          max_channels: SiteConfig.freeChannelsLimit,
-        })
-        .eq("id", profile.id);
+      await updateSubscriptionStatus(admin, profile.id, "free", false);
       logger.warn(`reconcile: reverted profile with no sub_id: ${profile.id}`);
       return "fixed";
     }
@@ -53,16 +47,14 @@ export const GET = async (req: NextRequest) => {
 
     const isActive = sub.status === "active" || sub.status === "trialing";
     const expectedStatus = sub.status;
-    const expectedChannels = isActive ? 999 : SiteConfig.freeChannelsLimit;
 
     if ((profile.subscription_status ?? "free") !== expectedStatus) {
-      await admin
-        .from("profiles")
-        .update({
-          subscription_status: expectedStatus,
-          max_channels: expectedChannels,
-        })
-        .eq("id", profile.id);
+      await updateSubscriptionStatus(
+        admin,
+        profile.id,
+        expectedStatus,
+        isActive,
+      );
       logger.info(
         `reconcile: fixed profile ${profile.id}: ${profile.subscription_status ?? "null"} → ${expectedStatus}`,
       );

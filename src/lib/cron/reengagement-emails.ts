@@ -3,13 +3,12 @@ import { sendEmail } from "@/lib/mail/send-email";
 import { founderEmail, p, signature } from "@/lib/mail/founder-email";
 import { logger } from "@/lib/logger";
 import { env } from "@/lib/env";
-import { SiteConfig } from "@/site-config";
-
-export type RunResult = {
-  sent: number;
-  skipped: number;
-  errors: number;
-};
+import type { RunResult } from "@/lib/email/email-helpers";
+import {
+  getAlreadySentIds,
+  insertEmailLog,
+  getTrackingPixelHtml,
+} from "@/lib/email/email-helpers";
 
 const EMAIL_TYPE = "reengagement_7d";
 
@@ -78,13 +77,11 @@ export async function runReengagementEmails(): Promise<RunResult> {
   // Step 3 — Deduplication via email_logs
   const inactiveIds = inactiveUsers.map((u) => u.id);
 
-  const { data: logs } = await admin
-    .from("email_logs")
-    .select("user_id")
-    .eq("email_type", EMAIL_TYPE)
-    .in("user_id", inactiveIds);
-
-  const alreadySentIds = new Set((logs ?? []).map((l) => l.user_id));
+  const alreadySentIds = await getAlreadySentIds(
+    admin,
+    EMAIL_TYPE,
+    inactiveIds,
+  );
 
   // Step 4 — Send emails
   for (const user of inactiveUsers) {
@@ -95,15 +92,9 @@ export async function runReengagementEmails(): Promise<RunResult> {
 
     try {
       // eslint-disable-next-line no-await-in-loop
-      const { data: log } = await admin
-        .from("email_logs")
-        .insert({ user_id: user.id, email_type: EMAIL_TYPE })
-        .select("id")
-        .single();
+      const logId = await insertEmailLog(admin, user.id, EMAIL_TYPE);
 
-      const trackingPixel = log?.id
-        ? `<img src="${SiteConfig.prodUrl}/api/email/track/${log.id}" width="1" height="1" style="display:none" />`
-        : "";
+      const trackingPixel = getTrackingPixelHtml(logId);
 
       const html = founderEmail(
         p("Hey,") +

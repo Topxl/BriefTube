@@ -2,6 +2,10 @@
 
 ## 2026-03-26
 
+REFACTOR: Centralize requireAdmin() into src/lib/auth/require-admin.ts — remove 4 duplicate implementations across admin routes
+REFACTOR: Centralize email cron helpers into src/lib/email/email-helpers.ts — shared RunResult type, getAlreadySentIds(), insertEmailLog(), getTrackingPixelHtml() used by 5 cron files
+REFACTOR: Centralize getUserPlan() into src/lib/subscriptions.ts — replace repeated profile fetch + isPro + maxChannels pattern across API routes
+REFACTOR: Centralize Stripe helpers into src/lib/stripe/helpers.ts — getOrFindStripeCustomerId() and updateSubscriptionStatus() replace duplicated patterns in portal, checkout, webhook, cancel, reconcile routes
 FEATURE: Add paused_by_system flag to subscriptions — auto-pause channels when user exceeds free limit (limit: 3), system-paused channels restore automatically when user upgrades to Pro, preserving manual user pauses
 FEATURE: Auto-restore only system-paused channels when Pro subscription is activated (Stripe checkout, subscription update) or admin gift pro — preserves manual user pauses
 FIX: YouTube import — channels come in as system-paused so they restore automatically when user upgrades to Pro

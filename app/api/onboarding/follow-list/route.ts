@@ -1,7 +1,6 @@
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { getYouTubeChannelInfo } from "@/lib/youtube";
-import { SiteConfig } from "@/site-config";
-import { isProUser, getMaxChannels } from "@/lib/is-pro";
+import { getUserPlan } from "@/lib/subscriptions";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
@@ -50,16 +49,13 @@ export async function POST(req: NextRequest) {
   // Fetch user profile to determine plan + active channel limit
   const { data: profile } = await admin
     .from("profiles")
-    .select(
-      "subscription_status, trial_ends_at, max_channels, preferred_language",
-    )
+    .select("preferred_language")
     .eq("id", user.id)
     .single();
 
-  const isPro = profile ? isProUser(profile) : false;
-  const maxActiveChannels = profile
-    ? getMaxChannels(profile)
-    : SiteConfig.freeChannelsLimit;
+  const plan = await getUserPlan(admin, user.id);
+  const isPro = plan.isPro;
+  const maxActiveChannels = plan.maxChannels;
 
   // Fetch user's existing subscriptions to skip duplicates and count active ones
   const { data: existingSubs } = await admin
