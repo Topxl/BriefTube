@@ -153,6 +153,13 @@ const checkoutSessionCompleted = async (
     })
     .eq("id", profile.id);
 
+  // Restore only system-paused channels — preserve manual user pauses
+  await supabase
+    .from("subscriptions")
+    .update({ active: true, paused_by_system: false })
+    .eq("user_id", profile.id)
+    .eq("paused_by_system", true);
+
   logger.info(`Subscription activated for user: ${profile.id}`);
 
   void captureServerEvent({
@@ -280,6 +287,15 @@ const customerSubscriptionUpdated = async (
       max_channels: isActive ? 999 : SiteConfig.freeChannelsLimit,
     })
     .eq("id", profile.id);
+
+  // Restore only system-paused channels — preserve manual user pauses
+  if (isActive) {
+    await supabase
+      .from("subscriptions")
+      .update({ active: true, paused_by_system: false })
+      .eq("user_id", profile.id)
+      .eq("paused_by_system", true);
+  }
 
   logger.info(
     `Subscription updated: ${subscription.id}, status: ${subscription.status}`,

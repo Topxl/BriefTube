@@ -423,7 +423,7 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
     );
     const { error } = await supabase
       .from("subscriptions")
-      .update({ active: targetActive })
+      .update({ active: targetActive, paused_by_system: false })
       .in("id", affectedIds);
     if (error) {
       setSources((prev) =>

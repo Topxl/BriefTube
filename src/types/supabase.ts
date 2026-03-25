@@ -680,6 +680,7 @@ export type Database = {
           created_at: string | null;
           id: string;
           list_id: string | null;
+          paused_by_system: boolean;
           source_type: string | null;
           user_id: string;
         };
@@ -691,6 +692,7 @@ export type Database = {
           created_at?: string | null;
           id?: string;
           list_id?: string | null;
+          paused_by_system?: boolean;
           source_type?: string | null;
           user_id: string;
         };
@@ -702,6 +704,7 @@ export type Database = {
           created_at?: string | null;
           id?: string;
           list_id?: string | null;
+          paused_by_system?: boolean;
           source_type?: string | null;
           user_id?: string;
         };
