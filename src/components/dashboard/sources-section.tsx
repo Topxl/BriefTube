@@ -615,27 +615,27 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
                   </button>
                 );
               })}
+              {filterStatus !== "all" && (
+                <>
+                  <span className="text-muted-foreground/20 px-0.5 text-xs">
+                    ·
+                  </span>
+                  <button
+                    onClick={() =>
+                      void handleBulkToggleAll(
+                        filterStatus as "active" | "paused",
+                      )
+                    }
+                    className="text-muted-foreground/40 hover:text-foreground text-xs underline underline-offset-2 transition-colors"
+                  >
+                    {filterStatus === "active" ? "Pause all" : "Activate all"}
+                  </button>
+                </>
+              )}
             </div>
           )}
         </div>
       )}
-
-      {/* Bulk toggle — contextual line below toolbar */}
-      {sources.length > 0 &&
-        !isYT &&
-        !anySelected &&
-        filterStatus !== "all" && (
-          <button
-            onClick={() =>
-              void handleBulkToggleAll(filterStatus as "active" | "paused")
-            }
-            className="text-muted-foreground/40 hover:text-foreground -mt-1 w-full text-left text-[11px] transition-colors"
-          >
-            {filterStatus === "active"
-              ? `Pause all ${activeCount} channels`
-              : `Activate all ${sources.length - activeCount} channels`}
-          </button>
-        )}
 
       {/* Active limit banner */}
       {atActiveLimit && (
