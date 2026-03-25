@@ -1,8 +1,6 @@
 "use server";
 
-import { createClient, createAdminClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
-import { env } from "@/lib/env";
+import { createAdminClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/mail/send-email";
 import { GiftTrialEmail } from "@/components/emails/gift-trial-email";
 import { runTrialReminders } from "@/lib/cron/trial-reminders";
@@ -15,19 +13,10 @@ import {
 } from "@/lib/cron/referral-trial-emails";
 import { runOnboardingApologyEmails } from "@/lib/cron/onboarding-apology-emails";
 import { runDailyDigestForUser } from "@/lib/cron/daily-digest";
+import { restoreSystemPausedChannels } from "@/lib/subscriptions";
+import { requireAdmin } from "@/lib/auth/require-admin";
 
 type RunResult = { sent: number; skipped: number; errors: number };
-
-async function requireAdmin() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!env.ADMIN_USER_ID || user?.id !== env.ADMIN_USER_ID) {
-    redirect("/dashboard");
-  }
-}
 
 export async function grantProTrial(
   email: string,
@@ -70,11 +59,7 @@ export async function grantProTrial(
   }
 
   // Restore only system-paused channels — preserve manual user pauses
-  await admin
-    .from("subscriptions")
-    .update({ active: true, paused_by_system: false })
-    .eq("user_id", profile.id)
-    .eq("paused_by_system", true);
+  await restoreSystemPausedChannels(profile.id, admin);
 
   const formattedDate = base.toLocaleDateString("fr-FR", {
     day: "numeric",
@@ -122,12 +107,7 @@ export async function triggerTestDailyDigest(): Promise<{
   reason?: string;
   count?: number;
 }> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!env.ADMIN_USER_ID || user?.id !== env.ADMIN_USER_ID)
-    redirect("/dashboard");
+  const user = await requireAdmin();
 
   const admin = createAdminClient();
   const { data: profile } = await admin

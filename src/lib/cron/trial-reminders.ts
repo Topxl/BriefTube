@@ -4,6 +4,12 @@ import { TrialReminderEmail } from "@/components/emails/trial-reminder-email";
 import { TrialExpiredEmail } from "@/components/emails/trial-expired-email";
 import { logger } from "@/lib/logger";
 import { SiteConfig } from "@/site-config";
+import type { RunResult } from "@/lib/email/email-helpers";
+import {
+  getAlreadySentIds,
+  insertEmailLog,
+  getTrackingPixelHtml,
+} from "@/lib/email/email-helpers";
 
 type EmailType = "trial_reminder_j3" | "trial_reminder_j1" | "trial_expired";
 
@@ -11,12 +17,6 @@ type TrialUser = {
   id: string;
   email: string;
   trial_ends_at: string;
-};
-
-type RunResult = {
-  sent: number;
-  skipped: number;
-  errors: number;
 };
 
 // Detection windows centered around target (±12h)
@@ -67,28 +67,9 @@ async function getUsersInWindow(
 
   // Check which users already received this email type
   const userIds = users.map((u) => u.id);
-  const { data: logs } = await admin
-    .from("email_logs")
-    .select("user_id")
-    .eq("email_type", type)
-    .in("user_id", userIds);
-
-  const alreadySentIds = new Set((logs ?? []).map((l) => l.user_id));
+  const alreadySentIds = await getAlreadySentIds(admin, type, userIds);
 
   return { users, alreadySentIds };
-}
-
-async function insertEmailLog(
-  userId: string,
-  type: EmailType,
-): Promise<string | null> {
-  const admin = createAdminClient();
-  const { data } = await admin
-    .from("email_logs")
-    .insert({ user_id: userId, email_type: type })
-    .select("id")
-    .single();
-  return data?.id ?? null;
 }
 
 async function sendTrialEmail(
@@ -119,6 +100,7 @@ async function sendTrialEmail(
 
 async function processEmailType(type: EmailType): Promise<RunResult> {
   const { users, alreadySentIds } = await getUsersInWindow(type);
+  const admin = createAdminClient();
   const result: RunResult = { sent: 0, skipped: 0, errors: 0 };
 
   for (const user of users) {
@@ -130,7 +112,7 @@ async function processEmailType(type: EmailType): Promise<RunResult> {
     try {
       // Insert log first to get tracking ID, then send
       // eslint-disable-next-line no-await-in-loop
-      const logId = await insertEmailLog(user.id, type);
+      const logId = await insertEmailLog(admin, user.id, type);
       const trackingPixelUrl = logId
         ? `${SiteConfig.prodUrl}/api/email/track/${logId}`
         : undefined;

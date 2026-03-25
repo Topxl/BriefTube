@@ -1,4 +1,3 @@
-import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { exec } from "child_process";
@@ -6,15 +5,13 @@ import { promisify } from "util";
 import { readFile } from "fs/promises";
 import path from "path";
 import { env } from "@/lib/env";
+import { getUser } from "@/lib/auth/auth-user";
 
 const execAsync = promisify(exec);
 const LOG_PATH = path.join(process.cwd(), "worker", "worker.log");
 
-async function requireAdmin() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+async function requireAdminOrNull() {
+  const user = await getUser();
   if (!env.ADMIN_USER_ID || user?.id !== env.ADMIN_USER_ID) return null;
   return user;
 }
@@ -24,7 +21,7 @@ function deduplicateLines(lines: string[]): string[] {
 }
 
 export async function GET() {
-  const user = await requireAdmin();
+  const user = await requireAdminOrNull();
   if (!user) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -134,7 +131,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const user = await requireAdmin();
+  const user = await requireAdminOrNull();
   if (!user) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
