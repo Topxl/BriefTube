@@ -58,7 +58,7 @@ export const dashboard = {
     loadMore: "Load more",
     untitledVideo: "Untitled video",
     statusProcessing: "processing",
-    statusFailed: "failed",
+    statusFailed: "unavailable",
   },
   channels: {
     title: "Channels",
