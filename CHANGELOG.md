@@ -2,6 +2,11 @@
 
 ## 2026-03-25
 
+FIX: Reengagement email — remove telegram_connected=true requirement, now targets all Pro users with 0 deliveries in 7 days regardless of platform
+FIX: Activation email — replace telegram_connected=false filter with platform-agnostic check (any connected platform excludes user)
+FIX: Referral notification — add email fallback for referrers without Telegram connected
+FIX: Admin monitoring — at-risk users now includes all Pro users (not Telegram-only); stat card shows platform_connections count instead of telegram_connected
+FIX: Email workflows registry — remove Telegram-specific conditions and conversion metrics; rename activation workflow to "No platform"
 FIX: Worker — create 'web' delivery (status=sent) for users without platform connection so their dashboard feed and daily digest work without Telegram/Discord/Slack
 FIX: Backfill — 2418 web deliveries inserted for 13 users who had active subscriptions but no platform connected (last 7 days)
 FEATURE: Summary cards — ⋯ menu moved to absolute top-right corner, speed button stays inline, date format uses Today/Yesterday/DD/MM/YY

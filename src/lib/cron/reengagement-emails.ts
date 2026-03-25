@@ -41,7 +41,6 @@ export async function runReengagementEmails(): Promise<RunResult> {
     .from("profiles")
     .select("id, email")
     .eq("subscription_status", "active")
-    .eq("telegram_connected", true)
     .in("id", activeSubUserIds);
 
   if (profilesError) {
@@ -115,7 +114,7 @@ export async function runReengagementEmails(): Promise<RunResult> {
             "That usually means the channels you follow haven't posted new videos recently. Completely normal for some creators.",
           ) +
           p(
-            "If that's the case, it might be worth adding a few more active channels to your list. The more you track, the more summaries land in your Telegram.",
+            "If that's the case, it might be worth adding a few more active channels to your list. The more you track, the more summaries you'll receive.",
           ) +
           p(
             "You can add channels directly from your dashboard: <a href='https://www.brief-tube.com/dashboard' style='color:#1a1a1a;'>brief-tube.com/dashboard</a>",

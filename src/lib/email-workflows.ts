@@ -12,18 +12,11 @@ export type WorkflowTrigger = {
   schedule?: string;
 };
 
-export type ConversionMetric =
-  | {
-      field: "subscription_status";
-      value: string;
-      label: string;
-    }
-  | {
-      field: "telegram_connected";
-      value: boolean;
-      label: string;
-    }
-  | null;
+export type ConversionMetric = {
+  field: "subscription_status";
+  value: string;
+  label: string;
+} | null;
 
 export type EligibleId =
   | "trial_j3"
@@ -138,23 +131,20 @@ export const EMAIL_WORKFLOWS: WorkflowDef[] = [
   },
   {
     id: "activation_telegram",
-    name: "Activation — Telegram",
-    description: "Personal email to users who haven't connected Telegram",
+    name: "Activation — No platform",
+    description:
+      "Personal email to users who haven't connected any delivery platform",
     subject: "Quick question about your BriefTube account",
     trigger: { type: "cron", label: "Daily cron" },
     audience: "Users ~24h after signup",
     conditions: [
-      "telegram_connected = false",
+      "No active platform connection (Telegram, Discord, Slack…)",
       "created_at within −36h..−12h from now",
       "Once per user",
     ],
     dedup: "once",
     icon: Zap,
-    conversionMetric: {
-      field: "telegram_connected",
-      value: true,
-      label: "connected",
-    },
+    conversionMetric: null,
     eligibleId: "activation",
   },
   {
@@ -166,7 +156,6 @@ export const EMAIL_WORKFLOWS: WorkflowDef[] = [
     audience: "Active Pro users",
     conditions: [
       "subscription_status = active",
-      "telegram_connected = true",
       "Has at least one active channel subscription",
       "0 delivered summaries in last 7 days",
       "Once per user",

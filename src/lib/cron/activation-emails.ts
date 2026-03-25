@@ -23,11 +23,10 @@ export async function runActivationEmails(): Promise<RunResult> {
   const { from, to } = getSignupWindow();
   const result: RunResult = { sent: 0, skipped: 0, errors: 0 };
 
-  // Users who signed up ~24h ago and still haven't connected Telegram (legacy field)
+  // Users who signed up ~24h ago
   const { data: candidates, error } = await admin
     .from("profiles")
     .select("id, email")
-    .eq("telegram_connected", false)
     .gte("created_at", from.toISOString())
     .lte("created_at", to.toISOString());
 
@@ -42,11 +41,10 @@ export async function runActivationEmails(): Promise<RunResult> {
 
   const candidateIds = candidates.map((u) => u.id);
 
-  // Exclude users who already connected Discord or Slack
+  // Exclude users who already connected any delivery platform
   const { data: platformConns } = await admin
     .from("platform_connections")
     .select("user_id")
-    .in("platform", ["discord", "slack", "telegram"])
     .eq("connected", true)
     .in("user_id", candidateIds);
 

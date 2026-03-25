@@ -72,18 +72,7 @@ function buildSparkline(dayMap: Record<string, number>): number[] {
 
 function isConverted(log: RawLog, metric: ConversionMetric): boolean {
   if (!metric || !log.profiles) return false;
-  if (metric.field === "subscription_status") {
-    const m = metric as Extract<
-      ConversionMetric,
-      { field: "subscription_status" }
-    >;
-    return log.profiles.subscription_status === m.value;
-  }
-  const m = metric as Extract<
-    ConversionMetric,
-    { field: "telegram_connected" }
-  >;
-  return log.profiles.telegram_connected === m.value;
+  return log.profiles.subscription_status === metric.value;
 }
 
 function TriggerBadge({ type }: { type: WorkflowDef["trigger"]["type"] }) {
