@@ -375,8 +375,6 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
     });
   };
 
-  const clearSelection = () => setSelectedIds(new Set());
-
   const toggleActive = async (source: Subscription) => {
     const newActive = !source.active;
     if (newActive && atActiveLimit) {
@@ -615,12 +613,6 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
                 className="nm-raised-sm rounded-full p-1.5 text-red-400 transition-colors hover:bg-red-500/10"
               >
                 <Trash2 className="h-3 w-3" />
-              </button>
-              <button
-                onClick={clearSelection}
-                className="text-muted-foreground/40 hover:text-foreground transition-colors"
-              >
-                <X className="h-3.5 w-3.5" />
               </button>
             </div>
           ) : (

@@ -2,7 +2,7 @@
 
 ## 2026-03-26
 
-FIX: Channels sheet — "All" button now deselects everything when all channels are already selected (toggle behavior)
+FIX: Channels sheet — "All" button toggles deselect when all selected; remove X close button from selection toolbar
 REFACTOR: Centralize channel restore logic into restoreSystemPausedChannels() utility — remove duplication across stripe webhook and admin actions
 FEATURE: Add paused_by_system flag to subscriptions — auto-pause channels when user exceeds free limit (limit: 3), system-paused channels restore automatically when user upgrades to Pro, preserving manual user pauses
 FEATURE: Auto-restore only system-paused channels when Pro subscription is activated (Stripe checkout, subscription update) or admin gift pro — preserves manual user pauses
