@@ -401,8 +401,16 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
     }
   };
 
+  const allSelected =
+    filteredByStatus.length > 0 &&
+    filteredByStatus.every((s) => selectedIds.has(s.id));
+
   const selectAll = () => {
-    setSelectedIds(new Set(filteredByStatus.map((s) => s.id)));
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredByStatus.map((s) => s.id)));
+    }
   };
 
   const handleBulkToggleSelected = async (targetActive: boolean) => {
