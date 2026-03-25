@@ -362,6 +362,8 @@ def create_deliveries_for_video(video_id: str, channel_id: str, language: str = 
     """Create delivery entries for all users subscribed to this channel with the given language.
 
     Creates one delivery per user per active platform connection (Telegram, Notion, WhatsApp…).
+    For users with no connected platform, creates a 'web' delivery (status=sent immediately)
+    so their dashboard feed and daily digest work without requiring Telegram/Discord.
     Uses a single bulk check + single batch insert — reduces DB round-trips from O(users) to O(1).
     """
     sb = get_client()
@@ -395,8 +397,11 @@ def create_deliveries_for_video(video_id: str, channel_id: str, language: str = 
 
     # Get all active platform connections for matching users
     connections = get_platform_connections_for_users(matching_ids)
-    if not connections:
-        return
+    connected_user_ids = {conn["user_id"] for conn in connections}
+
+    # Users with no platform connection get a 'web' delivery so their dashboard
+    # and daily digest work even without Telegram/Discord/Slack.
+    unconnected_ids = [uid for uid in matching_ids if uid not in connected_user_ids]
 
     # Fetch all existing deliveries for this video+language (check by user+platform pair)
     existing = (
@@ -409,20 +414,38 @@ def create_deliveries_for_video(video_id: str, channel_id: str, language: str = 
     )
     existing_pairs = {(d["user_id"], d.get("platform", "telegram")) for d in (existing.data or [])}
 
-    # Batch insert one delivery per user per platform
-    to_insert = [
-        {
-            "user_id": conn["user_id"],
-            "video_id": video_id,
-            "status": "pending",
-            "language": language,
-            "platform": conn["platform"],
-        }
-        for conn in connections
-        if (conn["user_id"], conn["platform"]) not in existing_pairs
-    ]
+    to_insert = []
+
+    # Platform deliveries (Telegram, Discord, Slack…)
+    for conn in connections:
+        if (conn["user_id"], conn["platform"]) not in existing_pairs:
+            to_insert.append({
+                "user_id": conn["user_id"],
+                "video_id": video_id,
+                "status": "pending",
+                "language": language,
+                "platform": conn["platform"],
+            })
+
+    # Web deliveries for users with no connected platform
+    now_iso = datetime.now(timezone.utc).isoformat()
+    for uid in unconnected_ids:
+        if (uid, "web") not in existing_pairs:
+            to_insert.append({
+                "user_id": uid,
+                "video_id": video_id,
+                "status": "sent",
+                "sent_at": now_iso,
+                "language": language,
+                "platform": "web",
+            })
+
     if to_insert:
         sb.table("deliveries").insert(to_insert).execute()
+        logger.info(
+            f"Video {video_id}: {len([x for x in to_insert if x['platform'] != 'web'])} platform "
+            f"+ {len([x for x in to_insert if x['platform'] == 'web'])} web deliveries created"
+        )
 
 
 def get_pending_deliveries(limit: int = 20) -> list[dict]:
