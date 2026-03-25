@@ -3,7 +3,12 @@ import { sendEmail } from "@/lib/mail/send-email";
 import { founderEmail, p, signature } from "@/lib/mail/founder-email";
 import { logger } from "@/lib/logger";
 import { env } from "@/lib/env";
-import { SiteConfig } from "@/site-config";
+import type { RunResult } from "@/lib/email/email-helpers";
+import {
+  getAlreadySentIds,
+  insertEmailLog,
+  getTrackingPixelHtml,
+} from "@/lib/email/email-helpers";
 
 // Detection window: signed up between 12h and 36h ago (center at 24h, ±12h)
 function getSignupWindow(): { from: Date; to: Date } {
@@ -11,12 +16,6 @@ function getSignupWindow(): { from: Date; to: Date } {
   const h = 3600_000;
   return { from: new Date(now - 36 * h), to: new Date(now - 12 * h) };
 }
-
-type RunResult = {
-  sent: number;
-  skipped: number;
-  errors: number;
-};
 
 export async function runActivationEmails(): Promise<RunResult> {
   const admin = createAdminClient();
@@ -61,13 +60,11 @@ export async function runActivationEmails(): Promise<RunResult> {
   const userIds = usersData.map((u) => u.id);
 
   // Deduplication via email_logs
-  const { data: logs } = await admin
-    .from("email_logs")
-    .select("user_id")
-    .eq("email_type", "activation_telegram")
-    .in("user_id", userIds);
-
-  const alreadySentIds = new Set((logs ?? []).map((l) => l.user_id));
+  const alreadySentIds = await getAlreadySentIds(
+    admin,
+    "activation_telegram",
+    userIds,
+  );
 
   for (const user of usersData) {
     if (alreadySentIds.has(user.id)) {
@@ -77,15 +74,9 @@ export async function runActivationEmails(): Promise<RunResult> {
 
     try {
       // eslint-disable-next-line no-await-in-loop
-      const { data: log } = await admin
-        .from("email_logs")
-        .insert({ user_id: user.id, email_type: "activation_telegram" })
-        .select("id")
-        .single();
+      const logId = await insertEmailLog(admin, user.id, "activation_telegram");
 
-      const trackingPixel = log?.id
-        ? `<img src="${SiteConfig.prodUrl}/api/email/track/${log.id}" width="1" height="1" style="display:none" />`
-        : "";
+      const trackingPixel = getTrackingPixelHtml(logId);
 
       const html = founderEmail(
         p("Hey,") +

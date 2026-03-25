@@ -1,9 +1,8 @@
-import { SiteConfig } from "@/site-config";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { getYouTubeChannelInfo, fetchVideoOembed } from "@/lib/youtube";
 import { extractVideoId } from "@/lib/youtube-id";
-import { isProUser, getMaxChannels } from "@/lib/is-pro";
+import { getUserPlan } from "@/lib/subscriptions";
 import { queueVideoForProcessing } from "@/lib/video-queue";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
@@ -168,11 +167,11 @@ export async function POST(request: NextRequest) {
   // Check user's profile for max active channels limit
   const { data: profile } = await supabase
     .from("profiles")
-    .select(
-      "max_channels, subscription_status, trial_ends_at, preferred_language",
-    )
+    .select("preferred_language")
     .eq("id", user.id)
     .single();
+
+  const plan = await getUserPlan(supabase, user.id);
 
   // Count currently active subscriptions
   const { count: activeCount } = await supabase
@@ -181,10 +180,8 @@ export async function POST(request: NextRequest) {
     .eq("user_id", user.id)
     .eq("active", true);
 
-  const maxActiveChannels = profile
-    ? getMaxChannels(profile)
-    : SiteConfig.freeChannelsLimit;
-  const isPro = profile ? isProUser(profile) : false;
+  const maxActiveChannels = plan.maxChannels;
+  const isPro = plan.isPro;
 
   // Free users can always add channels, but active is limited to maxActiveChannels
   const shouldBeActive = isPro || (activeCount ?? 0) < maxActiveChannels;
@@ -356,16 +353,9 @@ export async function PATCH(request: NextRequest) {
 
   // If activating, check the active channel limit
   if (active) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("max_channels, subscription_status, trial_ends_at")
-      .eq("id", user.id)
-      .single();
-
-    const isPro = profile ? isProUser(profile) : false;
-    const maxActiveChannels = profile
-      ? getMaxChannels(profile)
-      : SiteConfig.freeChannelsLimit;
+    const plan = await getUserPlan(supabase, user.id);
+    const isPro = plan.isPro;
+    const maxActiveChannels = plan.maxChannels;
 
     if (!isPro) {
       const { count } = await supabase
@@ -430,13 +420,8 @@ export async function PUT(request: NextRequest) {
   }
 
   // activate_all — respect the active channel limit for free users
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("max_channels, subscription_status, trial_ends_at")
-    .eq("id", user.id)
-    .single();
-
-  const isPro = profile ? isProUser(profile) : false;
+  const plan = await getUserPlan(supabase, user.id);
+  const isPro = plan.isPro;
 
   if (isPro) {
     const { error } = await supabase
@@ -452,9 +437,7 @@ export async function PUT(request: NextRequest) {
   }
 
   // Free user: only activate up to (maxActiveChannels - currentActiveCount) paused channels
-  const maxActiveChannels = profile
-    ? getMaxChannels(profile)
-    : SiteConfig.freeChannelsLimit;
+  const maxActiveChannels = plan.maxChannels;
 
   const { count: activeCount } = await supabase
     .from("subscriptions")

@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { isProUser } from "@/lib/is-pro";
+import { getUserPlan } from "@/lib/subscriptions";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
@@ -53,15 +53,9 @@ export async function POST(req: NextRequest, { params }: Params) {
   }
 
   // Following: check user is Pro or on trial
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("subscription_status, trial_ends_at")
-    .eq("id", user.id)
-    .single();
+  const plan = await getUserPlan(supabase, user.id);
 
-  const isPro = profile ? isProUser(profile) : false;
-
-  if (!isPro) {
+  if (!plan.isPro) {
     return NextResponse.json(
       {
         error: "upgrade_required",

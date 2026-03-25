@@ -3,19 +3,18 @@ import { sendEmail } from "@/lib/mail/send-email";
 import { founderEmail, p, signature } from "@/lib/mail/founder-email";
 import { logger } from "@/lib/logger";
 import { env } from "@/lib/env";
-import { SiteConfig } from "@/site-config";
+import type { RunResult } from "@/lib/email/email-helpers";
+import {
+  getAlreadySentIds,
+  insertEmailLog,
+  getTrackingPixelHtml,
+} from "@/lib/email/email-helpers";
 
 const ADMIN_USER_ID = "67320a39-948c-44d2-98e3-c0de49af1ec6";
 
 // Window: users who signed up during the period affected by the onboarding bug
 const BUG_INTRODUCED_AT = new Date("2026-02-22T00:00:00Z");
 const BUG_FIXED_AT = new Date("2026-02-28T23:59:59Z");
-
-type RunResult = {
-  sent: number;
-  skipped: number;
-  errors: number;
-};
 
 export async function runOnboardingApologyEmails(): Promise<RunResult> {
   const admin = createAdminClient();
@@ -38,13 +37,11 @@ export async function runOnboardingApologyEmails(): Promise<RunResult> {
   const userIds = usersData.map((u) => u.id);
 
   // Deduplication — skip users who already received this email
-  const { data: logs } = await admin
-    .from("email_logs")
-    .select("user_id")
-    .eq("email_type", "onboarding_apology")
-    .in("user_id", userIds);
-
-  const alreadySentIds = new Set((logs ?? []).map((l) => l.user_id));
+  const alreadySentIds = await getAlreadySentIds(
+    admin,
+    "onboarding_apology",
+    userIds,
+  );
 
   for (const user of usersData) {
     if (alreadySentIds.has(user.id)) {
@@ -54,15 +51,9 @@ export async function runOnboardingApologyEmails(): Promise<RunResult> {
 
     try {
       // eslint-disable-next-line no-await-in-loop
-      const { data: log } = await admin
-        .from("email_logs")
-        .insert({ user_id: user.id, email_type: "onboarding_apology" })
-        .select("id")
-        .single();
+      const logId = await insertEmailLog(admin, user.id, "onboarding_apology");
 
-      const trackingPixel = log?.id
-        ? `<img src="${SiteConfig.prodUrl}/api/email/track/${log.id}" width="1" height="1" style="display:none" />`
-        : "";
+      const trackingPixel = getTrackingPixelHtml(logId);
 
       const html = founderEmail(
         p("Hey,") +

@@ -3,12 +3,8 @@ import { sendEmail } from "@/lib/mail/send-email";
 import { ReferralTrialEmail } from "@/components/emails/referral-trial-email";
 import { logger } from "@/lib/logger";
 import { SiteConfig } from "@/site-config";
-
-export type RunResult = {
-  sent: number;
-  skipped: number;
-  errors: number;
-};
+import type { RunResult } from "@/lib/email/email-helpers";
+import { insertEmailLog, getAlreadySentIds } from "@/lib/email/email-helpers";
 
 type EmailType = "referral_trial_j3" | "referral_trial_j1";
 
@@ -83,13 +79,7 @@ async function processReferralEmailType(type: EmailType): Promise<RunResult> {
   const referredUserIds = [...referralMap.keys()];
 
   // 3. Deduplication
-  const { data: logs } = await admin
-    .from("email_logs")
-    .select("user_id")
-    .eq("email_type", type)
-    .in("user_id", referredUserIds);
-
-  const alreadySentIds = new Set((logs ?? []).map((l) => l.user_id));
+  const alreadySentIds = await getAlreadySentIds(admin, type, referredUserIds);
 
   // 4. Fetch referrer emails for name extraction
   const referrerIds = [...new Set(referralRows.map((r) => r.referrer_id))];
@@ -125,14 +115,10 @@ async function processReferralEmailType(type: EmailType): Promise<RunResult> {
           : `${referrerName} is on BriefTube Pro. Your trial ends in ${daysLeft} days`;
 
       // eslint-disable-next-line no-await-in-loop
-      const { data: log } = await admin
-        .from("email_logs")
-        .insert({ user_id: user.id, email_type: type })
-        .select("id")
-        .single();
+      const logId = await insertEmailLog(admin, user.id, type);
 
-      const trackingPixelUrl = log?.id
-        ? `${SiteConfig.prodUrl}/api/email/track/${log.id}`
+      const trackingPixelUrl = logId
+        ? `${SiteConfig.prodUrl}/api/email/track/${logId}`
         : undefined;
 
       // eslint-disable-next-line no-await-in-loop

@@ -5,11 +5,7 @@ import { TrialExpiredEmail } from "@/components/emails/trial-expired-email";
 import { logger } from "@/lib/logger";
 import { SiteConfig } from "@/site-config";
 import type { RunResult } from "@/lib/email/email-helpers";
-import {
-  getAlreadySentIds,
-  insertEmailLog,
-  getTrackingPixelHtml,
-} from "@/lib/email/email-helpers";
+import { getAlreadySentIds, insertEmailLog } from "@/lib/email/email-helpers";
 
 type EmailType = "trial_reminder_j3" | "trial_reminder_j1" | "trial_expired";
 

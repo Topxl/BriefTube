@@ -2,6 +2,7 @@ import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/server";
 import { stripe } from "@/lib/stripe";
+import { updateSubscriptionStatus } from "@/lib/stripe/helpers";
 import { SiteConfig } from "@/site-config";
 import { headers } from "next/headers";
 import type { NextRequest } from "next/server";
@@ -107,12 +108,13 @@ const checkoutSessionCompleted = async (
   let profile: {
     id: string;
     email: string;
+    stripe_customer_id: string | null;
     referred_by: string | null;
   } | null = null;
 
   const { data: profileByCustomer } = await supabase
     .from("profiles")
-    .select("id, email, referred_by")
+    .select("id, email, stripe_customer_id, referred_by")
     .eq("stripe_customer_id", customerId)
     .maybeSingle();
 
@@ -121,7 +123,7 @@ const checkoutSessionCompleted = async (
   if (!profile && session.metadata?.userId) {
     const { data: profileByUserId } = await supabase
       .from("profiles")
-      .select("id, email, referred_by")
+      .select("id, email, stripe_customer_id, referred_by")
       .eq("id", session.metadata.userId)
       .maybeSingle();
     profile = profileByUserId ?? null;
@@ -143,16 +145,24 @@ const checkoutSessionCompleted = async (
     status: stripeSubscription.status,
   });
 
-  // Update user profile with subscription info + save customer ID if missing
-  await supabase
-    .from("profiles")
-    .update({
-      stripe_customer_id: customerId,
-      stripe_subscription_id: subscriptionId,
-      subscription_status: stripeSubscription.status,
-      max_channels: 999,
-    })
-    .eq("id", profile.id);
+  // Save customer ID if missing
+  if (!profile.stripe_customer_id) {
+    await supabase
+      .from("profiles")
+      .update({
+        stripe_customer_id: customerId,
+        stripe_subscription_id: subscriptionId,
+      })
+      .eq("id", profile.id);
+  }
+
+  // Update subscription status (always active on checkout completion)
+  await updateSubscriptionStatus(
+    supabase,
+    profile.id,
+    stripeSubscription.status,
+    true,
+  );
 
   // Restore only system-paused channels — preserve manual user pauses
   await restoreSystemPausedChannels(profile.id, supabase);
@@ -277,13 +287,12 @@ const customerSubscriptionUpdated = async (
     subscription.status === "active" || subscription.status === "trialing";
 
   // Update subscription status and max_channels accordingly
-  await supabase
-    .from("profiles")
-    .update({
-      subscription_status: subscription.status,
-      max_channels: isActive ? 999 : SiteConfig.freeChannelsLimit,
-    })
-    .eq("id", profile.id);
+  await updateSubscriptionStatus(
+    supabase,
+    profile.id,
+    subscription.status,
+    isActive,
+  );
 
   // Restore only system-paused channels — preserve manual user pauses
   if (isActive) {
@@ -322,13 +331,12 @@ const customerSubscriptionDeleted = async (
   }
 
   // Revert to free plan
+  await updateSubscriptionStatus(supabase, profile.id, "free", false);
+
+  // Clear subscription ID
   await supabase
     .from("profiles")
-    .update({
-      subscription_status: "free",
-      stripe_subscription_id: null,
-      max_channels: SiteConfig.freeChannelsLimit,
-    })
+    .update({ stripe_subscription_id: null })
     .eq("id", profile.id);
 
   logger.info(
