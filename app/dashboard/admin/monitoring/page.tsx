@@ -371,6 +371,15 @@ export default async function AdminPage() {
       .eq("status", "completed"),
   ]);
 
+  // Platform-connected users (any platform: Telegram, Discord, Slack…)
+  const { data: platformConnsRaw } = await admin
+    .from("platform_connections")
+    .select("user_id")
+    .eq("connected", true);
+  const platformConnected = new Set(
+    (platformConnsRaw ?? []).map((r) => r.user_id),
+  ).size;
+
   // Queries with columns not in generated types — cast explicitly
   const { data: pendingQueueRaw } = await admin
     .from("processed_videos")
@@ -462,22 +471,21 @@ export default async function AdminPage() {
 
   let atRiskUsers: AtRiskUser[] = [];
   if (activeSubUserIds.length > 0) {
-    const [{ data: telegramCandidates }, { data: recentSent }] =
-      await Promise.all([
-        admin
-          .from("profiles")
-          .select("id, email")
-          .eq("telegram_connected", true)
-          .in("id", activeSubUserIds),
-        admin
-          .from("deliveries")
-          .select("user_id")
-          .eq("status", "sent")
-          .gte("created_at", sevenDaysAgo.toISOString())
-          .in("user_id", activeSubUserIds),
-      ]);
+    const [{ data: proCandidates }, { data: recentSent }] = await Promise.all([
+      admin
+        .from("profiles")
+        .select("id, email")
+        .eq("subscription_status", "active")
+        .in("id", activeSubUserIds),
+      admin
+        .from("deliveries")
+        .select("user_id")
+        .eq("status", "sent")
+        .gte("created_at", sevenDaysAgo.toISOString())
+        .in("user_id", activeSubUserIds),
+    ]);
     const recentIds = new Set((recentSent ?? []).map((d) => d.user_id));
-    atRiskUsers = ((telegramCandidates ?? []) as AtRiskUser[]).filter(
+    atRiskUsers = ((proCandidates ?? []) as AtRiskUser[]).filter(
       (u) => !recentIds.has(u.id),
     );
   }
@@ -506,8 +514,8 @@ export default async function AdminPage() {
   const deliveriesFailed24h = deliveriesByStatus.failed ?? 0;
 
   const total = totalUsers ?? 0;
-  const connected = telegramConnected ?? 0;
-  const telegramPct = total > 0 ? Math.round((connected / total) * 100) : 0;
+  const platformPct =
+    total > 0 ? Math.round((platformConnected / total) * 100) : 0;
 
   const proCount = proUsers ?? 0;
   const trialExpiredCount = trialExpired ?? 0;
@@ -852,15 +860,15 @@ export default async function AdminPage() {
             icon={<Users className="h-4 w-4" />}
           />
           <StatCard
-            label="Telegram connecté"
-            value={telegramConnected ?? 0}
-            sub={`${telegramPct}% des users`}
+            label="Plateforme connectée"
+            value={platformConnected}
+            sub={`${platformPct}% des users · ${telegramConnected ?? 0} Telegram`}
             icon={
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
               </svg>
             }
-            variant={telegramPct >= 50 ? "success" : "warning"}
+            variant={platformPct >= 50 ? "success" : "warning"}
           />
           <StatCard
             label="Abonnés Pro"
@@ -1313,7 +1321,7 @@ export default async function AdminPage() {
         <div className="flex items-center justify-between px-1">
           <SectionTitle>Utilisateurs à risque</SectionTitle>
           <span className="text-muted-foreground text-xs">
-            Telegram connecté · chaîne active · 0 livraison / 7j
+            Pro · chaîne active · 0 livraison / 7j
           </span>
         </div>
         <div className="nm-raised overflow-hidden rounded-xl">
@@ -1467,7 +1475,7 @@ export default async function AdminPage() {
         </div>
         <div className="nm-raised flex flex-col gap-2 rounded-xl px-4 py-3">
           <p className="text-muted-foreground text-sm">
-            Send re-engagement emails (Pro · Telegram connected · 0 delivery in
+            Send re-engagement emails (Pro · active subscription · 0 delivery in
             7 days)
           </p>
           <ReengagementEmailsButton />

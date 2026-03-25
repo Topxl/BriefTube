@@ -132,7 +132,7 @@ export async function GET(request: Request) {
 
         const { data: referrer } = await admin
           .from("profiles")
-          .select("id, telegram_chat_id")
+          .select("id, email, telegram_chat_id")
           .eq("referral_code", refCode)
           .single();
 
@@ -178,6 +178,12 @@ export async function GET(request: Request) {
                 }),
               },
             ).catch(() => undefined);
+          } else if (referrer.email) {
+            void sendEmail({
+              to: referrer.email,
+              subject: "Someone signed up with your BriefTube referral link",
+              html: `<p>Hi,</p><p>Someone just signed up using your BriefTube referral link — they now get an extended trial. Thanks for spreading the word!</p><p>— The BriefTube team</p>`,
+            }).catch(() => undefined);
           }
         }
       }
