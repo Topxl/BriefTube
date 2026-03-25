@@ -11,6 +11,7 @@ import { sendEmail } from "@/lib/mail/send-email";
 import { UpgradeEmail } from "@/components/emails/upgrade-email";
 import { PaymentFailedEmail } from "@/components/emails/payment-failed-email";
 import { captureServerEvent } from "@/lib/posthog/server";
+import { restoreSystemPausedChannels } from "@/lib/subscriptions";
 
 export const maxDuration = 300;
 
@@ -154,11 +155,7 @@ const checkoutSessionCompleted = async (
     .eq("id", profile.id);
 
   // Restore only system-paused channels — preserve manual user pauses
-  await supabase
-    .from("subscriptions")
-    .update({ active: true, paused_by_system: false })
-    .eq("user_id", profile.id)
-    .eq("paused_by_system", true);
+  await restoreSystemPausedChannels(profile.id, supabase);
 
   logger.info(`Subscription activated for user: ${profile.id}`);
 
@@ -290,11 +287,7 @@ const customerSubscriptionUpdated = async (
 
   // Restore only system-paused channels — preserve manual user pauses
   if (isActive) {
-    await supabase
-      .from("subscriptions")
-      .update({ active: true, paused_by_system: false })
-      .eq("user_id", profile.id)
-      .eq("paused_by_system", true);
+    await restoreSystemPausedChannels(profile.id, supabase);
   }
 
   logger.info(

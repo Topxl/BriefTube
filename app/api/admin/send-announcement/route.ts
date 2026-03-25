@@ -5,16 +5,10 @@ import { env } from "@/lib/env";
 import { getUser } from "@/lib/auth/auth-user";
 import type { NextRequest } from "next/server";
 
-async function requireAdminOrNull() {
-  const user = await getUser();
-  if (!env.ADMIN_USER_ID || user?.id !== env.ADMIN_USER_ID) return null;
-  return user;
-}
-
 export const POST = async (req: NextRequest) => {
-  const user = await requireAdminOrNull();
+  const user = await getUser();
 
-  if (!user) {
+  if (!env.ADMIN_USER_ID || user?.id !== env.ADMIN_USER_ID) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
     });
@@ -26,12 +20,6 @@ export const POST = async (req: NextRequest) => {
 
   // Test mode: only send to the admin
   if (isTest) {
-    if (!env.ADMIN_USER_ID) {
-      return new Response(JSON.stringify({ error: "Admin not configured" }), {
-        status: 500,
-      });
-    }
-
     const { data: adminProfile } = await admin
       .from("profiles")
       .select("id, email")
