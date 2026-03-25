@@ -153,12 +153,6 @@ const checkoutSessionCompleted = async (
     })
     .eq("id", profile.id);
 
-  // Restore all channels to active so the user doesn't lose their curated list
-  await supabase
-    .from("subscriptions")
-    .update({ active: true })
-    .eq("user_id", profile.id);
-
   logger.info(`Subscription activated for user: ${profile.id}`);
 
   void captureServerEvent({
@@ -286,14 +280,6 @@ const customerSubscriptionUpdated = async (
       max_channels: isActive ? 999 : SiteConfig.freeChannelsLimit,
     })
     .eq("id", profile.id);
-
-  // Restore all channels when subscription becomes active again
-  if (isActive) {
-    await supabase
-      .from("subscriptions")
-      .update({ active: true })
-      .eq("user_id", profile.id);
-  }
 
   logger.info(
     `Subscription updated: ${subscription.id}, status: ${subscription.status}`,
