@@ -8,6 +8,8 @@ FIX: Referral notification — add email fallback for referrers without Telegram
 FIX: Admin monitoring — at-risk users now includes all Pro users (not Telegram-only); stat card shows platform_connections count instead of telegram_connected
 FIX: Email workflows registry — remove Telegram-specific conditions and conversion metrics; rename activation workflow to "No platform"
 FIX: Worker — create 'web' delivery (status=sent) for users without platform connection so their dashboard feed and daily digest work without Telegram/Discord/Slack
+FIX: Worker — add entitlement check in create_deliveries_for_video: skip deliveries for expired-trial users with more channels than their free plan limit (max_channels)
+CHORE: DB cleanup — deactivate excess subscriptions for 3 expired-trial users (cjuillard7: 522→3, topxl6363: 343→2, alice.rjn1992: 10→3)
 FIX: Backfill — 2418 web deliveries inserted for 13 users who had active subscriptions but no platform connected (last 7 days)
 FEATURE: Summary cards — ⋯ menu moved to absolute top-right corner, speed button stays inline, date format uses Today/Yesterday/DD/MM/YY
 FIX: Summary cards — status label "failed" renamed to "unavailable"
