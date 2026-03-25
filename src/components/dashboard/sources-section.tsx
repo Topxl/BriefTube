@@ -596,47 +596,21 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
                     : status === "paused"
                       ? sources.length - activeCount
                       : null;
-                const isSelected = filterStatus === status;
-                const canBulk = isSelected && status !== "all";
                 return (
                   <button
                     key={status}
-                    onClick={() => {
-                      if (canBulk) {
-                        void handleBulkToggleAll(status as "active" | "paused");
-                      } else {
-                        setFilterStatus(status);
-                      }
-                    }}
-                    className={`group/tab flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium capitalize transition-colors ${
-                      isSelected
+                    onClick={() => setFilterStatus(status)}
+                    className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium capitalize transition-colors ${
+                      filterStatus === status
                         ? "nm-inset text-foreground"
                         : "nm-raised-sm text-muted-foreground/60 hover:text-foreground"
                     }`}
                   >
-                    {canBulk ? (
-                      <>
-                        <span className="group-hover/tab:hidden">
-                          {status}
-                          {count !== null && (
-                            <span className="text-muted-foreground/40 ml-1 tabular-nums">
-                              {count}
-                            </span>
-                          )}
-                        </span>
-                        <span className="hidden group-hover/tab:inline">
-                          {status === "active" ? "Pause all" : "Activate all"}
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        {status}
-                        {count !== null && (
-                          <span className="text-muted-foreground/40 tabular-nums">
-                            {count}
-                          </span>
-                        )}
-                      </>
+                    {status}
+                    {count !== null && (
+                      <span className="text-muted-foreground/40 tabular-nums">
+                        {count}
+                      </span>
                     )}
                   </button>
                 );
@@ -645,6 +619,23 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
           )}
         </div>
       )}
+
+      {/* Bulk toggle — contextual line below toolbar */}
+      {sources.length > 0 &&
+        !isYT &&
+        !anySelected &&
+        filterStatus !== "all" && (
+          <button
+            onClick={() =>
+              void handleBulkToggleAll(filterStatus as "active" | "paused")
+            }
+            className="text-muted-foreground/40 hover:text-foreground -mt-1 w-full text-left text-[11px] transition-colors"
+          >
+            {filterStatus === "active"
+              ? `Pause all ${activeCount} channels`
+              : `Activate all ${sources.length - activeCount} channels`}
+          </button>
+        )}
 
       {/* Active limit banner */}
       {atActiveLimit && (

@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-03-26
+
+REFACTOR: Simplify bulk-action UX in sources section — tabs no longer have hover tricks; contextual "Pause all" / "Activate all" button appears below toolbar instead
+
 ## 2026-03-25
 
 FEATURE: Channels sheet — filter tabs show active/paused counts; hover on selected Active/Paused tab reveals "Pause all" / "Activate all" bulk action (no extra button)
