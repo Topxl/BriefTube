@@ -277,6 +277,7 @@ export async function POST(request: NextRequest) {
       channel_name: finalChannelName,
       channel_avatar_url: finalAvatarUrl,
       active: shouldBeActive,
+      paused_by_system: !shouldBeActive,
     })
     .select()
     .single();
@@ -384,7 +385,7 @@ export async function PATCH(request: NextRequest) {
 
   const { data, error } = await supabase
     .from("subscriptions")
-    .update({ active })
+    .update({ active, paused_by_system: false })
     .eq("id", id)
     .eq("user_id", user.id)
     .select()
@@ -418,7 +419,7 @@ export async function PUT(request: NextRequest) {
   if (action === "pause_all") {
     const { error } = await supabase
       .from("subscriptions")
-      .update({ active: false })
+      .update({ active: false, paused_by_system: false })
       .eq("user_id", user.id);
 
     if (error) {

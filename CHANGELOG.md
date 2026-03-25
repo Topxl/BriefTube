@@ -2,6 +2,9 @@
 
 ## 2026-03-26
 
+FEATURE: Add paused_by_system flag to subscriptions — auto-pause channels when user exceeds free limit (limit: 3), system-paused channels restore automatically when user upgrades to Pro, preserving manual user pauses
+FEATURE: Auto-restore only system-paused channels when Pro subscription is activated (Stripe checkout, subscription update) or admin gift pro — preserves manual user pauses
+FIX: YouTube import — channels come in as system-paused so they restore automatically when user upgrades to Pro
 
 FIX: Worker — delete pending deliveries when subscription is paused or removed after delivery creation (orphaned deliveries were still sent)
 REFACTOR: Sources section — full row clickable for selection; bulk actions in toolbar (All / Play / Pause / Delete); remove separate bulk toggle

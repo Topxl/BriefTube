@@ -162,6 +162,7 @@ export async function GET(request: NextRequest) {
       channel_name: c.channelName,
       channel_avatar_url: c.avatarUrl,
       active: false,
+      paused_by_system: true,
     }));
 
   const skipped = youtubeChannels.length - toImport.length;
