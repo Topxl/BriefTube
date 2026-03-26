@@ -2,6 +2,10 @@
 
 ## 2026-03-26
 
+FIX: Worker Gemini — distinguish rate-limit 429 errors from hard failures; snooze job 30min on rate_limited instead of immediately retrying (thundering herd fix)
+FIX: Worker TTS — snooze job 30min on Edge TTS WebSocket 503 (speech.platform.bing.com outage) instead of counting as failure
+FIX: Worker db.snooze_job — accept minutes param in addition to hours (premiere/TTS/rate-limit use cases)
+
 PERF: Worker audio download — Invidious/Piped tried first before yt-dlp direct clients (avoids guaranteed failures on cloud VPS IP)
 PERF: Worker transcript/audio — shared is_direct_blocked() / mark_direct_blocked() in youtube_utils.py skips direct yt-dlp attempts for 10min after bot detection detection
 
