@@ -495,17 +495,34 @@ def create_deliveries_for_video(video_id: str, channel_id: str, language: str = 
 def get_pending_deliveries(limit: int = 20) -> list[dict]:
     """Get pending deliveries for completed videos.
 
-    Queries deliveries first (tiny set, usually 0-20 rows), then verifies
-    their videos are completed. This is far cheaper than scanning all 16k+
-    completed videos to find the handful of pending deliveries.
+    Strategy: start from completed videos (source of truth) then find pending
+    deliveries for them. This avoids the old approach of taking the oldest
+    pending deliveries (which could all be for not-yet-processed videos,
+    blocking newer deliveries for recently completed ones indefinitely).
     """
     sb = get_client()
 
-    # 1. Fetch pending deliveries directly — small set, indexed on (status, created_at)
+    # 1. Get recently completed video IDs — deliveries can only be sent for these
+    completed_res = (
+        sb.table("processed_videos")
+        .select("video_id")
+        .eq("status", "completed")
+        .order("processed_at", desc=True)
+        .limit(1000)
+        .execute()
+    )
+    completed_ids_list = [r["video_id"] for r in (completed_res.data or [])]
+    if not completed_ids_list:
+        return []
+
+    completed_ids = set(completed_ids_list)
+
+    # 2. Fetch pending deliveries for those completed videos (oldest first)
     raw_deliveries = (
         sb.table("deliveries")
         .select("id, user_id, video_id, language, platform")
         .eq("status", "pending")
+        .in_("video_id", completed_ids_list)
         .order("created_at")
         .limit(limit * 5)
         .execute()
@@ -514,18 +531,6 @@ def get_pending_deliveries(limit: int = 20) -> list[dict]:
 
     if not raw_deliveries:
         return []
-
-    # 2. Verify their videos are actually completed (guard against deliveries created before processing)
-    video_ids = list({d["video_id"] for d in raw_deliveries})
-    completed_res = (
-        sb.table("processed_videos")
-        .select("video_id")
-        .eq("status", "completed")
-        .in_("video_id", video_ids)
-        .execute()
-    )
-    completed_ids = {r["video_id"] for r in (completed_res.data or [])}
-    raw_deliveries = [d for d in raw_deliveries if d["video_id"] in completed_ids]
 
     # Deduplicate by (user_id, video_id, platform) — guard against duplicate delivery rows.
     # Must include platform: one user can have both Telegram and Discord deliveries for the same video.
