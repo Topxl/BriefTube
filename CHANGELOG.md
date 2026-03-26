@@ -2,9 +2,12 @@
 
 ## 2026-03-27
 
+FIX: Add missing @upstash/ratelimit and @upstash/redis dependencies — were imported in rate-limit.ts but not in package.json, causing CI TypeScript and Vercel build failures
+
 FIX: Landing pricing — Plus plan showed Pro price ($9.99) instead of $5 — usePrices type was missing plus/pro fields, landing component used same priceData for both plans
-FIX: Change "Connected" status text to green for all platforms (was using brand colors — red for Slack, purple for Discord)
-FIX: Use multicolor Slack logo (4 official brand colors) when connected instead of monochrome pink
+FIX: Harmonize delivery platform rows — remove colored backgrounds, consistent icon containers, subtle green "Connected" text
+FIX: Use multicolor Slack logo and direct fill for Discord icon (violet #5865F2)
+FIX: Change Telegram button from "Reconnect" to "Disconnect" for consistency
 SEO: Reduce sitemap video pages from 300 to 50 best (summary_length >= 500) — improves crawl budget for young site
 SEO: Change video page schema from VideoObject to Article with wordCount, inLanguage, about.VideoObject — better signals for summary content
 SEO: Create dedicated /youtube-summary landing page — comprehensive page targeting "youtube summary" keyword with FAQPage + SoftwareApplication schema, comparison table, 8 FAQs, audio summaries section
