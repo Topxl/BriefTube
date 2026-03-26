@@ -897,7 +897,9 @@ async def delivery_loop(alert_system: MonitoringAlert):
     _cleanup_counter = 0       # Run delivery cleanup every N cycles
     _recover_counter = 0       # Run delivery recovery every N cycles
     _audio_cleanup_counter = 0  # Run audio file cleanup every N cycles
-    _last_r2_cleanup = datetime.now(timezone.utc)  # R2 audio cleanup (every 6h)
+    # Run first cleanup 5min after startup, then every 2h.
+    # Using epoch-0 ensures the first check (after 5min warmup) triggers immediately.
+    _last_r2_cleanup = datetime.now(timezone.utc) - timedelta(hours=2) + timedelta(minutes=5)
 
     # Persistent HTTP session for audio downloads — reused across all deliveries
     # to avoid the overhead of a new TCP+TLS handshake per audio file.
@@ -1080,12 +1082,12 @@ async def delivery_loop(alert_system: MonitoringAlert):
                 _audio_cleanup_counter = 0
                 cleanup_audio_files(max_age_hours=1)
 
-            # Cleanup stale R2 audio files every 6h (files > 7 days, all delivered)
+            # Cleanup stale R2 audio files every 2h (files > 3 days, all delivered)
             _now = datetime.now(timezone.utc)
-            if (_now - _last_r2_cleanup).total_seconds() >= 6 * 3600:
+            if (_now - _last_r2_cleanup).total_seconds() >= 2 * 3600:
                 _last_r2_cleanup = _now
                 try:
-                    await asyncio.to_thread(_cleanup_stale_r2_audio)
+                    await asyncio.to_thread(_cleanup_stale_r2_audio, 3, 500)
                 except Exception as e:
                     logger.warning(f"R2 audio cleanup error (non-fatal): {e}")
 
