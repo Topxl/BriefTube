@@ -2,8 +2,10 @@
 
 ## 2026-03-26
 
+FEATURE: Worker — OpenRouter fallback summarizer (openrouter_api.py) tried when Gemini is rate-limited or fails; cheap large-context models (Gemini Flash 1.5, Llama 3.1, Mistral 7B)
+FEATURE: Worker TTS — gTTS (Google) fallback when Edge TTS fails; Edge TTS retries 3× with exponential backoff before falling back
+REFACTOR: gemini_api.py — extract build_summary_prompt() and LANGUAGE_NAMES to module-level so OpenRouter reuses same prompt logic
 FIX: Worker Gemini — distinguish rate-limit 429 errors from hard failures; snooze job 30min on rate_limited instead of immediately retrying (thundering herd fix)
-FIX: Worker TTS — snooze job 30min on Edge TTS WebSocket 503 (speech.platform.bing.com outage) instead of counting as failure
 FIX: Worker db.snooze_job — accept minutes param in addition to hours (premiere/TTS/rate-limit use cases)
 
 PERF: Worker audio download — Invidious/Piped tried first before yt-dlp direct clients (avoids guaranteed failures on cloud VPS IP)
