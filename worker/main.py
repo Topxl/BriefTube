@@ -24,6 +24,7 @@ import psutil
 from config import RSS_CHECK_INTERVAL, TELEGRAM_BOT_TOKEN, SUPABASE_URL, ADMIN_TELEGRAM_CHAT_ID, MAX_CONCURRENT_VIDEOS, MAX_CPU_PERCENT, MAX_LOAD_PER_CPU, MIN_FREE_RAM_MB, CPU_CHECK_INTERVAL, HEALTH_PORT, WORKER_INSTANCE, APP_URL, WORKER_API_SECRET, PUSH_NOTIFY_SECRET
 from transcript_extractor import TranscriptExtractor, validate_cookies
 from gemini_api import GeminiSummarizer
+from openrouter_api import OpenRouterSummarizer
 from text_cleaner import clean_for_tts
 from tts_processor import text_to_audio, cleanup_audio_files
 from telegram_deliverer import send_audio_to_user
@@ -328,6 +329,7 @@ async def _process_video(
     job: dict,
     transcript_extractor: TranscriptExtractor,
     gemini_summarizer: GeminiSummarizer,
+    openrouter_summarizer: "OpenRouterSummarizer | None",
     alert_system: MonitoringAlert,
 ) -> None:
     """Process one video job: transcript → Gemini summary → TTS → upload → mark done."""
@@ -521,17 +523,39 @@ async def _process_video(
         )
 
         if not summary:
-            # Transcript too short to summarize — permanent, silent skip (no user notification)
             if summary_error == "transcript_too_short":
                 logger.info(f"[{video_id}] Transcript too short — skipping permanently: {video_title[:80]}")
                 db.fail_job(job["id"], immediate=True)
                 return
-            # Gemini rate-limited (429 / quota) — transient, snooze without counting as failure
-            if summary_error == "rate_limited":
-                logger.warning(f"[{video_id}] Gemini rate limited — snoozed 30min: {video_title[:80]}")
-                db.snooze_job(job["id"], minutes=30)
-                return
-            raise Exception(f"Summary generation failed: {summary_error}")
+
+            # Gemini failed — try OpenRouter as fallback
+            if openrouter_summarizer:
+                logger.warning(
+                    f"[{video_id}] Gemini failed ({summary_error}) — trying OpenRouter fallback"
+                )
+                summary, or_error = await asyncio.to_thread(
+                    openrouter_summarizer.summarize,
+                    transcript=transcript,
+                    source_language=source_lang,
+                    target_language=user_language,
+                )
+                if not summary:
+                    # Both Gemini and OpenRouter failed
+                    if summary_error == "rate_limited" or or_error == "rate_limited":
+                        logger.warning(f"[{video_id}] All summarizers rate-limited — snoozed 30min")
+                        db.snooze_job(job["id"], minutes=30)
+                        return
+                    raise Exception(
+                        f"All summarizers failed: gemini={summary_error}, openrouter={or_error}"
+                    )
+                logger.info(f"[{video_id}] OpenRouter summary: {len(summary)} chars")
+            else:
+                # No OpenRouter — degrade gracefully
+                if summary_error == "rate_limited":
+                    logger.warning(f"[{video_id}] Gemini rate-limited, no OpenRouter — snoozed 30min")
+                    db.snooze_job(job["id"], minutes=30)
+                    return
+                raise Exception(f"Summary generation failed: {summary_error}")
 
         logger.info(f"[{video_id}] Summary: {len(summary)} chars")
         _t_summary = time.monotonic() - _t0 - _t_transcript
@@ -621,12 +645,6 @@ async def _process_video(
     except Exception as e:
         error_msg = str(e)
         logger.error(f"[{video_id}] Error: {error_msg}")
-
-        # Transient TTS outage (Edge TTS WebSocket 503) — snooze without counting as failure
-        if not _video_completed and "speech.platform.bing.com" in error_msg:
-            logger.warning(f"[{video_id}] Edge TTS unavailable (WSS 503) — snoozed 30min: {video_title[:80]}")
-            db.snooze_job(job["id"], minutes=30)
-            return
 
         permanent = db.fail_job(job["id"])
         if not _video_completed:
@@ -732,6 +750,14 @@ async def processor_loop(alert_system: MonitoringAlert):
         logger.error(f"Failed to initialize Gemini: {e}")
         return
 
+    # Initialize OpenRouter (optional fallback — graceful if key missing)
+    openrouter_summarizer = None
+    try:
+        openrouter_summarizer = OpenRouterSummarizer()
+        logger.info("OpenRouter summarizer ready (fallback)")
+    except ValueError:
+        logger.warning("OPENROUTER_API_KEY not set — OpenRouter fallback disabled")
+
     # Semaphore: at most MAX_CONCURRENT_VIDEOS tasks running at once
     semaphore = asyncio.Semaphore(MAX_CONCURRENT_VIDEOS)
 
@@ -758,7 +784,7 @@ async def processor_loop(alert_system: MonitoringAlert):
             async def _do(j: dict) -> None:
                 try:
                     await asyncio.wait_for(
-                        _process_video(j, transcript_extractor, gemini_summarizer, alert_system),
+                        _process_video(j, transcript_extractor, gemini_summarizer, openrouter_summarizer, alert_system),
                         timeout=VIDEO_TIMEOUT,
                     )
                 except asyncio.TimeoutError:

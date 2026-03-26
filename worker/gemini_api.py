@@ -12,6 +12,113 @@ from google.genai.types import GenerateContentConfig
 logger = logging.getLogger(__name__)
 
 
+# Language names for prompts — shared with OpenRouter
+LANGUAGE_NAMES = {
+    'fr': 'français',
+    'en': 'English',
+    'es': 'español',
+    'de': 'Deutsch',
+    'it': 'italiano',
+    'pt': 'português',
+    'nl': 'Nederlands',
+    'pl': 'polski',
+    'ru': 'русский',
+    'ja': '日本語',
+    'ko': '한국어',
+    'zh': '中文',
+    'ar': 'العربية',
+    'hi': 'हिन्दी',
+    'tr': 'Türkçe',
+}
+
+
+def build_summary_prompt(
+    transcript: str,
+    source_language: Optional[str] = None,
+    target_language: str = 'fr',
+) -> str:
+    """Build the prompt for summarization.
+
+    Shared between Gemini and OpenRouter for consistency.
+
+    Args:
+        transcript: Full video transcript text
+        source_language: Language code of the transcript (e.g., 'en', 'fr')
+        target_language: Desired language for the summary (default: 'fr')
+
+    Returns:
+        The complete prompt string
+    """
+    target_lang_name = LANGUAGE_NAMES.get(target_language.lower(), target_language)
+
+    # Determine target summary length based on transcript length.
+    # Never ask for MORE words than the original — that forces hallucination.
+    # Hard cap at AUDIO_MAX_WORDS: beyond this, Gemini would be truncated by
+    # max_output_tokens (4096 ≈ 3000 words) producing a cut mid-sentence.
+    AUDIO_MAX_WORDS = 800  # ~4-5 min at normal speech rate
+    transcript_words = len(transcript.split())
+
+    if transcript_words < 150:
+        # Very short video — keep 60-80% of original, never exceed it
+        min_words = max(30, int(transcript_words * 0.6))
+        max_words = int(transcript_words * 0.9)
+    elif transcript_words < 500:
+        min_words = int(transcript_words * 0.4)
+        max_words = int(transcript_words * 0.7)
+    else:
+        min_words = int(transcript_words * 0.25)
+        max_words = int(transcript_words * 0.5)
+
+    # Apply audio cap — prevent requesting more words than Gemini can output
+    min_words = min(min_words, AUDIO_MAX_WORDS)
+    max_words = min(max_words, AUDIO_MAX_WORDS)
+    length_guidance = f"about {min_words}-{max_words} words"
+
+    # Long-content flag: transcript > ~30 min (4500 words) → instruct Gemini
+    # to be selective rather than exhaustive
+    is_long_content = transcript_words > 4500
+
+    # Build prompt — no video URL: providing it lets Gemini use its training
+    # knowledge about the video instead of strictly following the transcript.
+    if source_language and source_language != target_language:
+        source_lang_name = LANGUAGE_NAMES.get(source_language.lower(), source_language)
+        intro = (
+            f"You are an assistant that summarizes YouTube videos.\n"
+            f"The transcript below comes from a video in {source_lang_name}.\n"
+            f"You must produce the summary in {target_lang_name}.\n\n"
+        )
+    else:
+        intro = (
+            f"You are an assistant that summarizes YouTube videos.\n"
+            f"Produce a summary in {target_lang_name} of the transcript below.\n\n"
+        )
+
+    selectivity_instruction = (
+        "2. This transcript is long: be highly selective. "
+        "Retain only the key insights, important decisions, and main conclusions. "
+        "Discard digressions, minor anecdotes, ads, and repetitions.\n"
+        if is_long_content
+        else "2. Capture the key points and main ideas from the transcript.\n"
+    )
+
+    prompt_parts = [
+        intro,
+        "ABSOLUTE RULE: base yourself ONLY on the provided transcript. "
+        "Do not use any external knowledge about this video or topic. "
+        "If the transcript is ambiguous or incomplete, summarize what is present without inventing.\n\n"
+        "Instructions:\n"
+        f"1. Summary of {length_guidance} — NEVER exceed this limit\n"
+        + selectivity_instruction +
+        "3. Avoid repetitions and filler.\n"
+        "4. Natural and direct tone, suitable for audio listening.\n"
+        f"5. Output language: {target_lang_name} — mandatory\n\n"
+        f"Transcript:\n{transcript}\n\n"
+        f"Summary in {target_lang_name} ({length_guidance}):"
+    ]
+
+    return "".join(prompt_parts)
+
+
 class GeminiSummarizer:
     """
     Summarizes video transcripts using Gemini 3 API
@@ -27,25 +134,6 @@ class GeminiSummarizer:
         "gemini-2.0-flash",        # Stable fallback
     ]
 
-    # Language names for prompts
-    LANGUAGE_NAMES = {
-        'fr': 'français',
-        'en': 'English',
-        'es': 'español',
-        'de': 'Deutsch',
-        'it': 'italiano',
-        'pt': 'português',
-        'nl': 'Nederlands',
-        'pl': 'polski',
-        'ru': 'русский',
-        'ja': '日本語',
-        'ko': '한국어',
-        'zh': '中文',
-        'ar': 'العربية',
-        'hi': 'हिन्दी',
-        'tr': 'Türkçe',
-    }
-
     def __init__(self, api_key: Optional[str] = None):
         """
         Initialize Gemini API client
@@ -59,10 +147,6 @@ class GeminiSummarizer:
 
         self.client = genai.Client(api_key=self.api_key)
         logger.info("Gemini API client initialized")
-
-    def _get_language_name(self, lang_code: str) -> str:
-        """Get full language name from code"""
-        return self.LANGUAGE_NAMES.get(lang_code.lower(), lang_code)
 
     def summarize(
         self,
@@ -90,75 +174,7 @@ class GeminiSummarizer:
         if not transcript or len(transcript.strip()) < 50:
             return None, "transcript_too_short"
 
-        # Build the prompt
-        target_lang_name = self._get_language_name(target_language)
-
-        # Determine target summary length based on transcript length.
-        # Never ask for MORE words than the original — that forces hallucination.
-        # Hard cap at AUDIO_MAX_WORDS: beyond this, Gemini would be truncated by
-        # max_output_tokens (4096 ≈ 3000 words) producing a cut mid-sentence.
-        AUDIO_MAX_WORDS = 800  # ~4-5 min at normal speech rate
-        transcript_words = len(transcript.split())
-
-        if transcript_words < 150:
-            # Very short video — keep 60-80% of original, never exceed it
-            min_words = max(30, int(transcript_words * 0.6))
-            max_words = int(transcript_words * 0.9)
-        elif transcript_words < 500:
-            min_words = int(transcript_words * 0.4)
-            max_words = int(transcript_words * 0.7)
-        else:
-            min_words = int(transcript_words * 0.25)
-            max_words = int(transcript_words * 0.5)
-
-        # Apply audio cap — prevent requesting more words than Gemini can output
-        min_words = min(min_words, AUDIO_MAX_WORDS)
-        max_words = min(max_words, AUDIO_MAX_WORDS)
-        length_guidance = f"about {min_words}-{max_words} words"
-
-        # Long-content flag: transcript > ~30 min (4500 words) → instruct Gemini
-        # to be selective rather than exhaustive
-        is_long_content = transcript_words > 4500
-
-        # Build prompt — no video URL: providing it lets Gemini use its training
-        # knowledge about the video instead of strictly following the transcript.
-        if source_language and source_language != target_language:
-            source_lang_name = self._get_language_name(source_language)
-            intro = (
-                f"You are an assistant that summarizes YouTube videos.\n"
-                f"The transcript below comes from a video in {source_lang_name}.\n"
-                f"You must produce the summary in {target_lang_name}.\n\n"
-            )
-        else:
-            intro = (
-                f"You are an assistant that summarizes YouTube videos.\n"
-                f"Produce a summary in {target_lang_name} of the transcript below.\n\n"
-            )
-
-        selectivity_instruction = (
-            "2. This transcript is long: be highly selective. "
-            "Retain only the key insights, important decisions, and main conclusions. "
-            "Discard digressions, minor anecdotes, ads, and repetitions.\n"
-            if is_long_content
-            else "2. Capture the key points and main ideas from the transcript.\n"
-        )
-
-        prompt_parts = [
-            intro,
-            "ABSOLUTE RULE: base yourself ONLY on the provided transcript. "
-            "Do not use any external knowledge about this video or topic. "
-            "If the transcript is ambiguous or incomplete, summarize what is present without inventing.\n\n"
-            "Instructions:\n"
-            f"1. Summary of {length_guidance} — NEVER exceed this limit\n"
-            + selectivity_instruction +
-            "3. Avoid repetitions and filler.\n"
-            "4. Natural and direct tone, suitable for audio listening.\n"
-            f"5. Output language: {target_lang_name} — mandatory\n\n"
-            f"Transcript:\n{transcript}\n\n"
-            f"Summary in {target_lang_name} ({length_guidance}):"
-        ]
-
-        prompt = "".join(prompt_parts)
+        prompt = build_summary_prompt(transcript, source_language, target_language)
 
         # Try models in order
         models_to_try = [model] if model else self.MODELS
