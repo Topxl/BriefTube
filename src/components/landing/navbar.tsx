@@ -16,6 +16,7 @@ export function Navbar() {
             alt="BriefTube"
             width={32}
             height={32}
+            priority
             suppressHydrationWarning
           />
           <span className="text-lg font-semibold">BriefTube</span>

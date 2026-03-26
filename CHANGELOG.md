@@ -2,6 +2,9 @@
 
 ## 2026-03-26
 
+PERF: Dashboard streaming — page shell renders immediately after auth; 3 async Server Components (DashboardBanners, ChannelsSheetSection, FeedSection) load in parallel via Suspense + React.cache; FCP near-instant instead of 5.87s
+PERF: ChannelsSheet — remove forceMount, sheet content not rendered in DOM until opened
+PERF: Navbar + DashboardNav — add priority to logo image for LCP preloading
 FIX: Worker R2 cleanup — reduce retention 7d→3d, batch 100→500, interval 6h→2h, run 5min after startup; cleanup never ran before (6h timer reset on every worker restart)
 FIX: Worker RSS/Whisper music detection — add "(Official Audio)" and "- Topic" patterns to skip Kendrick-style single tracks without transcript
 FIX: Worker RSS scanner — add MAX_VIDEO_AGE_DAYS=15 filter to skip videos published more than 15 days ago; prevents old RSS entries from being queued when new subscribers join a slow-posting channel

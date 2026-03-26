@@ -36,7 +36,6 @@ export function ChannelsSheet({ initialSources, maxChannels, isPro }: Props) {
         </Button>
       </SheetTrigger>
       <SheetContent
-        forceMount
         showCloseButton={false}
         side={isMobile ? "bottom" : "right"}
         className={

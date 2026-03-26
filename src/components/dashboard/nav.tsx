@@ -61,6 +61,7 @@ export function DashboardNav() {
                 alt="BriefTube"
                 width={30}
                 height={30}
+                priority
                 suppressHydrationWarning
               />
               <span className="hidden text-sm font-semibold sm:inline">
