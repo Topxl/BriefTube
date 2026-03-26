@@ -2,6 +2,8 @@
 
 ## 2026-03-26
 
+FIX: OG trajet ad — replace unsupported Satori CSS (textDecoration, textDecorationColor, textDecorationThickness, textUnderlineOffset) with red overlay strikethrough div
+CHORE: Delete outdated public assets — hero.png (old purple design), logo-ads-*.png (old white-bg logos), next.svg, vercel.svg (boilerplate)
 FEAT: OG ad images — add Google Ads formats g-square (1200×1200) and g-portrait (960×1200) to before-after, stat, telegram routes
 REFACTOR: OG images — extract shared loadLogoBase64() + OG_BARS helpers into src/lib/og.ts; update all 4 routes to use shared helper
 FIX: OG ad images — replace "Telegram" references with "Telegram, Discord or Slack" / "listening in your app" across before-after, stat, telegram routes
@@ -21,6 +23,7 @@ REFACTOR: gemini_api.py — extract build_summary_prompt() and LANGUAGE_NAMES to
 FIX: Worker Gemini — distinguish rate-limit 429 errors from hard failures; snooze job 30min on rate_limited instead of immediately retrying (thundering herd fix)
 FIX: Worker db.snooze_job — accept minutes param in addition to hours (premiere/TTS/rate-limit use cases)
 
+FIX: Worker audio proxy fallback — switch player client ios+mweb → tv_embedded for Webshare proxy step; ios/mweb return no formats through datacenter proxies, tv_embedded achieves 100% success on all restricted videos
 FIX: Worker geo-restriction detection — extend "your country" check to also match "this country", "national security", "government" patterns; government-blocked videos now marked geo_restricted permanently instead of retrying forever
 FIX: Worker delivery loop — add missing timedelta import in main.py (delivery task crashed every ~65s since R2 cleanup was added)
 FIX: Worker yt-dlp — switch format to bestaudio/best (was bitrate-constrained) and player clients to ios+mweb (2026 recommended pair); add bgutil-ytdlp-pot-provider PO token plugin to bypass YouTube bot-detection on restricted videos

@@ -235,7 +235,7 @@ class WhisperTranscriber:
                 'noprogress': True,
                 'nocheckcertificate': True,
                 'max_filesize': 150 * 1024 * 1024,
-                'extractor_args': {'youtube': {'player_client': ['ios', 'mweb']}},
+                'extractor_args': {'youtube': {'player_client': ['tv_embedded']}},
                 'proxy': http_proxy,
             }
             if _cookies_file.exists():
