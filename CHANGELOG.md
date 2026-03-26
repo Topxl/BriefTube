@@ -2,6 +2,7 @@
 
 ## 2026-03-26
 
+FEAT: OG image — full redesign with real logo, "Stop watching. Start listening." tagline, two-column layout (headline + platform badges / mock audio card with waveform), red glows, matches site style
 PERF: Dashboard streaming — page shell renders immediately after auth; 3 async Server Components (DashboardBanners, ChannelsSheetSection, FeedSection) load in parallel via Suspense + React.cache; FCP near-instant instead of 5.87s
 PERF: ChannelsSheet — remove forceMount, sheet content not rendered in DOM until opened
 PERF: Navbar + DashboardNav — add priority to logo image for LCP preloading
