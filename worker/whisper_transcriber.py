@@ -70,9 +70,26 @@ class WhisperTranscriber:
         """
         _cookies_file = Path(__file__).parent / "cookies" / "youtube.txt"
 
-        # Skip direct yt-dlp attempts if the VPS IP is known to be blocked.
-        # Pre-checks + downloads would all fail with bot detection — waste of time.
-        # Go straight to Invidious → Piped → proxy (paid) instead.
+        # ── Step 1: Invidious (free, fast, no proxy bandwidth) ──────────────────
+        # Tried first because it works reliably and avoids yt-dlp's bot detection
+        # dance entirely. Only falls through to yt-dlp if Invidious is down.
+        video_id = urllib.parse.parse_qs(urllib.parse.urlparse(youtube_url).query).get("v", [""])[0]
+        if not video_id and "youtu.be/" in youtube_url:
+            video_id = youtube_url.split("youtu.be/")[-1].split("?")[0]
+        if video_id:
+            inv_result = self._download_audio_via_invidious(video_id, output_path)
+            if inv_result is True:
+                return True
+            if inv_result == "live":
+                return "live"
+
+            # ── Step 2: Piped (second free proxy, different infrastructure) ───
+            piped_result = self._download_audio_via_piped(video_id, output_path)
+            if piped_result is True:
+                return True
+
+        # ── Step 3: yt-dlp direct clients ────────────────────────────────────
+        # Skip if the VPS IP is known to be blocked — all clients would fail.
         _skip_direct = is_direct_blocked()
         if _skip_direct:
             logger.debug("Audio download: IP known blocked — skipping direct clients")
@@ -199,26 +216,7 @@ class WhisperTranscriber:
                 logger.error(f"Error downloading audio: {e}")
                 return False
 
-        # All player clients exhausted — try free proxies before paid proxy
-        video_id = urllib.parse.parse_qs(urllib.parse.urlparse(youtube_url).query).get("v", [""])[0]
-        if not video_id and "youtu.be/" in youtube_url:
-            video_id = youtube_url.split("youtu.be/")[-1].split("?")[0]
-        if video_id:
-            # Try Invidious first (free YouTube proxy)
-            inv_result = self._download_audio_via_invidious(video_id, output_path)
-            if inv_result is True:
-                return True
-            if inv_result == "live":
-                return "live"
-
-            # Try Piped as second free proxy
-            piped_result = self._download_audio_via_piped(video_id, output_path)
-            if piped_result is True:
-                return True
-            if piped_result == "live":
-                return "live"
-
-        # Last resort: paid proxy (bandwidth cost)
+        # ── Step 4: paid proxy — last resort (bandwidth cost) ───────────────────
         http_proxy = os.environ.get("YOUTUBE_PROXY_HTTP", "")
         if http_proxy:
             logger.info(
