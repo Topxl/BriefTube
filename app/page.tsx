@@ -40,18 +40,18 @@ const Footer = dynamic(async () =>
 export const metadata: Metadata = {
   title: {
     absolute:
-      "BriefTube | YouTube Summaries as Audio for Telegram, Discord & Slack",
+      "BriefTube — Automatic YouTube Summary App | Audio delivered to Telegram, Discord & Slack",
   },
   description:
-    "BriefTube monitors your YouTube channels and delivers a short audio summary for every new video, straight to Telegram, Discord or Slack. Free for up to 5 channels. No watching required.",
+    "BriefTube is an automatic YouTube summary app. Get an AI-generated audio summary of every new video from your channels, delivered to Telegram, Discord or Slack within 30 minutes. Free for 5 channels.",
   alternates: {
     canonical: SiteConfig.prodUrl,
   },
   openGraph: {
     title:
-      "BriefTube | YouTube Summaries as Audio for Telegram, Discord & Slack",
+      "BriefTube — Automatic YouTube Summary App | Audio delivered to Telegram, Discord & Slack",
     description:
-      "Stop falling behind on your YouTube channels. BriefTube turns every new video into a short audio brief and delivers it automatically to Telegram, Discord or Slack. Free for 5 channels.",
+      "Stop falling behind on your YouTube channels. BriefTube turns every new video into a short audio summary and delivers it automatically to Telegram, Discord or Slack. Free for 5 channels.",
     images: [
       {
         url: "/opengraph-image",
@@ -63,9 +63,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     title:
-      "BriefTube | YouTube Summaries as Audio for Telegram, Discord & Slack",
+      "BriefTube — Automatic YouTube Summary App | Audio delivered to Telegram, Discord & Slack",
     description:
-      "Stop falling behind on your YouTube channels. BriefTube turns every new video into a short audio brief and delivers it automatically to Telegram, Discord or Slack. Free for 5 channels.",
+      "Stop falling behind on your YouTube channels. BriefTube turns every new video into a short audio summary and delivers it automatically to Telegram, Discord or Slack. Free for 5 channels.",
   },
 };
 
@@ -98,6 +98,14 @@ const jsonLd = [
         price: "0",
         priceCurrency: "USD",
         name: "Free",
+        availability: "https://schema.org/InStock",
+        url: `${SiteConfig.prodUrl}/pricing`,
+      },
+      {
+        "@type": "Offer",
+        price: "5",
+        priceCurrency: "USD",
+        name: "Plus",
         availability: "https://schema.org/InStock",
         url: `${SiteConfig.prodUrl}/pricing`,
       },

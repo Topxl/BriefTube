@@ -1,7 +1,30 @@
 # Changelog
 
+## 2026-03-27
+
+FIX: Landing pricing — Plus plan showed Pro price ($9.99) instead of $5 — usePrices type was missing plus/pro fields, landing component used same priceData for both plans
+FIX: Change "Connected" status text to green for all platforms (was using brand colors — red for Slack, purple for Discord)
+FIX: Use multicolor Slack logo (4 official brand colors) when connected instead of monochrome pink
+SEO: Reduce sitemap video pages from 300 to 50 best (summary_length >= 500) — improves crawl budget for young site
+SEO: Change video page schema from VideoObject to Article with wordCount, inLanguage, about.VideoObject — better signals for summary content
+SEO: Create dedicated /youtube-summary landing page — comprehensive page targeting "youtube summary" keyword with FAQPage + SoftwareApplication schema, comparison table, 8 FAQs, audio summaries section
+SEO: Add blog article "The Best YouTube Summary App in 2026" — targets "youtube summary app", "automatic youtube summary", "best youtube summarizer" long-tail keywords
+SEO: Update video page titles from "AI Summary" to "YouTube Summary" — applies to hundreds of programmatic video pages
+SEO: Add /youtube-summary to sitemap with 2026-03-27 lastModified
+SEO: Add "YouTube Summary" link to footer Product section + new Resources section (Blog, Comparisons, Channels)
+SEO: Update homepage title and description to explicitly target "youtube summary app" keyword
+
 ## 2026-03-26
 
+FEAT: Add Plus tier ($5/month, 50 channels) — new pricing card, Stripe checkout support, env vars, JSON-LD schema, landing + pricing pages
+FEAT: Increase free plan limit from 5 to 10 channels — site config, all locales, metadata, JSON-LD, emails, blog, comparisons, llms.txt, bot
+CRO: Annual discount messaging 27% → 33% ("2 months free") across landing, pricing cards, upsell modal
+CRO: Landing page CTAs — "Get my summaries for free" → "Start listening for free", "Try without signing up" → "See a live example"
+CRO: Move social proof stats into hero section (above the fold)
+CRO: Upsell modal — title "You've outgrown the free plan", value-oriented feature copy, "Unlock unlimited channels" CTA
+CRO: Cancel flow — improved save offer copy, "pause channels" alternative, updated delivery platform labels
+FIX: OG fomo ad — channel names overflowing/wrapping (fontSize 24→15, whiteSpace nowrap, 3-column grid, flexGrow on rows for square/portrait)
+CHORE: Translate all 8 new OG ad routes to English (liste-sans-fin, trajet, avantage, transformation, multitache, fomo, chiffre-choc); recapture all 24 Google Ads previews
 FIX: OG trajet ad — replace unsupported Satori CSS (textDecoration, textDecorationColor, textDecorationThickness, textUnderlineOffset) with red overlay strikethrough div
 CHORE: Delete outdated public assets — hero.png (old purple design), logo-ads-*.png (old white-bg logos), next.svg, vercel.svg (boilerplate)
 FEAT: OG ad images — add Google Ads formats g-square (1200×1200) and g-portrait (960×1200) to before-after, stat, telegram routes

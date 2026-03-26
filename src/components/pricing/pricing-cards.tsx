@@ -8,9 +8,22 @@ import { logger } from "@/lib/logger";
 
 type Interval = "month" | "year";
 
+type PriceInfo = {
+  amount: number;
+  currency: string;
+};
+
 type PricesData = {
-  monthly: { amount: number; currency: string };
-  annual: { amount: number; currency: string };
+  monthly: PriceInfo;
+  annual: PriceInfo;
+  plus?: {
+    monthly: PriceInfo;
+    annual: PriceInfo | null;
+  } | null;
+  pro?: {
+    monthly: PriceInfo;
+    annual: PriceInfo;
+  };
 };
 
 type Props = {
@@ -22,6 +35,13 @@ const FREE_FEATURES = [
   "5 YouTube channels",
   "AI audio summaries",
   "Telegram, Discord & Slack",
+];
+
+const PLUS_FEATURES = [
+  "50 YouTube channels",
+  "AI audio summaries",
+  "Telegram, Discord & Slack",
+  "Priority processing",
 ];
 
 const PRO_FEATURES = [
@@ -56,19 +76,38 @@ export function PricingCards({ isLoggedIn, isPro }: Props) {
       .catch((err) => logger.error("Failed to fetch price:", err));
   }, []);
 
-  const priceData = prices
+  const proPriceData = prices?.pro
     ? interval === "year"
-      ? prices.annual
-      : prices.monthly
+      ? prices.pro.annual
+      : prices.pro.monthly
+    : prices
+      ? interval === "year"
+        ? prices.annual
+        : prices.monthly
+      : null;
+
+  const plusPriceData = prices?.plus
+    ? interval === "year"
+      ? prices.plus.annual
+      : prices.plus.monthly
     : null;
 
-  const displayPrice = priceData
-    ? formatCurrency(priceData.amount, priceData.currency)
+  const displayProPrice = proPriceData
+    ? formatCurrency(proPriceData.amount, proPriceData.currency)
     : null;
 
-  const annualMonthlyEquiv =
-    prices && interval === "year"
-      ? Math.round(prices.annual.amount / 12 / 100)
+  const displayPlusPrice = plusPriceData
+    ? formatCurrency(plusPriceData.amount, plusPriceData.currency)
+    : null;
+
+  const proAnnualMonthlyEquiv =
+    proPriceData && interval === "year"
+      ? Math.round(proPriceData.amount / 12 / 100)
+      : null;
+
+  const plusAnnualMonthlyEquiv =
+    plusPriceData && interval === "year"
+      ? Math.round(plusPriceData.amount / 12 / 100)
       : null;
 
   return (
@@ -111,7 +150,7 @@ export function PricingCards({ isLoggedIn, isPro }: Props) {
         )}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-3">
         {/* Free Plan */}
         <div className="nm-raised overflow-hidden rounded-2xl">
           <div className="border-b border-white/[0.04] px-5 py-5">
@@ -149,6 +188,72 @@ export function PricingCards({ isLoggedIn, isPro }: Props) {
           </div>
         </div>
 
+        {/* Plus Plan */}
+        <div className="nm-raised overflow-hidden rounded-2xl">
+          <div className="border-b border-white/[0.04] px-5 py-5">
+            <p className="text-sm font-semibold tracking-wide uppercase">
+              Plus
+            </p>
+            <div className="mt-3 flex items-baseline gap-1">
+              {displayPlusPrice ? (
+                <>
+                  <span className="text-4xl font-bold">
+                    {displayPlusPrice.symbol}
+                    {displayPlusPrice.formatted}
+                  </span>
+                  <span className="text-muted-foreground text-sm">
+                    /{interval === "year" ? "year" : "month"}
+                  </span>
+                </>
+              ) : (
+                <span className="text-muted-foreground text-sm">Loading…</span>
+              )}
+            </div>
+            {plusAnnualMonthlyEquiv !== null && (
+              <p className="text-muted-foreground mt-1 text-xs">
+                Billed annually — equivalent to ${plusAnnualMonthlyEquiv}/month
+              </p>
+            )}
+          </div>
+          <div className="px-5 py-4">
+            <ul className="space-y-2.5">
+              {PLUS_FEATURES.map((f) => (
+                <li key={f} className="flex items-center gap-2 text-sm">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+                  {f}
+                </li>
+              ))}
+            </ul>
+            {isLoggedIn ? (
+              <form
+                action="/api/stripe/checkout"
+                method="POST"
+                data-form-type="other"
+                suppressHydrationWarning
+              >
+                <input type="hidden" name="interval" value={interval} />
+                <input type="hidden" name="plan" value="plus" />
+                <input type="hidden" name="referral" value={referral} />
+                <Button
+                  type="submit"
+                  className="mt-5 w-full rounded-full"
+                  variant="outline"
+                >
+                  Go Plus
+                </Button>
+              </form>
+            ) : (
+              <Button
+                asChild
+                className="mt-5 w-full rounded-full"
+                variant="outline"
+              >
+                <a href="/login">Start Plus Trial</a>
+              </Button>
+            )}
+          </div>
+        </div>
+
         {/* Pro Plan */}
         <div className="nm-raised relative overflow-hidden rounded-2xl border border-red-500/[0.12]">
           <div className="absolute -top-3 left-1/2 -translate-x-1/2">
@@ -159,11 +264,11 @@ export function PricingCards({ isLoggedIn, isPro }: Props) {
           <div className="border-b border-white/[0.04] px-5 pt-7 pb-5">
             <p className="text-sm font-semibold tracking-wide uppercase">Pro</p>
             <div className="mt-3 flex items-baseline gap-1">
-              {displayPrice ? (
+              {displayProPrice ? (
                 <>
                   <span className="text-4xl font-bold">
-                    {displayPrice.symbol}
-                    {displayPrice.formatted}
+                    {displayProPrice.symbol}
+                    {displayProPrice.formatted}
                   </span>
                   <span className="text-muted-foreground text-sm">
                     /{interval === "year" ? "year" : "month"}
@@ -173,9 +278,9 @@ export function PricingCards({ isLoggedIn, isPro }: Props) {
                 <span className="text-muted-foreground text-sm">Loading…</span>
               )}
             </div>
-            {annualMonthlyEquiv !== null && (
+            {proAnnualMonthlyEquiv !== null && (
               <p className="text-muted-foreground mt-1 text-xs">
-                Billed annually — equivalent to ${annualMonthlyEquiv}/month
+                Billed annually — equivalent to ${proAnnualMonthlyEquiv}/month
               </p>
             )}
           </div>

@@ -29,17 +29,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return { title: SiteConfig.title };
   }
 
-  const description = `AI-generated summary of "${video.video_title}". Get the key insights without watching the full video.`;
+  const description = `YouTube summary of "${video.video_title}". Get the key insights without watching the full video — AI-generated audio summary by BriefTube.`;
 
   return {
-    title: `${video.video_title} — AI Summary`,
+    title: `${video.video_title} — YouTube Summary`,
     description,
     alternates: {
       canonical: `${SiteConfig.prodUrl}/videos/${video_id}`,
     },
     openGraph: {
       type: "article",
-      title: `${video.video_title} — AI Summary`,
+      title: `${video.video_title} — YouTube Summary`,
       description,
       url: `${SiteConfig.prodUrl}/videos/${video_id}`,
       images: [
@@ -53,7 +53,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
     twitter: {
       card: "summary_large_image",
-      title: `${video.video_title} — AI Summary`,
+      title: `${video.video_title} — YouTube Summary`,
       description,
       images: [`https://img.youtube.com/vi/${video_id}/hqdefault.jpg`],
     },
@@ -95,17 +95,23 @@ export default async function VideoPage({ params }: Props) {
       })
     : null;
 
+  const summaryText = video.summary ?? "";
+  const wordCount = summaryText.split(/\s+/).filter(Boolean).length;
+
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "VideoObject",
-    name: video.video_title,
-    description: video.summary?.slice(0, 200),
-    thumbnailUrl: `https://img.youtube.com/vi/${video_id}/hqdefault.jpg`,
-    uploadDate: video.created_at
+    "@type": "Article",
+    headline: video.video_title,
+    description: summaryText.slice(0, 200),
+    image: `https://img.youtube.com/vi/${video_id}/hqdefault.jpg`,
+    datePublished: video.created_at
       ? new Date(video.created_at).toISOString()
       : new Date().toISOString(),
-    embedUrl: `https://www.youtube.com/embed/${video_id}`,
-    contentUrl: `https://youtu.be/${video_id}`,
+    author: {
+      "@type": "Organization",
+      name: "BriefTube",
+      url: SiteConfig.prodUrl,
+    },
     publisher: {
       "@type": "Organization",
       name: "BriefTube",
@@ -115,6 +121,20 @@ export default async function VideoPage({ params }: Props) {
         url: `${SiteConfig.prodUrl}/logo-120.png`,
       },
     },
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": `${SiteConfig.prodUrl}/videos/${video_id}`,
+    },
+    about: {
+      "@type": "VideoObject",
+      name: video.video_title,
+      thumbnailUrl: `https://img.youtube.com/vi/${video_id}/hqdefault.jpg`,
+      embedUrl: `https://www.youtube.com/embed/${video_id}`,
+      contentUrl: `https://youtu.be/${video_id}`,
+    },
+    wordCount,
+    articleSection: "YouTube Summary",
+    inLanguage: video.language || "en",
   };
 
   const breadcrumbLd = {

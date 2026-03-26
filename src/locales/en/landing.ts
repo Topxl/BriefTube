@@ -20,8 +20,8 @@ export const landing = {
     headingHighlight: "without watching a single video",
     subtitle:
       "Add your channels, and BriefTube handles the rest. Every new upload gets summarized by AI and turned into a short audio file. Listen from the dashboard, subscribe as a private podcast, or get it pushed to Telegram, Discord, or Slack.",
-    ctaPrimary: "Get my summaries for free",
-    ctaSecondary: "Try without signing up",
+    ctaPrimary: "Start listening for free",
+    ctaSecondary: "See a live example",
     socialProof: "No credit card · Cancel anytime · 7-day Pro trial",
     mockupBotRole: "bot",
     mockupVideo1Channel: "TED",
@@ -140,6 +140,19 @@ export const landing = {
         ],
         cta: "Start Free",
       },
+      plus: {
+        name: "Plus",
+        description:
+          "For creators and professionals who follow dozens of channels.",
+        features: [
+          "50 YouTube channels",
+          "AI audio summaries",
+          "Dashboard + podcast RSS feed",
+          "Telegram, Discord & Slack",
+          "Priority processing",
+        ],
+        cta: "Go Plus",
+      },
       pro: {
         name: "Pro",
         description:
@@ -189,7 +202,7 @@ export const landing = {
   finalCta: {
     heading: "Takes about 2 minutes to set up",
     subtitle: `Free for up to ${FREE} channels. No credit card, no commitment.`,
-    ctaPrimary: "Sign Up Free",
+    ctaPrimary: "Start listening for free",
     loginText: "Already have an account?",
     loginLink: "Log in",
   },

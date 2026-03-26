@@ -10,6 +10,86 @@ export type Article = {
 
 export const articles: Article[] = [
   {
+    slug: "best-youtube-summary-app-2026",
+    title:
+      "The Best YouTube Summary App in 2026 (Automatic, Audio, Zero Effort)",
+    description:
+      "Most YouTube summary tools require you to paste a URL manually, every time. There is a better way. Here's how automatic YouTube summaries work and which tool actually delivers.",
+    date: "2026-03-20",
+    readingTime: "7 min read",
+    category: "Tools",
+    content: `<p>You have 40 YouTube channels subscribed. You actually follow 3. The other 37 sit in your feed, publishing videos you'll never watch, adding to a guilt-inducing backlog that grows faster than you can clear it.</p>
+
+<p>The obvious fix is a YouTube summary tool. Paste the URL, get the key points, move on. But after using every major option available in 2026, I can tell you: most of them are solving the wrong problem. They save you time on the videos you manually choose to summarize. They don't solve the problem of not knowing what to watch in the first place.</p>
+
+<h2>The problem with manual YouTube summary tools</h2>
+
+<p>Tools like Eightify, Kagi Summarizer, Glasp, and TubeOnAI work the same way: you paste a YouTube URL, they return a summary. Simple, functional, fine for one-off videos.</p>
+
+<p>But think about what that workflow actually looks like in practice. You open YouTube. You see a Fireship video you might want to summarize. You copy the URL. You open the summary tool tab. You paste the URL. You wait. You read the summary. You decide whether to watch the full thing.</p>
+
+<p>That's 8 steps per video. Multiply by the 60 new videos your subscriptions publish per week. You've replaced one problem (watching too many videos) with a different problem (manually processing too many URLs). Most people do this twice, then forget the tool exists.</p>
+
+<h2>What automatic YouTube summaries look like instead</h2>
+
+<p>BriefTube works differently. You add channels to your dashboard once — the same channels you already follow on YouTube. From that point forward, every new video from those channels gets summarized automatically, converted to audio, and delivered to wherever you already spend time: Telegram, Discord, Slack, or a private podcast feed.</p>
+
+<p>No URL to paste. No tab to open. No manual step of any kind. A new Lex Fridman episode drops. Within 30 minutes, a 5-minute audio summary is in your Telegram. You listen while walking to the kitchen. That's the whole workflow.</p>
+
+<h2>The YouTube summary tools compared</h2>
+
+<h3>BriefTube — best for automatic, multi-channel coverage</h3>
+
+<p>The only automatic YouTube summary tool that covers your entire subscription list. Monitors channels via RSS, generates summaries with Google Gemini, converts to audio with neural TTS, delivers to Telegram/Discord/Slack/podcast. Free for 5 channels. Pro plan removes all channel limits.</p>
+
+<p>What it does that no other tool does: <strong>you never have to initiate anything</strong>. Every new video is summarized whether you remember to check or not.</p>
+
+<p>What it doesn't do: it doesn't work retroactively on old videos (only new uploads). It's built for ongoing monitoring, not on-demand summarization of individual videos.</p>
+
+<h3>Eightify — best for one-off video summaries</h3>
+
+<p>Chrome extension that adds a summary panel to the YouTube page. Clean UI, solid summaries, reasonable free tier. Good if you're already on YouTube and want to quickly decide whether a video is worth watching. Requires manual action every time. No audio, no delivery, no channel monitoring.</p>
+
+<h3>Kagi Summarizer — best for research and one-time use</h3>
+
+<p>Paste any URL (YouTube, articles, PDFs) and get a summary. High-quality output, especially for technical content. Requires a Kagi subscription. No automatic monitoring, no audio, no ongoing coverage.</p>
+
+<h3>Glasp — best for highlights and note-taking</h3>
+
+<p>More of a reading and research tool than a pure YouTube summarizer. Good for saving and annotating video content. Requires manual action per video. No audio, no automatic delivery.</p>
+
+<h3>TubeOnAI — best for mobile-first manual use</h3>
+
+<p>iOS/Android app for summarizing YouTube videos manually. Good mobile experience. Same limitation as every manual tool: you have to initiate each summary yourself.</p>
+
+<h2>How to choose the right YouTube summary tool</h2>
+
+<p>The question isn't which tool has the best summary quality — they're all reasonably good. The question is: what's your actual use case?</p>
+
+<p><strong>If you follow many channels and want to stay up to date without manual effort</strong> → BriefTube. You set it up once and forget it. Summaries arrive automatically.</p>
+
+<p><strong>If you occasionally stumble across a video and want a quick summary</strong> → Eightify or Kagi. Fast, lightweight, no commitment.</p>
+
+<p><strong>If you're doing research on a specific topic</strong> → Kagi Summarizer. Handles non-YouTube URLs too, good output quality.</p>
+
+<h2>The audio advantage</h2>
+
+<p>One thing most YouTube summary tools miss entirely: the output format. Reading a summary at a desk is fine. But most people's problem isn't that they don't have time to read — it's that they don't have time to sit still.</p>
+
+<p>A 5-minute audio summary fits into commutes, workouts, household chores — time slots that were previously dead time. That's why BriefTube's audio output changes the math significantly. You're not trading watching time for reading time. You're converting dead time into learning time.</p>
+
+<p>55 languages are supported. The audio quality is natural, not robotic. You can listen at 1.5x speed and still follow along easily.</p>
+
+<h2>The bottom line</h2>
+
+<p>Manual YouTube summary tools are useful. If you watch YouTube casually and occasionally want to check whether a video is worth your full attention, Eightify or Kagi will serve you well.</p>
+
+<p>But if you follow multiple channels and want to actually keep up with all of them — not just the ones you remember to check — you need automatic summaries. BriefTube is currently the only tool that does this properly: monitoring, summarizing, converting to audio, and delivering without any ongoing effort on your part.</p>
+
+<p>The free plan covers 5 channels. If you already know which channels produce the most value for you, that's often enough to start.</p>`,
+  },
+
+  {
     slug: "youtube-information-overload",
     title:
       "I subscribed to 60 YouTube channels. Here's how I stopped falling behind.",

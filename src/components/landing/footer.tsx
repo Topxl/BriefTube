@@ -55,10 +55,42 @@ export async function Footer() {
                   Pricing
                 </Link>
                 <Link
+                  href="/youtube-summary"
+                  className="hover:text-foreground transition-colors"
+                >
+                  YouTube Summary
+                </Link>
+                <Link
                   href="/support"
                   className="hover:text-foreground transition-colors"
                 >
                   Support
+                </Link>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <p className="text-xs font-medium tracking-wide text-white/40 uppercase">
+                Resources
+              </p>
+              <div className="text-muted-foreground flex flex-col gap-2 text-sm">
+                <Link
+                  href="/blog"
+                  className="hover:text-foreground transition-colors"
+                >
+                  Blog
+                </Link>
+                <Link
+                  href="/vs"
+                  className="hover:text-foreground transition-colors"
+                >
+                  Comparisons
+                </Link>
+                <Link
+                  href="/channels"
+                  className="hover:text-foreground transition-colors"
+                >
+                  Channels
                 </Link>
               </div>
             </div>
