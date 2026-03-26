@@ -38,7 +38,7 @@ import rss_scanner
 import storage
 import db
 import websub_manager
-from datetime import datetime, time as datetime_time, timezone
+from datetime import datetime, time as datetime_time, timedelta, timezone
 
 # ── Delivery loop watchdog ─────────────────────────────────────
 # Updated at the start of every delivery_loop iteration.
