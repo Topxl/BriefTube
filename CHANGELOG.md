@@ -2,6 +2,8 @@
 
 ## 2026-03-26
 
+FIX: Worker R2 cleanup — reduce retention 7d→3d, batch 100→500, interval 6h→2h, run 5min after startup; cleanup never ran before (6h timer reset on every worker restart)
+FIX: Worker RSS/Whisper music detection — add "(Official Audio)" and "- Topic" patterns to skip Kendrick-style single tracks without transcript
 FIX: Worker RSS scanner — add MAX_VIDEO_AGE_DAYS=15 filter to skip videos published more than 15 days ago; prevents old RSS entries from being queued when new subscribers join a slow-posting channel
 FIX: Worker db.create_deliveries_for_video — skip web delivery if ANY platform delivery (telegram/other) already exists for user+video; prevents spurious web entries for users who previously received Telegram messages
 FEATURE: Worker — OpenRouter fallback summarizer (openrouter_api.py) tried when Gemini is rate-limited or fails; models verified Mar 2026 (gemini-2.5-flash-lite $0.10/1M, gemini-2.0-flash-001 $0.10/1M, gpt-oss-120b $0.039/1M, deepseek-v3.2 $0.26/1M)
