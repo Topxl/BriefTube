@@ -9,6 +9,8 @@ export const env = createEnv({
     STRIPE_SECRET_KEY: z.string().min(1),
     STRIPE_PRO_PRICE_ID: z.string().min(1),
     STRIPE_PRO_ANNUAL_PRICE_ID: z.string().min(1),
+    STRIPE_PLUS_PRICE_ID: z.string().optional(),
+    STRIPE_PLUS_ANNUAL_PRICE_ID: z.string().optional(),
     STRIPE_WEBHOOK_SECRET: z.string().min(1),
     GOOGLE_CLIENT_ID: z.string().min(1),
     GOOGLE_CLIENT_SECRET: z.string().min(1),

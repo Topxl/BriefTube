@@ -6,7 +6,7 @@ import { PricingCards } from "@/components/pricing/pricing-cards";
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Start free with 5 YouTube channels, or go Pro for unlimited channels, priority processing and custom voices. Simple, transparent pricing.",
+    "Start free with 5 YouTube channels, upgrade to Plus for 50 channels, or go Pro for unlimited channels, priority processing and custom voices. Simple, transparent pricing.",
   alternates: {
     canonical: `${SiteConfig.prodUrl}/pricing`,
   },
@@ -98,11 +98,20 @@ export default async function PricingPage() {
         </section>
 
         <section className="flex flex-col gap-3">
+          <h2 className="text-lg font-semibold">What does Plus add?</h2>
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            Plus increases your channel limit from 5 to 50 YouTube channels. It
+            also gives you priority processing — your summaries are generated
+            before free-plan requests, so they arrive faster. Plus is perfect if
+            you follow dozens of channels but don't need unlimited.
+          </p>
+        </section>
+
+        <section className="flex flex-col gap-3">
           <h2 className="text-lg font-semibold">What does Pro add?</h2>
           <p className="text-muted-foreground text-sm leading-relaxed">
-            Pro removes the 5-channel limit entirely. You can follow as many
-            YouTube channels as you want. On top of that, Pro gives you priority
-            processing (your summaries are generated before free-plan requests),
+            Pro removes the channel limit entirely. You can follow as many
+            YouTube channels as you want. On top of Plus features, Pro gives you
             the ability to choose a specific voice from several neural TTS
             options per language, and early access to new features before they
             roll out to everyone.

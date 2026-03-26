@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { stripe } from "@/lib/stripe";
 import { SiteConfig } from "@/site-config";
 import { logger } from "@/lib/logger";
+import { env } from "@/lib/env";
 
 /**
  * Find or create a Stripe customer by user ID and email.
@@ -39,29 +40,54 @@ export async function getOrFindStripeCustomerId(
 }
 
 /**
+ * Determine max_channels based on Stripe subscription's price ID.
+ * Returns: Plus = 50, Pro = 999
+ */
+export function getMaxChannelsForPriceId(priceId: string): number {
+  if (env.STRIPE_PLUS_PRICE_ID && priceId === env.STRIPE_PLUS_PRICE_ID) {
+    return SiteConfig.plusChannelsLimit;
+  }
+  if (
+    env.STRIPE_PLUS_ANNUAL_PRICE_ID &&
+    priceId === env.STRIPE_PLUS_ANNUAL_PRICE_ID
+  ) {
+    return SiteConfig.plusChannelsLimit;
+  }
+  // Default to Pro unlimited
+  return 999;
+}
+
+/**
  * Update subscription status and max_channels in profiles table.
  * isActive = true → max_channels = 999 (unlimited)
  * isActive = false → max_channels = SiteConfig.freeChannelsLimit
+ * Optionally pass maxChannels to override tier-based logic
  */
 export async function updateSubscriptionStatus(
   supabase: SupabaseClient,
   userId: string,
   status: string,
   isActive: boolean,
+  maxChannels?: number,
 ): Promise<void> {
-  const maxChannels = isActive ? 999 : SiteConfig.freeChannelsLimit;
+  const channels =
+    maxChannels !== undefined
+      ? maxChannels
+      : isActive
+        ? 999
+        : SiteConfig.freeChannelsLimit;
 
   await supabase
     .from("profiles")
     .update({
       subscription_status: status,
-      max_channels: maxChannels,
+      max_channels: channels,
     })
     .eq("id", userId);
 
   logger.debug(`Updated subscription status for user ${userId}`, {
     status,
     isActive,
-    maxChannels,
+    maxChannels: channels,
   });
 }

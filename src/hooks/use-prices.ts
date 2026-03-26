@@ -1,9 +1,19 @@
 import { useQuery } from "@tanstack/react-query";
 import { formatCurrency } from "@/lib/format";
 
+type PriceInfo = { amount: number; currency: string };
+
 type PricesData = {
-  monthly: { amount: number; currency: string };
-  annual: { amount: number; currency: string };
+  monthly: PriceInfo;
+  annual: PriceInfo;
+  plus?: {
+    monthly: PriceInfo;
+    annual: PriceInfo | null;
+  } | null;
+  pro?: {
+    monthly: PriceInfo;
+    annual: PriceInfo;
+  };
 };
 
 async function fetchPrices(): Promise<PricesData> {

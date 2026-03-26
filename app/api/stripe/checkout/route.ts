@@ -15,14 +15,30 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Read interval and referral from form body
+  // Read interval, plan, and referral from form body
   const formData = await req.formData().catch(() => null);
   const interval = formData?.get("interval") === "year" ? "year" : "month";
+  const plan = formData?.get("plan") || "pro";
   const referral = formData?.get("referral");
-  const priceId =
-    interval === "year"
-      ? env.STRIPE_PRO_ANNUAL_PRICE_ID
-      : env.STRIPE_PRO_PRICE_ID;
+
+  let priceId: string;
+  if (plan === "plus") {
+    if (!env.STRIPE_PLUS_PRICE_ID) {
+      return NextResponse.json(
+        { error: "Plus plan not configured" },
+        { status: 400 },
+      );
+    }
+    priceId =
+      interval === "year" && env.STRIPE_PLUS_ANNUAL_PRICE_ID
+        ? env.STRIPE_PLUS_ANNUAL_PRICE_ID
+        : env.STRIPE_PLUS_PRICE_ID;
+  } else {
+    priceId =
+      interval === "year"
+        ? env.STRIPE_PRO_ANNUAL_PRICE_ID
+        : env.STRIPE_PRO_PRICE_ID;
+  }
 
   const { data: profile } = await supabase
     .from("profiles")

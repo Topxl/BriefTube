@@ -16,12 +16,21 @@ const plans = [
   {
     key: "free" as const,
     isPro: false,
+    isPlus: false,
+    highlighted: false,
+    href: "/login",
+  },
+  {
+    key: "plus" as const,
+    isPro: false,
+    isPlus: true,
     highlighted: false,
     href: "/login",
   },
   {
     key: "pro" as const,
     isPro: true,
+    isPlus: false,
     highlighted: true,
     href: "/login",
   },
@@ -35,6 +44,12 @@ export function Pricing() {
     ? interval === "year"
       ? prices.annual
       : prices.monthly
+    : null;
+
+  const plusPriceData = prices?.plus
+    ? interval === "year"
+      ? prices.plus.annual
+      : prices.plus.monthly
     : null;
 
   return (
@@ -90,13 +105,20 @@ export function Pricing() {
         </ScrollReveal>
 
         <ScrollReveal delay={150}>
-          <div className="mt-8 grid gap-6 md:grid-cols-2">
+          <div className="mt-8 grid gap-6 md:grid-cols-3">
             {plans.map((plan) => {
               const planData = tl.plans[plan.key];
 
+              const activePriceData = plan.isPlus
+                ? (plusPriceData ?? priceData)
+                : priceData;
+
               const displayPrice =
-                plan.isPro && priceData
-                  ? formatCurrency(priceData.amount, priceData.currency)
+                (plan.isPro || plan.isPlus) && activePriceData
+                  ? formatCurrency(
+                      activePriceData.amount,
+                      activePriceData.currency,
+                    )
                   : { formatted: "0", symbol: "$" };
 
               return (
@@ -120,7 +142,7 @@ export function Pricing() {
                       {planData.name}
                     </p>
                     <div className="mt-3 flex items-baseline gap-1">
-                      {plan.isPro ? (
+                      {plan.isPro || plan.isPlus ? (
                         <>
                           <span className="text-4xl font-bold">
                             {displayPrice.symbol}
@@ -137,11 +159,11 @@ export function Pricing() {
                         </>
                       )}
                     </div>
-                    {plan.isPro && interval === "year" && (
+                    {(plan.isPro || plan.isPlus) && interval === "year" && (
                       <p className="text-muted-foreground mt-1 text-xs">
                         Billed annually, equivalent to $
-                        {priceData
-                          ? Math.round(priceData.amount / 12 / 100)
+                        {activePriceData
+                          ? Math.round(activePriceData.amount / 12 / 100)
                           : "7"}
                         /month
                       </p>

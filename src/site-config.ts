@@ -1,6 +1,7 @@
 export const SiteConfig = {
   title: "BriefTube",
   freeChannelsLimit: 5,
+  plusChannelsLimit: 50,
   trialDays: 30,
   defaultTtsVoice: "en-US-JennyNeural",
   defaultLanguage: "en",

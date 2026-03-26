@@ -19,10 +19,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         .limit(500),
       supabase
         .from("processed_videos")
-        .select("video_id, channel_id, created_at")
+        .select("video_id, channel_id, created_at, summary_length")
         .eq("status", "completed")
+        .gte("summary_length", 500)
         .order("created_at", { ascending: false })
-        .limit(300),
+        .limit(50),
     ]);
 
   const allChannelIds = new Set((channelRows ?? []).map((r) => r.channel_id));
@@ -50,6 +51,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     {
       url: `${SiteConfig.prodUrl}`,
       lastModified: new Date("2026-03-22"),
+    },
+    {
+      url: `${SiteConfig.prodUrl}/youtube-summary`,
+      lastModified: new Date("2026-03-27"),
     },
     {
       url: `${SiteConfig.prodUrl}/pricing`,
