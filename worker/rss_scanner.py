@@ -24,7 +24,9 @@ _MUSIC_TITLE_RE = re.compile(
     r'|\b(?:no[- ]copyright|background|bgm)\s+music\b'
     r'|\b(?:instrumental|ambient)\s+(?:music|mix|playlist)\b'
     r'|\b24/?7\s+(?:music|stream|radio|lofi|chill)\b'
-    r'|\bmusic\s+(?:mix|playlist|24/?7|radio|live)\b',
+    r'|\bmusic\s+(?:mix|playlist|24/?7|radio|live)\b'
+    r'|\(official\s+audio\)'           # "Kendrick Lamar - luther (Official Audio)"
+    r'|\s-\s+Topic$',                  # YouTube Music auto-channels: "Artist - Topic"
     re.IGNORECASE,
 )
 
@@ -47,15 +49,20 @@ def is_youtube_short(url: str) -> bool:
     return "/shorts/" in url
 
 
+MAX_VIDEO_AGE_DAYS = 15  # Ignore videos published more than this many days ago
+
+
 def fetch_channel_videos(channel_id: str) -> list[dict]:
     """Fetch recent videos from a YouTube channel via RSS.
 
-    Videos whose publish date is in the future (Premieres, scheduled drops)
-    are skipped — they'll be picked up naturally on the next scan once live.
+    - Future videos (Premieres, scheduled) are skipped — picked up once live.
+    - Videos older than MAX_VIDEO_AGE_DAYS are skipped — prevents RSS entries
+      from weeks ago being re-queued when a new subscriber joins the channel.
     """
     rss_url = get_rss_url(channel_id)
     feed = feedparser.parse(rss_url)
     now = time.time()
+    max_age_cutoff = now - MAX_VIDEO_AGE_DAYS * 86400
 
     videos = []
     for entry in feed.entries:
@@ -65,12 +72,16 @@ def fetch_channel_videos(channel_id: str) -> list[dict]:
         if not video_id:
             continue
 
-        # Skip videos scheduled for future publication (Premieres, etc.)
         published = getattr(entry, "published_parsed", None)
-        if published:
-            published_ts = calendar.timegm(published)  # UTC timestamp
-            if published_ts > now + 60:  # 1-min grace to handle clock skew
+        published_ts = calendar.timegm(published) if published else None
+
+        if published_ts is not None:
+            # Skip future videos (Premieres, scheduled drops)
+            if published_ts > now + 60:
                 logger.debug(f"Skipping future video: {entry.title} (publishes in {int((published_ts - now) / 3600)}h)")
+                continue
+            # Skip videos too old to be relevant
+            if published_ts < max_age_cutoff:
                 continue
 
         videos.append({
@@ -79,6 +90,7 @@ def fetch_channel_videos(channel_id: str) -> list[dict]:
             "url": entry.link,
             "channel_id": channel_id,
             "channel_name": feed.feed.title if hasattr(feed.feed, "title") else "Unknown",
+            "published_ts": published_ts,
         })
     return videos
 
