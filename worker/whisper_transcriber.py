@@ -136,7 +136,10 @@ class WhisperTranscriber:
                             f"Audio pre-check: format unavailable with {client_name} — trying next client"
                         )
                         continue
-                    if "your country" in pre_err.lower():
+                    if any(kw in pre_err.lower() for kw in (
+                        "your country", "this country", "not available in your",
+                        "national security", "government", "unavailable in this country",
+                    )):
                         logger.warning("Audio pre-check: video geo-restricted — skipping permanently")
                         return "geo_restricted"
                     if any(kw in pre_err.lower() for kw in _BOT_KW):
@@ -202,7 +205,10 @@ class WhisperTranscriber:
                 if "error opening output files" in err.lower() or "invalid argument" in err.lower():
                     logger.warning("Audio download: ffmpeg output error (live stream or unsupported format) — skipping permanently")
                     return "unsupported"
-                if "your country" in err.lower():
+                if any(kw in err.lower() for kw in (
+                    "your country", "this country", "not available in your",
+                    "national security", "government", "unavailable in this country",
+                )):
                     logger.warning("Audio download: video geo-restricted — skipping permanently")
                     return "geo_restricted"
                 if any(kw in err.lower() for kw in _BOT_KW):
