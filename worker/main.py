@@ -39,6 +39,11 @@ import db
 import websub_manager
 from datetime import datetime, time as datetime_time, timezone
 
+# ── Delivery loop watchdog ─────────────────────────────────────
+# Updated at the start of every delivery_loop iteration.
+# _supervised_delivery_loop monitors this and restarts the task if stuck.
+_delivery_last_beat: float = 0.0
+
 # ── Logging ────────────────────────────────────────────────────
 
 # Ensure deno (used by yt-dlp for YouTube JS extraction) is in PATH
@@ -848,6 +853,7 @@ def _cleanup_stale_r2_audio(days: int = 7, batch: int = 100) -> None:
 
 async def delivery_loop(alert_system: MonitoringAlert):
     """Send completed audio to subscribed users."""
+    global _delivery_last_beat
     logger.info("Telegram Deliverer started")
 
     _cleanup_counter = 0       # Run delivery cleanup every N cycles
@@ -862,6 +868,7 @@ async def delivery_loop(alert_system: MonitoringAlert):
     )
 
     while True:
+        _delivery_last_beat = time.monotonic()  # Heartbeat — monitored by _supervised_delivery_loop
         try:
             # Periodically clean up undeliverable deliveries (failed videos /
             # disconnected users) so they don't block the queue.
@@ -885,13 +892,28 @@ async def delivery_loop(alert_system: MonitoringAlert):
                 except Exception as e:
                     logger.warning(f"Recovery error (non-fatal): {e}")
 
-            # Get pending deliveries with retry on connection errors
+            # Get pending deliveries with retry on connection errors.
+            # wait_for(60s) prevents an indefinite hang if the DB connection is stuck
+            # (the thread keeps running but the asyncio await is released after timeout).
             deliveries = []
             max_retries = 3
             for attempt in range(max_retries):
                 try:
-                    deliveries = await asyncio.to_thread(db.get_pending_deliveries, 30)
+                    deliveries = await asyncio.wait_for(
+                        asyncio.to_thread(db.get_pending_deliveries, 30),
+                        timeout=60.0,
+                    )
                     break
+                except asyncio.TimeoutError:
+                    logger.error(
+                        f"get_pending_deliveries timed out (attempt {attempt + 1}/{max_retries})"
+                        " — resetting DB client"
+                    )
+                    db.reset_client()
+                    if attempt < max_retries - 1:
+                        await asyncio.sleep(2 ** attempt)
+                    else:
+                        deliveries = []  # Give up this cycle, retry next iteration
                 except Exception as e:
                     if attempt < max_retries - 1:
                         logger.warning(f"Delivery fetch failed (attempt {attempt + 1}/{max_retries}): {e}")
@@ -1044,6 +1066,55 @@ async def delivery_loop(alert_system: MonitoringAlert):
                     level="ERROR"
                 )
                 await asyncio.sleep(15)
+
+
+# ── Delivery loop supervisor ───────────────────────────────────
+
+async def _supervised_delivery_loop(alert_system: MonitoringAlert):
+    """Wraps delivery_loop and restarts it automatically if it gets stuck.
+
+    delivery_loop updates _delivery_last_beat at the start of every iteration.
+    If the heartbeat stops advancing for WATCHDOG_TIMEOUT seconds (DB hang,
+    asyncio deadlock, etc.) this supervisor cancels the stuck task and starts
+    a fresh one — without taking down the entire worker process.
+    """
+    WATCHDOG_TIMEOUT = 300  # seconds without a heartbeat before declaring stuck
+    CHECK_INTERVAL   = 60   # how often to check the heartbeat
+
+    while True:
+        task = asyncio.create_task(delivery_loop(alert_system))
+        logger.info("Delivery task started (supervised)")
+
+        while not task.done():
+            await asyncio.sleep(CHECK_INTERVAL)
+            if _delivery_last_beat > 0:
+                age = time.monotonic() - _delivery_last_beat
+                if age > WATCHDOG_TIMEOUT:
+                    logger.error(
+                        f"Delivery loop has not progressed for {age:.0f}s "
+                        f"(threshold: {WATCHDOG_TIMEOUT}s) — cancelling and restarting"
+                    )
+                    await alert_system.send_alert(
+                        f"⚠️ **Delivery loop stuck** ({age:.0f}s) — restarting automatically",
+                        level="WARNING",
+                    )
+                    task.cancel()
+                    try:
+                        await task
+                    except (asyncio.CancelledError, Exception):
+                        pass
+                    break
+
+        if task.done() and not task.cancelled():
+            try:
+                exc = task.exception()
+                if exc:
+                    logger.error(f"Delivery task exited with exception: {exc}")
+            except (asyncio.CancelledError, asyncio.InvalidStateError):
+                pass
+
+        logger.info("Delivery task restarting in 5s")
+        await asyncio.sleep(5)
 
 
 # ── Loop 6: Telegram Bot Polling ──────────────────────────────
@@ -1553,7 +1624,7 @@ async def main():
             rss_loop(alert_system),
             websub_loop(alert_system),
             processor_loop(alert_system),
-            delivery_loop(alert_system),
+            _supervised_delivery_loop(alert_system),  # self-healing wrapper
             _bot_poll_loop(bot_app),
             health_loop(),
             stats_save_loop(),

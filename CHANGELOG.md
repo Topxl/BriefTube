@@ -2,6 +2,7 @@
 
 ## 2026-03-26
 
+FIX: Worker delivery loop — add asyncio.wait_for(60s) on get_pending_deliveries to prevent indefinite DB hang, add _supervised_delivery_loop watchdog that auto-restarts the delivery task if stuck > 5min without killing the whole process
 REFACTOR: Centralize requireAdmin() into src/lib/auth/require-admin.ts — remove 4 duplicate implementations across admin routes
 REFACTOR: Centralize email cron helpers into src/lib/email/email-helpers.ts — shared RunResult type, getAlreadySentIds(), insertEmailLog(), getTrackingPixelHtml() used by 5 cron files
 REFACTOR: Centralize getUserPlan() into src/lib/subscriptions.ts — replace repeated profile fetch + isPro + maxChannels pattern across API routes
