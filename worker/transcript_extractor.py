@@ -32,6 +32,8 @@ from youtube_utils import (
     INVIDIOUS_INSTANCES as _INVIDIOUS_INSTANCES,
     PIPED_INSTANCES as _PIPED_INSTANCES,
     extract_video_id as _extract_video_id,
+    is_direct_blocked,
+    mark_direct_blocked,
 )
 
 logger = logging.getLogger(__name__)
@@ -375,9 +377,17 @@ class TranscriptExtractor:
                         logger.error(f"Could not find any transcript: {e}")
                     return None, None, blocked
 
-            # Step 1: try direct (no proxy) — free, no bandwidth cost
-            api = self._get_api(use_proxy=False)
-            transcript_data, detected_lang, ip_blocked = _fetch_with_api(api)
+            # Step 1: try direct (no proxy) — free, no bandwidth cost.
+            # Skip if we already know the VPS IP is blocked (avoids a guaranteed failure).
+            if is_direct_blocked():
+                ip_blocked = True
+                transcript_data = None
+                detected_lang = None
+            else:
+                api = self._get_api(use_proxy=False)
+                transcript_data, detected_lang, ip_blocked = _fetch_with_api(api)
+                if ip_blocked:
+                    mark_direct_blocked()
 
             # Step 2: if IP blocked, retry with rotating proxy
             if ip_blocked and transcript_data is None:
@@ -491,7 +501,13 @@ class TranscriptExtractor:
         cookies_file = str(_COOKIES_FILE) if _COOKIES_FILE.exists() else None
         deno_path = Path.home() / ".deno" / "bin" / "deno"
 
-        for player_client in _PLAYER_CLIENTS:
+        # Skip direct yt-dlp attempts if we already know the VPS IP is blocked.
+        # All player clients would fail with bot detection — waste of 2-3s each.
+        _skip_direct = is_direct_blocked()
+        if _skip_direct:
+            logger.debug("yt-dlp subtitle: IP known blocked — skipping direct clients")
+
+        for player_client in (_PLAYER_CLIENTS if not _skip_direct else []):
             client_name = player_client[0]
             ydl_opts: dict = {
                 "skip_download": True,

@@ -33,6 +33,8 @@ from youtube_utils import (
     BOT_DETECTION_KEYWORDS as _BOT_KW,
     INVIDIOUS_INSTANCES as _INVIDIOUS_INSTANCES,
     PIPED_INSTANCES as _PIPED_INSTANCES,
+    is_direct_blocked,
+    mark_direct_blocked,
 )
 
 logger = logging.getLogger(__name__)
@@ -68,7 +70,14 @@ class WhisperTranscriber:
         """
         _cookies_file = Path(__file__).parent / "cookies" / "youtube.txt"
 
-        for player_client in _PLAYER_CLIENTS:
+        # Skip direct yt-dlp attempts if the VPS IP is known to be blocked.
+        # Pre-checks + downloads would all fail with bot detection — waste of time.
+        # Go straight to Invidious → Piped → proxy (paid) instead.
+        _skip_direct = is_direct_blocked()
+        if _skip_direct:
+            logger.debug("Audio download: IP known blocked — skipping direct clients")
+
+        for player_client in (_PLAYER_CLIENTS if not _skip_direct else []):
             client_name = player_client[0]
             try:
                 # Pre-check: detect live/upcoming streams before attempting download.
@@ -117,6 +126,7 @@ class WhisperTranscriber:
                         logger.info(
                             f"Audio pre-check: bot detection with {client_name} — trying next client"
                         )
+                        mark_direct_blocked()
                         continue
                     # Other pre-check errors: proceed to actual download
 
@@ -184,6 +194,7 @@ class WhisperTranscriber:
                     logger.info(
                         f"Audio download: bot detection with {client_name} — trying next client"
                     )
+                    mark_direct_blocked()
                     continue
                 logger.error(f"Error downloading audio: {e}")
                 return False

@@ -59,24 +59,23 @@ def is_video_processed(video_id: str) -> bool:
     return len(res.data) > 0
 
 
-def get_all_known_video_ids(days: int = 30) -> set[str]:
-    """Return video_ids created within the last `days` days.
+def get_all_known_video_ids() -> set[str]:
+    """Return all known video_ids from processed_videos.
 
-    YouTube RSS feeds only contain the last ~15 videos per channel, which are
-    always recent. Videos older than 30 days cannot appear in the current RSS
-    feed and do not need to be in the cache — this keeps the set small even
-    when processed_videos has millions of rows.
+    Loads the full table (no time filter) to prevent re-detection of videos
+    that were processed more than N days ago but are still in a channel's RSS
+    feed (slow-posting channels keep old videos in their last-15 RSS entries).
+
+    At ~300 videos/day the table stays well under 200k rows — loading all IDs
+    into memory is fast and safe.
     """
-    from datetime import timedelta
     sb = get_client()
-    cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
     known: set[str] = set()
     offset = 0
     while True:
         res = (
             sb.table("processed_videos")
             .select("video_id")
-            .gte("created_at", cutoff)
             .range(offset, offset + 999)
             .execute()
         )

@@ -6,8 +6,41 @@ transcript_extractor.py, whisper_transcriber.py and rss_scanner.py.
 
 import logging
 import re
+import time
 
 logger = logging.getLogger(__name__)
+
+
+# ── Shared "direct connection blocked" state ───────────────────────────────────
+#
+# When YouTube blocks the VPS IP (bot detection / rate limit), every direct
+# yt-dlp or youtube-transcript-api call fails immediately.  Retrying direct
+# on the next video is pointless and wastes time (each failed attempt ~1-2s).
+#
+# Both transcript_extractor.py and whisper_transcriber.py call
+# mark_direct_blocked() when they detect a block, and check is_direct_blocked()
+# before attempting direct connections — skipping straight to proxy instead.
+#
+# Thread-safe: Python float reads/writes are atomic under the GIL.
+_direct_blocked_until: float = 0.0
+
+
+def is_direct_blocked() -> bool:
+    """Return True if direct YouTube connections are currently known to be blocked."""
+    return time.monotonic() < _direct_blocked_until
+
+
+def mark_direct_blocked(duration_seconds: float = 600.0) -> None:
+    """Mark direct YouTube connections as blocked for *duration_seconds*.
+
+    Default: 10 minutes — long enough to avoid hammering YouTube, short enough
+    to recover automatically when the rate-limit window resets.
+    """
+    global _direct_blocked_until
+    _direct_blocked_until = time.monotonic() + duration_seconds
+    logger.info(
+        f"Direct YouTube blocked — skipping direct attempts for {duration_seconds:.0f}s"
+    )
 
 
 # ── Premiere / scheduled-live detection ───────────────────────────────────────
