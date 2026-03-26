@@ -2,6 +2,8 @@
 
 ## 2026-03-26
 
+FIX: Worker RSS scanner — add MAX_VIDEO_AGE_DAYS=15 filter to skip videos published more than 15 days ago; prevents old RSS entries from being queued when new subscribers join a slow-posting channel
+FIX: Worker db.create_deliveries_for_video — skip web delivery if ANY platform delivery (telegram/other) already exists for user+video; prevents spurious web entries for users who previously received Telegram messages
 FEATURE: Worker — OpenRouter fallback summarizer (openrouter_api.py) tried when Gemini is rate-limited or fails; models verified Mar 2026 (gemini-2.5-flash-lite $0.10/1M, gemini-2.0-flash-001 $0.10/1M, gpt-oss-120b $0.039/1M, deepseek-v3.2 $0.26/1M)
 FEATURE: Worker TTS — gTTS (Google) fallback when Edge TTS fails; Edge TTS retries 3× with exponential backoff before falling back
 REFACTOR: gemini_api.py — extract build_summary_prompt() and LANGUAGE_NAMES to module-level so OpenRouter reuses same prompt logic

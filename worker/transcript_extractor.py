@@ -53,7 +53,9 @@ _MUSIC_TITLE_RE = re.compile(
     r'|study\s+music'
     r'|focus\s+music'
     r'|healing\s+(music|sounds?|frequency|frequencies)'
-    r'|meditation\s+(music|sounds?|frequency|frequencies)',
+    r'|meditation\s+(music|sounds?|frequency|frequencies)'
+    r'|\(official\s+audio\)'           # "Kendrick Lamar - luther (Official Audio)"
+    r'|\s-\s+Topic$',                  # YouTube Music auto-channels: "Artist - Topic"
     re.IGNORECASE,
 )
 

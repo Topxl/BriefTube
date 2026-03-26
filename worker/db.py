@@ -473,9 +473,12 @@ def create_deliveries_for_video(video_id: str, channel_id: str, language: str = 
             })
 
     # Web deliveries for users with no connected platform
+    # Check against ALL platforms — don't create web delivery if telegram (or any
+    # other platform) delivery already exists for this user+video.
+    existing_user_ids = {d_uid for d_uid, _ in existing_pairs}
     now_iso = datetime.now(timezone.utc).isoformat()
     for uid in unconnected_ids:
-        if (uid, "web") not in existing_pairs:
+        if uid not in existing_user_ids:
             to_insert.append({
                 "user_id": uid,
                 "video_id": video_id,
