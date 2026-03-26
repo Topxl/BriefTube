@@ -78,12 +78,12 @@ def hours_until_premiere(err: str) -> int:
 # ── yt-dlp player clients ─────────────────────────────────────────────────────
 
 # Full chain: used for subtitle extraction (light requests, worth trying all clients).
-# ios is fastest; android, tv_embedded and mweb are fallbacks for datacenter IPs.
-PLAYER_CLIENTS_FULL: list[list[str]] = [["ios"], ["android"], ["tv_embedded"], ["mweb"]]
+# ios + mweb recommended 2026; android + tv_embedded as additional fallbacks.
+PLAYER_CLIENTS_FULL: list[list[str]] = [["ios"], ["mweb"], ["android"], ["tv_embedded"]]
 
 # Short chain: used for audio download in Whisper (heavy requests, fail fast).
-# Two clients is enough — android rarely succeeds when ios fails on the same IP.
-PLAYER_CLIENTS_SHORT: list[list[str]] = [["ios"], ["tv_embedded"]]
+# ios + mweb is the recommended 2026 pair (android_vr deprecated, tv_embedded secondary).
+PLAYER_CLIENTS_SHORT: list[list[str]] = [["ios"], ["mweb"]]
 
 
 # ── Bot-detection keywords ────────────────────────────────────────────────────

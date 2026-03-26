@@ -147,13 +147,11 @@ class WhisperTranscriber:
                         continue
                     # Other pre-check errors: proceed to actual download
 
-                # 64kbps is more than sufficient for Whisper speech recognition and
-                # keeps file size well under Groq's 25 MB limit (~54 min max at 64kbps).
-                # 192kbps would exceed the limit for any video longer than ~15 min.
-                # max_filesize: abort if raw audio exceeds 150 MB (≈ ~5h at 64kbps)
-                # before postprocessing — prevents infinite HLS live downloads.
+                # bestaudio/best: no bitrate constraint — avoids "format not available"
+                # errors on videos that only have high-bitrate streams. Groq's 25 MB
+                # limit is enforced by max_filesize below (150 MB pre-postprocessing).
                 ydl_opts: dict = {
-                    'format': 'bestaudio[abr<=64]/bestaudio[abr<=96]/bestaudio/best',
+                    'format': 'bestaudio/best',
                     'postprocessors': [{
                         'key': 'FFmpegExtractAudio',
                         'preferredcodec': 'opus',  # libopus: 2-3x faster than libmp3lame
@@ -223,7 +221,7 @@ class WhisperTranscriber:
                 "Audio download: all clients blocked, retrying with proxy (bandwidth cost)..."
             )
             proxy_opts: dict = {
-                'format': 'bestaudio[abr<=64]/bestaudio[abr<=96]/bestaudio/best',
+                'format': 'bestaudio/best',
                 'postprocessors': [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'opus'}],
                 'outtmpl': str(output_path.with_suffix('')),
                 'quiet': True,
@@ -231,7 +229,7 @@ class WhisperTranscriber:
                 'noprogress': True,
                 'nocheckcertificate': True,
                 'max_filesize': 150 * 1024 * 1024,
-                'extractor_args': {'youtube': {'player_client': ['ios']}},
+                'extractor_args': {'youtube': {'player_client': ['ios', 'mweb']}},
                 'proxy': http_proxy,
             }
             if _cookies_file.exists():
