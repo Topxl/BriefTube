@@ -283,7 +283,10 @@ export function NotificationsSection({
             />
           </div>
           {dailyDigest && (
-            <div className="mt-3 flex items-center gap-2 pl-[42px]">
+            <div
+              className="mt-3 flex items-center gap-2 pl-[42px]"
+              suppressHydrationWarning
+            >
               <p className="text-muted-foreground text-xs">
                 Delivery time (local)
               </p>
