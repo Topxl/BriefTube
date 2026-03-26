@@ -526,6 +526,11 @@ async def _process_video(
                 logger.info(f"[{video_id}] Transcript too short — skipping permanently: {video_title[:80]}")
                 db.fail_job(job["id"], immediate=True)
                 return
+            # Gemini rate-limited (429 / quota) — transient, snooze without counting as failure
+            if summary_error == "rate_limited":
+                logger.warning(f"[{video_id}] Gemini rate limited — snoozed 30min: {video_title[:80]}")
+                db.snooze_job(job["id"], minutes=30)
+                return
             raise Exception(f"Summary generation failed: {summary_error}")
 
         logger.info(f"[{video_id}] Summary: {len(summary)} chars")
@@ -616,6 +621,13 @@ async def _process_video(
     except Exception as e:
         error_msg = str(e)
         logger.error(f"[{video_id}] Error: {error_msg}")
+
+        # Transient TTS outage (Edge TTS WebSocket 503) — snooze without counting as failure
+        if not _video_completed and "speech.platform.bing.com" in error_msg:
+            logger.warning(f"[{video_id}] Edge TTS unavailable (WSS 503) — snoozed 30min: {video_title[:80]}")
+            db.snooze_job(job["id"], minutes=30)
+            return
+
         permanent = db.fail_job(job["id"])
         if not _video_completed:
             db.mark_video_failed(video_id, language=user_language)

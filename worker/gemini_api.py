@@ -163,6 +163,8 @@ class GeminiSummarizer:
         # Try models in order
         models_to_try = [model] if model else self.MODELS
 
+        all_rate_limited = True  # Tracks whether every failure was a 429/quota error
+
         for model_name in models_to_try:
             try:
                 logger.info(f"Attempting summarization with model: {model_name}")
@@ -190,9 +192,19 @@ class GeminiSummarizer:
                 return summary, None
 
             except Exception as e:
+                err_str = str(e).lower()
+                is_rate_limit = (
+                    "429" in err_str
+                    or "resource_exhausted" in err_str
+                    or "quota" in err_str
+                    or "rate" in err_str
+                )
+                if not is_rate_limit:
+                    all_rate_limited = False
                 logger.error(f"Failed with model {model_name}: {e}")
-                # Try next model
                 continue
 
-        # All models failed
+        # All models failed — distinguish transient rate limits from hard failures
+        if all_rate_limited:
+            return None, "rate_limited"
         return None, "all_models_failed"

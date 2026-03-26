@@ -245,20 +245,22 @@ def complete_job(job_id: str):
     sb.table("processing_queue").update({"status": "completed"}).eq("id", job_id).execute()
 
 
-def snooze_job(job_id: str, hours: int) -> None:
-    """Put a job back to queued with a retry_after delay (for premiere/scheduled videos).
+def snooze_job(job_id: str, hours: int = 0, minutes: int = 0) -> None:
+    """Put a job back to queued with a retry_after delay.
 
     Does NOT increment attempts — this is not a failure, just a wait.
+    Used for: premiere/scheduled videos, transient rate limits, TTS outages.
     """
     from datetime import datetime, timezone, timedelta
-    retry_after = (datetime.now(timezone.utc) + timedelta(hours=hours)).isoformat()
+    retry_after = (datetime.now(timezone.utc) + timedelta(hours=hours, minutes=minutes)).isoformat()
     sb = get_client()
     sb.table("processing_queue").update({
         "status": "queued",
         "retry_after": retry_after,
         "started_at": None,
     }).eq("id", job_id).execute()
-    logger.info(f"Job {job_id} snoozed for {hours}h (premiere/scheduled)")
+    label = f"{hours}h" if hours else f"{minutes}min"
+    logger.info(f"Job {job_id} snoozed for {label}")
 
 
 def fail_job(job_id: str, immediate: bool = False, retry_after_minutes: int = 0) -> bool:
