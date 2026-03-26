@@ -2,6 +2,9 @@
 
 ## 2026-03-26
 
+PERF: Worker audio download — Invidious/Piped tried first before yt-dlp direct clients (avoids guaranteed failures on cloud VPS IP)
+PERF: Worker transcript/audio — shared is_direct_blocked() / mark_direct_blocked() in youtube_utils.py skips direct yt-dlp attempts for 10min after bot detection detection
+
 FIX: Worker RSS scanner — remove 30-day window from get_all_known_video_ids to prevent re-detection of slow-posting channel videos after 30 days (caused ~3500 duplicate Gemini API calls on 2026-03-25)
 FIX: Worker get_pending_deliveries — query from completed videos first to avoid old pending-video deliveries blocking the queue indefinitely
 FIX: Worker delivery loop — add asyncio.wait_for(60s) on get_pending_deliveries to prevent indefinite DB hang, add _supervised_delivery_loop watchdog that auto-restarts the delivery task if stuck > 5min without killing the whole process
