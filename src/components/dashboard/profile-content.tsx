@@ -106,10 +106,21 @@ function PodcastFeedSection({ rssToken }: { rssToken: string }) {
 }
 
 type Interval = "month" | "year";
+type Plan = "plus" | "pro";
+
+type PriceInfo = { amount: number; currency: string };
 
 type PricesData = {
-  monthly: { amount: number; currency: string };
-  annual: { amount: number; currency: string };
+  monthly: PriceInfo;
+  annual: PriceInfo;
+  plus?: {
+    monthly: PriceInfo;
+    annual: PriceInfo | null;
+  } | null;
+  pro?: {
+    monthly: PriceInfo;
+    annual: PriceInfo;
+  };
 };
 
 import { dialogManager } from "@/features/dialog-manager/dialog-manager";
@@ -186,6 +197,7 @@ export function ProfileContent({
   const router = useRouter();
 
   const [retryCount, setRetryCount] = useState(0);
+  const [upgradePlan, setUpgradePlan] = useState<Plan>("pro");
   const [upgradeInterval, setUpgradeInterval] = useState<Interval>(
     defaultInterval ?? "year",
   );
@@ -233,10 +245,16 @@ export function ProfileContent({
     return () => clearTimeout(timer);
   }, [paymentSuccess, isActivePro, router, retryCount]);
 
+  const hasPlus = !!prices?.plus;
+
   const priceData = prices
-    ? upgradeInterval === "year"
-      ? prices.annual
-      : prices.monthly
+    ? upgradePlan === "plus" && prices.plus
+      ? upgradeInterval === "year" && prices.plus.annual
+        ? prices.plus.annual
+        : prices.plus.monthly
+      : upgradeInterval === "year" && prices.pro
+        ? prices.pro.annual
+        : (prices.pro?.monthly ?? prices.monthly)
     : null;
 
   const displayUpgradePrice = priceData
@@ -313,11 +331,43 @@ export function ProfileContent({
               <p className="text-sm font-medium">
                 {isTrial
                   ? `${trialDaysLeft} day${trialDaysLeft !== 1 ? "s" : ""} left on your trial`
-                  : "Upgrade to Pro"}
+                  : "Upgrade your plan"}
               </p>
               <p className="text-muted-foreground mt-0.5 text-[11px]">
-                Unlimited channels and priority processing.
+                {upgradePlan === "plus"
+                  ? "50 channels and priority processing."
+                  : "Unlimited channels and priority processing."}
               </p>
+
+              {/* Plan selector */}
+              {hasPlus && (
+                <div className="mt-3 flex items-center gap-2">
+                  <div className="nm-raised flex rounded-full p-0.5">
+                    <button
+                      onClick={() => setUpgradePlan("plus")}
+                      className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                        upgradePlan === "plus"
+                          ? "bg-red-600 text-white"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      Plus
+                    </button>
+                    <button
+                      onClick={() => setUpgradePlan("pro")}
+                      className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                        upgradePlan === "pro"
+                          ? "bg-red-600 text-white"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      Pro
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Interval selector */}
               <div className="mt-3 flex items-center gap-2">
                 <div className="nm-raised flex rounded-full p-0.5">
                   <button
@@ -354,6 +404,7 @@ export function ProfileContent({
                   </span>
                 )}
               </div>
+
               <div className="mt-3 flex items-center justify-between">
                 <p className="text-sm font-semibold">
                   {displayUpgradePrice
@@ -366,6 +417,7 @@ export function ProfileContent({
                   data-form-type="other"
                   suppressHydrationWarning
                 >
+                  <input type="hidden" name="plan" value={upgradePlan} />
                   <input
                     type="hidden"
                     name="interval"

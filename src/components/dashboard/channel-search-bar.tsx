@@ -179,7 +179,7 @@ export function ChannelSearchBar() {
 
   return (
     <div className="relative">
-      <div className="relative w-full">
+      <div className="relative w-full" suppressHydrationWarning>
         {isYT ? (
           <Youtube className="text-muted-foreground absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2" />
         ) : (
