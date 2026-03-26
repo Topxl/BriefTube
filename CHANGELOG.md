@@ -12,6 +12,7 @@ REFACTOR: gemini_api.py — extract build_summary_prompt() and LANGUAGE_NAMES to
 FIX: Worker Gemini — distinguish rate-limit 429 errors from hard failures; snooze job 30min on rate_limited instead of immediately retrying (thundering herd fix)
 FIX: Worker db.snooze_job — accept minutes param in addition to hours (premiere/TTS/rate-limit use cases)
 
+FIX: Worker yt-dlp — switch format to bestaudio/best (was bitrate-constrained) and player clients to ios+mweb (2026 recommended pair); add bgutil-ytdlp-pot-provider PO token plugin to bypass YouTube bot-detection on restricted videos
 PERF: Worker audio download — Invidious/Piped tried first before yt-dlp direct clients (avoids guaranteed failures on cloud VPS IP)
 PERF: Worker transcript/audio — shared is_direct_blocked() / mark_direct_blocked() in youtube_utils.py skips direct yt-dlp attempts for 10min after bot detection detection
 
