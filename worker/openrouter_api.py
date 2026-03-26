@@ -22,13 +22,13 @@ class OpenRouterSummarizer:
     Returns same (summary, error) tuple as GeminiSummarizer.
     """
 
-    # Cheap models with large context — ordered by cost/quality balance
-    # See https://openrouter.ai/models for current pricing
+    # Models ordered by cost/quality for summarization — verified March 2026
+    # Source: openrouter.ai/rankings + /api/v1/models pricing
     MODELS = [
-        "google/gemini-flash-1.5-8b",           # $0.0375/1M in, 1M context
-        "google/gemini-flash-1.5",              # $0.075/1M in, 1M context
-        "meta-llama/llama-3.1-8b-instruct",     # very cheap, solid multilingual
-        "mistralai/mistral-7b-instruct",        # ultra cheap fallback
+        "google/gemini-2.5-flash-lite",  # $0.10/1M in, 1M ctx — cheapest large-context
+        "google/gemini-2.0-flash-001",   # $0.10/1M in, 1M ctx — proven reliable
+        "openai/gpt-oss-120b",           # $0.039/1M in, 131k ctx — ultra cheap
+        "deepseek/deepseek-v3.2",        # $0.26/1M in, 163k ctx — excellent multilingual
     ]
 
     def __init__(self, api_key: Optional[str] = None):
