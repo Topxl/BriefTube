@@ -24,6 +24,18 @@ class TestIsLikelyMusicShouldSkip:
     def test_case_insensitive(self):
         assert is_likely_music("LOFI BEATS TO STUDY")
 
+    def test_official_audio(self):
+        assert is_likely_music("Kendrick Lamar - luther (Official Audio)")
+
+    def test_official_audio_uppercase(self):
+        assert is_likely_music("Drake - God's Plan (OFFICIAL AUDIO)")
+
+    def test_youtube_music_topic_channel(self):
+        assert is_likely_music("Kendrick Lamar - Topic")
+
+    def test_youtube_music_topic_channel_with_dash(self):
+        assert is_likely_music("Taylor Swift - Topic")
+
 
 # ── is_likely_music — should NOT skip ────────────────────────────────────────
 
