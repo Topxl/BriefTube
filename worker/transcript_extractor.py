@@ -594,7 +594,10 @@ class TranscriptExtractor:
                 )):
                     logger.info("yt-dlp subtitle: live stream detected — snooze 2h")
                     return None, None, "video_is_live"
-                elif "your country" in err.lower():
+                elif any(kw in err.lower() for kw in (
+                    "your country", "this country", "not available in your",
+                    "national security", "government", "unavailable in this country",
+                )):
                     logger.warning("yt-dlp subtitle: video geo-restricted — will try Invidious")
                     break  # geo-restriction is consistent across all clients
                 elif "429" in err or "Too Many Requests" in err:
