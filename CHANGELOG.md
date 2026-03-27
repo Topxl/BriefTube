@@ -2,6 +2,7 @@
 
 ## 2026-03-27
 
+FEATURE: Dashboard — add "Retry processing" button in video menu for failed videos
 FIX: Worker /services health check — cache result 5min to avoid hitting Webshare + external APIs on every admin page reload
 FIX: Worker transcript — remove youtube-transcript-api Webshare proxy step; if direct is IP-blocked, fall through to Invidious/Piped (free) instead of paying for the same transcript; Webshare reserved for yt-dlp as absolute last resort only
 FIX: Worker direct-block duration — increase mark_direct_blocked() default from 10min to 1h; reduces repeated re-detection cycles that trigger proxy fallback

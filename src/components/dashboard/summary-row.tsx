@@ -6,6 +6,7 @@ import {
   ExternalLink,
   Play,
   MoreHorizontal,
+  RefreshCw,
   Share2,
   Languages,
   Star,
@@ -186,6 +187,41 @@ export function SummaryRow({
   }, [title, delivery.video_id]);
 
   const [generatingLang, setGeneratingLang] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState(false);
+
+  const handleRetry = useCallback(async () => {
+    setRetrying(true);
+    try {
+      const res = await fetch("/api/process-video", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          videoId: delivery.video_id,
+          videoTitle: title ?? delivery.video_id,
+          language: delivery.language ?? "fr",
+        }),
+      });
+      if (!res.ok) {
+        toast.error("Retry failed");
+        return;
+      }
+      const data = (await res.json()) as { queued?: boolean };
+      if (data.queued) {
+        addProcessingVideo({
+          videoId: delivery.video_id,
+          title: title ?? delivery.video_id,
+          startedAt: Date.now(),
+        });
+        toast.success("Retry started!");
+      } else {
+        toast.info("Video is already being processed");
+      }
+    } catch {
+      toast.error("Network error");
+    } finally {
+      setRetrying(false);
+    }
+  }, [delivery.video_id, delivery.language, title]);
 
   const handleGenerateLang = useCallback(
     async (langCode: string) => {
@@ -336,6 +372,19 @@ export function SummaryRow({
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-52">
+            {video?.status === "failed" && (
+              <>
+                <DropdownMenuItem
+                  onClick={() => void handleRetry()}
+                  disabled={retrying}
+                  className="flex items-center gap-2"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  {retrying ? "Retrying…" : "Retry processing"}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+              </>
+            )}
             {video?.video_url && (
               <DropdownMenuItem asChild>
                 <a
