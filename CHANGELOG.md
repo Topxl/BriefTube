@@ -2,6 +2,7 @@
 
 ## 2026-03-27
 
+FIX: Worker subtitle proxy — switch player client ios → tv_embedded; ios returns "Requested format is not available" through datacenter proxy, tv_embedded works reliably (same fix as audio proxy)
 CHORE: Add unit tests — formatCurrency (5 tests), isProUser/getMaxChannels (10 tests), vitest setup file
 FIX: Add missing @upstash/ratelimit and @upstash/redis dependencies — were imported in rate-limit.ts but not in package.json, causing CI TypeScript and Vercel build failures
 

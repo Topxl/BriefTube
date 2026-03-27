@@ -613,7 +613,8 @@ class TranscriptExtractor:
                     return None, None, None  # unknown error, stop trying
 
         # All direct clients bot-detected — retry once via residential proxy.
-        # VTT files are tiny (a few KB) so proxy bandwidth cost is negligible.
+        # tv_embedded is the only client that works reliably through datacenter
+        # proxies; ios/mweb return "Requested format is not available" via proxy.
         http_proxy = os.environ.get("YOUTUBE_PROXY_HTTP", "")
         if not http_proxy:
             return None, None, None
@@ -629,7 +630,7 @@ class TranscriptExtractor:
             "no_warnings": True,
             "noprogress": True,
             "nocheckcertificate": True,
-            "extractor_args": {"youtube": {"player_client": ["ios"]}},
+            "extractor_args": {"youtube": {"player_client": ["tv_embedded"]}},
             "proxy": http_proxy,
         }
         if cookies_file:
