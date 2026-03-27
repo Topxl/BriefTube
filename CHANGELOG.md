@@ -2,6 +2,8 @@
 
 ## 2026-03-27
 
+FIX: Worker transcript — remove youtube-transcript-api Webshare proxy step; if direct is IP-blocked, fall through to Invidious/Piped (free) instead of paying for the same transcript; Webshare reserved for yt-dlp as absolute last resort only
+FIX: Worker direct-block duration — increase mark_direct_blocked() default from 10min to 1h; reduces repeated re-detection cycles that trigger proxy fallback
 FIX: Worker subtitle proxy — switch player client ios → tv_embedded; ios returns "Requested format is not available" through datacenter proxy, tv_embedded works reliably (same fix as audio proxy)
 CHORE: Add unit tests — formatCurrency (5 tests), isProUser/getMaxChannels (10 tests), vitest setup file
 FIX: Add missing @upstash/ratelimit and @upstash/redis dependencies — were imported in rate-limit.ts but not in package.json, causing CI TypeScript and Vercel build failures
