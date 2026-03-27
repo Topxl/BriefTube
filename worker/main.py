@@ -1328,12 +1328,22 @@ async def health_loop():
             "timestamp": datetime.now(timezone.utc).isoformat(),
         })
 
+    # Cache for /services — avoids hitting Webshare + external APIs on every page load.
+    _services_cache: dict = {}
+    _services_cache_at: float = 0.0
+    _SERVICES_CACHE_TTL = 300.0  # 5 minutes
+
     async def handle_services(request):
         """Ping each external service and return their status."""
+        nonlocal _services_cache, _services_cache_at
         auth_header = request.headers.get("Authorization", "")
         token = auth_header.removeprefix("Bearer ").strip()
         if WORKER_API_SECRET and token != WORKER_API_SECRET:
             return web.json_response({"error": "Unauthorized"}, status=401)
+
+        # Return cached result if fresh enough (avoids proxy/API calls on rapid reloads)
+        if _services_cache and (time.monotonic() - _services_cache_at) < _SERVICES_CACHE_TTL:
+            return web.json_response(_services_cache)
 
         gemini_key = os.environ.get("GEMINI_API_KEY", "")
         groq_key = os.environ.get("GROQ_API_KEY", "")
@@ -1471,10 +1481,13 @@ async def health_loop():
             },
         ]
 
-        return web.json_response({
+        result = {
             "groups": groups,
             "timestamp": datetime.now(timezone.utc).isoformat(),
-        })
+        }
+        _services_cache.update(result)
+        _services_cache_at = time.monotonic()
+        return web.json_response(result)
 
     async def handle_get_whatsapp_link(request):
         """Get WhatsApp magic link (GET /get-whatsapp-link?token=<token>).
