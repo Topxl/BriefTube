@@ -391,11 +391,10 @@ class TranscriptExtractor:
                 if ip_blocked:
                     mark_direct_blocked()
 
-            # Step 2: if IP blocked, retry with rotating proxy
-            if ip_blocked and transcript_data is None:
-                logger.info("Direct connection blocked by YouTube — retrying with proxy")
-                api = self._get_api(use_proxy=True)
-                transcript_data, detected_lang, _ = _fetch_with_api(api)
+            # Step 2 removed: do NOT use Webshare here.
+            # If the VPS IP is blocked, Invidious/Piped (steps 2b/2c below) serve
+            # the same transcript for free. Webshare is reserved for yt-dlp as
+            # absolute last resort only.
 
             if detected_lang == 'auto' and transcript_data is not None:
                 logger.info("Found transcript via multi-language fallback")
