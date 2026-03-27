@@ -164,12 +164,7 @@ function SourceRow({
               : "bg-muted-foreground/25 group-hover/toggle:bg-green-500/50"
           }`}
         />
-        <span className="group-hover/toggle:hidden">
-          {source.active ? "Active" : "Paused"}
-        </span>
-        <span className="hidden group-hover/toggle:inline">
-          {source.active ? "Pause" : "Activate"}
-        </span>
+        {source.active ? "Active" : "Paused"}
       </button>
     </div>
   );
@@ -618,28 +613,17 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
           ) : (
             <div className="flex items-center gap-1">
               {(["all", "active", "paused"] as const).map((status) => {
-                const count =
-                  status === "active"
-                    ? activeCount
-                    : status === "paused"
-                      ? sources.length - activeCount
-                      : null;
                 return (
                   <button
                     key={status}
                     onClick={() => setFilterStatus(status)}
-                    className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium capitalize transition-colors ${
+                    className={`rounded-full px-2.5 py-1 text-xs font-medium capitalize transition-colors ${
                       filterStatus === status
                         ? "nm-inset text-foreground"
                         : "nm-raised-sm text-muted-foreground/60 hover:text-foreground"
                     }`}
                   >
                     {status}
-                    {count !== null && (
-                      <span className="text-muted-foreground/40 tabular-nums">
-                        {count}
-                      </span>
-                    )}
                   </button>
                 );
               })}

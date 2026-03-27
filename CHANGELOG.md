@@ -5,6 +5,7 @@
 CHORE: Add unit tests — formatCurrency (5 tests), isProUser/getMaxChannels (10 tests), vitest setup file
 FIX: Add missing @upstash/ratelimit and @upstash/redis dependencies — were imported in rate-limit.ts but not in package.json, causing CI TypeScript and Vercel build failures
 
+CHORE: Remove count numbers from Active/Paused filter tabs in channels panel
 FEAT: Add Plus/Pro plan selector in profile subscription section — users can now choose between Plus ($5/mo, 50 channels) and Pro ($9.99/mo, unlimited) before upgrading
 FIX: Landing pricing — Plus plan showed Pro price ($9.99) instead of $5 — usePrices type was missing plus/pro fields, landing component used same priceData for both plans
 FIX: Harmonize delivery platform rows — remove colored backgrounds, consistent icon containers, subtle green "Connected" text
