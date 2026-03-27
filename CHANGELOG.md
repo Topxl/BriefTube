@@ -2,6 +2,7 @@
 
 ## 2026-03-27
 
+FIX: Worker /services health check — cache result 5min to avoid hitting Webshare + external APIs on every admin page reload
 FIX: Worker transcript — remove youtube-transcript-api Webshare proxy step; if direct is IP-blocked, fall through to Invidious/Piped (free) instead of paying for the same transcript; Webshare reserved for yt-dlp as absolute last resort only
 FIX: Worker direct-block duration — increase mark_direct_blocked() default from 10min to 1h; reduces repeated re-detection cycles that trigger proxy fallback
 FIX: Worker subtitle proxy — switch player client ios → tv_embedded; ios returns "Requested format is not available" through datacenter proxy, tv_embedded works reliably (same fix as audio proxy)
