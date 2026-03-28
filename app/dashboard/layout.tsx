@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { DashboardNav } from "@/components/dashboard/nav";
 // Only identify users in the dashboard — avoids loading Supabase client on the landing page
 import { PostHogIdentify } from "@/components/posthog/posthog-identify";
+import { YouTubeSyncDialog } from "@/components/dashboard/youtube-sync-dialog";
 
 export default async function DashboardLayout({
   children,
@@ -28,6 +29,9 @@ export default async function DashboardLayout({
       <div className="mx-auto max-w-[1080px] px-4 py-5 pb-24 md:px-6 md:py-6 md:pb-6">
         {children}
       </div>
+      <Suspense fallback={null}>
+        <YouTubeSyncDialog />
+      </Suspense>
     </div>
   );
 }
