@@ -2,6 +2,11 @@
 
 ## 2026-03-28
 
+FIX: Worker — switch from Gemini 3 preview (free-tier, 20 req/day) to Gemini 2.5 Flash (pay-as-you-go, 1M context) — eliminates 429 rate limit errors and reduces cost
+SECURITY: YouTube Sync — replace cookie-based diff storage with server-side session (fixes XSS risk, 4KB limit, missing secure flag); diff now stored in profiles.youtube_sync_diff and fetched via GET /api/youtube/sync
+SECURITY: YouTube Sync — add Zod validation to POST /api/youtube/sync (validates channel IDs, names, avatar URLs, action enums, max 500 items per array)
+SECURITY: YouTube OAuth — add sameSite=lax flag to state and mode cookies for CSRF protection
+FEATURE: YouTube Sync — new "Sync" button in channels panel to re-sync YouTube subscriptions with diff preview (new/removed/unchanged channels) and per-channel action choices (add active, add paused, ignore, deactivate, delete, keep)
 FIX: Video share page — resolve 404 error when video has multiple language versions (maybeSingle fails with >1 row); now picks the original language version
 FIX: Dashboard mobile — summary text was clipped on small screens; add max-height scroll container and bump font from text-xs to text-sm on mobile
 FEAT: Daily digest email — add "Read full summary" link to /videos page and "Full summaries in email" toggle in profile notifications (newsletter_full_summary setting)

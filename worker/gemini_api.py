@@ -126,11 +126,10 @@ class GeminiSummarizer:
     """
 
     # Available models (ordered by preference)
-    # Verify latest model names at: https://aistudio.google.com
+    # gemini-2.5-flash: 1M context, $0.15/M input — best cost/quality for summaries
+    # gemini-3 preview models removed: free-tier only (20 req/day), not pay-as-you-go
     MODELS = [
-        "gemini-3-flash-preview",  # Confirmed working
-        "gemini-3-pro-preview",    # Higher quality (slower)
-        "gemini-2.5-flash",        # Fallback
+        "gemini-2.5-flash",        # Primary — 1M context, cheap, fast
         "gemini-2.0-flash",        # Stable fallback
     ]
 
