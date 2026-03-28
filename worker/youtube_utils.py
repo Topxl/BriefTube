@@ -30,12 +30,12 @@ def is_direct_blocked() -> bool:
     return time.monotonic() < _direct_blocked_until
 
 
-def mark_direct_blocked(duration_seconds: float = 3600.0) -> None:
+def mark_direct_blocked(duration_seconds: float = 43200.0) -> None:
     """Mark direct YouTube connections as blocked for *duration_seconds*.
 
-    Default: 1 hour — avoids repeated failed direct attempts that trigger the
-    proxy fallback. YouTube rate-limit windows typically last 30min–2h on VPS
-    IPs; retrying every 10min just burns proxy bandwidth re-discovering the block.
+    Default: 12 hours — Hetzner VPS IPs are permanently bot-detected by YouTube.
+    Retrying direct every hour just wastes ~18s per first-video-after-reset.
+    One probe every 12h is enough to detect if the block lifts.
     """
     global _direct_blocked_until
     _direct_blocked_until = time.monotonic() + duration_seconds
