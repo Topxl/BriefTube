@@ -465,6 +465,7 @@ export type Database = {
           id: string;
           max_channels: number | null;
           newsletter_enabled: boolean | null;
+          newsletter_full_summary: boolean;
           newsletter_hour: number | null;
           notify_new_summaries_push: boolean | null;
           onboarding_completed: boolean | null;
@@ -491,6 +492,7 @@ export type Database = {
           id: string;
           max_channels?: number | null;
           newsletter_enabled?: boolean | null;
+          newsletter_full_summary?: boolean;
           newsletter_hour?: number | null;
           notify_new_summaries_push?: boolean | null;
           onboarding_completed?: boolean | null;
@@ -517,6 +519,7 @@ export type Database = {
           id?: string;
           max_channels?: number | null;
           newsletter_enabled?: boolean | null;
+          newsletter_full_summary?: boolean;
           newsletter_hour?: number | null;
           notify_new_summaries_push?: boolean | null;
           onboarding_completed?: boolean | null;
@@ -837,11 +840,7 @@ export type Database = {
     };
     Functions: {
       get_feed_deliveries: {
-        Args: {
-          p_user_id: string;
-          p_limit: number;
-          p_offset: number;
-        };
+        Args: { p_limit: number; p_offset: number; p_user_id: string };
         Returns: {
           created_at: string | null;
           id: string;
@@ -853,6 +852,12 @@ export type Database = {
           user_id: string;
           video_id: string;
         }[];
+        SetofOptions: {
+          from: "*";
+          to: "deliveries";
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
       };
       pick_next_processing_job: {
         Args: never;

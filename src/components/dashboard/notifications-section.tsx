@@ -16,6 +16,7 @@ type Props = {
   initialAnnouncements: boolean;
   initialDailyDigest: boolean;
   initialDigestHour: number;
+  initialFullSummary: boolean;
 };
 
 export function NotificationsSection({
@@ -24,6 +25,7 @@ export function NotificationsSection({
   initialAnnouncements,
   initialDailyDigest,
   initialDigestHour,
+  initialFullSummary,
 }: Props) {
   const supabase = createClient();
   const [pushEnabled, setPushEnabled] = useState(initialPushEnabled);
@@ -41,6 +43,7 @@ export function NotificationsSection({
   const [savingPush, setSavingPush] = useState(false);
   const [savingNewsletter, setSavingNewsletter] = useState(false);
   const [savingAnnouncements, setSavingAnnouncements] = useState(false);
+  const [fullSummary, setFullSummary] = useState(initialFullSummary);
   const [savingDigest, setSavingDigest] = useState(false);
 
   const permissionDenied =
@@ -171,6 +174,28 @@ export function NotificationsSection({
     }
   };
 
+  const handleFullSummaryToggle = async (checked: boolean) => {
+    setFullSummary(checked);
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+      await supabase
+        .from("profiles")
+        .update({ newsletter_full_summary: checked })
+        .eq("id", user.id);
+      toast.success(
+        checked
+          ? "Full summaries enabled in digest."
+          : "Short previews restored in digest.",
+      );
+    } catch {
+      setFullSummary(!checked);
+      toast.error("Failed to update preference.");
+    }
+  };
+
   const formatHour = (h: number) => `${String(h).padStart(2, "0")}:00`;
 
   return (
@@ -283,26 +308,40 @@ export function NotificationsSection({
             />
           </div>
           {dailyDigest && (
-            <div
-              className="mt-3 flex items-center gap-2 pl-[42px]"
-              suppressHydrationWarning
-            >
-              <p className="text-muted-foreground text-xs">
-                Delivery time (local)
-              </p>
-              <input
-                type="time"
-                value={`${formatHour(digestHour)}:00`.slice(0, 5)}
-                onChange={(e) => {
-                  const hour = parseInt(
-                    e.target.value.split(":")[0] ?? "0",
-                    10,
-                  );
-                  if (!isNaN(hour)) void handleDigestHourChange(hour);
-                }}
-                className="nm-inset text-foreground rounded-lg px-2 py-1 text-xs outline-none"
-              />
-            </div>
+            <>
+              <div
+                className="mt-3 flex items-center gap-2 pl-[42px]"
+                suppressHydrationWarning
+              >
+                <p className="text-muted-foreground text-xs">
+                  Delivery time (local)
+                </p>
+                <input
+                  type="time"
+                  value={`${formatHour(digestHour)}:00`.slice(0, 5)}
+                  onChange={(e) => {
+                    const hour = parseInt(
+                      e.target.value.split(":")[0] ?? "0",
+                      10,
+                    );
+                    if (!isNaN(hour)) void handleDigestHourChange(hour);
+                  }}
+                  className="nm-inset text-foreground rounded-lg px-2 py-1 text-xs outline-none"
+                />
+              </div>
+              <div className="mt-3 flex items-center justify-between pl-[42px]">
+                <p className="text-muted-foreground text-xs">
+                  Full summaries in email
+                </p>
+                <Switch
+                  checked={fullSummary}
+                  onCheckedChange={(checked) =>
+                    void handleFullSummaryToggle(checked)
+                  }
+                  className="data-[state=checked]:bg-red-400"
+                />
+              </div>
+            </>
           )}
         </div>
       </div>

@@ -33,7 +33,7 @@ export const dailyNewsletterTrigger = inngest.createFunction(
       const supabase = createAdminClient();
       const { data } = await supabase
         .from("profiles")
-        .select("id, email, preferred_language")
+        .select("id, email, preferred_language, newsletter_full_summary")
         .eq("newsletter_enabled", true)
         .eq("newsletter_hour", currentHour);
       return (data ?? []).filter((u) => !!u.email);
@@ -49,6 +49,7 @@ export const dailyNewsletterTrigger = inngest.createFunction(
           userId: u.id,
           email: u.email,
           language: u.preferred_language ?? "fr",
+          fullSummary: u.newsletter_full_summary,
         },
       })),
     );
@@ -66,10 +67,11 @@ export const sendUserNewsletter = inngest.createFunction(
   { id: "newsletter-send-user", retries: 2 },
   { event: "newsletter/send-user" },
   async ({ event, step }) => {
-    const { userId, email, language } = event.data as {
+    const { userId, email, language, fullSummary } = event.data as {
       userId: string;
       email: string;
       language: string;
+      fullSummary?: boolean;
     };
 
     const videos = await step.run("fetch-deliveries", async () => {
@@ -146,6 +148,7 @@ export const sendUserNewsletter = inngest.createFunction(
           date,
           unsubscribeUrl: `${SiteConfig.prodUrl}/dashboard/profile`,
           language,
+          fullSummary: fullSummary ?? false,
         }),
       );
 

@@ -25,7 +25,7 @@ export default async function ProfilePage(props: {
       supabase
         .from("profiles")
         .select(
-          "subscription_status, trial_ends_at, stripe_customer_id, tts_voice, preferred_language, favorite_languages, max_channels, referral_code, notify_new_summaries_push, email_newsletter, email_announcements, newsletter_enabled, newsletter_hour, rss_token",
+          "subscription_status, trial_ends_at, stripe_customer_id, tts_voice, preferred_language, favorite_languages, max_channels, referral_code, notify_new_summaries_push, email_newsletter, email_announcements, newsletter_enabled, newsletter_hour, newsletter_full_summary, rss_token",
         )
         .eq("id", user.id)
         .single(),
@@ -135,6 +135,7 @@ export default async function ProfilePage(props: {
       initialAnnouncements={profile?.email_announcements ?? true}
       initialDailyDigest={profile?.newsletter_enabled ?? true}
       initialDigestHour={profile?.newsletter_hour ?? 8}
+      initialFullSummary={profile?.newsletter_full_summary ?? false}
       rssToken={rssToken}
     />
   );

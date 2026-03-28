@@ -162,6 +162,7 @@ type Props = {
   initialAnnouncements: boolean;
   initialDailyDigest: boolean;
   initialDigestHour: number;
+  initialFullSummary: boolean;
   rssToken: string;
 };
 
@@ -192,6 +193,7 @@ export function ProfileContent({
   initialAnnouncements,
   initialDailyDigest,
   initialDigestHour,
+  initialFullSummary,
   rssToken,
 }: Props) {
   const router = useRouter();
@@ -527,6 +529,7 @@ export function ProfileContent({
         initialAnnouncements={initialAnnouncements}
         initialDailyDigest={initialDailyDigest}
         initialDigestHour={initialDigestHour}
+        initialFullSummary={initialFullSummary}
       />
 
       {/* Podcast feed */}
