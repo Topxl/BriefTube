@@ -91,7 +91,9 @@ export async function GET(request: NextRequest) {
   // Verify CSRF state
   const cookieStore = await cookies();
   const savedState = cookieStore.get("youtube_oauth_state")?.value;
+  const oauthMode = cookieStore.get("youtube_oauth_mode")?.value ?? "import";
   cookieStore.delete("youtube_oauth_state");
+  cookieStore.delete("youtube_oauth_mode");
 
   if (!state || state !== savedState) {
     return NextResponse.redirect(
@@ -141,12 +143,59 @@ export async function GET(request: NextRequest) {
   const [existingSubsRes, youtubeChannels] = await Promise.all([
     supabase
       .from("subscriptions")
-      .select("channel_id, active")
+      .select("channel_id, channel_name, active")
       .eq("user_id", user.id),
     fetchAllSubscriptions(access_token),
   ]);
 
   logger.info(`Fetched ${youtubeChannels.length} YouTube subscriptions`);
+
+  // ── Sync mode: compute diff and redirect with data ──────────────
+  if (oauthMode === "sync") {
+    const existingSubs = existingSubsRes.data ?? [];
+    const youtubeChannelIds = new Set(youtubeChannels.map((c) => c.channelId));
+    const existingChannelIds = new Set(existingSubs.map((s) => s.channel_id));
+
+    // New channels: in YouTube but not in DB
+    const added = youtubeChannels
+      .filter((c) => !existingChannelIds.has(c.channelId))
+      .map((c) => ({
+        channelId: c.channelId,
+        channelName: c.channelName,
+        avatarUrl: c.avatarUrl,
+      }));
+
+    // Removed channels: in DB but not in YouTube
+    const removed = existingSubs
+      .filter((s) => !youtubeChannelIds.has(s.channel_id))
+      .map((s) => ({
+        channelId: s.channel_id,
+        channelName: s.channel_name,
+      }));
+
+    // Unchanged: in both
+    const unchanged = existingSubs
+      .filter((s) => youtubeChannelIds.has(s.channel_id))
+      .map((s) => ({
+        channelId: s.channel_id,
+        channelName: s.channel_name,
+        active: s.active,
+      }));
+
+    logger.info(
+      `Sync diff: ${added.length} new, ${removed.length} removed, ${unchanged.length} unchanged`,
+    );
+
+    // Store diff server-side in profile (no cookie size limit, more secure)
+    await supabase
+      .from("profiles")
+      .update({ youtube_sync_diff: { added, removed, unchanged } })
+      .eq("id", user.id);
+
+    return NextResponse.redirect(
+      new URL("/dashboard?youtube_sync=ready", baseUrl),
+    );
+  }
 
   // Filter out already-subscribed channels (active or inactive)
   const existingChannelIds = new Set(

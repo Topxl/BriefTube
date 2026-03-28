@@ -482,6 +482,7 @@ export type Database = {
           trial_ends_at: string | null;
           tts_voice: string | null;
           updated_at: string | null;
+          youtube_sync_diff: Json | null;
         };
         Insert: {
           created_at?: string | null;
@@ -509,6 +510,7 @@ export type Database = {
           trial_ends_at?: string | null;
           tts_voice?: string | null;
           updated_at?: string | null;
+          youtube_sync_diff?: Json | null;
         };
         Update: {
           created_at?: string | null;
@@ -536,6 +538,7 @@ export type Database = {
           trial_ends_at?: string | null;
           tts_voice?: string | null;
           updated_at?: string | null;
+          youtube_sync_diff?: Json | null;
         };
         Relationships: [
           {

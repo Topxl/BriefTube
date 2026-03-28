@@ -15,6 +15,7 @@ import {
   Pause,
   Check,
   Youtube,
+  RefreshCw,
 } from "@/lib/icons";
 import { dialogManager } from "@/features/dialog-manager/dialog-manager";
 import { openUpsellModal } from "@/components/dashboard/upsell-modal";
@@ -564,13 +565,22 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
       {/* Toolbar: filter tabs OR selection controls */}
       {sources.length > 0 && !isYT && (
         <div className="flex items-center justify-between">
-          <a
-            href="/api/youtube/auth"
-            className="nm-raised-sm flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium text-red-400 capitalize transition-colors hover:text-red-300"
-          >
-            <Youtube className="h-3 w-3" />
-            Import from YouTube
-          </a>
+          <div className="flex items-center gap-1.5">
+            <a
+              href="/api/youtube/auth"
+              className="nm-raised-sm flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium text-red-400 capitalize transition-colors hover:text-red-300"
+            >
+              <Youtube className="h-3 w-3" />
+              Import
+            </a>
+            <a
+              href="/api/youtube/auth?mode=sync"
+              className="nm-raised-sm text-muted-foreground/60 hover:text-foreground flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition-colors"
+            >
+              <RefreshCw className="h-3 w-3" />
+              Sync
+            </a>
+          </div>
           {anySelected ? (
             <div className="flex items-center gap-1.5">
               <span className="text-muted-foreground/50 text-xs tabular-nums">

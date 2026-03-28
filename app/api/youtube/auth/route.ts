@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import crypto from "crypto";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -26,12 +27,23 @@ export async function GET() {
     );
   }
 
+  // Support ?mode=sync to trigger sync diff flow instead of import
+  const mode = request.nextUrl.searchParams.get("mode") ?? "import";
+
   const state = crypto.randomBytes(16).toString("hex");
   const cookieStore = await cookies();
   cookieStore.set("youtube_oauth_state", state, {
     httpOnly: true,
     maxAge: 600,
     path: "/",
+    sameSite: "lax",
+  });
+  // Store mode so callback knows whether to import or sync-diff
+  cookieStore.set("youtube_oauth_mode", mode, {
+    httpOnly: true,
+    maxAge: 600,
+    path: "/",
+    sameSite: "lax",
   });
 
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
