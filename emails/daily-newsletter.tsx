@@ -25,9 +25,15 @@ type Props = {
   date: string;
   unsubscribeUrl: string;
   language: string;
+  fullSummary?: boolean;
 };
 
-export function DailyNewsletterEmail({ videos, date, unsubscribeUrl }: Props) {
+export function DailyNewsletterEmail({
+  videos,
+  date,
+  unsubscribeUrl,
+  fullSummary = false,
+}: Props) {
   return (
     <Html>
       <Head />
@@ -69,16 +75,24 @@ export function DailyNewsletterEmail({ videos, date, unsubscribeUrl }: Props) {
               <Text style={videoIndex}>#{i + 1}</Text>
               <Text style={videoTitle}>{video.title}</Text>
               <Text style={summaryText}>
-                {video.summary.length > 400
-                  ? `${video.summary.slice(0, 400)}…`
-                  : video.summary}
+                {fullSummary
+                  ? video.summary
+                  : video.summary.length > 400
+                    ? `${video.summary.slice(0, 400)}…`
+                    : video.summary}
               </Text>
               <div style={buttonRow}>
                 <Button href={video.briefUrl} style={primaryButton}>
-                  Listen to audio summary
+                  Listen to audio
                 </Button>
-                <Button href={video.youtubeUrl} style={secondaryButton}>
-                  Watch on YouTube
+                <Button
+                  href={`https://www.brief-tube.com/videos/${video.videoId}`}
+                  style={secondaryButton}
+                >
+                  Read full summary
+                </Button>
+                <Button href={video.youtubeUrl} style={tertiaryButton}>
+                  YouTube
                 </Button>
               </div>
               {i < videos.length - 1 && <Hr style={cardDivider} />}
@@ -250,6 +264,15 @@ const footerText: React.CSSProperties = {
 const link: React.CSSProperties = {
   color: "#6b7280",
   textDecoration: "underline",
+};
+
+const tertiaryButton: React.CSSProperties = {
+  color: "#9ca3af",
+  fontSize: "13px",
+  fontWeight: "500",
+  padding: "10px 14px",
+  textDecoration: "underline",
+  display: "inline-block",
 };
 
 const unsubLink: React.CSSProperties = {

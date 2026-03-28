@@ -23,6 +23,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     .select("video_id, video_title, summary, channel_id, created_at, language")
     .eq("video_id", video_id)
     .eq("status", "completed")
+    .order("created_at", { ascending: true })
+    .limit(1)
     .maybeSingle();
 
   if (!video) {
@@ -65,12 +67,14 @@ export default async function VideoPage({ params }: Props) {
 
   const supabase = createAdminClient();
 
-  // Fetch video
+  // Fetch video — pick the earliest language version (original) when multiple exist
   const { data: video } = await supabase
     .from("processed_videos")
     .select("video_id, video_title, summary, channel_id, created_at, language")
     .eq("video_id", video_id)
     .eq("status", "completed")
+    .order("created_at", { ascending: true })
+    .limit(1)
     .maybeSingle();
 
   if (!video) {

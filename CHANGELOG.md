@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-03-28
+
+FIX: Video share page — resolve 404 error when video has multiple language versions (maybeSingle fails with >1 row); now picks the original language version
+FIX: Dashboard mobile — summary text was clipped on small screens; add max-height scroll container and bump font from text-xs to text-sm on mobile
+FEAT: Daily digest email — add "Read full summary" link to /videos page and "Full summaries in email" toggle in profile notifications (newsletter_full_summary setting)
+
 ## 2026-03-27
 
 FEATURE: Dashboard — add "Retry processing" button in video menu for failed videos

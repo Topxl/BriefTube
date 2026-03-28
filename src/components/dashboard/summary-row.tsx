@@ -471,8 +471,8 @@ export function SummaryRow({
           style={{ gridTemplateRows: showSummary ? "1fr" : "0fr" }}
         >
           <div className="overflow-hidden">
-            <div className="border-t border-white/[0.04] px-3 py-3">
-              <p className="text-muted-foreground text-xs leading-relaxed break-words whitespace-pre-line">
+            <div className="max-h-[60vh] overflow-y-auto border-t border-white/[0.04] px-3 py-3">
+              <p className="text-muted-foreground text-sm leading-relaxed break-words whitespace-pre-line sm:text-xs">
                 {video.summary}
               </p>
             </div>
