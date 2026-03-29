@@ -2,7 +2,9 @@
 
 ## 2026-03-30
 
+REFACTOR: Worker — centralize geo-bypass proxy loop into youtube_utils.run_geo_bypass(); eliminate duplicated patterns in transcript_extractor and whisper_transcriber
 CHORE: Worker — remove YOUTUBE_PROXY_HTTP_GEO (replaced by YOUTUBE_PROXY_HTTP_GEO_TEMPLATE); remove get_geo_proxy_urls() (replaced by get_geo_proxy_urls_for_language())
+FEATURE: Worker — expand geo-bypass to 60+ languages and 30 countries; language-mapped country always tried first even if not in default list (TH, KR, IN, BR, etc.)
 FEATURE: Worker — smart geo-restriction bypass: detect video source language, map to country of origin (FR→France, JA→Japan, etc.), try that proxy first before cycling through all countries
 FEATURE: Worker — multi-country geo-bypass loop: try up to 10 country proxies in order (YOUTUBE_PROXY_HTTP_GEO_TEMPLATE) instead of single US proxy
 REFACTOR: Worker — add _LANGUAGE_TO_COUNTRY mapping and get_geo_proxy_urls_for_language() to youtube_utils; both transcript_extractor and whisper_transcriber use it
