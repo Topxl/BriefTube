@@ -8,7 +8,13 @@ FIX: Landing variants — all "3 channels" → dynamic from SiteConfig.freeChann
 FEATURE: Landing hero — add post-trial reassurance line ("After trial: X channels free forever")
 FEATURE: Email trial-reminder — add free tier reassurance ("you'll still keep X channels free forever")
 FEATURE: Email trial-expired — clarify free tier continues with X channels forever
-FEATURE: Email onboarding J1 — mention trial duration and free tier after trial
+FEATURE: Email onboarding J1 ��� mention trial duration and free tier after trial
+FIX: /vs competitor page — "7 days" vs "30-day" contradiction resolved with SiteConfig
+FIX: Pricing page — hardcoded "30-day", "5 channels", "50 channels" → SiteConfig values
+FIX: Pricing cards — hardcoded "5 YouTube channels" and "50 YouTube channels" → SiteConfig
+FIX: Dashboard profile — hardcoded "50 channels" → SiteConfig.plusChannelsLimit
+FIX: Admin actions — hardcoded trial +30 days → SiteConfig.trialDays
+FIX: Worker — add FREE_CHANNELS_LIMIT config constant, replace hardcoded "5 channels" in bot_handler and db.py
 FEAT: Admin dashboard — "Ajouté chaînes" step in acquisition funnel + channel source breakdown (manual vs YouTube import vs list follow)
 FEAT: YouTube sync — tag imported channels with source_type="youtube_import" for analytics
 FEAT: Admin dashboard — add activation rate (users with channels), onboarding rate, email open rate metrics

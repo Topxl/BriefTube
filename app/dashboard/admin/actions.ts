@@ -12,6 +12,7 @@ import {
   type ReferralTrialResult,
 } from "@/lib/cron/referral-trial-emails";
 import { runOnboardingApologyEmails } from "@/lib/cron/onboarding-apology-emails";
+import { SiteConfig } from "@/site-config";
 import { runDailyDigestForUser } from "@/lib/cron/daily-digest";
 import { restoreSystemPausedChannels } from "@/lib/subscriptions";
 import { requireAdmin } from "@/lib/auth/require-admin";
@@ -139,7 +140,7 @@ export async function extendAllTrialsTo30Days(): Promise<{ updated: number }> {
   await Promise.all(
     toUpdate.map((profile) => {
       const trialEnd = new Date(profile.created_at as string);
-      trialEnd.setDate(trialEnd.getDate() + 30);
+      trialEnd.setDate(trialEnd.getDate() + SiteConfig.trialDays);
       return admin
         .from("profiles")
         .update({ trial_ends_at: trialEnd.toISOString() })

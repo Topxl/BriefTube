@@ -5,8 +5,7 @@ import { PricingCards } from "@/components/pricing/pricing-cards";
 
 export const metadata: Metadata = {
   title: "Pricing",
-  description:
-    "Start free with 5 YouTube channels, upgrade to Plus for 50 channels, or go Pro for unlimited channels, priority processing and custom voices. Simple, transparent pricing.",
+  description: `Start free with ${SiteConfig.freeChannelsLimit} YouTube channels, upgrade to Plus for ${SiteConfig.plusChannelsLimit} channels, or go Pro for unlimited channels, priority processing and custom voices. Simple, transparent pricing.`,
   alternates: {
     canonical: `${SiteConfig.prodUrl}/pricing`,
   },
@@ -88,22 +87,14 @@ export default async function PricingPage() {
             What does the free plan include?
           </h2>
           <p className="text-muted-foreground text-sm leading-relaxed">
-            The free plan lets you monitor up to 5 YouTube channels with no
-            credit card and no time limit. Every new video from those channels
-            gets summarized automatically by AI, converted to audio, and
-            delivered to your dashboard, private podcast RSS feed, Telegram,
-            Discord, or Slack. There is no catch and no feature artificially
-            locked — the free plan is genuinely usable.
+            {`The free plan lets you monitor up to ${SiteConfig.freeChannelsLimit} YouTube channels with no credit card and no time limit. Every new video from those channels gets summarized automatically by AI, converted to audio, and delivered to your dashboard, private podcast RSS feed, Telegram, Discord, or Slack. There is no catch and no feature artificially locked — the free plan is genuinely usable.`}
           </p>
         </section>
 
         <section className="flex flex-col gap-3">
           <h2 className="text-lg font-semibold">What does Plus add?</h2>
           <p className="text-muted-foreground text-sm leading-relaxed">
-            Plus increases your channel limit from 5 to 50 YouTube channels. It
-            also gives you priority processing — your summaries are generated
-            before free-plan requests, so they arrive faster. Plus is perfect if
-            you follow dozens of channels but don't need unlimited.
+            {`Plus increases your channel limit from ${SiteConfig.freeChannelsLimit} to ${SiteConfig.plusChannelsLimit} YouTube channels. It also gives you priority processing — your summaries are generated before free-plan requests, so they arrive faster. Plus is perfect if you follow dozens of channels but don't need unlimited.`}
           </p>
         </section>
 
@@ -145,14 +136,10 @@ export default async function PricingPage() {
 
         <section className="flex flex-col gap-3">
           <h2 className="text-lg font-semibold">
-            Is the 30-day trial really free?
+            {`Is the ${SiteConfig.trialDays}-day trial really free?`}
           </h2>
           <p className="text-muted-foreground text-sm leading-relaxed">
-            Yes. No credit card required to start. When you sign up, you
-            automatically get 30 days of Pro features at no cost. At the end of
-            the trial, you can enter a card to continue on Pro, or keep using
-            the free plan with no action needed. You will never be charged
-            without explicitly providing payment details.
+            {`Yes. No credit card required to start. When you sign up, you automatically get ${SiteConfig.trialDays} days of Pro features at no cost. At the end of the trial, you can enter a card to continue on Pro, or keep using the free plan with no action needed. You will never be charged without explicitly providing payment details.`}
           </p>
         </section>
       </div>

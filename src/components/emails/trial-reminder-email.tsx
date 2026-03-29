@@ -10,6 +10,7 @@ import {
   Preview,
   Text,
 } from "@react-email/components";
+import { SiteConfig } from "@/site-config";
 
 type Props = {
   daysLeft: number;
@@ -101,6 +102,16 @@ export function TrialReminderEmail({ daysLeft, trackingPixelUrl }: Props) {
           >
             Upgrade to Pro
           </Button>
+          <Text
+            style={{
+              color: "#71717a",
+              fontSize: "13px",
+              lineHeight: "1.5",
+              margin: "16px 0 0",
+            }}
+          >
+            {`Not ready to upgrade? No problem — you'll still keep ${SiteConfig.freeChannelsLimit} channels free forever. No card needed.`}
+          </Text>
           <Hr
             style={{
               borderColor: "rgba(255,255,255,0.06)",

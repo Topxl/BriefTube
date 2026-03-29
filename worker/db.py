@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 import httpx
 from supabase import create_client, Client, ClientOptions
 
-from config import SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+from config import SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, FREE_CHANNELS_LIMIT
 
 logger = logging.getLogger(__name__)
 
@@ -426,7 +426,7 @@ def create_deliveries_for_video(video_id: str, channel_id: str, language: str = 
             s["user_id"] for s in (sub_counts_raw.data or [])
         )
         for p in trial_expired_users:
-            max_ch = p.get("max_channels") or 5
+            max_ch = p.get("max_channels") or FREE_CHANNELS_LIMIT
             count = sub_counts.get(p["id"], 0)
             if count <= max_ch:
                 fully_entitled_ids.append(p["id"])
