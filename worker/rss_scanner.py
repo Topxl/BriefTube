@@ -36,6 +36,18 @@ def is_likely_music(title: str) -> bool:
     return bool(_MUSIC_TITLE_RE.search(title))
 
 
+_VALID_CHANNEL_ID_RE = re.compile(r"^UC[a-zA-Z0-9_\-]{22}$")
+
+
+def is_valid_channel_id(channel_id: str) -> bool:
+    """Return True only for real YouTube channel IDs (UCxxxxxxxxxxxxxxxxxxxxxxxx).
+
+    Guards against names / raw URLs accidentally stored in the DB — those would
+    produce malformed RSS URLs and noisy errors on every scan.
+    """
+    return bool(_VALID_CHANNEL_ID_RE.match(channel_id))
+
+
 def get_rss_url(channel_id: str) -> str:
     return f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"
 
@@ -104,6 +116,14 @@ def scan_all_channels():
     channel_ids = db.get_all_channel_ids()
     logger.info(f"Scanning {len(channel_ids)} channels...")
 
+    # Drop invalid channel IDs before doing any work — these are names or URLs
+    # accidentally stored in the DB (no UCxxx format). Log once so admins can
+    # clean them up; don't spam an error on every scan.
+    valid_channel_ids = [ch for ch in channel_ids if is_valid_channel_id(ch)]
+    invalid = set(channel_ids) - set(valid_channel_ids)
+    for ch in invalid:
+        logger.warning(f"Skipping invalid channel_id (not a UC… ID): {ch!r}")
+
     # Load known video IDs once — avoids 3000+ individual DB queries per scan
     known_video_ids = db.get_all_known_video_ids()
     logger.info(f"Loaded {len(known_video_ids)} known video IDs into memory")
@@ -111,7 +131,7 @@ def scan_all_channels():
     # Fetch all RSS feeds in parallel — 50x faster than sequential
     channel_videos: dict[str, list[dict]] = {}
     with ThreadPoolExecutor(max_workers=50) as executor:
-        futures = {executor.submit(fetch_channel_videos, ch): ch for ch in channel_ids}
+        futures = {executor.submit(fetch_channel_videos, ch): ch for ch in valid_channel_ids}
         for future in as_completed(futures):
             ch = futures[future]
             try:

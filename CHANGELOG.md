@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-03-29
+
+FIX: Subscriptions — reject channel IDs that don't resolve to a real UC… YouTube ID (prevents names/malformed URLs being stored in DB)
+FIX: RSS scanner — skip invalid channel IDs (non-UC… format) with a warning instead of crashing on every scan
+CHORE: DB — deleted 2 invalid subscription entries (bare channel name and malformed URL stored as channel_id)
+FEAT: Worker — KPI report sent automatically at 8h and 20h UTC via log bot (users, conversion, videos, deliveries, system)
+FEAT: Worker — /log_mode command replaces /log_toggle — modes: off (default), errors, all
+REFACTOR: Worker — log bot mirror disabled by default, send_alert respects log_mode
+FEATURE: Dashboard — summary card shows "processing" badge immediately after clicking "Retry processing" (optimistic local state, no page reload needed)
+
 ## 2026-03-28
 
 FIX: Worker — switch from Gemini 3 preview (free-tier, 20 req/day) to Gemini 2.5 Flash (pay-as-you-go, 1M context) — eliminates 429 rate limit errors and reduces cost
