@@ -2,6 +2,10 @@
 
 ## 2026-03-29
 
+FEAT: Admin dashboard — add activation rate (users with channels), onboarding rate, email open rate metrics
+FEAT: Worker — comprehensive KPI report with activation funnel, retention, costs, day-over-day deltas, email open rates
+FEAT: Worker — /kpi command for on-demand KPI report
+FEAT: Worker — /log_mode off|errors|all (default: off) replaces /log_toggle
 FIX: Subscriptions — reject channel IDs that don't resolve to a real UC… YouTube ID (prevents names/malformed URLs being stored in DB)
 FIX: RSS scanner — skip invalid channel IDs (non-UC… format) with a warning instead of crashing on every scan
 CHORE: DB — deleted 2 invalid subscription entries (bare channel name and malformed URL stored as channel_id)

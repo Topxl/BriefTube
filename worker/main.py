@@ -32,7 +32,7 @@ from notion_deliverer import send_to_notion
 from whatsapp_deliverer import send_to_whatsapp
 from discord_deliverer import send_to_discord
 from slack_deliverer import send_to_slack
-from bot_handler import create_bot_application, setup_bot_commands, MonitoringAlert, send_daily_report
+from bot_handler import create_bot_application, setup_bot_commands, MonitoringAlert, send_kpi_report
 from monitoring import stats
 import rss_scanner
 import storage
@@ -1572,6 +1572,33 @@ async def stats_save_loop():
             logger.warning(f"WorkerStats periodic save failed: {e}")
 
 
+# ── KPI report loop (8h + 20h UTC) ─────────────────────────────
+
+async def kpi_report_loop(alert_system: MonitoringAlert):
+    """Send KPI reports at 08:00 and 20:00 UTC every day."""
+    report_hours = {8, 20}  # UTC hours
+    last_sent_hour = -1
+
+    while True:
+        now = datetime.now(timezone.utc)
+        current_hour = now.hour
+
+        if current_hour in report_hours and current_hour != last_sent_hour:
+            period = "morning" if current_hour == 8 else "evening"
+            try:
+                await send_kpi_report(alert_system, period=period)
+                logger.info(f"KPI {period} report sent")
+            except Exception as e:
+                logger.error(f"KPI report failed: {e}")
+            last_sent_hour = current_hour
+
+        # Reset at midnight
+        if current_hour == 0:
+            last_sent_hour = -1
+
+        await asyncio.sleep(60)  # Check every minute
+
+
 # ── Main ───────────────────────────────────────────────────────
 
 async def main():
@@ -1681,6 +1708,7 @@ async def main():
             _bot_poll_loop(bot_app),
             health_loop(),
             stats_save_loop(),
+            kpi_report_loop(alert_system),
         ]
 
         # Add alert processor if admin configured

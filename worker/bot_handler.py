@@ -43,11 +43,16 @@ class MonitoringAlert:
         self._log_chat_id: str = LOG_BOT_ADMIN_CHAT_ID or admin_chat_id or ""
         # Track video_ids already mirrored this session (avoid sending N copies for N subscribers)
         self._mirrored_video_ids: set = set()
-        self._mirror_enabled: bool = True  # Toggle via /log_toggle
+        # Log mode: "off" (no alerts/mirrors), "errors" (only ERROR/CRITICAL), "all" (everything)
+        self._log_mode: str = "off"
 
     async def send_alert(self, message: str, level: str = "INFO"):
         """Queue an alert to be sent to admin via the log bot."""
         if not self._log_chat_id or not self._log_bot:
+            return
+        if self._log_mode == "off":
+            return
+        if self._log_mode == "errors" and level not in ("ERROR", "CRITICAL"):
             return
 
         emoji = {
@@ -101,7 +106,7 @@ class MonitoringAlert:
         Lets the admin see every video sent to users (title, YouTube link, audio)
         without receiving N duplicates when multiple subscribers get the same video.
         """
-        if not self._mirror_enabled:
+        if self._log_mode != "all":
             return
         if not self._log_bot or not self._log_chat_id:
             return
@@ -142,31 +147,195 @@ class MonitoringAlert:
         self.is_running = False
 
 
-async def send_daily_report(alert_system: MonitoringAlert):
-    """Send daily statistics report to admin."""
-    summary = stats.get_summary()
-    system = get_system_info()
+async def send_kpi_report(alert_system: MonitoringAlert, period: str = "daily"):
+    """Send a comprehensive KPI report to admin via the log bot (always sent, regardless of log_mode).
 
-    report = (
-        f"📊 <b>Daily Worker Report</b>\n\n"
-        f"<b>Uptime:</b> {summary['uptime']}\n\n"
-        f"<b>Videos:</b>\n"
-        f"• Processed: {summary['videos_processed']}\n"
-        f"• Failed: {summary['videos_failed']}\n"
-        f"• Avg time: {summary['avg_processing_time']}s\n\n"
-        f"<b>RSS Scans:</b> {summary['rss_scans']}\n"
-        f"<b>New videos found:</b> {summary['new_videos_found']}\n\n"
-        f"<b>Deliveries:</b>\n"
-        f"• Sent: {summary['deliveries_sent']}\n"
-        f"• Failed: {summary['deliveries_failed']}\n\n"
-        f"<b>System:</b>\n"
-        f"• CPU: {system.get('cpu_percent', 'N/A')}%\n"
-        f"• Memory: {system.get('memory_percent', 'N/A')}%\n"
-        f"• Disk: {system.get('disk_free_gb', 'N/A')} GB free\n\n"
-        f"<b>Recent Errors:</b> {len(summary['recent_errors'])}\n"
-    )
+    Args:
+        period: "morning", "evening", or "on-demand".
+    """
+    if not alert_system._log_bot or not alert_system._log_chat_id:
+        return
 
-    await alert_system.send_alert(report, level="INFO")
+    supabase = db.get_client()
+    labels = {"morning": "Morning", "evening": "Evening", "on-demand": "On-Demand"}
+    now_label = labels.get(period, "Daily")
+
+    try:
+        from datetime import datetime, timedelta, timezone
+        now = datetime.now(timezone.utc)
+        day_ago = (now - timedelta(hours=24)).isoformat()
+        two_days_ago = (now - timedelta(hours=48)).isoformat()
+        week_ago = (now - timedelta(days=7)).isoformat()
+        two_weeks_ago = (now - timedelta(days=14)).isoformat()
+        month_ago = (now - timedelta(days=30)).isoformat()
+
+        # ── Users ────────────────────────────────────────────────
+        total_users = supabase.table("profiles").select("id", count="exact").execute()
+        pro_users = supabase.table("profiles").select("id", count="exact").eq("subscription_status", "active").execute()
+        free_users = supabase.table("profiles").select("id", count="exact").eq("subscription_status", "free").execute()
+        trial_users = supabase.table("profiles").select("id", count="exact").eq("subscription_status", "free").gt("trial_ends_at", now.isoformat()).execute()
+        churned = supabase.table("profiles").select("id", count="exact").in_("subscription_status", ["cancelled", "past_due"]).execute()
+        signups_24h = supabase.table("profiles").select("id", count="exact").gte("created_at", day_ago).execute()
+        signups_prev_24h = supabase.table("profiles").select("id", count="exact").gte("created_at", two_days_ago).lt("created_at", day_ago).execute()
+        signups_7d = supabase.table("profiles").select("id", count="exact").gte("created_at", week_ago).execute()
+        onboarded = supabase.table("profiles").select("id", count="exact").eq("onboarding_completed", True).execute()
+
+        # ── Activation: users with at least 1 channel ────────────
+        users_with_channels = supabase.rpc("get_feed_deliveries", {"p_user_id": "00000000-0000-0000-0000-000000000000", "p_limit": 0, "p_offset": 0}).execute()
+        # Simpler: distinct user_ids in subscriptions
+        sub_users_rows = supabase.table("subscriptions").select("user_id").execute()
+        activated_user_ids = set(r["user_id"] for r in (sub_users_rows.data or []))
+        n_activated = len(activated_user_ids)
+
+        # Avg channels per user (among those who have channels)
+        total_subs = supabase.table("subscriptions").select("id", count="exact").execute()
+        avg_channels = ((total_subs.count or 0) / n_activated) if n_activated > 0 else 0
+
+        # ── Platforms ────────────────────────────────────────────
+        telegram_c = supabase.table("platform_connections").select("id", count="exact").eq("platform", "telegram").eq("connected", True).execute()
+        discord_c = supabase.table("platform_connections").select("id", count="exact").eq("platform", "discord").eq("connected", True).execute()
+        slack_c = supabase.table("platform_connections").select("id", count="exact").eq("platform", "slack").eq("connected", True).execute()
+        active_channels = supabase.table("subscriptions").select("id", count="exact").eq("active", True).execute()
+        paused_system = supabase.table("subscriptions").select("id", count="exact").eq("paused_by_system", True).execute()
+
+        # ── Videos (24h + yesterday for delta) ───────────────────
+        vc_q = supabase.table("processed_videos").select("id", count="exact").eq("status", "completed").gte("created_at", day_ago).execute()
+        vf_q = supabase.table("processed_videos").select("id", count="exact").eq("status", "failed").gte("created_at", day_ago).execute()
+        vp_q = supabase.table("processed_videos").select("id", count="exact").in_("status", ["pending", "processing"]).execute()
+        vc_prev = supabase.table("processed_videos").select("id", count="exact").eq("status", "completed").gte("created_at", two_days_ago).lt("created_at", day_ago).execute()
+
+        # ── Deliveries (24h + yesterday) by platform ─────────────
+        del_total = supabase.table("deliveries").select("id", count="exact").gte("created_at", day_ago).execute()
+        del_prev = supabase.table("deliveries").select("id", count="exact").gte("created_at", two_days_ago).lt("created_at", day_ago).execute()
+        del_telegram = supabase.table("deliveries").select("id", count="exact").eq("platform", "telegram").gte("created_at", day_ago).execute()
+        del_discord = supabase.table("deliveries").select("id", count="exact").eq("platform", "discord").gte("created_at", day_ago).execute()
+        del_slack = supabase.table("deliveries").select("id", count="exact").eq("platform", "slack").gte("created_at", day_ago).execute()
+
+        # ── Emails (24h + open rate 30d) ─────────────────────────
+        emails_24h = supabase.table("email_logs").select("id", count="exact").gte("sent_at", day_ago).execute()
+        emails_30d_total = supabase.table("email_logs").select("id", count="exact").gte("sent_at", month_ago).execute()
+        emails_30d_opened = supabase.table("email_logs").select("id", count="exact").gte("sent_at", month_ago).not_.is_("opened_at", "null").execute()
+
+        # ── Engagement: active users 7d + 14d ────────────────────
+        active_7d_rows = supabase.table("deliveries").select("user_id").gte("created_at", week_ago).execute()
+        active_7d_ids = set(r["user_id"] for r in (active_7d_rows.data or []))
+        active_14d_rows = supabase.table("deliveries").select("user_id").gte("created_at", two_weeks_ago).lt("created_at", week_ago).execute()
+        active_prev_7d_ids = set(r["user_id"] for r in (active_14d_rows.data or []))
+        # Retention = users active in both weeks / users active previous week
+        retained = active_7d_ids & active_prev_7d_ids
+        retention_rate = (len(retained) / len(active_prev_7d_ids) * 100) if active_prev_7d_ids else 0
+
+        # ── Trials expiring soon (7d) ────────────────────────────
+        expiring_soon = (now + timedelta(days=7)).isoformat()
+        expiring_trials = supabase.table("profiles").select("id", count="exact").eq("subscription_status", "free").gt("trial_ends_at", now.isoformat()).lt("trial_ends_at", expiring_soon).execute()
+
+        # ── Infrastructure costs (from worker_stats) ─────────────
+        today_str = now.date().isoformat()
+        yesterday_str = (now - timedelta(days=1)).date().isoformat()
+        ws_today = supabase.table("worker_stats").select("groq_cost, groq_seconds").eq("date", today_str).maybeSingle().execute()
+        ws_yesterday = supabase.table("worker_stats").select("groq_cost, groq_seconds").eq("date", yesterday_str).maybeSingle().execute()
+
+        # ── Worker stats ─────────────────────────────────────────
+        summary = stats.get_summary()
+        system = get_system_info()
+
+        # ── Build numbers ────────────────────────────────────────
+        n_total = total_users.count or 0
+        n_pro = pro_users.count or 0
+        n_trial = trial_users.count or 0
+        n_free = max(0, (free_users.count or 0) - n_trial)
+        n_churned = churned.count or 0
+        n_onboarded = onboarded.count or 0
+        onboard_rate = (n_onboarded / n_total * 100) if n_total > 0 else 0
+        activation_rate = (n_activated / n_total * 100) if n_total > 0 else 0
+        conv_rate = (n_pro / (n_pro + n_churned) * 100) if (n_pro + n_churned) > 0 else 0
+
+        vc = vc_q.count or 0
+        vf = vf_q.count or 0
+        v_rate = (vc / (vc + vf) * 100) if (vc + vf) > 0 else 0
+        vc_y = vc_prev.count or 0
+
+        dt = del_total.count or 0
+        dt_y = del_prev.count or 0
+        dtg = del_telegram.count or 0
+        ddc = del_discord.count or 0
+        dsl = del_slack.count or 0
+        d_web = max(0, dt - dtg - ddc - dsl)
+
+        su_24 = signups_24h.count or 0
+        su_y = signups_prev_24h.count or 0
+
+        email_open_rate = ((emails_30d_opened.count or 0) / (emails_30d_total.count or 1) * 100)
+
+        groq_cost_today = ws_today.data.get("groq_cost", 0) if ws_today.data else 0
+        groq_cost_yesterday = ws_yesterday.data.get("groq_cost", 0) if ws_yesterday.data else 0
+        groq_sec_today = ws_today.data.get("groq_seconds", 0) if ws_today.data else 0
+
+        # ── Delta helper ─────────────────────────────────────────
+        def delta(current: int, previous: int) -> str:
+            diff = current - previous
+            if diff == 0:
+                return ""
+            arrow = "↑" if diff > 0 else "↓"
+            return f" {arrow}{abs(diff)}"
+
+        # ── Message 1: Users + Funnel + Engagement ───────────────
+        msg1 = (
+            f"📊 <b>{now_label} KPI Report</b>\n"
+            f"<i>{now.strftime('%A %d %B %Y, %H:%M UTC')}</i>\n\n"
+
+            f"👥 <b>Users ({n_total})</b>\n"
+            f"  Pro: <b>{n_pro}</b> · Trial: {n_trial} · Free: {n_free}\n"
+            f"  Churned: {n_churned} · Conv: <b>{conv_rate:.0f}%</b>\n"
+            f"  Signups: <b>{su_24}</b>{delta(su_24, su_y)} (24h) · {signups_7d.count or 0} (7d)\n\n"
+
+            f"🔑 <b>Activation Funnel</b>\n"
+            f"  Onboarded: {onboard_rate:.0f}% · Added channels: <b>{activation_rate:.0f}%</b>\n"
+            f"  Users with channels: {n_activated}/{n_total}\n"
+            f"  Avg channels/user: {avg_channels:.0f}\n"
+            f"  Trials expiring &lt;7d: {expiring_trials.count or 0}\n\n"
+
+            f"📈 <b>Engagement</b>\n"
+            f"  Active (7d): <b>{len(active_7d_ids)}</b>\n"
+            f"  Retention (w/w): <b>{retention_rate:.0f}%</b> ({len(retained)}/{len(active_prev_7d_ids)})\n"
+            f"  Referrals: {total_referrals.count or 0}\n\n"
+
+            f"📡 <b>Platforms</b>\n"
+            f"  TG: {telegram_c.count or 0} · DC: {discord_c.count or 0} · Slack: {slack_c.count or 0}\n"
+            f"  Channels: {active_channels.count or 0} active · {paused_system.count or 0} paused"
+        )
+
+        # ── Message 2: Operations + Costs + System ───────────────
+        msg2 = (
+            f"🎬 <b>Videos (24h)</b>\n"
+            f"  Done: <b>{vc}</b>{delta(vc, vc_y)} · Failed: {vf} · Queue: {vp_q.count or 0}\n"
+            f"  Success: <b>{v_rate:.0f}%</b> · Avg: {summary['avg_processing_time']}s\n\n"
+
+            f"📬 <b>Deliveries (24h): {dt}</b>{delta(dt, dt_y)}\n"
+            f"  TG: {dtg} · DC: {ddc} · Slack: {dsl} · Web: {d_web}\n\n"
+
+            f"✉️ <b>Emails</b>\n"
+            f"  Sent (24h): {emails_24h.count or 0}\n"
+            f"  Open rate (30d): <b>{email_open_rate:.0f}%</b> ({emails_30d_opened.count or 0}/{emails_30d_total.count or 0})\n\n"
+
+            f"💰 <b>Infrastructure Costs</b>\n"
+            f"  Groq today: <b>${groq_cost_today:.2f}</b>{delta(int(groq_cost_today*100), int(groq_cost_yesterday*100)).replace('↑', '↑$0.').replace('↓', '↓$0.') if groq_cost_today != groq_cost_yesterday else ''}\n"
+            f"  Groq audio: {groq_sec_today:.0f}s / 28800s quota\n\n"
+
+            f"💻 <b>System</b>\n"
+            f"  CPU: {system.get('cpu_percent', '?')}% · RAM: {system.get('memory_percent', '?')}%\n"
+            f"  Uptime: {summary['uptime']} · Errors: {len(summary['recent_errors'])}"
+        )
+
+        bot = alert_system._log_bot
+        chat = alert_system._log_chat_id
+        await bot.send_message(chat_id=chat, text=msg1, parse_mode="HTML")
+        await bot.send_message(chat_id=chat, text=msg2, parse_mode="HTML")
+
+    except Exception as e:
+        logger.error(f"KPI report failed: {e}")
+        import traceback as _tb
+        logger.error(_tb.format_exc())
 
 
 # ── URL detection patterns ────────────────────────────────────
@@ -451,20 +620,53 @@ async def monitor_logs_command(update: Update, context: ContextTypes.DEFAULT_TYP
     )
 
 
-async def log_toggle_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Toggle delivery mirroring on/off (admin only)."""
+async def log_mode_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Set log mode: /log_mode [off|errors|all] (admin only).
+
+    off    — no alerts, no delivery mirrors (default)
+    errors — only ERROR/CRITICAL alerts, no delivery mirrors
+    all    — all alerts + delivery mirrors (preview audio)
+    """
     chat_id = str(update.effective_chat.id)
     if not _is_admin(chat_id):
         await update.message.reply_text("⛔ Admin only command")
         return
-    # Find the alert_system via the application's bot_data
     alert = context.application.bot_data.get("alert_system")
     if not alert:
         await update.message.reply_text("Alert system not found.")
         return
-    alert._mirror_enabled = not alert._mirror_enabled
-    state = "enabled ✅" if alert._mirror_enabled else "disabled ⏸️"
-    await update.message.reply_text(f"Delivery mirroring {state}")
+
+    args = context.args
+    valid_modes = ("off", "errors", "all")
+
+    if not args or args[0] not in valid_modes:
+        current = alert._log_mode
+        await update.message.reply_text(
+            f"Current mode: <b>{current}</b>\n\n"
+            f"Usage: /log_mode [off|errors|all]\n"
+            f"• <b>off</b> — silent, no alerts\n"
+            f"• <b>errors</b> — only errors\n"
+            f"• <b>all</b> — all alerts + delivery previews",
+            parse_mode="HTML",
+        )
+        return
+
+    alert._log_mode = args[0]
+    await update.message.reply_text(f"Log mode set to <b>{args[0]}</b>", parse_mode="HTML")
+
+
+async def kpi_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Send KPI report on demand (admin only)."""
+    chat_id = str(update.effective_chat.id)
+    if not _is_admin(chat_id):
+        await update.message.reply_text("⛔ Admin only command")
+        return
+    alert = context.application.bot_data.get("alert_system")
+    if not alert:
+        await update.message.reply_text("Alert system not found.")
+        return
+    await update.message.reply_text("Generating KPI report...")
+    await send_kpi_report(alert, period="on-demand")
 
 
 async def cookies_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -1680,7 +1882,8 @@ def create_bot_application() -> Application:
     app.add_handler(CommandHandler("monitor_status", monitor_status_command))
     app.add_handler(CommandHandler("monitor_stats", monitor_stats_command))
     app.add_handler(CommandHandler("monitor_logs", monitor_logs_command))
-    app.add_handler(CommandHandler("log_toggle", log_toggle_command))
+    app.add_handler(CommandHandler("log_mode", log_mode_command))
+    app.add_handler(CommandHandler("kpi", kpi_command))
     app.add_handler(CommandHandler("cookies", cookies_command))
 
     # Inline keyboard callbacks — options menu and sub-actions

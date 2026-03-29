@@ -727,6 +727,35 @@ export default async function AdminPage() {
   );
   const emailDays14d = buildDailyArray(emailLogs, 14);
 
+  // ── Email open rates ──────────────────────────────────────────
+  const { count: emailsOpened30d } = await admin
+    .from("email_logs")
+    .select("*", { count: "exact", head: true })
+    .gte("sent_at", thirtyDaysAgo.toISOString())
+    .not("opened_at", "is", null);
+  const emailOpenRate =
+    totalEmailsSent30d > 0
+      ? Math.round(((emailsOpened30d ?? 0) / totalEmailsSent30d) * 100)
+      : 0;
+
+  // ── Users who added channels (activation) ──────────────────────
+  const { data: usersWithChannelsRaw } = await admin
+    .from("subscriptions")
+    .select("user_id");
+  const usersWithChannels = new Set(
+    (usersWithChannelsRaw ?? []).map((s) => s.user_id),
+  ).size;
+  const activationRate =
+    total > 0 ? Math.round((usersWithChannels / total) * 100) : 0;
+
+  // ── Onboarding completed ──────────────────────────────────────
+  const { count: onboardedCount } = await admin
+    .from("profiles")
+    .select("*", { count: "exact", head: true })
+    .eq("onboarding_completed", true);
+  const onboardingRate =
+    total > 0 ? Math.round(((onboardedCount ?? 0) / total) * 100) : 0;
+
   // ── Taux de conversion funnel ─────────────────────────────────
   const allTrialUsers = (trialActive ?? 0) + trialExpiredCount + proCount;
   const visitorToSignupRatePct =
@@ -969,6 +998,59 @@ export default async function AdminPage() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Activation & Engagement */}
+      <div className="flex flex-col gap-2">
+        <SectionTitle>Activation & Engagement</SectionTitle>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <StatCard
+            label="Ont ajouté des chaînes"
+            value={usersWithChannels}
+            sub={`${activationRate}% des inscrits`}
+            icon={<CheckCircle className="h-4 w-4" />}
+            variant={
+              activationRate >= 50
+                ? "success"
+                : activationRate >= 20
+                  ? "warning"
+                  : "danger"
+            }
+          />
+          <StatCard
+            label="Onboarding complété"
+            value={onboardedCount ?? 0}
+            sub={`${onboardingRate}% des inscrits`}
+            icon={<CheckCircle className="h-4 w-4" />}
+            variant={
+              onboardingRate >= 50
+                ? "success"
+                : onboardingRate >= 20
+                  ? "warning"
+                  : "danger"
+            }
+          />
+          <StatCard
+            label="Open rate emails"
+            value={`${emailOpenRate}%`}
+            sub={`${emailsOpened30d ?? 0}/${totalEmailsSent30d} (30j)`}
+            icon={<Mail className="h-4 w-4" />}
+            variant={
+              emailOpenRate >= 20
+                ? "success"
+                : emailOpenRate >= 10
+                  ? "warning"
+                  : "danger"
+            }
+          />
+          <StatCard
+            label="Actifs 7j"
+            value={activeUsersCount}
+            sub={`${total > 0 ? Math.round((activeUsersCount / total) * 100) : 0}% des users`}
+            icon={<Activity className="h-4 w-4" />}
+            variant={activeUsersCount > 0 ? "success" : "default"}
+          />
+        </div>
       </div>
 
       {/* Revenus */}
