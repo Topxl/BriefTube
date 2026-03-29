@@ -35,6 +35,7 @@ from youtube_utils import (
     PIPED_INSTANCES as _PIPED_INSTANCES,
     is_direct_blocked,
     mark_direct_blocked,
+    is_geo_restricted as _is_geo_restricted,
 )
 
 logger = logging.getLogger(__name__)
@@ -94,6 +95,7 @@ class WhisperTranscriber:
         if _skip_direct:
             logger.debug("Audio download: IP known blocked — skipping direct clients")
 
+        _geo_restricted_detected = False  # set to True → Step 4 uses US-targeted proxy
         for player_client in (_PLAYER_CLIENTS if not _skip_direct else []):
             client_name = player_client[0]
             try:
@@ -136,12 +138,10 @@ class WhisperTranscriber:
                             f"Audio pre-check: format unavailable with {client_name} — trying next client"
                         )
                         continue
-                    if any(kw in pre_err.lower() for kw in (
-                        "your country", "this country", "not available in your",
-                        "national security", "government", "unavailable in this country",
-                    )):
-                        logger.warning("Audio pre-check: video geo-restricted — skipping permanently")
-                        return "geo_restricted"
+                    if _is_geo_restricted(pre_err):
+                        logger.warning("Audio pre-check: geo-restricted — will try geo-bypass proxy")
+                        _geo_restricted_detected = True
+                        break  # geo-restriction is consistent across all clients
                     if any(kw in pre_err.lower() for kw in _BOT_KW):
                         logger.info(
                             f"Audio pre-check: bot detection with {client_name} — trying next client"
@@ -205,12 +205,10 @@ class WhisperTranscriber:
                 if "error opening output files" in err.lower() or "invalid argument" in err.lower():
                     logger.warning("Audio download: ffmpeg output error (live stream or unsupported format) — skipping permanently")
                     return "unsupported"
-                if any(kw in err.lower() for kw in (
-                    "your country", "this country", "not available in your",
-                    "national security", "government", "unavailable in this country",
-                )):
-                    logger.warning("Audio download: video geo-restricted — skipping permanently")
-                    return "geo_restricted"
+                if _is_geo_restricted(err):
+                    logger.warning("Audio download: geo-restricted — will try geo-bypass proxy")
+                    _geo_restricted_detected = True
+                    break  # geo-restriction is consistent across all clients
                 if any(kw in err.lower() for kw in _BOT_KW):
                     logger.info(
                         f"Audio download: bot detection with {client_name} — trying next client"
@@ -220,12 +218,23 @@ class WhisperTranscriber:
                 logger.error(f"Error downloading audio: {e}")
                 return False
 
-        # ── Step 4: paid proxy — last resort (bandwidth cost) ───────────────────
-        http_proxy = os.environ.get("YOUTUBE_PROXY_HTTP", "")
-        if http_proxy:
-            logger.info(
-                "Audio download: all clients blocked, retrying with proxy (bandwidth cost)..."
+        # ── Step 4: proxy ────────────────────────────────────────────────────────
+        # Geo-restricted → use US-targeted proxy (YOUTUBE_PROXY_HTTP_GEO).
+        # Bot-detected   → use regular rotating proxy (YOUTUBE_PROXY_HTTP).
+        # Both fall back gracefully if the dedicated var is not set.
+        if _geo_restricted_detected:
+            http_proxy = (
+                os.environ.get("YOUTUBE_PROXY_HTTP_GEO")
+                or os.environ.get("YOUTUBE_PROXY_HTTP", "")
             )
+        else:
+            http_proxy = os.environ.get("YOUTUBE_PROXY_HTTP", "")
+
+        if http_proxy:
+            if _geo_restricted_detected:
+                logger.info("Audio download: geo-restricted — retrying with geo-bypass proxy (US IPs)...")
+            else:
+                logger.info("Audio download: all clients blocked, retrying with proxy (bandwidth cost)...")
             proxy_opts: dict = {
                 'format': 'bestaudio/best',
                 'postprocessors': [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'opus'}],
@@ -257,6 +266,9 @@ class WhisperTranscriber:
                 # Fall through to auth_required so it retries instead of snoozing 2h.
                 logger.warning(f"Audio download (proxy) failed: {err[:120]}")
 
+        if _geo_restricted_detected:
+            logger.warning("Audio download: geo-bypass proxy also failed — video truly geo-restricted")
+            return "geo_restricted"
         logger.warning(
             "Audio download: bot detection on all clients + proxy — will retry later"
         )

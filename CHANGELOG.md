@@ -2,6 +2,9 @@
 
 ## 2026-03-30
 
+FEATURE: Worker — geo-restriction bypass: when YouTube blocks a video by region, automatically retry with a US-targeted proxy (YOUTUBE_PROXY_HTTP_GEO) instead of giving up
+REFACTOR: Worker — centralize geo-restriction keyword detection in youtube_utils.is_geo_restricted()
+
 FIX: Gemini 2.5 Flash — disable thinking mode (thinking_budget=0) to fix summaries truncated mid-sentence; thinking tokens were consuming the max_output_tokens budget
 FIX: Gemini — add MAX_TOKENS finish_reason detection + increase max_output_tokens to 8192
 
