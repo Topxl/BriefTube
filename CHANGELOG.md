@@ -2,6 +2,9 @@
 
 ## 2026-03-30
 
+FEATURE: Worker — smart geo-restriction bypass: detect video source language, map to country of origin (FR→France, JA→Japan, etc.), try that proxy first before cycling through all countries
+FEATURE: Worker — multi-country geo-bypass loop: try up to 10 country proxies in order (YOUTUBE_PROXY_HTTP_GEO_TEMPLATE) instead of single US proxy
+REFACTOR: Worker — add _LANGUAGE_TO_COUNTRY mapping and get_geo_proxy_urls_for_language() to youtube_utils; both transcript_extractor and whisper_transcriber use it
 FEATURE: Worker — geo-restriction bypass: when YouTube blocks a video by region, automatically retry with a US-targeted proxy (YOUTUBE_PROXY_HTTP_GEO) instead of giving up
 REFACTOR: Worker — centralize geo-restriction keyword detection in youtube_utils.is_geo_restricted()
 

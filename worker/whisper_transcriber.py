@@ -36,6 +36,8 @@ from youtube_utils import (
     is_direct_blocked,
     mark_direct_blocked,
     is_geo_restricted as _is_geo_restricted,
+    get_geo_proxy_urls_for_language as _get_geo_proxy_urls,
+    country_from_proxy_url as _country_from_proxy_url,
 )
 
 logger = logging.getLogger(__name__)
@@ -58,13 +60,15 @@ class WhisperTranscriber:
         self.client = Groq(api_key=self.api_key)
         logger.info("Groq Whisper transcriber initialized")
 
-    def _download_audio(self, youtube_url: str, output_path: Path) -> bool:
+    def _download_audio(self, youtube_url: str, output_path: Path, language: str | None = None) -> bool:
         """
         Download audio from YouTube video
 
         Args:
             youtube_url: YouTube video URL
             output_path: Path to save audio file
+            language: Source language of the video — used to pick the right
+                      country proxy when a geo-restriction is detected.
 
         Returns:
             True if successful, False otherwise
@@ -219,23 +223,16 @@ class WhisperTranscriber:
                 return False
 
         # ── Step 4: proxy ────────────────────────────────────────────────────────
-        # Geo-restricted → use US-targeted proxy (YOUTUBE_PROXY_HTTP_GEO).
-        # Bot-detected   → use regular rotating proxy (YOUTUBE_PROXY_HTTP).
-        # Both fall back gracefully if the dedicated var is not set.
-        if _geo_restricted_detected:
-            http_proxy = (
-                os.environ.get("YOUTUBE_PROXY_HTTP_GEO")
-                or os.environ.get("YOUTUBE_PROXY_HTTP", "")
-            )
-        else:
-            http_proxy = os.environ.get("YOUTUBE_PROXY_HTTP", "")
+        # Geo-restricted → loop through country proxies ordered by the video's
+        #   source language (e.g. French video → FR proxy first, then others).
+        #   The content's country of origin almost never restricts its own videos,
+        #   so we typically succeed on the first try.
+        #
+        # Bot-detected → single regular rotating proxy (YOUTUBE_PROXY_HTTP).
 
-        if http_proxy:
-            if _geo_restricted_detected:
-                logger.info("Audio download: geo-restricted — retrying with geo-bypass proxy (US IPs)...")
-            else:
-                logger.info("Audio download: all clients blocked, retrying with proxy (bandwidth cost)...")
-            proxy_opts: dict = {
+        def _run_proxy_download(proxy_url: str, label: str):
+            """Attempt audio download with *proxy_url*. Returns True/live/premiere:/False."""
+            attempt_opts: dict = {
                 'format': 'bestaudio/best',
                 'postprocessors': [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'opus'}],
                 'outtmpl': str(output_path.with_suffix('')),
@@ -245,33 +242,57 @@ class WhisperTranscriber:
                 'nocheckcertificate': True,
                 'max_filesize': 150 * 1024 * 1024,
                 'extractor_args': {'youtube': {'player_client': ['tv_embedded']}},
-                'proxy': http_proxy,
+                'proxy': proxy_url,
             }
             if _cookies_file.exists():
-                proxy_opts['cookiefile'] = str(_cookies_file)
+                attempt_opts['cookiefile'] = str(_cookies_file)
             try:
-                with yt_dlp.YoutubeDL(proxy_opts) as ydl:
+                with yt_dlp.YoutubeDL(attempt_opts) as ydl:
                     ydl.download([youtube_url])
                 opus_path = output_path.with_suffix('.opus')
                 if opus_path.exists():
-                    logger.info("Audio download: proxy successful")
+                    logger.info(f"Audio download: {label} successful")
                     return True
             except Exception as e:
                 err = str(e)
                 if "live event has ended" in err.lower():
-                    logger.info(f"Audio download (proxy): live/ended stream — {err[:80]}")
+                    logger.info(f"Audio download ({label}): live/ended stream — {err[:80]}")
                     return "live"
-                # "no video formats found" and "requested format is not available" via proxy
-                # = proxy/YouTube IP restriction, NOT necessarily a live stream.
-                # Fall through to auth_required so it retries instead of snoozing 2h.
-                logger.warning(f"Audio download (proxy) failed: {err[:120]}")
+                # "no video formats found" / "requested format is not available" via proxy
+                # = proxy/YouTube restriction, not necessarily a live stream.
+                logger.warning(f"Audio download ({label}) failed: {err[:120]}")
+            return None  # this attempt failed, try next
 
         if _geo_restricted_detected:
-            logger.warning("Audio download: geo-bypass proxy also failed — video truly geo-restricted")
+            # Try country proxies ordered by the video's source language.
+            # "fr" video → FR proxy first; "ja" video → JP proxy first, etc.
+            proxy_urls = _get_geo_proxy_urls(language)
+            if proxy_urls:
+                for proxy_url in proxy_urls:
+                    country = _country_from_proxy_url(proxy_url)
+                    logger.info(f"Audio download: geo-restricted — trying {country} proxy...")
+                    result = _run_proxy_download(proxy_url, f"{country} proxy")
+                    if result is True:
+                        return True
+                    if result == "live":
+                        return "live"
+                    # None → this country failed, try next
+                logger.warning("Audio download: geo-bypass failed for all countries — video truly geo-restricted")
+                return "geo_restricted"
+            logger.warning("Audio download: geo-restricted but no geo-proxy configured")
             return "geo_restricted"
-        logger.warning(
-            "Audio download: bot detection on all clients + proxy — will retry later"
-        )
+
+        # Bot-detected: single rotating proxy
+        http_proxy = os.environ.get("YOUTUBE_PROXY_HTTP", "")
+        if http_proxy:
+            logger.info("Audio download: all clients blocked, retrying with proxy (bandwidth cost)...")
+            result = _run_proxy_download(http_proxy, "proxy")
+            if result is True:
+                return True
+            if result == "live":
+                return "live"
+
+        logger.warning("Audio download: bot detection on all clients + proxy — will retry later")
         return "auth_required"
 
     def _download_audio_via_invidious(self, video_id: str, output_path: Path):
@@ -505,7 +526,7 @@ class WhisperTranscriber:
 
             # Step 1: Download audio
             logger.info(f"Downloading audio from YouTube: {youtube_url}")
-            dl_result = self._download_audio(youtube_url, audio_path)
+            dl_result = self._download_audio(youtube_url, audio_path, language=language)
             if isinstance(dl_result, str) and dl_result.startswith("premiere:"):
                 try:
                     hours = int(dl_result.split(":")[1])

@@ -5,6 +5,7 @@ transcript_extractor.py, whisper_transcriber.py and rss_scanner.py.
 """
 
 import logging
+import os
 import re
 import time
 
@@ -110,14 +111,118 @@ GEO_RESTRICTION_KEYWORDS: tuple[str, ...] = (
 
 
 def is_geo_restricted(err: str) -> bool:
-    """Return True if the error indicates a geo-restriction (video blocked in this region).
-
-    When this is detected, the caller should attempt a geo-bypass proxy (US IPs)
-    rather than abandoning — many geo-restrictions are bypassed by using a US
-    residential IP (configured via YOUTUBE_PROXY_HTTP_GEO env var).
-    """
+    """Return True if the error indicates a geo-restriction (video blocked in this region)."""
     err_lower = err.lower()
     return any(kw in err_lower for kw in GEO_RESTRICTION_KEYWORDS)
+
+
+# ── Geo-bypass proxy rotation ─────────────────────────────────────────────────
+#
+# Countries tried in order when a video is geo-restricted.
+# We don't know in advance which country the video is restricted to, so we
+# try the most common ones first (US covers ~70% of YouTube geo-blocks, then
+# UK, Canada, Australia cover most of the rest).
+_GEO_BYPASS_COUNTRIES: list[str] = [
+    "US", "GB", "CA", "AU", "FR", "DE", "JP", "NL", "SE", "CH",
+]
+
+
+def get_geo_proxy_urls() -> list[str]:
+    """Return ordered list of country-targeted proxy URLs to try for geo-bypass.
+
+    Set YOUTUBE_PROXY_HTTP_GEO_TEMPLATE in Infisical with a {country} placeholder:
+      http://USERNAME-{country}-rotate:PASSWORD@p.webshare.io:80
+
+    Falls back to YOUTUBE_PROXY_HTTP_GEO (single country), then YOUTUBE_PROXY_HTTP.
+    """
+    template = os.environ.get("YOUTUBE_PROXY_HTTP_GEO_TEMPLATE", "")
+    if template:
+        return [template.format(country=c) for c in _GEO_BYPASS_COUNTRIES]
+    # Single geo proxy (e.g. US only)
+    single = os.environ.get("YOUTUBE_PROXY_HTTP_GEO") or os.environ.get("YOUTUBE_PROXY_HTTP", "")
+    return [single] if single else []
+
+
+def country_from_proxy_url(url: str) -> str:
+    """Extract country code from a Webshare-style proxy URL for logging.
+
+    e.g. 'http://user-US-rotate:pass@host' → 'US'
+    """
+    m = re.search(r"-([A-Z]{2})-rotate", url)
+    return m.group(1) if m else "??"
+
+
+# ── Language → country mapping for geo-restriction bypass ─────────────────────
+#
+# When a video is geo-restricted, the country that natively produces content in
+# that language is the most likely to have unrestricted access.  Targeting that
+# country first avoids cycling through irrelevant countries and wastes no proxy
+# bandwidth.
+
+_LANGUAGE_TO_COUNTRY: dict[str, str] = {
+    "en": "US",
+    "fr": "FR",
+    "de": "DE",
+    "es": "ES",
+    "it": "IT",
+    "pt": "BR",
+    "nl": "NL",
+    "pl": "PL",
+    "ru": "RU",
+    "ja": "JP",
+    "ko": "KR",
+    "zh": "TW",
+    "ar": "AE",
+    "hi": "IN",
+    "tr": "TR",
+    "sv": "SE",
+    "da": "DK",
+    "fi": "FI",
+    "nb": "NO",
+    "cs": "CZ",
+    "hu": "HU",
+    "ro": "RO",
+    "uk": "UA",
+    "he": "IL",
+    "th": "TH",
+    "vi": "VN",
+    "id": "ID",
+}
+
+
+def get_geo_proxy_urls_for_language(language: str | None = None) -> list[str]:
+    """Return geo-proxy URLs ordered by relevance to the video's source language.
+
+    When a video is geo-restricted, we try the country that natively produces
+    content in that language first — it's the most likely to have unrestricted
+    access.  If the primary country fails or is unknown, we fall through to the
+    full country list.
+
+    Args:
+        language: BCP-47 language code of the video (e.g. "fr", "fr-FR", "ja").
+                  Pass None to use the default country order.
+
+    Requires YOUTUBE_PROXY_HTTP_GEO_TEMPLATE in Infisical with a {country}
+    placeholder, e.g.:
+      http://USERNAME-{country}-rotate:PASSWORD@p.webshare.io:80
+
+    Falls back to YOUTUBE_PROXY_HTTP_GEO (single country), then YOUTUBE_PROXY_HTTP.
+    """
+    template = os.environ.get("YOUTUBE_PROXY_HTTP_GEO_TEMPLATE", "")
+    if not template:
+        single = os.environ.get("YOUTUBE_PROXY_HTTP_GEO") or os.environ.get("YOUTUBE_PROXY_HTTP", "")
+        return [single] if single else []
+
+    countries = list(_GEO_BYPASS_COUNTRIES)
+
+    if language:
+        lang = language.lower().split("-")[0]  # "fr-FR" → "fr"
+        primary = _LANGUAGE_TO_COUNTRY.get(lang)
+        if primary and primary in countries:
+            countries.remove(primary)
+            countries.insert(0, primary)
+
+    return [template.format(country=c) for c in countries]
 
 
 # ── Free YouTube proxy instances ──────────────────────────────────────────────
