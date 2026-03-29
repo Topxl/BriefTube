@@ -10,6 +10,7 @@ import {
   Preview,
   Text,
 } from "@react-email/components";
+import { SiteConfig } from "@/site-config";
 
 type Props = {
   dashboardUrl: string;
@@ -91,6 +92,16 @@ export function OnboardingJ1Email({ dashboardUrl, trackingPixelUrl }: Props) {
           >
             Add channels
           </Button>
+          <Text
+            style={{
+              color: "#71717a",
+              fontSize: "13px",
+              lineHeight: "1.5",
+              margin: "16px 0 0",
+            }}
+          >
+            {`You're on a ${SiteConfig.trialDays}-day Pro trial — add as many channels as you want. After that, ${SiteConfig.freeChannelsLimit} channels stay free forever. No credit card needed.`}
+          </Text>
           <Hr
             style={{
               borderColor: "rgba(255,255,255,0.06)",

@@ -45,6 +45,11 @@ export function Hero() {
           </Button>
         </div>
 
+        <p className="text-muted-foreground mt-4 text-sm">{tl.socialProof}</p>
+        <p className="mt-1 text-sm font-medium text-green-500">
+          {tl.postTrialNote}
+        </p>
+
         {/* Audio player — client component, loads after h1/CTA render */}
         <HeroPlayer />
       </div>

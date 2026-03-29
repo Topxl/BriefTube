@@ -21,7 +21,7 @@ from telegram.ext import (
     filters,
 )
 
-from config import TELEGRAM_BOT_TOKEN, ADMIN_TELEGRAM_CHAT_ID, APP_URL, LOG_BOT_TOKEN, LOG_BOT_ADMIN_CHAT_ID
+from config import TELEGRAM_BOT_TOKEN, ADMIN_TELEGRAM_CHAT_ID, APP_URL, LOG_BOT_TOKEN, LOG_BOT_ADMIN_CHAT_ID, FREE_CHANNELS_LIMIT
 import db
 from monitoring import stats, get_system_info, get_log_tail, format_log, _md_to_html
 
@@ -492,7 +492,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         "/help — Show this message\n\n"
         "Send a YouTube video link → get an audio summary\n"
         "Send a channel link or @handle → subscribe to it\n\n"
-        f"Free plan: {ON_DEMAND_MONTHLY_LIMIT} on-demand summaries/month, 5 channels\n"
+        f"Free plan: {ON_DEMAND_MONTHLY_LIMIT} on-demand summaries/month, {FREE_CHANNELS_LIMIT} channels\n"
         "Pro plan: unlimited\n\n"
         f"Manage your channels at {APP_URL}"
     )
@@ -1615,7 +1615,7 @@ async def handle_sub_channel_callback(update: Update, context: ContextTypes.DEFA
     is_pro = _is_pro(profile)
     if not is_pro:
         count = await asyncio.to_thread(db.get_subscription_count, profile["id"])
-        max_ch = profile.get("max_channels", 5)
+        max_ch = profile.get("max_channels", FREE_CHANNELS_LIMIT)
         if count >= max_ch:
             try:
                 await query.answer(
@@ -1775,7 +1775,7 @@ async def handle_subch_callback(update: Update, context: ContextTypes.DEFAULT_TY
     is_pro = _is_pro(profile)
     if not is_pro:
         count = await asyncio.to_thread(db.get_subscription_count, profile["id"])
-        max_ch = profile.get("max_channels", 5)
+        max_ch = profile.get("max_channels", FREE_CHANNELS_LIMIT)
         if count >= max_ch:
             await query.message.reply_text(
                 f"You've reached your limit of {max_ch} channels.\n\n"

@@ -10,6 +10,7 @@ import {
   Preview,
   Text,
 } from "@react-email/components";
+import { SiteConfig } from "@/site-config";
 
 type Props = {
   trackingPixelUrl?: string;
@@ -65,11 +66,21 @@ export function TrialExpiredEmail({ trackingPixelUrl }: Props = {}) {
               color: "#a1a1aa",
               fontSize: "15px",
               lineHeight: "1.6",
+              margin: "0 0 16px",
+            }}
+          >
+            {`You can still use BriefTube for free with up to ${SiteConfig.freeChannelsLimit} channels — forever, no card required.`}
+          </Text>
+          <Text
+            style={{
+              color: "#a1a1aa",
+              fontSize: "15px",
+              lineHeight: "1.6",
               margin: "0 0 24px",
             }}
           >
-            Upgrade to Pro to resume receiving daily AI-powered summaries of
-            your YouTube channels in Discord, Slack or Telegram.
+            Want more? Upgrade to Pro to resume receiving daily AI-powered
+            summaries of your YouTube channels in Discord, Slack or Telegram.
           </Text>
           <Button
             href="https://www.brief-tube.com/dashboard/billing"

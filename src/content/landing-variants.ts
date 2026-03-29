@@ -13,6 +13,11 @@ type ProofStat = {
   label: string;
 };
 
+import { SiteConfig } from "@/site-config";
+
+const FREE = SiteConfig.freeChannelsLimit;
+const TRIAL = SiteConfig.trialDays;
+
 export type LandingVariant = {
   slug: "commuter" | "backlog" | "speed" | "niche" | "telegram";
   pageTitle: string;
@@ -46,7 +51,7 @@ export const landingVariants: LandingVariant[] = [
       subheadline:
         "While you're driving, at the gym, or cooking dinner — BriefTube is already summarizing the videos you care about. Audio drops to your Telegram before you even open YouTube.",
       ctaLabel: "Start listening for free",
-      trustLine: "No credit card. 3 channels free. Works in under 5 minutes.",
+      trustLine: `No credit card. ${FREE} channels free. Works in under 5 minutes.`,
     },
     painPoints: [
       {
@@ -68,8 +73,7 @@ export const landingVariants: LandingVariant[] = [
     steps: [
       {
         title: "Subscribe to your channels",
-        description:
-          "Paste the channel URL or search by name. BriefTube monitors up to 3 channels for free — channels like Kurzgesagt, Fireship, or your favorite finance creator.",
+        description: `Paste the channel URL or search by name. BriefTube monitors up to ${FREE} channels for free — channels like Kurzgesagt, Fireship, or your favorite finance creator.`,
       },
       {
         title: "Connect your Telegram",
@@ -89,8 +93,7 @@ export const landingVariants: LandingVariant[] = [
     ],
     bottomCta: {
       headline: "Your commute could be your most productive 20 minutes.",
-      subheadline:
-        "3 channels, full audio summaries, delivered to Telegram — free, no card required.",
+      subheadline: `${FREE} channels, full audio summaries, delivered to Telegram — free, no card required.`,
       ctaLabel: "Start listening for free",
       urgencyNote: "Takes about 5 minutes to set up.",
     },
@@ -105,7 +108,7 @@ export const landingVariants: LandingVariant[] = [
       subheadline:
         "The Watch Later list grows faster than you can watch. BriefTube doesn't help you watch more — it makes watching unnecessary. Audio summaries arrive in your Telegram before you even think about catching up.",
       ctaLabel: "Stop the backlog today",
-      trustLine: "Free for 3 channels. No card. Setup in under 5 minutes.",
+      trustLine: `Free for ${FREE} channels. No card. Setup in under 5 minutes.`,
     },
     painPoints: [
       {
@@ -127,8 +130,7 @@ export const landingVariants: LandingVariant[] = [
     steps: [
       {
         title: "Subscribe to the channels you actually care about",
-        description:
-          "Pick 1–3 channels from your backlog pile. BriefTube monitors their RSS feeds and catches every new upload automatically.",
+        description: `Pick 1–${FREE} channels from your backlog pile. BriefTube monitors their RSS feeds and catches every new upload automatically.`,
       },
       {
         title: "Connect Telegram in 30 seconds",
@@ -144,12 +146,11 @@ export const landingVariants: LandingVariant[] = [
     proofStats: [
       { value: "3,400+", label: "channels tracked" },
       { value: "0", label: "videos to manually open" },
-      { value: "7-day", label: "free trial on Pro" },
+      { value: `${TRIAL}-day`, label: "free trial on Pro" },
     ],
     bottomCta: {
       headline: "The backlog stops here.",
-      subheadline:
-        "Monitor 3 channels free. Audio summaries in Telegram. No catching up required.",
+      subheadline: `Monitor ${FREE} channels free. Audio summaries in Telegram. No catching up required.`,
       ctaLabel: "Stop the backlog today",
       urgencyNote:
         "No card required. Start free, upgrade if you want more channels.",
@@ -166,7 +167,7 @@ export const landingVariants: LandingVariant[] = [
       subheadline:
         "Playing at 2x is still a 45-minute commitment. BriefTube extracts the actual key points and sends a 2–3 minute audio to your Telegram — automatically, when the video goes up.",
       ctaLabel: "Start compressing my content",
-      trustLine: "Free for 3 channels. No card. Ready in under 5 minutes.",
+      trustLine: `Free for ${FREE} channels. No card. Ready in under 5 minutes.`,
     },
     painPoints: [
       {
@@ -209,11 +210,9 @@ export const landingVariants: LandingVariant[] = [
     ],
     bottomCta: {
       headline: "Stop watching. Start knowing.",
-      subheadline:
-        "3 channels free. Audio summaries in Telegram. No manual work, ever.",
+      subheadline: `${FREE} channels free. Audio summaries in Telegram. No manual work, ever.`,
       ctaLabel: "Start compressing my content",
-      urgencyNote:
-        "No card required. Upgrade only if you want more than 3 channels.",
+      urgencyNote: `No card required. Upgrade only if you want more than ${FREE} channels.`,
     },
   },
   {
@@ -226,8 +225,7 @@ export const landingVariants: LandingVariant[] = [
       subheadline:
         "Keeping up with your industry on YouTube takes hours you don't have. BriefTube monitors the channels that matter in your niche and delivers audio summaries to Telegram — so you stay ahead without watching.",
       ctaLabel: "Monitor my niche for free",
-      trustLine:
-        "Free for 3 channels. No card. Up and running in under 5 minutes.",
+      trustLine: `Free for ${FREE} channels. No card. Up and running in under 5 minutes.`,
     },
     painPoints: [
       {
@@ -271,8 +269,7 @@ export const landingVariants: LandingVariant[] = [
     bottomCta: {
       headline:
         "Know what's happening in your niche before everyone else does.",
-      subheadline:
-        "3 channels free. Unlimited on Pro. Audio summaries, automatically, in Telegram.",
+      subheadline: `${FREE} channels free. Unlimited on Pro. Audio summaries, automatically, in Telegram.`,
       ctaLabel: "Monitor my niche for free",
       urgencyNote: "No card required. Add more channels anytime with Pro.",
     },
@@ -288,8 +285,7 @@ export const landingVariants: LandingVariant[] = [
       subheadline:
         "You already live in Telegram — messages, channels, voice notes. BriefTube connects your YouTube subscriptions to it. New video goes up, 2–3 minute audio lands in your chat. No app switching, no manual work.",
       ctaLabel: "Connect my channels to Telegram",
-      trustLine:
-        "Free for 3 channels. 30-second Telegram setup. No card required.",
+      trustLine: `Free for ${FREE} channels. 30-second Telegram setup. No card required.`,
     },
     painPoints: [
       {
@@ -311,8 +307,7 @@ export const landingVariants: LandingVariant[] = [
     steps: [
       {
         title: "Add your YouTube channels",
-        description:
-          "Subscribe to the channels you want to follow — up to 3 for free. Works with any public YouTube channel: tech, finance, news, productivity, whatever you follow.",
+        description: `Subscribe to the channels you want to follow — up to ${FREE} for free. Works with any public YouTube channel: tech, finance, news, productivity, whatever you follow.`,
       },
       {
         title: "Link BriefTube to your Telegram in 30 seconds",
@@ -332,10 +327,9 @@ export const landingVariants: LandingVariant[] = [
     ],
     bottomCta: {
       headline: "Your YouTube, finally inside Telegram.",
-      subheadline:
-        "3 channels free. Connect in 30 seconds. Audio summaries, no app switching.",
+      subheadline: `${FREE} channels free. Connect in 30 seconds. Audio summaries, no app switching.`,
       ctaLabel: "Connect my channels to Telegram",
-      urgencyNote: "Free forever for 3 channels. Pro unlocks unlimited.",
+      urgencyNote: `Free forever for ${FREE} channels. Pro unlocks unlimited.`,
     },
   },
 ];

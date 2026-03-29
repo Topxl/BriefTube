@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle2 } from "@/lib/icons";
 import { formatCurrency } from "@/lib/format";
 import { logger } from "@/lib/logger";
+import { SiteConfig } from "@/site-config";
 
 type Interval = "month" | "year";
 
@@ -32,13 +33,13 @@ type Props = {
 };
 
 const FREE_FEATURES = [
-  "5 YouTube channels",
+  `${SiteConfig.freeChannelsLimit} YouTube channels`,
   "AI audio summaries",
   "Telegram, Discord & Slack",
 ];
 
 const PLUS_FEATURES = [
-  "50 YouTube channels",
+  `${SiteConfig.plusChannelsLimit} YouTube channels`,
   "AI audio summaries",
   "Telegram, Discord & Slack",
   "Priority processing",

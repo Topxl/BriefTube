@@ -1,6 +1,8 @@
 import { SiteConfig } from "@/site-config";
 
 const FREE = SiteConfig.freeChannelsLimit;
+const PLUS = SiteConfig.plusChannelsLimit;
+const TRIAL = SiteConfig.trialDays;
 
 export const landing = {
   nav: {
@@ -22,7 +24,8 @@ export const landing = {
       "Add your channels, and BriefTube handles the rest. Every new upload gets summarized by AI and turned into a short audio file. Listen from the dashboard, subscribe as a private podcast, or get it pushed to Telegram, Discord, or Slack.",
     ctaPrimary: "Start listening for free",
     ctaSecondary: "See a live example",
-    socialProof: "No credit card · Cancel anytime · 7-day Pro trial",
+    socialProof: `No credit card · Cancel anytime · ${TRIAL}-day Pro trial`,
+    postTrialNote: `After trial: ${FREE} channels free forever. No card, no catch.`,
     mockupBotRole: "bot",
     mockupVideo1Channel: "TED",
     mockupVideo1Title: "How Great Leaders Inspire Action",
@@ -118,7 +121,7 @@ export const landing = {
     error: "An error occurred.",
     upsellText:
       "Want this delivered automatically? As a podcast, on Discord, Slack, or Telegram.",
-    upsellCta: "Create a free account. 7-day Pro trial included.",
+    upsellCta: `Create a free account. ${TRIAL}-day Pro trial included.`,
     hint: "3 free tries · Works on videos with subtitles",
   },
   pricing: {
@@ -145,7 +148,7 @@ export const landing = {
         description:
           "For creators and professionals who follow dozens of channels.",
         features: [
-          "50 YouTube channels",
+          `${PLUS} YouTube channels`,
           "AI audio summaries",
           "Dashboard + podcast RSS feed",
           "Telegram, Discord & Slack",

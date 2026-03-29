@@ -35,6 +35,10 @@ R2_BUCKET_NAME = os.getenv("R2_BUCKET_NAME", "brieftube-audio")
 # e.g. "https://pub-xxxx.r2.dev" or "https://audio.brief-tube.com"
 R2_PUBLIC_URL = os.getenv("R2_PUBLIC_URL", "")
 
+# Plan limits (must match SiteConfig in src/site-config.ts)
+FREE_CHANNELS_LIMIT = int(os.getenv("FREE_CHANNELS_LIMIT", "5"))
+TRIAL_DAYS = int(os.getenv("TRIAL_DAYS", "30"))
+
 # TTS (default voice, users can override in their profile)
 DEFAULT_TTS_VOICE = os.getenv("TTS_VOICE", "fr-FR-DeniseNeural")
 

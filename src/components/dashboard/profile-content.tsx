@@ -337,7 +337,7 @@ export function ProfileContent({
               </p>
               <p className="text-muted-foreground mt-0.5 text-[11px]">
                 {upgradePlan === "plus"
-                  ? "50 channels and priority processing."
+                  ? `${SiteConfig.plusChannelsLimit} channels and priority processing.`
                   : "Unlimited channels and priority processing."}
               </p>
 
