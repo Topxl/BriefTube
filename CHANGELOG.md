@@ -2,7 +2,7 @@
 
 ## 2026-03-29
 
-FEATURE: Telegram bot — /help shows admin commands (/kpi, /log_mode, /monitor_*) for admin only
+REFACTOR: Move admin commands (/kpi, /log_mode, /monitor_*, /cookies) from main bot to log bot with dedicated polling loop
 FIX: Replace all hardcoded "5 channels" references with dynamic SiteConfig.freeChannelsLimit across OG images, landing pages, YouTube summary page, channels page, blog, and comparison pages
 FIX: Landing + emails — replace all hardcoded channel limits and trial durations with SiteConfig values (single source of truth)
 FIX: Landing hero — "7-day Pro trial" → dynamic from SiteConfig.trialDays (30 days)

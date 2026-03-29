@@ -21,7 +21,7 @@ from pathlib import Path
 import aiohttp
 import psutil
 
-from config import RSS_CHECK_INTERVAL, TELEGRAM_BOT_TOKEN, SUPABASE_URL, ADMIN_TELEGRAM_CHAT_ID, MAX_CONCURRENT_VIDEOS, MAX_CPU_PERCENT, MAX_LOAD_PER_CPU, MIN_FREE_RAM_MB, CPU_CHECK_INTERVAL, HEALTH_PORT, WORKER_INSTANCE, APP_URL, WORKER_API_SECRET, PUSH_NOTIFY_SECRET
+from config import RSS_CHECK_INTERVAL, TELEGRAM_BOT_TOKEN, LOG_BOT_TOKEN, SUPABASE_URL, ADMIN_TELEGRAM_CHAT_ID, MAX_CONCURRENT_VIDEOS, MAX_CPU_PERCENT, MAX_LOAD_PER_CPU, MIN_FREE_RAM_MB, CPU_CHECK_INTERVAL, HEALTH_PORT, WORKER_INSTANCE, APP_URL, WORKER_API_SECRET, PUSH_NOTIFY_SECRET
 from transcript_extractor import TranscriptExtractor, validate_cookies
 from gemini_api import GeminiSummarizer
 from openrouter_api import OpenRouterSummarizer
@@ -32,7 +32,7 @@ from notion_deliverer import send_to_notion
 from whatsapp_deliverer import send_to_whatsapp
 from discord_deliverer import send_to_discord
 from slack_deliverer import send_to_slack
-from bot_handler import create_bot_application, setup_bot_commands, MonitoringAlert, send_kpi_report
+from bot_handler import create_bot_application, create_log_bot_application, setup_bot_commands, MonitoringAlert, send_kpi_report
 from monitoring import stats
 import rss_scanner
 import storage
@@ -1244,6 +1244,60 @@ async def _bot_poll_loop(bot_app) -> None:
         await session.close()
 
 
+# ── Loop 6b: Log Bot Polling ──────────────────────────────────
+
+async def _log_bot_poll_loop(log_bot_app) -> None:
+    """Polling loop for the admin log bot (commands only, no callbacks)."""
+    from telegram import Update as TGUpdate
+
+    url = f"https://api.telegram.org/bot{LOG_BOT_TOKEN}/getUpdates"
+    offset = 0
+
+    connector = aiohttp.TCPConnector(enable_cleanup_closed=True, keepalive_timeout=60, limit=2)
+    session = aiohttp.ClientSession(connector=connector)
+    try:
+        # Drop pending updates
+        try:
+            async with session.post(
+                url,
+                json={"timeout": 0, "allowed_updates": ["message"]},
+                timeout=aiohttp.ClientTimeout(total=10),
+            ) as resp:
+                data = await resp.json()
+                if data.get("ok") and data.get("result"):
+                    offset = data["result"][-1]["update_id"] + 1
+        except Exception:
+            pass
+
+        logger.info("Log bot polling started")
+
+        while True:
+            try:
+                async with session.post(
+                    url,
+                    json={"offset": offset, "timeout": 10, "allowed_updates": ["message"]},
+                    timeout=aiohttp.ClientTimeout(total=60),
+                ) as resp:
+                    data = await resp.json()
+
+                if not data.get("ok"):
+                    await asyncio.sleep(5)
+                    continue
+
+                for raw in data.get("result", []):
+                    update = TGUpdate.de_json(raw, log_bot_app.bot)
+                    asyncio.create_task(log_bot_app.process_update(update))
+                    offset = raw["update_id"] + 1
+
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:
+                logger.error(f"Log bot poll error: {e}")
+                await asyncio.sleep(5)
+    finally:
+        await session.close()
+
+
 # ── Loop : Health Check HTTP ───────────────────────────────────
 
 async def health_loop():
@@ -1661,9 +1715,18 @@ async def main():
     # Register the slash-command menu (left of the Telegram input bar)
     await setup_bot_commands(bot_app)
 
+    # Start log bot (admin commands)
+    log_bot_app = create_log_bot_application()
+    if log_bot_app:
+        await log_bot_app.initialize()
+        await log_bot_app.start()
+        logger.info("Log bot initialized for admin commands")
+
     # Initialize monitoring alert system
     alert_system = MonitoringAlert(bot_app, ADMIN_TELEGRAM_CHAT_ID)
     bot_app.bot_data["alert_system"] = alert_system
+    if log_bot_app:
+        log_bot_app.bot_data["alert_system"] = alert_system
 
     # Send startup alert
     if ADMIN_TELEGRAM_CHAT_ID:
@@ -1714,6 +1777,10 @@ async def main():
         # Add alert processor if admin configured
         if ADMIN_TELEGRAM_CHAT_ID:
             tasks.append(alert_system.process_alerts())
+
+        # Add log bot polling if configured
+        if log_bot_app:
+            tasks.append(_log_bot_poll_loop(log_bot_app))
 
         await asyncio.gather(*tasks)
 

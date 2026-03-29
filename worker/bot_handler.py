@@ -484,10 +484,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle /help command."""
-    chat_id = str(update.effective_chat.id)
-    is_admin = chat_id == ADMIN_TELEGRAM_CHAT_ID
-
-    text = (
+    await update.message.reply_text(
         "BriefTube — YouTube summaries as audio on Telegram\n\n"
         "Commands:\n"
         "/start — Connect your account\n"
@@ -499,19 +496,6 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         "Pro plan: unlimited\n\n"
         f"Manage your channels at {APP_URL}"
     )
-
-    if is_admin:
-        text += (
-            "\n\n— Admin —\n"
-            "/kpi — KPI report\n"
-            "/log_mode [off|errors|all] — Log notifications\n"
-            "/monitor_status — Worker status\n"
-            "/monitor_stats — Processing stats\n"
-            "/monitor_logs — Recent logs\n"
-            "/cookies — Cookie status"
-        )
-
-    await update.message.reply_text(text)
 
 
 async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -536,8 +520,10 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 # ── Admin Monitoring Commands ─────────────────────────────────────
 
 def _is_admin(chat_id: str) -> bool:
-    """Check if chat_id is admin."""
-    return ADMIN_TELEGRAM_CHAT_ID and chat_id == str(ADMIN_TELEGRAM_CHAT_ID)
+    """Check if chat_id is admin (matches either main bot or log bot admin)."""
+    cid = str(chat_id)
+    return (ADMIN_TELEGRAM_CHAT_ID and cid == str(ADMIN_TELEGRAM_CHAT_ID)) or \
+           (LOG_BOT_ADMIN_CHAT_ID and cid == str(LOG_BOT_ADMIN_CHAT_ID))
 
 
 async def monitor_status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -1894,14 +1880,6 @@ def create_bot_application() -> Application:
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("status", status_command))
 
-    # Admin monitoring commands
-    app.add_handler(CommandHandler("monitor_status", monitor_status_command))
-    app.add_handler(CommandHandler("monitor_stats", monitor_stats_command))
-    app.add_handler(CommandHandler("monitor_logs", monitor_logs_command))
-    app.add_handler(CommandHandler("log_mode", log_mode_command))
-    app.add_handler(CommandHandler("kpi", kpi_command))
-    app.add_handler(CommandHandler("cookies", cookies_command))
-
     # Inline keyboard callbacks — options menu and sub-actions
     app.add_handler(CallbackQueryHandler(handle_options_callback, pattern=r"^options_"))
     app.add_handler(CallbackQueryHandler(handle_summary_callback, pattern=r"^summary_"))
@@ -1922,4 +1900,43 @@ def create_bot_application() -> Application:
 
     # Message handler LAST — catches non-command text messages
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    return app
+
+
+# ── Log Bot (admin-only) ─────────────────────────────────────────
+
+async def log_bot_help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle /help on the log bot."""
+    await update.message.reply_text(
+        "BriefTube Log Bot — Admin commands\n\n"
+        "/kpi — KPI report\n"
+        "/log_mode [off|errors|all] — Log notifications\n"
+        "/monitor_status — Worker status\n"
+        "/monitor_stats — Processing stats\n"
+        "/monitor_logs [N] — Last N log lines\n"
+        "/cookies — Cookie status\n"
+        "/help — Show this message"
+    )
+
+
+def create_log_bot_application() -> Optional[Application]:
+    """Create the log bot application with admin command handlers.
+
+    Returns None if LOG_BOT_TOKEN is not configured.
+    """
+    if not LOG_BOT_TOKEN:
+        return None
+
+    app = Application.builder().token(LOG_BOT_TOKEN).updater(None).build()
+    app.add_error_handler(_error_handler)
+
+    app.add_handler(CommandHandler("help", log_bot_help_command))
+    app.add_handler(CommandHandler("start", log_bot_help_command))
+    app.add_handler(CommandHandler("monitor_status", monitor_status_command))
+    app.add_handler(CommandHandler("monitor_stats", monitor_stats_command))
+    app.add_handler(CommandHandler("monitor_logs", monitor_logs_command))
+    app.add_handler(CommandHandler("log_mode", log_mode_command))
+    app.add_handler(CommandHandler("kpi", kpi_command))
+    app.add_handler(CommandHandler("cookies", cookies_command))
+
     return app
