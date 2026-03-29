@@ -484,7 +484,10 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle /help command."""
-    await update.message.reply_text(
+    chat_id = str(update.effective_chat.id)
+    is_admin = chat_id == ADMIN_TELEGRAM_CHAT_ID
+
+    text = (
         "BriefTube — YouTube summaries as audio on Telegram\n\n"
         "Commands:\n"
         "/start — Connect your account\n"
@@ -496,6 +499,19 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         "Pro plan: unlimited\n\n"
         f"Manage your channels at {APP_URL}"
     )
+
+    if is_admin:
+        text += (
+            "\n\n— Admin —\n"
+            "/kpi — KPI report\n"
+            "/log_mode [off|errors|all] — Log notifications\n"
+            "/monitor_status — Worker status\n"
+            "/monitor_stats — Processing stats\n"
+            "/monitor_logs — Recent logs\n"
+            "/cookies — Cookie status"
+        )
+
+    await update.message.reply_text(text)
 
 
 async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
