@@ -7,7 +7,7 @@ import logging
 import os
 from typing import Optional, Tuple
 from google import genai
-from google.genai.types import GenerateContentConfig
+from google.genai.types import GenerateContentConfig, ThinkingConfig
 
 logger = logging.getLogger(__name__)
 
@@ -189,11 +189,28 @@ class GeminiSummarizer:
                     contents=prompt,
                     config=GenerateContentConfig(
                         temperature=0.7,
-                        max_output_tokens=4096,
+                        # Thinking tokens count against max_output_tokens in
+                        # Gemini 2.5 Flash, so they eat into the response budget
+                        # and truncate summaries mid-sentence.
+                        # Summarization needs no complex reasoning → disable it.
+                        thinking_config=ThinkingConfig(thinking_budget=0),
+                        max_output_tokens=8192,
                     )
                 )
 
                 summary = response.text.strip()
+
+                # Warn if Gemini stopped due to token limit — output is truncated
+                try:
+                    finish_reason = response.candidates[0].finish_reason
+                    if finish_reason and finish_reason.name == "MAX_TOKENS":
+                        logger.warning(
+                            f"Gemini hit MAX_TOKENS on {model_name} — summary may be "
+                            f"truncated ({len(summary)} chars). Increase max_output_tokens "
+                            f"or reduce transcript length."
+                        )
+                except Exception:
+                    pass
 
                 if len(summary) < 100:
                     logger.warning(f"Summary too short ({len(summary)} chars), trying next model")

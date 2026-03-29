@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-03-30
+
+FIX: Gemini 2.5 Flash — disable thinking mode (thinking_budget=0) to fix summaries truncated mid-sentence; thinking tokens were consuming the max_output_tokens budget
+FIX: Gemini — add MAX_TOKENS finish_reason detection + increase max_output_tokens to 8192
+
 ## 2026-03-29
 
 FIX: KPI report crash — maybeSingle() → maybe_single() (Python supabase-py snake_case API)
