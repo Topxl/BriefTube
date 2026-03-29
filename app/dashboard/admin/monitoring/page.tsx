@@ -371,37 +371,36 @@ export default async function AdminPage() {
       .eq("status", "completed"),
   ]);
 
-  // Platform-connected users (any platform: Telegram, Discord, Slack…)
-  const { data: platformConnsRaw } = await admin
-    .from("platform_connections")
-    .select("user_id")
-    .eq("connected", true);
+  // ── Parallel batch 2: platform, queue, failed, transcripts ──────
+  const [
+    { data: platformConnsRaw },
+    { data: pendingQueueRaw },
+    { data: recentFailedRaw },
+    { data: transcriptSourcesRaw },
+  ] = await Promise.all([
+    admin.from("platform_connections").select("user_id").eq("connected", true),
+    admin
+      .from("processed_videos")
+      .select("video_id, channel_id, language, created_at, status")
+      .in("status", ["pending", "processing"])
+      .order("created_at", { ascending: true }),
+    admin
+      .from("processed_videos")
+      .select("video_id, channel_id, language, created_at, failure_count")
+      .eq("status", "failed")
+      .order("created_at", { ascending: false }),
+    admin
+      .from("processed_videos")
+      .select("transcript_source")
+      .eq("status", "completed")
+      .gte("created_at", since24h)
+      .not("transcript_source", "is", null),
+  ]);
   const platformConnected = new Set(
     (platformConnsRaw ?? []).map((r) => r.user_id),
   ).size;
-
-  // Queries with columns not in generated types — cast explicitly
-  const { data: pendingQueueRaw } = await admin
-    .from("processed_videos")
-    .select("video_id, channel_id, language, created_at, status")
-    .in("status", ["pending", "processing"])
-    .order("created_at", { ascending: true });
   const pendingQueue = pendingQueueRaw as unknown as PendingVideo[] | null;
-
-  const { data: recentFailedRaw } = await admin
-    .from("processed_videos")
-    .select("video_id, channel_id, language, created_at, failure_count")
-    .eq("status", "failed")
-    .order("created_at", { ascending: false });
   const recentFailed = recentFailedRaw as unknown as FailedVideo[] | null;
-
-  // ── Sources de transcripts (24h) ──────────────────────────────
-  const { data: transcriptSourcesRaw } = await admin
-    .from("processed_videos")
-    .select("transcript_source")
-    .eq("status", "completed")
-    .gte("created_at", since24h)
-    .not("transcript_source", "is", null);
 
   const transcriptSources = (transcriptSourcesRaw ?? []).reduce<
     Record<string, number>
@@ -534,24 +533,26 @@ export default async function AdminPage() {
   }
   const mrr = Math.round((proCount * monthlyPriceCents) / 100);
 
-  // ── Utilisateurs actifs 7j ────────────────────────────────────
-  const { data: activeDeliveries } = await admin
-    .from("deliveries")
-    .select("user_id")
-    .eq("status", "sent")
-    .gte("created_at", sevenDaysAgo.toISOString());
+  // ── Parallel batch 3: active users, signups, referrals ──────────
+  const fourteenDaysAgo = new Date();
+  fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+
+  const [{ data: activeDeliveries }, { data: recentSignups }] =
+    await Promise.all([
+      admin
+        .from("deliveries")
+        .select("user_id")
+        .eq("status", "sent")
+        .gte("created_at", sevenDaysAgo.toISOString()),
+      admin
+        .from("profiles")
+        .select("created_at")
+        .gte("created_at", fourteenDaysAgo.toISOString())
+        .order("created_at", { ascending: true }),
+    ]);
   const activeUsersCount = new Set(
     (activeDeliveries ?? []).map((d) => d.user_id),
   ).size;
-
-  // ── Nouveaux inscrits 14j ─────────────────────────────────────
-  const fourteenDaysAgo = new Date();
-  fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
-  const { data: recentSignups } = await admin
-    .from("profiles")
-    .select("created_at")
-    .gte("created_at", fourteenDaysAgo.toISOString())
-    .order("created_at", { ascending: true });
 
   // Build 14-day array
   const signupDays: { label: string; count: number }[] = [];
@@ -738,21 +739,35 @@ export default async function AdminPage() {
       ? Math.round(((emailsOpened30d ?? 0) / totalEmailsSent30d) * 100)
       : 0;
 
-  // ── Users who added channels (activation) ──────────────────────
-  const { data: usersWithChannelsRaw } = await admin
-    .from("subscriptions")
-    .select("user_id");
+  // ── Users who added channels + source breakdown + onboarding ────
+  // Distinct user count via lightweight user_id-only query
+  const [
+    { data: channelUserIds },
+    { count: importSubCount },
+    { count: listFollowSubCount },
+    { count: onboardedCount },
+  ] = await Promise.all([
+    admin.from("subscriptions").select("user_id").limit(10000),
+    admin
+      .from("subscriptions")
+      .select("*", { count: "exact", head: true })
+      .eq("source_type", "youtube_import"),
+    admin
+      .from("subscriptions")
+      .select("*", { count: "exact", head: true })
+      .eq("source_type", "list_follow"),
+    admin
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .eq("onboarding_completed", true),
+  ]);
   const usersWithChannels = new Set(
-    (usersWithChannelsRaw ?? []).map((s) => s.user_id),
+    (channelUserIds ?? []).map((s) => s.user_id),
   ).size;
-  const activationRate =
-    total > 0 ? Math.round((usersWithChannels / total) * 100) : 0;
-
-  // ── Onboarding completed ──────────────────────────────────────
-  const { count: onboardedCount } = await admin
-    .from("profiles")
-    .select("*", { count: "exact", head: true })
-    .eq("onboarding_completed", true);
+  const totalSubCount = activeSubscriptions ?? 0;
+  const importSubs = importSubCount ?? 0;
+  const listFollowSubs = listFollowSubCount ?? 0;
+  const manualSubs = Math.max(0, totalSubCount - importSubs - listFollowSubs);
   const onboardingRate =
     total > 0 ? Math.round(((onboardedCount ?? 0) / total) * 100) : 0;
 
@@ -762,9 +777,15 @@ export default async function AdminPage() {
     visitorsTotal30d && visitorsTotal30d > 0
       ? (newSignups30d / visitorsTotal30d) * 100
       : null;
-  const signupToTrialRatePct = total > 0 ? (allTrialUsers / total) * 100 : 0;
-  const trialToProRatePct =
-    allTrialUsers > 0 ? (proCount / allTrialUsers) * 100 : 0;
+  const signupToTrialPct = total > 0 ? (allTrialUsers / total) * 100 : 0;
+  const trialToActivatedPct =
+    allTrialUsers > 0 ? (usersWithChannels / allTrialUsers) * 100 : 0;
+  const activatedToProPct =
+    usersWithChannels > 0 ? (proCount / usersWithChannels) * 100 : 0;
+  const activationRate =
+    allTrialUsers > 0
+      ? Math.round((usersWithChannels / allTrialUsers) * 100)
+      : 0;
 
   const fmtPct = (n: number) =>
     n < 1 ? `${n.toFixed(1)}%` : `${Math.round(n)}%`;
@@ -821,14 +842,21 @@ export default async function AdminPage() {
               sub="total"
               variant="default"
             />
-            <FunnelArrow rate={fmtPct(signupToTrialRatePct)} />
+            <FunnelArrow rate={fmtPct(signupToTrialPct)} />
             <FunnelStep
               label="Ont trialé"
               value={allTrialUsers}
               sub="actifs + expirés"
               variant="warning"
             />
-            <FunnelArrow rate={fmtPct(trialToProRatePct)} />
+            <FunnelArrow rate={fmtPct(trialToActivatedPct)} />
+            <FunnelStep
+              label="Ajouté chaînes"
+              value={usersWithChannels}
+              sub={`${activationRate}% des trials`}
+              variant={activationRate >= 50 ? "success" : "warning"}
+            />
+            <FunnelArrow rate={fmtPct(activatedToProPct)} />
             <FunnelStep
               label="Pro payant"
               value={proCount}
@@ -1050,6 +1078,37 @@ export default async function AdminPage() {
             icon={<Activity className="h-4 w-4" />}
             variant={activeUsersCount > 0 ? "success" : "default"}
           />
+        </div>
+
+        {/* Source des chaînes */}
+        <div className="nm-raised overflow-hidden rounded-xl">
+          <div className="border-b border-white/[0.04] px-4 py-2.5">
+            <p className="text-xs font-medium">Source des chaînes ajoutées</p>
+          </div>
+          <div className="grid grid-cols-3 divide-x divide-white/[0.04]">
+            <div className="flex flex-col gap-1 px-4 py-3">
+              <p className="text-muted-foreground text-[11px]">Manuel</p>
+              <p className="text-xl font-bold tabular-nums">{manualSubs}</p>
+              <p className="text-muted-foreground/50 text-[9px]">chaînes</p>
+            </div>
+            <div className="flex flex-col gap-1 px-4 py-3">
+              <p className="text-muted-foreground text-[11px]">
+                Import YouTube
+              </p>
+              <p className="text-xl font-bold text-sky-400 tabular-nums">
+                {importSubs}
+              </p>
+              <p className="text-muted-foreground/50 text-[9px]">chaînes</p>
+            </div>
+            <div className="flex flex-col gap-1 px-4 py-3">
+              <p className="text-muted-foreground text-[11px]">
+                Suivi de liste
+              </p>
+              <p className="text-xl font-bold text-amber-400 tabular-nums">
+                {listFollowSubs}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
