@@ -2,6 +2,7 @@
 
 ## 2026-03-29
 
+FIX: KPI report crash — maybeSingle() → maybe_single() (Python supabase-py snake_case API)
 REFACTOR: Move admin commands (/kpi, /log_mode, /monitor_*, /cookies) from main bot to log bot with dedicated polling loop
 FIX: Replace all hardcoded "5 channels" references with dynamic SiteConfig.freeChannelsLimit across OG images, landing pages, YouTube summary page, channels page, blog, and comparison pages
 FIX: Landing + emails — replace all hardcoded channel limits and trial durations with SiteConfig values (single source of truth)
