@@ -148,7 +148,9 @@ export default async function ChannelsIndexPage() {
             size="lg"
             className="mt-5 rounded-full bg-red-600 hover:bg-red-500"
           >
-            <Link href="/login">Start free — 5 channels</Link>
+            <Link href="/login">
+              Start free — {SiteConfig.freeChannelsLimit} channels
+            </Link>
           </Button>
         </div>
       </div>

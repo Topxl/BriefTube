@@ -7,8 +7,7 @@ import { SiteConfig } from "@/site-config";
 
 export const metadata: Metadata = {
   title: "YouTube Summary App — AI-Powered, Automatic | BriefTube",
-  description:
-    "Get an AI-generated YouTube summary for every new video from the channels you follow. BriefTube creates automatic audio summaries and delivers them to Telegram, Discord, Slack, or your podcast app. Free for 5 channels.",
+  description: `Get an AI-generated YouTube summary for every new video from the channels you follow. BriefTube creates automatic audio summaries and delivers them to Telegram, Discord, Slack, or your podcast app. Free for ${SiteConfig.freeChannelsLimit} channels.`,
   alternates: {
     canonical: `${SiteConfig.prodUrl}/youtube-summary`,
   },
@@ -127,7 +126,7 @@ const jsonLd = [
         name: "Can I get YouTube summaries for free?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Yes. BriefTube's free plan monitors up to 5 YouTube channels at no cost, with no credit card required. You get automatic AI audio summaries for every new video from those 5 channels, delivered to Telegram, Discord, Slack, or a private podcast feed.",
+          text: `Yes. BriefTube's free plan monitors up to ${SiteConfig.freeChannelsLimit} YouTube channels at no cost, with no credit card required. You get automatic AI audio summaries for every new video from those ${SiteConfig.freeChannelsLimit} channels, delivered to Telegram, Discord, Slack, or a private podcast feed.`,
         },
       },
       {
@@ -170,8 +169,7 @@ const steps = [
   {
     number: "01",
     title: "Add channels",
-    description:
-      "Search for any YouTube channel by name or URL and add it to your BriefTube dashboard. The free plan includes 5 channels.",
+    description: `Search for any YouTube channel by name or URL and add it to your BriefTube dashboard. The free plan includes ${SiteConfig.freeChannelsLimit} channels.`,
   },
   {
     number: "02",
@@ -253,7 +251,7 @@ const faqs = [
   },
   {
     q: "Is there a free YouTube summary tool?",
-    a: "Yes. BriefTube's free plan monitors up to 5 YouTube channels automatically at no cost. No credit card required.",
+    a: `Yes. BriefTube's free plan monitors up to ${SiteConfig.freeChannelsLimit} YouTube channels automatically at no cost. No credit card required.`,
   },
   {
     q: "How long does a YouTube summary take?",
@@ -322,7 +320,7 @@ export default function YouTubeSummaryPage() {
               </Button>
             </div>
             <p className="text-muted-foreground mt-4 text-sm">
-              Free for 5 channels — no credit card required
+              {`Free for ${SiteConfig.freeChannelsLimit} channels — no credit card required`}
             </p>
           </div>
         </section>
@@ -599,9 +597,7 @@ export default function YouTubeSummaryPage() {
               Start getting YouTube summaries today
             </h2>
             <p className="text-muted-foreground max-w-lg leading-relaxed">
-              Add up to 5 YouTube channels for free. Every new video gets
-              summarized automatically and delivered as audio to wherever you
-              listen.
+              {`Add up to ${SiteConfig.freeChannelsLimit} YouTube channels for free. Every new video gets summarized automatically and delivered as audio to wherever you listen.`}
             </p>
             <Button
               size="lg"
@@ -611,7 +607,7 @@ export default function YouTubeSummaryPage() {
               <Link href="/login">Get Started Free</Link>
             </Button>
             <p className="text-muted-foreground text-sm">
-              Free for 5 channels ·{" "}
+              {`Free for ${SiteConfig.freeChannelsLimit} channels · `}
               <Link href="/pricing" className="underline underline-offset-2">
                 See all plans
               </Link>

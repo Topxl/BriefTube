@@ -5,8 +5,9 @@ export const SiteConfig = {
   trialDays: 30,
   defaultTtsVoice: "en-US-JennyNeural",
   defaultLanguage: "en",
-  description:
-    "BriefTube monitors your YouTube channels and delivers a short audio summary for every new video, to Telegram, Discord or Slack. Free for up to 5 channels.",
+  get description() {
+    return `BriefTube monitors your YouTube channels and delivers a short audio summary for every new video, to Telegram, Discord or Slack. Free for up to ${this.freeChannelsLimit} channels.`;
+  },
   prodUrl: "https://www.brief-tube.com",
   appId: "brieftube",
   domain: "brief-tube.com",
