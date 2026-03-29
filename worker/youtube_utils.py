@@ -8,6 +8,7 @@ import logging
 import os
 import re
 import time
+from typing import Any, Callable
 
 logger = logging.getLogger(__name__)
 
@@ -118,10 +119,13 @@ def is_geo_restricted(err: str) -> bool:
 
 # ── Geo-bypass proxy rotation ─────────────────────────────────────────────────
 #
-# Countries tried in order when a video is geo-restricted (default order,
-# before language-based reordering).
+# Default fallback order when the video language is unknown or unmapped.
+# The language-specific country (from _LANGUAGE_TO_COUNTRY) is always prepended
+# at runtime, so this list is only the "everything else" safety net.
 _GEO_BYPASS_COUNTRIES: list[str] = [
-    "US", "GB", "CA", "AU", "FR", "DE", "JP", "NL", "SE", "CH",
+    "US", "GB", "CA", "AU", "FR", "DE", "JP", "KR", "NL", "SE",
+    "CH", "IT", "ES", "PT", "BR", "MX", "PL", "RU", "TH", "IN",
+    "SG", "TW", "HK", "ID", "VN", "TR", "IL", "AE", "ZA", "UA",
 ]
 
 
@@ -142,6 +146,7 @@ def country_from_proxy_url(url: str) -> str:
 # bandwidth.
 
 _LANGUAGE_TO_COUNTRY: dict[str, str] = {
+    # European
     "en": "US",
     "fr": "FR",
     "de": "DE",
@@ -151,24 +156,69 @@ _LANGUAGE_TO_COUNTRY: dict[str, str] = {
     "nl": "NL",
     "pl": "PL",
     "ru": "RU",
-    "ja": "JP",
-    "ko": "KR",
-    "zh": "TW",
-    "ar": "AE",
-    "hi": "IN",
-    "tr": "TR",
     "sv": "SE",
     "da": "DK",
     "fi": "FI",
     "nb": "NO",
+    "no": "NO",
     "cs": "CZ",
+    "sk": "SK",
     "hu": "HU",
     "ro": "RO",
     "uk": "UA",
-    "he": "IL",
+    "bg": "BG",
+    "hr": "HR",
+    "sr": "RS",
+    "sl": "SI",
+    "el": "GR",
+    "lt": "LT",
+    "lv": "LV",
+    "et": "EE",
+    "ca": "ES",
+    # Asian
+    "ja": "JP",
+    "ko": "KR",
+    "zh": "TW",
+    "zh-tw": "TW",
+    "zh-hk": "HK",
+    "zh-cn": "HK",  # mainland CN → HK (more reliable proxy)
     "th": "TH",
     "vi": "VN",
     "id": "ID",
+    "ms": "MY",
+    "tl": "PH",
+    "hi": "IN",
+    "bn": "BD",
+    "ur": "PK",
+    "ta": "IN",
+    "te": "IN",
+    "ml": "IN",
+    "kn": "IN",
+    "si": "LK",
+    "km": "KH",
+    "my": "MM",
+    "lo": "LA",
+    "mn": "MN",
+    "ka": "GE",
+    "hy": "AM",
+    "az": "AZ",
+    "kk": "KZ",
+    "uz": "UZ",
+    # Middle East / Africa
+    "ar": "AE",
+    "he": "IL",
+    "fa": "AE",  # Persian content — Iran proxy unreliable, AE better
+    "tr": "TR",
+    "sw": "KE",
+    "am": "ET",
+    "yo": "NG",
+    "ha": "NG",
+    "ig": "NG",
+    "zu": "ZA",
+    # Americas
+    "pt-br": "BR",
+    "es-mx": "MX",
+    "es-ar": "MX",
 }
 
 
@@ -198,13 +248,44 @@ def get_geo_proxy_urls_for_language(language: str | None = None) -> list[str]:
     countries = list(_GEO_BYPASS_COUNTRIES)
 
     if language:
-        lang = language.lower().split("-")[0]  # "fr-FR" → "fr"
-        primary = _LANGUAGE_TO_COUNTRY.get(lang)
-        if primary and primary in countries:
-            countries.remove(primary)
+        # Try full tag first (e.g. "zh-TW"), then base code (e.g. "zh")
+        lang_lower = language.lower()
+        primary = _LANGUAGE_TO_COUNTRY.get(lang_lower) or _LANGUAGE_TO_COUNTRY.get(lang_lower.split("-")[0])
+        if primary:
+            # Always add the language-specific country to the front, even if it's
+            # not in the default fallback list (e.g. TH, KH, MM, …).
+            if primary in countries:
+                countries.remove(primary)
             countries.insert(0, primary)
 
     return [template.format(country=c) for c in countries]
+
+
+def run_geo_bypass(
+    attempt_fn: Callable[[str, str], Any],
+    language: str | None,
+    logger_instance: logging.Logger,
+    context: str,
+) -> Any:
+    """Try geo-proxy URLs in language-priority order until one succeeds.
+
+    Calls attempt_fn(proxy_url, country_label) for each country proxy.
+    - Returns None to signal "try next country".
+    - Returns anything else to signal "done" (success or terminal error).
+
+    Returns None if no proxy is configured or all countries fail.
+    """
+    proxy_urls = get_geo_proxy_urls_for_language(language)
+    if not proxy_urls:
+        return None
+    for proxy_url in proxy_urls:
+        country = country_from_proxy_url(proxy_url)
+        logger_instance.info(f"{context}: geo-restricted — trying {country} proxy...")
+        result = attempt_fn(proxy_url, country)
+        if result is not None:
+            return result
+    logger_instance.warning(f"{context}: geo-bypass failed for all countries")
+    return None
 
 
 # ── Free YouTube proxy instances ──────────────────────────────────────────────

@@ -36,7 +36,7 @@ from youtube_utils import (
     mark_direct_blocked,
     is_geo_restricted as _is_geo_restricted,
     get_geo_proxy_urls_for_language as _get_geo_proxy_urls,
-    country_from_proxy_url as _country_from_proxy_url,
+    run_geo_bypass as _run_geo_bypass,
 )
 
 logger = logging.getLogger(__name__)
@@ -622,8 +622,8 @@ class TranscriptExtractor:
         #
         # Bot-detected → single regular rotating proxy (YOUTUBE_PROXY_HTTP).
 
-        def _run_proxy_attempt(proxy_url: str, label: str) -> tuple:
-            """Run one yt-dlp subtitle attempt with *proxy_url*. Returns (text, lang, err)."""
+        def _proxy_attempt(proxy_url: str, label: str):
+            """One yt-dlp subtitle attempt via proxy_url. Returns (text, lang, err) or None."""
             attempt_opts: dict = {
                 "skip_download": True,
                 "writesubtitles": True,
@@ -681,31 +681,20 @@ class TranscriptExtractor:
                 if any(kw in err.lower() for kw in ("is a live stream", "live event", "no video formats found")):
                     return None, None, "video_is_live"
                 logger.warning(f"yt-dlp subtitle ({label}) failed: {err[:120]}")
-            return None, None, None  # this country failed, try next
+            return None  # this country failed, try next
 
         if _geo_restricted_detected:
-            # Try country proxies ordered by the video's source language.
-            # "fr" video → FR proxy first; "ja" video → JP proxy first, etc.
             source_lang = preferred_languages[0] if preferred_languages else None
-            proxy_urls = _get_geo_proxy_urls(source_lang)
-            if not proxy_urls:
-                return None, None, None
-            for proxy_url in proxy_urls:
-                country = _country_from_proxy_url(proxy_url)
-                logger.info(f"yt-dlp subtitle: geo-restricted — trying {country} proxy...")
-                text, detected_lang, err = _run_proxy_attempt(proxy_url, f"{country} proxy")
-                if text or err:  # success or terminal error (premiere/live)
-                    return text, detected_lang, err
-            logger.warning("yt-dlp subtitle: geo-bypass failed for all countries")
-            return None, None, None
+            result = _run_geo_bypass(_proxy_attempt, source_lang, logger, "yt-dlp subtitle")
+            return result if result is not None else (None, None, None)
 
         # Bot-detected: single rotating proxy
         http_proxy = os.environ.get("YOUTUBE_PROXY_HTTP", "")
         if not http_proxy:
             return None, None, None
         logger.info("yt-dlp subtitle: all clients bot-detected — retrying with proxy")
-        text, detected_lang, err = _run_proxy_attempt(http_proxy, "proxy")
-        return text, detected_lang, err
+        result = _proxy_attempt(http_proxy, "proxy")
+        return result if result is not None else (None, None, None)
 
     @staticmethod
     def _parse_vtt_text(content: str) -> Optional[str]:

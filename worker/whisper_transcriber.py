@@ -37,7 +37,7 @@ from youtube_utils import (
     mark_direct_blocked,
     is_geo_restricted as _is_geo_restricted,
     get_geo_proxy_urls_for_language as _get_geo_proxy_urls,
-    country_from_proxy_url as _country_from_proxy_url,
+    run_geo_bypass as _run_geo_bypass,
 )
 
 logger = logging.getLogger(__name__)
@@ -223,15 +223,10 @@ class WhisperTranscriber:
                 return False
 
         # ── Step 4: proxy ────────────────────────────────────────────────────────
-        # Geo-restricted → loop through country proxies ordered by the video's
-        #   source language (e.g. French video → FR proxy first, then others).
-        #   The content's country of origin almost never restricts its own videos,
-        #   so we typically succeed on the first try.
-        #
-        # Bot-detected → single regular rotating proxy (YOUTUBE_PROXY_HTTP).
-
-        def _run_proxy_download(proxy_url: str, label: str):
-            """Attempt audio download with *proxy_url*. Returns True/live/premiere:/False."""
+        # Geo-restricted → try country proxies ordered by video's source language.
+        # Bot-detected   → single regular rotating proxy (YOUTUBE_PROXY_HTTP).
+        def _proxy_download(proxy_url: str, label: str):
+            """One yt-dlp audio download attempt via proxy_url. Returns True/live/None."""
             attempt_opts: dict = {
                 'format': 'bestaudio/best',
                 'postprocessors': [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'opus'}],
@@ -249,8 +244,7 @@ class WhisperTranscriber:
             try:
                 with yt_dlp.YoutubeDL(attempt_opts) as ydl:
                     ydl.download([youtube_url])
-                opus_path = output_path.with_suffix('.opus')
-                if opus_path.exists():
+                if output_path.with_suffix('.opus').exists():
                     logger.info(f"Audio download: {label} successful")
                     return True
             except Exception as e:
@@ -258,35 +252,23 @@ class WhisperTranscriber:
                 if "live event has ended" in err.lower():
                     logger.info(f"Audio download ({label}): live/ended stream — {err[:80]}")
                     return "live"
-                # "no video formats found" / "requested format is not available" via proxy
-                # = proxy/YouTube restriction, not necessarily a live stream.
                 logger.warning(f"Audio download ({label}) failed: {err[:120]}")
-            return None  # this attempt failed, try next
+            return None  # this country failed, try next
 
         if _geo_restricted_detected:
-            # Try country proxies ordered by the video's source language.
-            # "fr" video → FR proxy first; "ja" video → JP proxy first, etc.
-            proxy_urls = _get_geo_proxy_urls(language)
-            if proxy_urls:
-                for proxy_url in proxy_urls:
-                    country = _country_from_proxy_url(proxy_url)
-                    logger.info(f"Audio download: geo-restricted — trying {country} proxy...")
-                    result = _run_proxy_download(proxy_url, f"{country} proxy")
-                    if result is True:
-                        return True
-                    if result == "live":
-                        return "live"
-                    # None → this country failed, try next
-                logger.warning("Audio download: geo-bypass failed for all countries — video truly geo-restricted")
-                return "geo_restricted"
-            logger.warning("Audio download: geo-restricted but no geo-proxy configured")
+            result = _run_geo_bypass(_proxy_download, language, logger, "Audio download")
+            if result is True:
+                return True
+            if result == "live":
+                return "live"
+            logger.warning("Audio download: all geo-proxy countries failed — video truly geo-restricted")
             return "geo_restricted"
 
         # Bot-detected: single rotating proxy
         http_proxy = os.environ.get("YOUTUBE_PROXY_HTTP", "")
         if http_proxy:
             logger.info("Audio download: all clients blocked, retrying with proxy (bandwidth cost)...")
-            result = _run_proxy_download(http_proxy, "proxy")
+            result = _proxy_download(http_proxy, "proxy")
             if result is True:
                 return True
             if result == "live":
