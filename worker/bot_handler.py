@@ -232,8 +232,8 @@ async def send_kpi_report(alert_system: MonitoringAlert, period: str = "daily"):
         # ── Infrastructure costs (from worker_stats) ─────────────
         today_str = now.date().isoformat()
         yesterday_str = (now - timedelta(days=1)).date().isoformat()
-        ws_today = supabase.table("worker_stats").select("groq_cost, groq_seconds").eq("date", today_str).maybeSingle().execute()
-        ws_yesterday = supabase.table("worker_stats").select("groq_cost, groq_seconds").eq("date", yesterday_str).maybeSingle().execute()
+        ws_today = supabase.table("worker_stats").select("groq_cost, groq_seconds").eq("date", today_str).maybe_single().execute()
+        ws_yesterday = supabase.table("worker_stats").select("groq_cost, groq_seconds").eq("date", yesterday_str).maybe_single().execute()
 
         # ── Worker stats ─────────────────────────────────────────
         summary = stats.get_summary()
