@@ -35,6 +35,8 @@ from youtube_utils import (
     is_direct_blocked,
     mark_direct_blocked,
     is_geo_restricted as _is_geo_restricted,
+    get_geo_proxy_urls_for_language as _get_geo_proxy_urls,
+    country_from_proxy_url as _country_from_proxy_url,
 )
 
 logger = logging.getLogger(__name__)
@@ -611,85 +613,99 @@ class TranscriptExtractor:
                     logger.warning(f"yt-dlp subtitle failed: {err[:120]}")
                     return None, None, None  # unknown error, stop trying
 
-        # Proxy fallback — choose the right proxy based on why direct failed:
-        #   geo-restricted → US-targeted proxy (YOUTUBE_PROXY_HTTP_GEO) to bypass region lock
-        #   bot-detected   → regular rotating proxy (YOUTUBE_PROXY_HTTP)
-        # Both fall back to YOUTUBE_PROXY_HTTP if the dedicated var is not set.
-        if _geo_restricted_detected:
-            http_proxy = (
-                os.environ.get("YOUTUBE_PROXY_HTTP_GEO")
-                or os.environ.get("YOUTUBE_PROXY_HTTP", "")
-            )
-        else:
-            http_proxy = os.environ.get("YOUTUBE_PROXY_HTTP", "")
+        # Proxy fallback — strategy depends on why direct failed:
+        #
+        # Geo-restricted → loop through country proxies ordered by the video's
+        #   source language (e.g. French video → FR proxy first, then others).
+        #   The content's country of origin almost never has geo-restrictions on
+        #   its own videos, so we find the right country on the first try.
+        #
+        # Bot-detected → single regular rotating proxy (YOUTUBE_PROXY_HTTP).
 
-        if not http_proxy:
+        def _run_proxy_attempt(proxy_url: str, label: str) -> tuple:
+            """Run one yt-dlp subtitle attempt with *proxy_url*. Returns (text, lang, err)."""
+            attempt_opts: dict = {
+                "skip_download": True,
+                "writesubtitles": True,
+                "writeautomaticsub": True,
+                "subtitleslangs": list(dict.fromkeys(preferred_languages)),
+                "subtitlesformat": "vtt",
+                "quiet": True,
+                "no_warnings": True,
+                "noprogress": True,
+                "nocheckcertificate": True,
+                "extractor_args": {"youtube": {"player_client": ["tv_embedded"]}},
+                "proxy": proxy_url,
+            }
+            if cookies_file:
+                attempt_opts["cookiefile"] = cookies_file
+            try:
+                with tempfile.TemporaryDirectory(prefix="brieftube_vtt_proxy_") as tmp:
+                    attempt_opts["outtmpl"] = os.path.join(tmp, "%(id)s")
+                    with yt_dlp.YoutubeDL(attempt_opts) as ydl:
+                        info = ydl.extract_info(youtube_url, download=True)
+                        if info:
+                            live_status = info.get("live_status")
+                            if live_status == "is_upcoming":
+                                scheduled = info.get("scheduled_start_time")
+                                if scheduled:
+                                    import time as _time
+                                    hours = max(1, int((scheduled - _time.time()) / 3600) + 1)
+                                else:
+                                    hours = 24
+                                return None, None, f"premiere_not_available_yet:{hours}"
+                            if live_status == "is_live" or info.get("is_live"):
+                                return None, None, "video_is_live"
+
+                    vtt_files = glob.glob(os.path.join(tmp, "*.vtt"))
+                    if vtt_files:
+                        selected = vtt_files[0]
+                        detected_lang = "auto"
+                        for lang in preferred_languages:
+                            matches = [f for f in vtt_files if f".{lang}." in f]
+                            if matches:
+                                selected = matches[0]
+                                detected_lang = lang
+                                break
+                        text = self._parse_vtt(selected)
+                        if text:
+                            logger.info(
+                                f"✅ yt-dlp subtitle via {label} ({len(text)} chars) "
+                                f"lang: {detected_lang} [FREE]"
+                            )
+                            return text, detected_lang, None
+            except Exception as e:
+                err = str(e)
+                if _PREMIERE_RE.search(err):
+                    return None, None, f"premiere_not_available_yet:{_hours_until_premiere(err)}"
+                if any(kw in err.lower() for kw in ("is a live stream", "live event", "no video formats found")):
+                    return None, None, "video_is_live"
+                logger.warning(f"yt-dlp subtitle ({label}) failed: {err[:120]}")
+            return None, None, None  # this country failed, try next
+
+        if _geo_restricted_detected:
+            # Try country proxies ordered by the video's source language.
+            # "fr" video → FR proxy first; "ja" video → JP proxy first, etc.
+            source_lang = preferred_languages[0] if preferred_languages else None
+            proxy_urls = _get_geo_proxy_urls(source_lang)
+            if not proxy_urls:
+                return None, None, None
+            for proxy_url in proxy_urls:
+                country = _country_from_proxy_url(proxy_url)
+                logger.info(f"yt-dlp subtitle: geo-restricted — trying {country} proxy...")
+                text, detected_lang, err = _run_proxy_attempt(proxy_url, f"{country} proxy")
+                if text or err:  # success or terminal error (premiere/live)
+                    return text, detected_lang, err
+            logger.warning("yt-dlp subtitle: geo-bypass failed for all countries")
             return None, None, None
 
-        if _geo_restricted_detected:
-            logger.info("yt-dlp subtitle: geo-restricted — retrying with geo-bypass proxy (US IPs)...")
-        else:
-            logger.info("yt-dlp subtitle: all clients bot-detected — retrying with proxy")
-        proxy_opts: dict = {
-            "skip_download": True,
-            "writesubtitles": True,
-            "writeautomaticsub": True,
-            "subtitleslangs": list(dict.fromkeys(preferred_languages)),
-            "subtitlesformat": "vtt",
-            "quiet": True,
-            "no_warnings": True,
-            "noprogress": True,
-            "nocheckcertificate": True,
-            "extractor_args": {"youtube": {"player_client": ["tv_embedded"]}},
-            "proxy": http_proxy,
-        }
-        if cookies_file:
-            proxy_opts["cookiefile"] = cookies_file
-
-        try:
-            with tempfile.TemporaryDirectory(prefix="brieftube_vtt_proxy_") as tmp:
-                proxy_opts["outtmpl"] = os.path.join(tmp, "%(id)s")
-                with yt_dlp.YoutubeDL(proxy_opts) as ydl:
-                    info = ydl.extract_info(youtube_url, download=True)
-                    if info:
-                        live_status = info.get("live_status")
-                        if live_status == "is_upcoming":
-                            scheduled = info.get("scheduled_start_time")
-                            if scheduled:
-                                import time as _time
-                                hours = max(1, int((scheduled - _time.time()) / 3600) + 1)
-                            else:
-                                hours = 24
-                            return None, None, f"premiere_not_available_yet:{hours}"
-                        if live_status == "is_live" or info.get("is_live"):
-                            return None, None, "video_is_live"
-
-                vtt_files = glob.glob(os.path.join(tmp, "*.vtt"))
-                if vtt_files:
-                    selected = vtt_files[0]
-                    detected_lang = "auto"
-                    for lang in preferred_languages:
-                        matches = [f for f in vtt_files if f".{lang}." in f]
-                        if matches:
-                            selected = matches[0]
-                            detected_lang = lang
-                            break
-                    text = self._parse_vtt(selected)
-                    if text:
-                        logger.info(
-                            f"✅ yt-dlp subtitle via proxy ({len(text)} chars) "
-                            f"lang: {detected_lang} [FREE]"
-                        )
-                        return text, detected_lang, None
-        except Exception as e:
-            err = str(e)
-            if _PREMIERE_RE.search(err):
-                return None, None, f"premiere_not_available_yet:{_hours_until_premiere(err)}"
-            if any(kw in err.lower() for kw in ("is a live stream", "live event", "no video formats found")):
-                return None, None, "video_is_live"
-            logger.warning(f"yt-dlp subtitle (proxy) failed: {err[:120]}")
-
-        return None, None, None
+        # Bot-detected: single rotating proxy
+        http_proxy = os.environ.get("YOUTUBE_PROXY_HTTP", "")
+        if not http_proxy:
+            return None, None, None
+        logger.info("yt-dlp subtitle: all clients bot-detected — retrying with proxy")
+        text, detected_lang, err = _run_proxy_attempt(http_proxy, "proxy")
+        return text, detected_lang, err
 
     @staticmethod
     def _parse_vtt_text(content: str) -> Optional[str]:
