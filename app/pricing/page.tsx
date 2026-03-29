@@ -35,8 +35,7 @@ export default async function PricingPage() {
       "@type": "WebPage",
       name: "BriefTube Pricing",
       url: `${SiteConfig.prodUrl}/pricing`,
-      description:
-        "Start free with 5 YouTube channels. Upgrade to Pro for unlimited channels, priority processing, and custom voices.",
+      description: `Start free with ${SiteConfig.freeChannelsLimit} YouTube channels. Upgrade to Pro for unlimited channels, priority processing, and custom voices.`,
       isPartOf: {
         "@type": "WebSite",
         name: SiteConfig.title,

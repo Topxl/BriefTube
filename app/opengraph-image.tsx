@@ -338,7 +338,7 @@ export default function OGImage() {
           }}
         >
           <span style={{ fontSize: 18, fontWeight: 700, color: "#f87171" }}>
-            Free for up to 5 channels
+            Free for up to ${SiteConfig.freeChannelsLimit} channels
           </span>
         </div>
       </div>

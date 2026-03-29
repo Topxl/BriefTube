@@ -1,3 +1,5 @@
+import { SiteConfig } from "@/site-config";
+
 export type ComparisonData = {
   slug: string;
   competitor: string;
@@ -53,7 +55,7 @@ export const comparisons: ComparisonData[] = [
       },
       {
         feature: "Free tier",
-        briefTube: "5 channels free",
+        briefTube: `${SiteConfig.freeChannelsLimit} channels free`,
         competitor: "Limited free, paid from $4.99/month (annual)",
       },
       {
@@ -106,7 +108,7 @@ export const comparisons: ComparisonData[] = [
       },
       {
         feature: "Free tier",
-        briefTube: "5 channels free",
+        briefTube: `${SiteConfig.freeChannelsLimit} channels free`,
         competitor: "15 free uses/month, paid from $2.99/month",
       },
       {
@@ -165,7 +167,7 @@ export const comparisons: ComparisonData[] = [
       },
       {
         feature: "Free tier",
-        briefTube: "5 channels free",
+        briefTube: `${SiteConfig.freeChannelsLimit} channels free`,
         competitor: "100 free queries then paid",
       },
     ],
@@ -219,7 +221,7 @@ export const comparisons: ComparisonData[] = [
       },
       {
         feature: "Free tier",
-        briefTube: "5 channels free",
+        briefTube: `${SiteConfig.freeChannelsLimit} channels free`,
         competitor: "Free with limits",
       },
     ],
@@ -267,7 +269,7 @@ export const comparisons: ComparisonData[] = [
       },
       {
         feature: "Free tier",
-        briefTube: "5 channels free",
+        briefTube: `${SiteConfig.freeChannelsLimit} channels free`,
         competitor: "102 free queries/day",
       },
       {
@@ -321,7 +323,7 @@ export const comparisons: ComparisonData[] = [
       },
       {
         feature: "Free tier",
-        briefTube: "5 channels free",
+        briefTube: `${SiteConfig.freeChannelsLimit} channels free`,
         competitor: "Limited free summaries",
       },
     ],
@@ -370,7 +372,7 @@ export const comparisons: ComparisonData[] = [
       },
       {
         feature: "Free tier",
-        briefTube: "5 channels free",
+        briefTube: `${SiteConfig.freeChannelsLimit} channels free`,
         competitor: "Limited trial",
       },
     ],
@@ -424,7 +426,7 @@ export const comparisons: ComparisonData[] = [
       },
       {
         feature: "Free tier",
-        briefTube: "5 channels free",
+        briefTube: `${SiteConfig.freeChannelsLimit} channels free`,
         competitor: "5 free transcripts/month",
       },
     ],
@@ -473,7 +475,7 @@ export const comparisons: ComparisonData[] = [
       },
       {
         feature: "Free tier",
-        briefTube: "5 channels free",
+        briefTube: `${SiteConfig.freeChannelsLimit} channels free`,
         competitor: "3 podcasts free",
       },
     ],
@@ -527,7 +529,7 @@ export const comparisons: ComparisonData[] = [
       },
       {
         feature: "Free tier",
-        briefTube: "5 channels free",
+        briefTube: `${SiteConfig.freeChannelsLimit} channels free`,
         competitor: "Free with limits",
       },
     ],
@@ -576,7 +578,7 @@ export const comparisons: ComparisonData[] = [
       },
       {
         feature: "Pricing",
-        briefTube: "Free (5 channels), Pro unlimited",
+        briefTube: `Free (${SiteConfig.freeChannelsLimit} channels), Pro unlimited`,
         competitor: "Free limited, then $20/month",
       },
       {
@@ -634,7 +636,7 @@ export const comparisons: ComparisonData[] = [
       },
       {
         feature: "Price",
-        briefTube: "Free (5 channels), Pro unlimited",
+        briefTube: `Free (${SiteConfig.freeChannelsLimit} channels), Pro unlimited`,
         competitor: "$5.99/month, 10 subscriptions max",
       },
     ],
@@ -742,7 +744,7 @@ export const comparisons: ComparisonData[] = [
       },
       {
         feature: "Price",
-        briefTube: "Free (5 channels), Pro unlimited",
+        briefTube: `Free (${SiteConfig.freeChannelsLimit} channels), Pro unlimited`,
         competitor: "$5.99/month — 200 credits cap",
       },
     ],

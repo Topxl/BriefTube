@@ -202,7 +202,7 @@ export async function GET(req: Request) {
               fontWeight: 700,
             }}
           >
-            Free · 5 channels included
+            Free · ${SiteConfig.freeChannelsLimit} channels included
           </span>
           <span style={{ fontSize: badgePx, color: "#71717a" }}>·</span>
           <span

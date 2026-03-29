@@ -1,3 +1,5 @@
+import { SiteConfig } from "@/site-config";
+
 export type Article = {
   slug: string;
   title: string;
@@ -40,7 +42,7 @@ export const articles: Article[] = [
 
 <h3>BriefTube — best for automatic, multi-channel coverage</h3>
 
-<p>The only automatic YouTube summary tool that covers your entire subscription list. Monitors channels via RSS, generates summaries with Google Gemini, converts to audio with neural TTS, delivers to Telegram/Discord/Slack/podcast. Free for 5 channels. Pro plan removes all channel limits.</p>
+<p>The only automatic YouTube summary tool that covers your entire subscription list. Monitors channels via RSS, generates summaries with Google Gemini, converts to audio with neural TTS, delivers to Telegram/Discord/Slack/podcast. Free for ${SiteConfig.freeChannelsLimit} channels. Pro plan removes all channel limits.</p>
 
 <p>What it does that no other tool does: <strong>you never have to initiate anything</strong>. Every new video is summarized whether you remember to check or not.</p>
 
@@ -86,7 +88,7 @@ export const articles: Article[] = [
 
 <p>But if you follow multiple channels and want to actually keep up with all of them — not just the ones you remember to check — you need automatic summaries. BriefTube is currently the only tool that does this properly: monitoring, summarizing, converting to audio, and delivering without any ongoing effort on your part.</p>
 
-<p>The free plan covers 5 channels. If you already know which channels produce the most value for you, that's often enough to start.</p>`,
+<p>The free plan covers ${SiteConfig.freeChannelsLimit} channels. If you already know which channels produce the most value for you, that's often enough to start.</p>`,
   },
 
   {
@@ -212,7 +214,7 @@ export const articles: Article[] = [
 
 <h2>Step 1: Create Your BriefTube Account</h2>
 
-<p>Sign in at BriefTube with your Google account. No password, no forms — one click and you're in. Free accounts include 5 channels. Pro unlocks unlimited channels.</p>
+<p>Sign in at BriefTube with your Google account. No password, no forms — one click and you're in. Free accounts include ${SiteConfig.freeChannelsLimit} channels. Pro unlocks unlimited channels.</p>
 
 <h2>Step 2: Connect Your Delivery Platform</h2>
 
@@ -229,7 +231,7 @@ export const articles: Article[] = [
 
 <h2>Step 3: Add Your First Channels</h2>
 
-<p>In the BriefTube dashboard, click "Add Channel" and search for any YouTube channel by name or paste its URL. Start with 3–5 channels that publish frequently. You want to feel the system working within days, not weeks.</p>
+<p>In the BriefTube dashboard, click "Add Channel" and search for any YouTube channel by name or paste its URL. Start with a few channels that publish frequently. You want to feel the system working within days, not weeks.</p>
 
 <h2>Step 4: Wait for New Content</h2>
 
@@ -324,7 +326,7 @@ export const articles: Article[] = [
 
 <p>The actual setup is trivial. Sign up with your Google account. Connect your Telegram. Add channels. That's it.</p>
 
-<p>Free accounts get 5 channels. Start with your absolute favorite creators — the ones you actually want to keep up with. See how the system works, whether the summaries match your expectations, whether the audio voices sound good to you.</p>
+<p>Free accounts get ${SiteConfig.freeChannelsLimit} channels. Start with your absolute favorite creators — the ones you actually want to keep up with. See how the system works, whether the summaries match your expectations, whether the audio voices sound good to you.</p>
 
 <p>If it works (and it does), upgrade to Pro for unlimited channels. Then add everyone else.</p>
 
@@ -429,7 +431,7 @@ export const articles: Article[] = [
 
 <p>BriefTube solves the core problem: keeping up with dozens of YouTube channels. It monitors RSS feeds for your subscribed channels, summarizes new videos with AI, converts summaries to natural-sounding audio, and delivers everything to Telegram automatically.</p>
 
-<p>The key phrase: you don't do anything. The system watches your channels and delivers summaries as they appear. Free tier gets you 5 channels. Pro tier gives unlimited channels, multi-language support, and customizable TTS voices.</p>
+<p>The key phrase: you don't do anything. The system watches your channels and delivers summaries as they appear. Free tier gets you ${SiteConfig.freeChannelsLimit} channels. Pro tier gives unlimited channels, multi-language support, and customizable TTS voices.</p>
 
 <p>For anyone following more than 3 YouTube channels seriously, this tool is a time reclamation device. It turns video consumption from a 20-minute commitment into a 4-minute audio summary you can consume while doing literally anything else.</p>
 
@@ -944,7 +946,7 @@ export const articles: Article[] = [
 
 <p><strong>BriefTube</strong> is built specifically for channel monitoring. It watches RSS feeds for subscribed YouTube channels, detects new uploads within minutes, generates AI summaries using Google Gemini, converts them to audio via neural text-to-speech, and delivers the audio to Telegram, Discord, or Slack automatically.</p>
 
-<p>The key distinction: you don't trigger anything. You set up your subscriptions once and receive summaries as content appears. For people following 5-20 channels seriously, this is the only approach that scales. Free tier covers 5 channels. Pro tier is unlimited with customizable voices and multi-language support.</p>
+<p>The key distinction: you don't trigger anything. You set up your subscriptions once and receive summaries as content appears. For people following 5-20 channels seriously, this is the only approach that scales. Free tier covers ${SiteConfig.freeChannelsLimit} channels. Pro tier is unlimited with customizable voices and multi-language support.</p>
 
 <h2>Transcription-First Tools</h2>
 
@@ -1004,7 +1006,7 @@ export const articles: Article[] = [
 
 <p>A 20-minute Thomas Frank video on his latest Obsidian setup becomes a 3-minute audio summary during your commute. You learn the key system changes he made, decide if any apply to your situation, and get back to work. The channel stays followed, you stay informed, and you're not losing an afternoon to productivity content consumption.</p>
 
-<p>Free tier covers 5 channels — enough to cover the core channels above. Pro unlocks unlimited channels and voice customization.</p>`,
+<p>Free tier covers ${SiteConfig.freeChannelsLimit} channels — enough to cover the core channels above. Pro unlocks unlimited channels and voice customization.</p>`,
   },
 
   {

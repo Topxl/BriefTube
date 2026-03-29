@@ -42,16 +42,14 @@ export const metadata: Metadata = {
     absolute:
       "BriefTube — Automatic YouTube Summary App | Audio delivered to Telegram, Discord & Slack",
   },
-  description:
-    "BriefTube is an automatic YouTube summary app. Get an AI-generated audio summary of every new video from your channels, delivered to Telegram, Discord or Slack within 30 minutes. Free for 5 channels.",
+  description: `BriefTube is an automatic YouTube summary app. Get an AI-generated audio summary of every new video from your channels, delivered to Telegram, Discord or Slack within 30 minutes. Free for ${SiteConfig.freeChannelsLimit} channels.`,
   alternates: {
     canonical: SiteConfig.prodUrl,
   },
   openGraph: {
     title:
       "BriefTube — Automatic YouTube Summary App | Audio delivered to Telegram, Discord & Slack",
-    description:
-      "Stop falling behind on your YouTube channels. BriefTube turns every new video into a short audio summary and delivers it automatically to Telegram, Discord or Slack. Free for 5 channels.",
+    description: `Stop falling behind on your YouTube channels. BriefTube turns every new video into a short audio summary and delivers it automatically to Telegram, Discord or Slack. Free for ${SiteConfig.freeChannelsLimit} channels.`,
     images: [
       {
         url: "/opengraph-image",
@@ -64,8 +62,7 @@ export const metadata: Metadata = {
   twitter: {
     title:
       "BriefTube — Automatic YouTube Summary App | Audio delivered to Telegram, Discord & Slack",
-    description:
-      "Stop falling behind on your YouTube channels. BriefTube turns every new video into a short audio summary and delivers it automatically to Telegram, Discord or Slack. Free for 5 channels.",
+    description: `Stop falling behind on your YouTube channels. BriefTube turns every new video into a short audio summary and delivers it automatically to Telegram, Discord or Slack. Free for ${SiteConfig.freeChannelsLimit} channels.`,
   },
 };
 
@@ -90,7 +87,7 @@ const jsonLd = [
       "Text-to-speech audio conversion",
       "Automatic delivery to Telegram, Discord or Slack",
       "Multi-language support",
-      "Monitor up to 5 channels for free",
+      `Monitor up to ${SiteConfig.freeChannelsLimit} channels for free`,
     ],
     offers: [
       {
@@ -164,7 +161,7 @@ const jsonLd = [
         name: "Is there a free YouTube summarizer that works automatically?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Yes. BriefTube's free plan monitors up to 5 YouTube channels automatically at no cost, with no credit card required. It generates AI audio summaries for every new video and delivers them to Telegram, Discord, Slack, or a private podcast feed.",
+          text: `Yes. BriefTube's free plan monitors up to ${SiteConfig.freeChannelsLimit} YouTube channels automatically at no cost, with no credit card required. It generates AI audio summaries for every new video and delivers them to Telegram, Discord, Slack, or a private podcast feed.`,
         },
       },
       {
