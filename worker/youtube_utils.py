@@ -118,29 +118,11 @@ def is_geo_restricted(err: str) -> bool:
 
 # ── Geo-bypass proxy rotation ─────────────────────────────────────────────────
 #
-# Countries tried in order when a video is geo-restricted.
-# We don't know in advance which country the video is restricted to, so we
-# try the most common ones first (US covers ~70% of YouTube geo-blocks, then
-# UK, Canada, Australia cover most of the rest).
+# Countries tried in order when a video is geo-restricted (default order,
+# before language-based reordering).
 _GEO_BYPASS_COUNTRIES: list[str] = [
     "US", "GB", "CA", "AU", "FR", "DE", "JP", "NL", "SE", "CH",
 ]
-
-
-def get_geo_proxy_urls() -> list[str]:
-    """Return ordered list of country-targeted proxy URLs to try for geo-bypass.
-
-    Set YOUTUBE_PROXY_HTTP_GEO_TEMPLATE in Infisical with a {country} placeholder:
-      http://USERNAME-{country}-rotate:PASSWORD@p.webshare.io:80
-
-    Falls back to YOUTUBE_PROXY_HTTP_GEO (single country), then YOUTUBE_PROXY_HTTP.
-    """
-    template = os.environ.get("YOUTUBE_PROXY_HTTP_GEO_TEMPLATE", "")
-    if template:
-        return [template.format(country=c) for c in _GEO_BYPASS_COUNTRIES]
-    # Single geo proxy (e.g. US only)
-    single = os.environ.get("YOUTUBE_PROXY_HTTP_GEO") or os.environ.get("YOUTUBE_PROXY_HTTP", "")
-    return [single] if single else []
 
 
 def country_from_proxy_url(url: str) -> str:
@@ -206,11 +188,11 @@ def get_geo_proxy_urls_for_language(language: str | None = None) -> list[str]:
     placeholder, e.g.:
       http://USERNAME-{country}-rotate:PASSWORD@p.webshare.io:80
 
-    Falls back to YOUTUBE_PROXY_HTTP_GEO (single country), then YOUTUBE_PROXY_HTTP.
+    Falls back to YOUTUBE_PROXY_HTTP if the template is not set.
     """
     template = os.environ.get("YOUTUBE_PROXY_HTTP_GEO_TEMPLATE", "")
     if not template:
-        single = os.environ.get("YOUTUBE_PROXY_HTTP_GEO") or os.environ.get("YOUTUBE_PROXY_HTTP", "")
+        single = os.environ.get("YOUTUBE_PROXY_HTTP", "")
         return [single] if single else []
 
     countries = list(_GEO_BYPASS_COUNTRIES)
