@@ -34,6 +34,7 @@ from youtube_utils import (
     extract_video_id as _extract_video_id,
     is_direct_blocked,
     mark_direct_blocked,
+    is_geo_restricted as _is_geo_restricted,
 )
 
 logger = logging.getLogger(__name__)
@@ -508,6 +509,7 @@ class TranscriptExtractor:
         if _skip_direct:
             logger.debug("yt-dlp subtitle: IP known blocked — skipping direct clients")
 
+        _geo_restricted_detected = False  # set to True → proxy step uses US-targeted proxy
         for player_client in (_PLAYER_CLIENTS if not _skip_direct else []):
             client_name = player_client[0]
             ydl_opts: dict = {
@@ -593,11 +595,9 @@ class TranscriptExtractor:
                 )):
                     logger.info("yt-dlp subtitle: live stream detected — snooze 2h")
                     return None, None, "video_is_live"
-                elif any(kw in err.lower() for kw in (
-                    "your country", "this country", "not available in your",
-                    "national security", "government", "unavailable in this country",
-                )):
-                    logger.warning("yt-dlp subtitle: video geo-restricted — will try Invidious")
+                elif _is_geo_restricted(err):
+                    logger.warning("yt-dlp subtitle: video geo-restricted — will try geo-bypass proxy")
+                    _geo_restricted_detected = True
                     break  # geo-restriction is consistent across all clients
                 elif "429" in err or "Too Many Requests" in err:
                     logger.warning("yt-dlp subtitle: rate-limited (429) — will try Invidious")
@@ -611,14 +611,25 @@ class TranscriptExtractor:
                     logger.warning(f"yt-dlp subtitle failed: {err[:120]}")
                     return None, None, None  # unknown error, stop trying
 
-        # All direct clients bot-detected — retry once via residential proxy.
-        # tv_embedded is the only client that works reliably through datacenter
-        # proxies; ios/mweb return "Requested format is not available" via proxy.
-        http_proxy = os.environ.get("YOUTUBE_PROXY_HTTP", "")
+        # Proxy fallback — choose the right proxy based on why direct failed:
+        #   geo-restricted → US-targeted proxy (YOUTUBE_PROXY_HTTP_GEO) to bypass region lock
+        #   bot-detected   → regular rotating proxy (YOUTUBE_PROXY_HTTP)
+        # Both fall back to YOUTUBE_PROXY_HTTP if the dedicated var is not set.
+        if _geo_restricted_detected:
+            http_proxy = (
+                os.environ.get("YOUTUBE_PROXY_HTTP_GEO")
+                or os.environ.get("YOUTUBE_PROXY_HTTP", "")
+            )
+        else:
+            http_proxy = os.environ.get("YOUTUBE_PROXY_HTTP", "")
+
         if not http_proxy:
             return None, None, None
 
-        logger.info("yt-dlp subtitle: all clients bot-detected — retrying with proxy")
+        if _geo_restricted_detected:
+            logger.info("yt-dlp subtitle: geo-restricted — retrying with geo-bypass proxy (US IPs)...")
+        else:
+            logger.info("yt-dlp subtitle: all clients bot-detected — retrying with proxy")
         proxy_opts: dict = {
             "skip_download": True,
             "writesubtitles": True,

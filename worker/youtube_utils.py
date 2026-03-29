@@ -97,6 +97,29 @@ BOT_DETECTION_KEYWORDS: tuple[str, ...] = (
 )
 
 
+# ── Geo-restriction detection ─────────────────────────────────────────────────
+
+GEO_RESTRICTION_KEYWORDS: tuple[str, ...] = (
+    "your country",
+    "this country",
+    "not available in your",
+    "national security",
+    "government",
+    "unavailable in this country",
+)
+
+
+def is_geo_restricted(err: str) -> bool:
+    """Return True if the error indicates a geo-restriction (video blocked in this region).
+
+    When this is detected, the caller should attempt a geo-bypass proxy (US IPs)
+    rather than abandoning — many geo-restrictions are bypassed by using a US
+    residential IP (configured via YOUTUBE_PROXY_HTTP_GEO env var).
+    """
+    err_lower = err.lower()
+    return any(kw in err_lower for kw in GEO_RESTRICTION_KEYWORDS)
+
+
 # ── Free YouTube proxy instances ──────────────────────────────────────────────
 
 # Public Invidious instances — open-source YouTube frontend.
