@@ -188,6 +188,7 @@ export function SummaryRow({
 
   const [generatingLang, setGeneratingLang] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
+  const [localStatus, setLocalStatus] = useState<string | null>(null);
 
   const handleRetry = useCallback(async () => {
     setRetrying(true);
@@ -212,6 +213,7 @@ export function SummaryRow({
           title: title ?? delivery.video_id,
           startedAt: Date.now(),
         });
+        setLocalStatus("processing");
         toast.success("Retry started!");
       } else {
         toast.info("Video is already being processed");
@@ -332,15 +334,15 @@ export function SummaryRow({
                 ? formatSummaryDate(delivery.created_at)
                 : ""}
             </span>
-            {video && video.status !== "completed" && (
+            {video && (localStatus ?? video.status) !== "completed" && (
               <span
                 className={`rounded-full px-1.5 py-px text-[10px] font-medium ${
-                  video.status === "failed"
+                  (localStatus ?? video.status) === "failed"
                     ? "bg-red-500/20 text-red-400"
                     : "bg-yellow-500/20 text-yellow-400"
                 }`}
               >
-                {video.status === "failed"
+                {(localStatus ?? video.status) === "failed"
                   ? tl.statusFailed
                   : tl.statusProcessing}
               </span>
@@ -372,7 +374,7 @@ export function SummaryRow({
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-52">
-            {video?.status === "failed" && (
+            {video?.status === "failed" && !localStatus && (
               <>
                 <DropdownMenuItem
                   onClick={() => void handleRetry()}

@@ -158,6 +158,24 @@ export async function POST(request: NextRequest) {
   const finalChannelName = youtubeInfo.channelName;
   const finalAvatarUrl = youtubeInfo.channelAvatarUrl;
 
+  // Validate that we resolved a real YouTube channel ID (UCxxxxxxxxxxxxxxxxxxxxxxxx).
+  // If getYouTubeChannelInfo couldn't find one, it falls back to the raw input —
+  // which may be a name, a malformed URL, etc. — and must be rejected.
+  const YOUTUBE_CHANNEL_ID_RE = /^UC[a-zA-Z0-9_-]{22}$/;
+  if (!YOUTUBE_CHANNEL_ID_RE.test(finalChannelId)) {
+    logger.warn("Invalid channel ID after YouTube lookup — rejecting:", {
+      input: channelId,
+      resolved: finalChannelId,
+    });
+    return NextResponse.json(
+      {
+        error:
+          "Could not find a valid YouTube channel. Please use a channel URL (e.g. youtube.com/@handle) or a video URL.",
+      },
+      { status: 422 },
+    );
+  }
+
   logger.info("YouTube channel info fetched:", {
     channelId: finalChannelId,
     channelName: finalChannelName,
