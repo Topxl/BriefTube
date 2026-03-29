@@ -740,14 +740,14 @@ export default async function AdminPage() {
       : 0;
 
   // ── Users who added channels + source breakdown + onboarding ────
-  // Distinct user count via lightweight user_id-only query
+  // Use RPC for accurate distinct count (avoids PostgREST row pagination issues)
   const [
-    { data: channelUserIds },
+    { data: usersWithChannelsResult },
     { count: importSubCount },
     { count: listFollowSubCount },
     { count: onboardedCount },
   ] = await Promise.all([
-    admin.from("subscriptions").select("user_id").limit(10000),
+    admin.rpc("count_users_with_channels" as never),
     admin
       .from("subscriptions")
       .select("*", { count: "exact", head: true })
@@ -761,9 +761,7 @@ export default async function AdminPage() {
       .select("*", { count: "exact", head: true })
       .eq("onboarding_completed", true),
   ]);
-  const usersWithChannels = new Set(
-    (channelUserIds ?? []).map((s) => s.user_id),
-  ).size;
+  const usersWithChannels = (usersWithChannelsResult as unknown as number) || 0;
   const totalSubCount = activeSubscriptions ?? 0;
   const importSubs = importSubCount ?? 0;
   const listFollowSubs = listFollowSubCount ?? 0;
