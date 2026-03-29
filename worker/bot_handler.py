@@ -179,6 +179,7 @@ async def send_kpi_report(alert_system: MonitoringAlert, period: str = "daily"):
         signups_prev_24h = supabase.table("profiles").select("id", count="exact").gte("created_at", two_days_ago).lt("created_at", day_ago).execute()
         signups_7d = supabase.table("profiles").select("id", count="exact").gte("created_at", week_ago).execute()
         onboarded = supabase.table("profiles").select("id", count="exact").eq("onboarding_completed", True).execute()
+        total_referrals = supabase.table("profiles").select("id", count="exact").not_.is_("referred_by", "null").execute()
 
         # ── Activation: users with at least 1 channel ────────────
         users_with_channels = supabase.rpc("get_feed_deliveries", {"p_user_id": "00000000-0000-0000-0000-000000000000", "p_limit": 0, "p_offset": 0}).execute()
