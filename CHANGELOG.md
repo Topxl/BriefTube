@@ -2,6 +2,15 @@
 
 ## 2026-03-29
 
+FIX: Landing + emails — replace all hardcoded channel limits and trial durations with SiteConfig values (single source of truth)
+FIX: Landing hero — "7-day Pro trial" → dynamic from SiteConfig.trialDays (30 days)
+FIX: Landing variants — all "3 channels" → dynamic from SiteConfig.freeChannelsLimit (5)
+FEATURE: Landing hero — add post-trial reassurance line ("After trial: X channels free forever")
+FEATURE: Email trial-reminder — add free tier reassurance ("you'll still keep X channels free forever")
+FEATURE: Email trial-expired — clarify free tier continues with X channels forever
+FEATURE: Email onboarding J1 — mention trial duration and free tier after trial
+FEAT: Admin dashboard — "Ajouté chaînes" step in acquisition funnel + channel source breakdown (manual vs YouTube import vs list follow)
+FEAT: YouTube sync — tag imported channels with source_type="youtube_import" for analytics
 FEAT: Admin dashboard — add activation rate (users with channels), onboarding rate, email open rate metrics
 FEAT: Worker — comprehensive KPI report with activation funnel, retention, costs, day-over-day deltas, email open rates
 FEAT: Worker — /kpi command for on-demand KPI report
