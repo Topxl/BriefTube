@@ -89,6 +89,31 @@ def get_all_known_video_ids() -> set[str]:
     return known
 
 
+def get_recent_titles_by_channel(hours: int = 2) -> dict[str, set[str]]:
+    """Return {channel_id: {title_lower, ...}} for videos seen in the last N hours.
+
+    Used to skip re-uploads of the same video (same title, same channel within
+    the dedup window). Normalises titles to lowercase + stripped before storing.
+    """
+    from datetime import datetime, timezone, timedelta
+
+    sb = get_client()
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
+    res = (
+        sb.table("processed_videos")
+        .select("channel_id, video_title")
+        .gte("created_at", cutoff)
+        .execute()
+    )
+    result: dict[str, set[str]] = {}
+    for row in res.data or []:
+        ch = row.get("channel_id")
+        title = row.get("video_title")
+        if ch and title:
+            result.setdefault(ch, set()).add(title.lower().strip())
+    return result
+
+
 def mark_video_completed(
     video_id: str,
     summary: str,
