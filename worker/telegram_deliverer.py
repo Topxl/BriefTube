@@ -3,6 +3,7 @@
 import asyncio
 import html as _html
 import logging
+import os
 import shutil
 import subprocess
 import tempfile
@@ -43,7 +44,9 @@ async def _convert_to_ogg(mp3_path: Path) -> Path:
     Returns the path to the temporary OGG file; caller is responsible for deleting it.
     Raises RuntimeError if ffmpeg exits with a non-zero status.
     """
-    ogg_path = Path(tempfile.mktemp(suffix=".ogg"))
+    fd, ogg_path_str = tempfile.mkstemp(suffix=".ogg")
+    os.close(fd)  # Close the file descriptor, ffmpeg will write to the path
+    ogg_path = Path(ogg_path_str)
     cmd = [
         _FFMPEG,
         "-y",

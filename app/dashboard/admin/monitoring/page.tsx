@@ -435,7 +435,7 @@ export default async function AdminPage() {
       .limit(100),
     admin
       .from("processed_videos")
-      .select("transcript_source")
+      .select("transcript_source, transcript_cost")
       .eq("status", "completed")
       .gte("created_at", since24h)
       .not("transcript_source", "is", null),
@@ -597,6 +597,72 @@ export default async function AdminPage() {
   const videosSkipped24h = videosByStatus.skipped ?? 0;
   const deliveriesSent24h = deliveriesByStatus.sent ?? 0;
   const deliveriesFailed24h = deliveriesByStatus.failed ?? 0;
+
+  // Pipeline breakdown
+  const TEXT_SOURCES = [
+    "youtube_api",
+    "invidious",
+    "piped",
+    "youtube-transcript-api",
+    "youtube",
+    "manual",
+  ];
+  const AUDIO_SOURCES = ["groq", "whisper", "yt-dlp"];
+
+  type TranscriptSourceRaw = {
+    transcript_source: string | null;
+    transcript_cost: number | null;
+  };
+
+  const transcriptSourceStats = (
+    (transcriptSourcesRaw as TranscriptSourceRaw[] | null) ?? []
+  ).reduce<Record<string, { count: number; cost: number }>>((acc, v) => {
+    const src = (v.transcript_source as string | null) ?? "unknown";
+    const cost = (v.transcript_cost as number | null) ?? 0;
+    acc[src] ??= { count: 0, cost: 0 };
+    acc[src].count++;
+    acc[src].cost += cost;
+    return acc;
+  }, {});
+
+  const textSourcesTotal = Object.entries(transcriptSourceStats)
+    .filter(([src]) => TEXT_SOURCES.includes(src))
+    .reduce((s, [, v]) => s + v.count, 0);
+
+  const audioSourcesTotal = Object.entries(transcriptSourceStats)
+    .filter(([src]) => AUDIO_SOURCES.includes(src))
+    .reduce((s, [, v]) => s + v.count, 0);
+
+  const groqCost24h = Object.entries(transcriptSourceStats)
+    .filter(([src]) => AUDIO_SOURCES.includes(src))
+    .reduce((s, [, v]) => s + v.cost, 0);
+
+  const totalTranscripts24h = textSourcesTotal + audioSourcesTotal;
+
+  const textPercentage =
+    totalTranscripts24h > 0
+      ? Math.round((textSourcesTotal / totalTranscripts24h) * 100)
+      : 0;
+  const audioPercentage =
+    totalTranscripts24h > 0
+      ? Math.round((audioSourcesTotal / totalTranscripts24h) * 100)
+      : 0;
+
+  // Failure reasons breakdown (7 days)
+  type FailedVideoRaw = {
+    metadata: { error?: string } | null;
+  };
+
+  const failureReasons = (
+    (recentFailed as FailedVideoRaw[] | null) ?? []
+  ).reduce<Record<string, number>>((acc, v) => {
+    const reason = v.metadata?.error ?? "(unknown)";
+    acc[reason] = (acc[reason] ?? 0) + 1;
+    return acc;
+  }, {});
+  const failureReasonEntries = Object.entries(failureReasons).sort(
+    ([, a], [, b]) => b - a,
+  );
 
   const total = totalUsers ?? 0;
   const platformPct =
@@ -1264,26 +1330,157 @@ export default async function AdminPage() {
           <div className="flex flex-col gap-2">
             <SectionTitle>Services</SectionTitle>
             <ServicesHealth />
-            {/* Transcript sources breakdown (24h) */}
-            {transcriptSourceEntries.length > 0 && (
+
+            {/* Pipeline de traitement (24h) */}
+            {totalTranscripts24h > 0 && (
               <div className="nm-raised overflow-hidden rounded-xl">
                 <div className="border-b border-white/[0.04] px-4 py-2.5">
-                  <p className="text-xs font-medium">Sources transcripts 24h</p>
+                  <p className="text-xs font-medium">
+                    Pipeline de traitement — 24h
+                  </p>
                 </div>
                 <div className="divide-y divide-white/[0.04]">
-                  {transcriptSourceEntries.map(([src, count]) => (
-                    <div
-                      key={src}
-                      className="flex items-center justify-between px-4 py-2"
-                    >
-                      <p className="font-mono text-[11px] text-white/70">
-                        {src}
-                      </p>
-                      <span className="text-muted-foreground text-[11px] tabular-nums">
-                        {count}
-                      </span>
+                  {/* Text sources */}
+                  <div className="px-4 py-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs font-medium text-emerald-400">
+                          Texte
+                        </p>
+                        <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 font-mono text-[10px] text-emerald-400">
+                          {textSourcesTotal} (
+                          {Math.round(
+                            (textSourcesTotal / totalTranscripts24h) * 100,
+                          )}
+                          %)
+                        </span>
+                      </div>
                     </div>
-                  ))}
+                    <div className="mt-2 flex flex-col gap-1">
+                      {Object.entries(transcriptSourceStats)
+                        .filter(([src]) => TEXT_SOURCES.includes(src))
+                        .sort(([, a], [, b]) => b.count - a.count)
+                        .map(([src, { count }]) => (
+                          <div
+                            key={src}
+                            className="flex items-center justify-between px-2 py-1"
+                          >
+                            <p className="font-mono text-[11px] text-white/60">
+                              {src}
+                            </p>
+                            <span className="text-muted-foreground text-[11px] tabular-nums">
+                              {count}
+                            </span>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+
+                  {/* Audio sources */}
+                  <div className="px-4 py-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs font-medium text-orange-400">
+                          Audio / Whisper
+                        </p>
+                        <span className="rounded-full bg-orange-500/10 px-2 py-0.5 font-mono text-[10px] text-orange-400">
+                          {audioSourcesTotal} (
+                          {Math.round(
+                            (audioSourcesTotal / totalTranscripts24h) * 100,
+                          )}
+                          %)
+                        </span>
+                      </div>
+                    </div>
+                    <div className="mt-2 flex flex-col gap-1">
+                      {Object.entries(transcriptSourceStats)
+                        .filter(([src]) => AUDIO_SOURCES.includes(src))
+                        .sort(([, a], [, b]) => b.count - a.count)
+                        .map(([src, { count, cost }]) => (
+                          <div
+                            key={src}
+                            className="flex items-center justify-between px-2 py-1"
+                          >
+                            <p className="font-mono text-[11px] text-white/60">
+                              {src}
+                            </p>
+                            <span className="text-muted-foreground text-[11px] tabular-nums">
+                              {count}
+                              {cost > 0 && (
+                                <span className="ml-2 text-orange-400/70">
+                                  ${(cost / 100).toFixed(2)}
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+
+                  {/* Cost summary */}
+                  {(() => {
+                    const totalCost = Object.entries(transcriptSourceStats)
+                      .filter(([src]) => AUDIO_SOURCES.includes(src))
+                      .reduce((sum, [, { cost }]) => sum + cost, 0);
+                    return totalCost > 0 ? (
+                      <div className="border-t border-white/[0.04] px-4 py-2.5">
+                        <p className="text-[11px] text-orange-400/70">
+                          Coût Whisper/Groq : ${(totalCost / 100).toFixed(3)}
+                        </p>
+                      </div>
+                    ) : null;
+                  })()}
+                </div>
+              </div>
+            )}
+
+            {totalTranscripts24h === 0 && (
+              <div className="nm-raised rounded-xl px-4 py-4">
+                <p className="text-muted-foreground text-sm">
+                  Aucune vidéo traitée ces 24h
+                </p>
+              </div>
+            )}
+
+            {/* Failure reasons (7 days) */}
+            {failureReasonEntries.length > 0 && (
+              <div className="nm-raised overflow-hidden rounded-xl">
+                <div className="border-b border-white/[0.04] px-4 py-2.5">
+                  <p className="text-xs font-medium">
+                    Raisons d&apos;échec — 7j (
+                    {Object.values(failureReasons).reduce(
+                      (sum, count) => sum + count,
+                      0,
+                    )}
+                    )
+                  </p>
+                </div>
+                <div className="divide-y divide-white/[0.04]">
+                  {failureReasonEntries.map(([reason, count]) => {
+                    let colorClass = "text-red-400";
+                    if (
+                      reason === "music_content" ||
+                      reason === "likely_music_no_speech"
+                    ) {
+                      colorClass = "text-muted-foreground";
+                    } else if (reason === "(unknown)") {
+                      colorClass = "text-yellow-400";
+                    }
+
+                    return (
+                      <div
+                        key={reason}
+                        className="flex items-center justify-between px-4 py-2.5"
+                      >
+                        <p className={`font-mono text-[11px] ${colorClass}`}>
+                          {reason}
+                        </p>
+                        <span className="text-muted-foreground text-[11px] tabular-nums">
+                          {count}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}

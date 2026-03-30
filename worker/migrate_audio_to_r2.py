@@ -114,12 +114,13 @@ def migrate(dry_run: bool = False, limit: int = 0) -> None:
                 tmp.write(resp.content)
                 tmp_path = Path(tmp.name)
 
-            new_url = storage.upload_audio(tmp_path, storage_key)
-            tmp_path.unlink(missing_ok=True)
+            try:
+                new_url = storage.upload_audio(tmp_path, storage_key)
+            finally:
+                tmp_path.unlink(missing_ok=True)
         except Exception as e:
             logger.error(f"  R2 upload failed: {e}")
             failed += 1
-            tmp_path.unlink(missing_ok=True)
             continue
 
         # Update DB

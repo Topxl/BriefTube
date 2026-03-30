@@ -34,6 +34,7 @@ export async function GET(request: NextRequest) {
   const cookieStore = await cookies();
   cookieStore.set("youtube_oauth_state", state, {
     httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
     maxAge: 600,
     path: "/",
     sameSite: "lax",
@@ -41,6 +42,7 @@ export async function GET(request: NextRequest) {
   // Store mode so callback knows whether to import or sync-diff
   cookieStore.set("youtube_oauth_mode", mode, {
     httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
     maxAge: 600,
     path: "/",
     sameSite: "lax",

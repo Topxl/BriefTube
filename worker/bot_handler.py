@@ -1192,6 +1192,24 @@ async def handle_options_callback(update: Update, context: ContextTypes.DEFAULT_
     if not video_id or not language:
         return
 
+    # Validate video_id (YouTube video IDs are 11 chars, alphanumeric with - and _)
+    if not re.match(r'^[a-zA-Z0-9_-]{11}$', video_id):
+        logger.warning(f"Invalid video_id in callback: {video_id!r}")
+        try:
+            await query.answer("Invalid request")
+        except Exception:
+            pass
+        return
+
+    # Validate language (2-5 chars, alphanumeric with dash)
+    if not re.match(r'^[a-zA-Z]{2}(?:-[a-zA-Z]{2})?$', language):
+        logger.warning(f"Invalid language in callback: {language!r}")
+        try:
+            await query.answer("Invalid request")
+        except Exception:
+            pass
+        return
+
     # Fetch profile and channel info in parallel
     try:
         profile, channel_info = await asyncio.wait_for(
@@ -1247,6 +1265,14 @@ async def handle_summary_callback(update: Update, context: ContextTypes.DEFAULT_
     if not video_id or not language:
         return
 
+    # Validate video_id and language
+    if not re.match(r'^[a-zA-Z0-9_-]{11}$', video_id):
+        logger.warning(f"Invalid video_id in callback: {video_id!r}")
+        return
+    if not re.match(r'^[a-zA-Z]{2}(?:-[a-zA-Z]{2})?$', language):
+        logger.warning(f"Invalid language in callback: {language!r}")
+        return
+
     pv = await asyncio.to_thread(db.get_processed_video, video_id, language)
     if not pv or not pv.get("summary"):
         try:
@@ -1277,6 +1303,14 @@ async def handle_share_callback(update: Update, context: ContextTypes.DEFAULT_TY
     _, _, rest = query.data.partition("_")  # strip "share_"
     video_id, _, language = rest.rpartition("_")
     if not video_id or not language:
+        return
+
+    # Validate video_id and language
+    if not re.match(r'^[a-zA-Z0-9_-]{11}$', video_id):
+        logger.warning(f"Invalid video_id in callback: {video_id!r}")
+        return
+    if not re.match(r'^[a-zA-Z]{2}(?:-[a-zA-Z]{2})?$', language):
+        logger.warning(f"Invalid language in callback: {language!r}")
         return
 
     # Fetch profile and video metadata in parallel — independent queries
@@ -1329,6 +1363,14 @@ async def handle_share_lang_callback(update: Update, context: ContextTypes.DEFAU
     if not video_id:
         return
 
+    # Validate video_id and language
+    if not re.match(r'^[a-zA-Z0-9_-]{11}$', video_id):
+        logger.warning(f"Invalid video_id in callback: {video_id!r}")
+        return
+    if not re.match(r'^[a-zA-Z]{2}(?:-[a-zA-Z]{2})?$', current_lang):
+        logger.warning(f"Invalid language in callback: {current_lang!r}")
+        return
+
     available_set = set(await asyncio.to_thread(db.get_available_languages_for_video, video_id))
 
     buttons = [
@@ -1357,6 +1399,14 @@ async def handle_share_set_lang_callback(update: Update, context: ContextTypes.D
     _, _, rest = query.data.partition("_")  # strip "shareSetLang_"
     video_id, _, new_lang = rest.rpartition("_")
     if not video_id or not new_lang:
+        return
+
+    # Validate video_id and language
+    if not re.match(r'^[a-zA-Z0-9_-]{11}$', video_id):
+        logger.warning(f"Invalid video_id in callback: {video_id!r}")
+        return
+    if not re.match(r'^[a-zA-Z]{2}(?:-[a-zA-Z]{2})?$', new_lang):
+        logger.warning(f"Invalid language in callback: {new_lang!r}")
         return
 
     # Fetch profile and processed video in parallel — independent reads
@@ -1455,6 +1505,14 @@ async def handle_lang_callback(update: Update, context: ContextTypes.DEFAULT_TYP
     if not video_id:
         return
 
+    # Validate video_id and language
+    if not re.match(r'^[a-zA-Z0-9_-]{11}$', video_id):
+        logger.warning(f"Invalid video_id in callback: {video_id!r}")
+        return
+    if not re.match(r'^[a-zA-Z]{2}(?:-[a-zA-Z]{2})?$', current_lang):
+        logger.warning(f"Invalid language in callback: {current_lang!r}")
+        return
+
     profile, available = await asyncio.gather(
         asyncio.to_thread(db.get_profile_by_telegram, str(query.from_user.id)),
         asyncio.to_thread(db.get_available_languages_for_video, video_id),
@@ -1497,6 +1555,14 @@ async def handle_alllang_callback(update: Update, context: ContextTypes.DEFAULT_
 
     _, video_id, current_lang = query.data.split("_", 2)
 
+    # Validate video_id and language
+    if not re.match(r'^[a-zA-Z0-9_-]{11}$', video_id):
+        logger.warning(f"Invalid video_id in callback: {video_id!r}")
+        return
+    if not re.match(r'^[a-zA-Z]{2}(?:-[a-zA-Z]{2})?$', current_lang):
+        logger.warning(f"Invalid language in callback: {current_lang!r}")
+        return
+
     profile, available = await asyncio.gather(
         asyncio.to_thread(db.get_profile_by_telegram, str(query.from_user.id)),
         asyncio.to_thread(db.get_available_languages_for_video, video_id),
@@ -1532,6 +1598,22 @@ async def handle_setlang_callback(update: Update, context: ContextTypes.DEFAULT_
     if not video_id or not new_lang:
         try:
             await query.answer()
+        except Exception:
+            pass
+        return
+
+    # Validate video_id and language
+    if not re.match(r'^[a-zA-Z0-9_-]{11}$', video_id):
+        logger.warning(f"Invalid video_id in callback: {video_id!r}")
+        try:
+            await query.answer("Invalid request")
+        except Exception:
+            pass
+        return
+    if not re.match(r'^[a-zA-Z]{2}(?:-[a-zA-Z]{2})?$', new_lang):
+        logger.warning(f"Invalid language in callback: {new_lang!r}")
+        try:
+            await query.answer("Invalid request")
         except Exception:
             pass
         return

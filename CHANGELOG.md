@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-03-27
+
+SECURITY: Fix IDOR vulnerability in Discord, Slack, and Notion OAuth callbacks — use authenticated session user instead of untrusted state parameter for database operations
+SECURITY: Throw if Discord, Slack, or Notion client secrets are missing (replace weak fallback "secret" default)
+SECURITY: Fix open redirect vulnerability in auth callback routes (/auth/callback and /api/test/auth) — validate next parameter is a safe relative path
+FIX: Worker security — replace unsafe tempfile.mktemp() with mkstemp() in telegram_deliverer.py
+FIX: Worker security — add callback_data validation for video_id (YouTube format) and language codes in bot_handler.py
+FIX: Worker security — wrap R2 upload with try-finally to ensure temp file cleanup in migrate_audio_to_r2.py
+FIX: Add rate limiting to survey endpoint (3 requests per 10 minutes per IP)
+FIX: Add secure flag to YouTube OAuth cookies (production only)
+FIX: Replace weak random with crypto.randomBytes for WhatsApp token generation (2^32 entropy)
+
 ## 2026-03-31
 
 FIX: monitoring — failed videos limited to 7 days + 100 max (was unlimited), show metadata.error per entry, deduplicate video_id for 24h stats

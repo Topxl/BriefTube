@@ -14,7 +14,11 @@ export async function GET(request: Request) {
   }
 
   const { origin, searchParams } = new URL(request.url);
-  const next = searchParams.get("next") ?? "/dashboard";
+  const rawNext = searchParams.get("next") ?? "/dashboard";
+  const next =
+    rawNext.startsWith("/") && !rawNext.startsWith("//")
+      ? rawNext
+      : "/dashboard";
   const redirectTo = `${origin}/auth/callback?next=${encodeURIComponent(next)}`;
 
   const admin = createAdminClient();
