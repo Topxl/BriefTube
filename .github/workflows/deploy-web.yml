@@ -1,0 +1,80 @@
+name: Deploy Web
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "worker/**"
+      - "vps/**"
+      - "**.md"
+      - ".agents/**"
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Fetch secrets from Infisical
+        uses: Infisical/secrets-action@v1.0.7
+        with:
+          client-id: ${{ secrets.INFISICAL_CLIENT_ID }}
+          client-secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+          project-slug: "brieftube-server-qy7-v"
+          env-slug: "prod"
+          secret-path: "/deploy"
+          export-type: "env"
+
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ env.VPS_HOST }}
+          username: brieftube
+          key: ${{ env.VPS_SSH_KEY }}
+          command_timeout: 10m
+          script: |
+            set -e
+            cd /home/brieftube/app
+
+            echo "→ Pulling latest code..."
+            git clean -f -- worker/worker.pid worker/log_bot.lock 2>/dev/null || true
+            git pull origin main
+
+            echo "→ Installing dependencies..."
+            pnpm install --frozen-lockfile
+
+            echo "→ Getting Infisical token..."
+            TOKEN=$(infisical login \
+              --method=universal-auth \
+              --client-id="${INFISICAL_UNIVERSAL_AUTH_CLIENT_ID}" \
+              --client-secret="${INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET}" \
+              --plain --silent 2>/dev/null)
+
+            echo "→ Building Next.js..."
+            infisical run \
+              --token="${TOKEN}" \
+              --projectId=089a5c93-5c51-4a24-8bf0-9d8bceb3a114 \
+              --env=prod \
+              --path=/web \
+              -- pnpm build
+
+            echo "→ Copying standalone build..."
+            WEB_DIR="/home/brieftube/web"
+            rm -rf "$WEB_DIR/.next" "$WEB_DIR/public" "$WEB_DIR/server.js" "$WEB_DIR/package.json"
+            cp -r .next/standalone/* "$WEB_DIR/"
+            cp -r .next/standalone/.next "$WEB_DIR/.next"
+            cp -r .next/static "$WEB_DIR/.next/static"
+            cp -r public "$WEB_DIR/public"
+
+            echo "→ Restarting web service..."
+            sudo systemctl restart brieftube-web
+            sleep 3
+
+            echo "→ Health check..."
+            if curl -sf http://localhost:3000 > /dev/null; then
+              echo "✅ Web app deployed successfully"
+            else
+              echo "❌ Web app failed to start"
+              sudo journalctl -u brieftube-web -n 20 --no-pager
+              exit 1
+            fi
