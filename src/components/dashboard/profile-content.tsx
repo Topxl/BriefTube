@@ -2,12 +2,34 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { createClient } from "@/lib/supabase/client";
-import { DeliverySection } from "@/components/dashboard/delivery-section";
-import { NotificationsSection } from "@/components/dashboard/notifications-section";
-import { ReferralSection } from "@/components/dashboard/referral-section";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+
+const DeliverySection = dynamic(
+  async () =>
+    import("@/components/dashboard/delivery-section").then((m) => ({
+      default: m.DeliverySection,
+    })),
+  { ssr: false },
+);
+
+const NotificationsSection = dynamic(
+  async () =>
+    import("@/components/dashboard/notifications-section").then((m) => ({
+      default: m.NotificationsSection,
+    })),
+  { ssr: false },
+);
+
+const ReferralSection = dynamic(
+  async () =>
+    import("@/components/dashboard/referral-section").then((m) => ({
+      default: m.ReferralSection,
+    })),
+  { ssr: false },
+);
 import {
   LogOut,
   Trash2,
@@ -19,7 +41,6 @@ import {
 } from "@/lib/icons";
 import { SiteConfig } from "@/site-config";
 import { formatCurrency } from "@/lib/format";
-import { logger } from "@/lib/logger";
 
 const PODCAST_APPS = [
   {
@@ -164,6 +185,7 @@ type Props = {
   initialDigestHour: number;
   initialFullSummary: boolean;
   rssToken: string;
+  initialPrices: PricesData;
 };
 
 export function ProfileContent({
@@ -195,6 +217,7 @@ export function ProfileContent({
   initialDigestHour,
   initialFullSummary,
   rssToken,
+  initialPrices,
 }: Props) {
   const router = useRouter();
 
@@ -203,7 +226,7 @@ export function ProfileContent({
   const [upgradeInterval, setUpgradeInterval] = useState<Interval>(
     defaultInterval ?? "year",
   );
-  const [prices, setPrices] = useState<PricesData | null>(null);
+  const [prices] = useState<PricesData>(initialPrices);
   const [referral, setReferral] = useState("");
 
   const isActivating = !!paymentSuccess && !isActivePro && retryCount < 10;
@@ -216,15 +239,6 @@ export function ProfileContent({
     w.rewardful?.("ready", () => {
       if (w.Rewardful?.referral) setReferral(w.Rewardful.referral);
     });
-  }, []);
-
-  useEffect(() => {
-    fetch("/api/stripe/price")
-      .then(async (res) => res.json())
-      .then((data: PricesData) => {
-        if (data.monthly.amount) setPrices(data);
-      })
-      .catch((err) => logger.error("Failed to fetch price:", err));
   }, []);
 
   useEffect(() => {
@@ -247,21 +261,21 @@ export function ProfileContent({
     return () => clearTimeout(timer);
   }, [paymentSuccess, isActivePro, router, retryCount]);
 
-  const hasPlus = !!prices?.plus;
+  const hasPlus = !!prices.plus;
 
-  const priceData = prices
-    ? upgradePlan === "plus" && prices.plus
+  const priceData =
+    upgradePlan === "plus" && prices.plus
       ? upgradeInterval === "year" && prices.plus.annual
         ? prices.plus.annual
         : prices.plus.monthly
       : upgradeInterval === "year" && prices.pro
         ? prices.pro.annual
-        : (prices.pro?.monthly ?? prices.monthly)
-    : null;
+        : (prices.pro?.monthly ?? prices.monthly);
 
-  const displayUpgradePrice = priceData
-    ? formatCurrency(priceData.amount, priceData.currency)
-    : null;
+  const displayUpgradePrice = formatCurrency(
+    priceData.amount,
+    priceData.currency,
+  );
 
   const supabase = createClient();
 
@@ -409,9 +423,7 @@ export function ProfileContent({
 
               <div className="mt-3 flex items-center justify-between">
                 <p className="text-sm font-semibold">
-                  {displayUpgradePrice
-                    ? `${displayUpgradePrice.symbol}${displayUpgradePrice.formatted}/${upgradeInterval === "year" ? "yr" : "mo"}`
-                    : "—"}
+                  {`${displayUpgradePrice.symbol}${displayUpgradePrice.formatted}/${upgradeInterval === "year" ? "yr" : "mo"}`}
                 </p>
                 <form
                   action="/api/stripe/checkout"
