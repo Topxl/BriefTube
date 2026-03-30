@@ -113,6 +113,7 @@ function SourceRow({
             alt={source.channel_name}
             width={32}
             height={32}
+            unoptimized
             className={`h-8 w-8 rounded-full transition-all ${
               !source.active && !selected ? "opacity-35" : ""
             } ${selected ? "opacity-50" : ""}`}
