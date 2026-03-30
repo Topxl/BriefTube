@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-03-31
+
+FIX: monitoring — failed videos limited to 7 days + 100 max (was unlimited), show metadata.error per entry, deduplicate video_id for 24h stats
+
 ## 2026-03-27
 
 FEAT: Rewrite email subject lines for higher open rates (trial reminders, activation, digest)

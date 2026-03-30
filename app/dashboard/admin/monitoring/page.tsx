@@ -95,6 +95,7 @@ type FailedVideo = {
   language: string;
   created_at: string;
   failure_count: number;
+  metadata: { error?: string } | null;
 };
 
 type ExpiringTrial = {
@@ -407,7 +408,10 @@ export default async function AdminPage() {
       .from("subscriptions")
       .select("*", { count: "exact", head: true })
       .eq("active", true),
-    admin.from("processed_videos").select("status").gte("created_at", since24h),
+    admin
+      .from("processed_videos")
+      .select("video_id, status")
+      .gte("created_at", since24h),
     admin.from("deliveries").select("status").gte("created_at", since24h),
     admin
       .from("processed_videos")
@@ -422,9 +426,13 @@ export default async function AdminPage() {
       .order("created_at", { ascending: true }),
     admin
       .from("processed_videos")
-      .select("video_id, channel_id, language, created_at, failure_count")
+      .select(
+        "video_id, channel_id, language, created_at, failure_count, metadata",
+      )
       .eq("status", "failed")
-      .order("created_at", { ascending: false }),
+      .gte("created_at", sevenDaysAgoStr)
+      .order("created_at", { ascending: false })
+      .limit(100),
     admin
       .from("processed_videos")
       .select("transcript_source")
@@ -575,8 +583,17 @@ export default async function AdminPage() {
     return acc;
   }, {});
 
-  const videosCompleted24h = videosByStatus.completed ?? 0;
-  const videosFailed24h = videosByStatus.failed ?? 0;
+  // Count distinct video_ids (a video processed in 2 languages = 1 unique video)
+  const videosCompleted24h = new Set(
+    (videosToday ?? [])
+      .filter((v) => v.status === "completed")
+      .map((v) => (v as { video_id?: string }).video_id),
+  ).size;
+  const videosFailed24h = new Set(
+    (videosToday ?? [])
+      .filter((v) => v.status === "failed")
+      .map((v) => (v as { video_id?: string }).video_id),
+  ).size;
   const videosSkipped24h = videosByStatus.skipped ?? 0;
   const deliveriesSent24h = deliveriesByStatus.sent ?? 0;
   const deliveriesFailed24h = deliveriesByStatus.failed ?? 0;
@@ -1365,6 +1382,11 @@ export default async function AdminPage() {
                             minute: "2-digit",
                           })}
                         </p>
+                        {v.metadata?.error && (
+                          <p className="mt-0.5 font-mono text-[9px] text-red-400/60">
+                            {v.metadata.error}
+                          </p>
+                        )}
                       </div>
                       <span className="shrink-0 rounded-full bg-red-500/10 px-2 py-0.5 font-mono text-[10px] text-red-400">
                         ×{v.failure_count}
