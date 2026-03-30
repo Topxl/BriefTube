@@ -2,6 +2,7 @@
 
 ## 2026-03-30
 
+REFACTOR: lists page — redesign with visual cards, avatar mosaics, category colors (grid layout, gradient headers)
 REFACTOR: channels sheet — display followed lists as horizontal chips at top, remove "From lists" section
 FIX: lists page — mount FollowedListsSection (was coded but never rendered)
 FIX: channels sheet — show list_follow subscriptions in a separate "From lists" section

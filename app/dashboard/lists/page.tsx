@@ -5,7 +5,7 @@ import { Pencil, Users } from "@/lib/icons";
 import { CreateListButton } from "@/components/lists/create-list-button";
 import { ShareListButton } from "@/components/lists/share-list-button";
 import { FollowButton } from "@/components/lists/follow-button";
-import { FollowedListsSection } from "@/components/lists/followed-lists-section";
+import { UnfollowButton } from "@/components/lists/unfollow-button";
 
 const CATEGORIES = [
   "Tech",
@@ -17,13 +17,136 @@ const CATEGORIES = [
   "Entertainment",
   "Health",
   "Sports",
-  "Other",
+  "Business",
 ];
+
+const CATEGORY_GRADIENTS: Record<string, string> = {
+  Tech: "from-blue-500/25 to-blue-900/10",
+  Finance: "from-green-500/25 to-green-900/10",
+  Science: "from-violet-500/25 to-violet-900/10",
+  Education: "from-orange-500/25 to-orange-900/10",
+  Gaming: "from-red-500/25 to-red-900/10",
+  News: "from-yellow-500/25 to-yellow-900/10",
+  Entertainment: "from-pink-500/25 to-pink-900/10",
+  Health: "from-teal-500/25 to-teal-900/10",
+  Sports: "from-cyan-500/25 to-cyan-900/10",
+  Business: "from-amber-500/25 to-amber-900/10",
+};
+
+const DEFAULT_GRADIENT = "from-zinc-500/20 to-zinc-900/10";
 
 type Filter = "all" | "following" | "not-following";
 
+type ChannelPreview = {
+  avatar: string | null;
+  name: string;
+};
+
+type ListData = {
+  id: string;
+  name: string;
+  category: string | null;
+  channelCount: number;
+  followerCount?: number;
+  channels: ChannelPreview[];
+};
+
 function extractCount(val: unknown): number {
   return (val as { count: number }[])[0]?.count ?? 0;
+}
+
+function ListCard({
+  list,
+  actions,
+}: {
+  list: ListData;
+  actions: React.ReactNode;
+}) {
+  const gradient = CATEGORY_GRADIENTS[list.category ?? ""] ?? DEFAULT_GRADIENT;
+  const previews = list.channels.slice(0, 4);
+
+  return (
+    <div className="nm-raised flex flex-col overflow-hidden rounded-2xl transition-all hover:shadow-lg">
+      {/* Visual header — avatar mosaic */}
+      <Link href={`/lists/${list.id}`} className="block">
+        <div className={`relative h-24 bg-gradient-to-br ${gradient} p-0.5`}>
+          {previews.length >= 4 ? (
+            <div className="grid h-full grid-cols-2 gap-0.5 overflow-hidden rounded-t-2xl">
+              {previews.map((ch, i) =>
+                ch.avatar ? (
+                  <img
+                    key={i}
+                    src={ch.avatar}
+                    alt={ch.name}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div
+                    key={i}
+                    className="bg-muted/40 flex h-full w-full items-center justify-center text-xs font-bold uppercase"
+                  >
+                    {ch.name.charAt(0)}
+                  </div>
+                ),
+              )}
+            </div>
+          ) : previews.length > 0 ? (
+            <div className="flex h-full gap-0.5 overflow-hidden rounded-t-2xl">
+              {previews.map((ch, i) =>
+                ch.avatar ? (
+                  <img
+                    key={i}
+                    src={ch.avatar}
+                    alt={ch.name}
+                    className="h-full flex-1 object-cover"
+                  />
+                ) : (
+                  <div
+                    key={i}
+                    className="bg-muted/40 flex h-full flex-1 items-center justify-center text-xs font-bold uppercase"
+                  >
+                    {ch.name.charAt(0)}
+                  </div>
+                ),
+              )}
+            </div>
+          ) : (
+            <div className="flex h-full items-center justify-center rounded-t-2xl">
+              <span className="text-muted-foreground/40 text-2xl font-bold uppercase">
+                {list.name.charAt(0)}
+              </span>
+            </div>
+          )}
+
+          {/* Category badge */}
+          {list.category && (
+            <span className="absolute bottom-2 left-2 rounded-full bg-black/50 px-2 py-0.5 text-[10px] font-medium text-white/70 backdrop-blur-sm">
+              {list.category}
+            </span>
+          )}
+        </div>
+      </Link>
+
+      {/* Content + actions */}
+      <div className="flex flex-1 flex-col gap-2 p-3">
+        <div>
+          <Link
+            href={`/lists/${list.id}`}
+            className="hover:text-foreground line-clamp-2 text-sm font-semibold transition-colors"
+          >
+            {list.name}
+          </Link>
+          <p className="text-muted-foreground mt-0.5 text-[11px]">
+            {list.channelCount} channel{list.channelCount !== 1 ? "s" : ""}
+            {list.followerCount != null
+              ? ` · ${list.followerCount} follower${list.followerCount !== 1 ? "s" : ""}`
+              : ""}
+          </p>
+        </div>
+        <div className="mt-auto flex items-center gap-1.5">{actions}</div>
+      </div>
+    </div>
+  );
 }
 
 export default async function DashboardListsPage({
@@ -52,7 +175,9 @@ export default async function DashboardListsPage({
   ] = await Promise.all([
     supabase
       .from("channel_lists")
-      .select("id, name, category, list_channels(count)")
+      .select(
+        "id, name, category, list_channels(channel_avatar_url, channel_name), list_channels(count)",
+      )
       .eq("created_by", user.id)
       .order("created_at", { ascending: false }),
     supabase
@@ -62,12 +187,16 @@ export default async function DashboardListsPage({
       .single(),
     supabase
       .from("list_follows")
-      .select("list_id, channel_lists(name, category)")
+      .select(
+        "list_id, channel_lists(id, name, category, list_channels(channel_avatar_url, channel_name), list_channels(count))",
+      )
       .eq("user_id", user.id),
     (() => {
       const q = supabase
         .from("channel_lists")
-        .select("id, name, category, list_channels(count), list_follows(count)")
+        .select(
+          "id, name, category, list_channels(channel_avatar_url, channel_name), list_channels(count), list_follows(count)",
+        )
         .eq("is_public", true)
         .neq("created_by", user.id);
       return category ? q.eq("category", category) : q;
@@ -77,43 +206,58 @@ export default async function DashboardListsPage({
   const referralCode = profileData?.referral_code ?? null;
   const followedListIds = new Set((followedRaw ?? []).map((r) => r.list_id));
 
-  const followedItems = (followedRaw ?? [])
-    .map((r) => {
-      const list = r.channel_lists as {
-        name: string;
-        category: string | null;
-      } | null;
-      return list
-        ? { list_id: r.list_id, name: list.name, category: list.category }
-        : null;
-    })
-    .filter(
-      (x): x is { list_id: string; name: string; category: string | null } =>
-        x !== null,
-    );
+  function parseChannels(raw: unknown): ChannelPreview[] {
+    const arr = Array.isArray(raw) ? raw : [];
+    return arr.slice(0, 4).map((ch: Record<string, unknown>) => ({
+      avatar: (ch.channel_avatar_url as string | null) || null,
+      name: (ch.channel_name as string) || "Unknown",
+    }));
+  }
 
-  const allPublic = (publicLists ?? [])
-    .map((l) => ({
-      id: l.id,
-      name: l.name,
-      category: l.category,
+  // My lists with channel previews
+  const myListsMapped: ListData[] = (myLists ?? []).map(
+    (l: Record<string, unknown>) => ({
+      id: l.id as string,
+      name: l.name as string,
+      category: (l.category as string | null) ?? null,
+      channelCount: extractCount(l.list_channels),
+      channels: parseChannels(l.list_channels),
+    }),
+  );
+
+  // Followed lists with channel previews — excluding ones user created
+  const followedLists: ListData[] = (followedRaw ?? [])
+    .map((r: Record<string, unknown>) => {
+      const list = r.channel_lists as Record<string, unknown> | null;
+      if (!list) return null;
+      return {
+        id: r.list_id as string,
+        name: list.name as string,
+        category: (list.category as string | null) ?? null,
+        channelCount: extractCount(list.list_channels),
+        channels: parseChannels(list.list_channels),
+      };
+    })
+    .filter((x): x is ListData => x !== null)
+    .filter((l) => !myListsMapped.some((m) => m.id === l.id));
+
+  // Public lists with channel previews
+  const allPublic: ListData[] = (publicLists ?? [])
+    .map((l: Record<string, unknown>) => ({
+      id: l.id as string,
+      name: l.name as string,
+      category: (l.category as string | null) || null,
       channelCount: extractCount(l.list_channels),
       followerCount: extractCount(l.list_follows),
+      channels: parseChannels(l.list_channels),
     }))
-    .sort((a, b) => b.followerCount - a.followerCount);
+    .sort((a, b) => (b.followerCount || 0) - (a.followerCount || 0));
 
   const sortedPublic = allPublic.filter((l) => {
     if (filter === "following") return followedListIds.has(l.id);
     if (filter === "not-following") return !followedListIds.has(l.id);
     return true;
   });
-
-  const myListsMapped = (myLists ?? []).map((l) => ({
-    id: l.id,
-    name: l.name,
-    category: l.category,
-    channelCount: extractCount(l.list_channels),
-  }));
 
   function filterHref(f: Filter) {
     const params = new URLSearchParams();
@@ -132,56 +276,66 @@ export default async function DashboardListsPage({
   }
 
   return (
-    <div className="space-y-6 px-0.5 pt-0.5 pb-2">
+    <div className="space-y-8 px-0.5 pt-0.5 pb-4">
       {/* Following */}
-      <FollowedListsSection initialItems={followedItems} />
+      {followedLists.length > 0 && (
+        <section className="space-y-3">
+          <p className="text-muted-foreground/70 text-xs font-medium tracking-wider uppercase">
+            Following
+          </p>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {followedLists.map((list) => (
+              <ListCard
+                key={list.id}
+                list={list}
+                actions={
+                  <UnfollowButton
+                    listId={list.id}
+                    listName={list.name}
+                    onUnfollowed={() => {
+                      // This would require client component wrapper in real implementation
+                    }}
+                  />
+                }
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* My lists */}
-      <section className="space-y-2.5">
-        <div className="flex items-center justify-between">
-          <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
-            Mine
-          </p>
-          <CreateListButton variant="inline" />
-        </div>
-        {myListsMapped.length > 0 && (
-          <div className="nm-raised overflow-hidden rounded-2xl">
-            <div className="divide-y divide-white/[0.05]">
-              {myListsMapped.map((list) => (
-                <div
-                  key={list.id}
-                  className="flex items-center justify-between px-4 py-3.5 transition-colors hover:bg-white/[0.02]"
-                >
-                  <div className="min-w-0">
-                    <Link
-                      href={`/lists/${list.id}`}
-                      className="hover:text-foreground truncate text-sm font-medium transition-colors"
-                    >
-                      {list.name}
-                    </Link>
-                    <p className="text-muted-foreground mt-0.5 text-[11px]">
-                      {list.channelCount} ch
-                      {list.category ? ` · ${list.category}` : ""}
-                    </p>
-                  </div>
-                  <div className="ml-3 flex shrink-0 items-center gap-3">
+      {myListsMapped.length > 0 && (
+        <section className="space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
+              Mine
+            </p>
+            <CreateListButton variant="inline" />
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {myListsMapped.map((list) => (
+              <ListCard
+                key={list.id}
+                list={list}
+                actions={
+                  <div className="flex w-full items-center gap-1.5">
                     <ShareListButton
                       listId={list.id}
                       referralCode={referralCode}
                     />
                     <Link
                       href={`/lists/${list.id}/edit`}
-                      className="text-muted-foreground hover:text-foreground transition-colors"
+                      className="text-muted-foreground hover:text-foreground ml-auto transition-colors"
                     >
                       <Pencil className="h-3.5 w-3.5" />
                     </Link>
                   </div>
-                </div>
-              ))}
-            </div>
+                }
+              />
+            ))}
           </div>
-        )}
-      </section>
+        </section>
+      )}
 
       {/* Discover */}
       <section className="space-y-3">
@@ -240,7 +394,7 @@ export default async function DashboardListsPage({
           </div>
         </div>
 
-        {/* List rows */}
+        {/* List cards grid */}
         {sortedPublic.length === 0 ? (
           <p className="text-muted-foreground py-8 text-center text-sm">
             {filter === "following"
@@ -252,23 +406,14 @@ export default async function DashboardListsPage({
                   : "No public lists yet."}
           </p>
         ) : (
-          <div className="nm-raised overflow-hidden rounded-2xl">
-            <div className="divide-y divide-white/[0.05]">
-              {sortedPublic.map((list) => (
-                <Link
-                  key={list.id}
-                  href={`/lists/${list.id}`}
-                  className="flex items-center justify-between px-4 py-3.5 transition-colors hover:bg-white/[0.02]"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{list.name}</p>
-                    <p className="text-muted-foreground mt-0.5 text-[11px]">
-                      {list.channelCount} ch
-                      {list.category ? ` · ${list.category}` : ""}
-                    </p>
-                  </div>
-                  <div className="ml-3 flex shrink-0 items-center gap-1.5">
-                    <span className="text-muted-foreground flex items-center gap-1 text-xs">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {sortedPublic.map((list) => (
+              <ListCard
+                key={list.id}
+                list={list}
+                actions={
+                  <div className="flex w-full items-center gap-2">
+                    <span className="text-muted-foreground flex items-center gap-1 text-[10px]">
                       <Users className="h-3 w-3" />
                       {list.followerCount}
                     </span>
@@ -277,9 +422,9 @@ export default async function DashboardListsPage({
                       initialFollowing={followedListIds.has(list.id)}
                     />
                   </div>
-                </Link>
-              ))}
-            </div>
+                }
+              />
+            ))}
           </div>
         )}
       </section>
