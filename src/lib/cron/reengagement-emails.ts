@@ -123,7 +123,7 @@ export async function runReengagementEmails(): Promise<RunResult> {
         from: "Vin from BriefTube <vin@brief-tube.com>",
         to: user.email,
         replyTo: env.NEXT_PUBLIC_EMAIL_CONTACT ?? "contact@brief-tube.com",
-        subject: "Your BriefTube channels have been quiet this week",
+        subject: "add more channels to stay updated",
         html,
         headers: getUnsubscribeHeaders(user.id, "announcements"),
       });

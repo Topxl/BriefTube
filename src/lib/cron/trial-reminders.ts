@@ -80,7 +80,7 @@ async function sendTrialEmail(
   if (type === "trial_expired") {
     await sendEmail({
       to: user.email,
-      subject: "Your BriefTube trial has ended",
+      subject: "upgrade now to keep your channels",
       html: TrialExpiredEmail({ trackingPixelUrl }),
       headers: getUnsubscribeHeaders(user.id, "announcements"),
     });
@@ -89,8 +89,8 @@ async function sendTrialEmail(
       to: user.email,
       subject:
         daysLeft <= 1
-          ? "Your BriefTube trial ends tomorrow"
-          : `Your BriefTube trial ends in ${daysLeft} days`,
+          ? "last day, don't lose your summaries"
+          : `${daysLeft} days left to upgrade`,
       html: TrialReminderEmail({ daysLeft, trackingPixelUrl }),
       headers: getUnsubscribeHeaders(user.id, "announcements"),
     });

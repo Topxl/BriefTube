@@ -42,6 +42,45 @@ from youtube_utils import (
 
 logger = logging.getLogger(__name__)
 
+# ── Proxy circuit breaker ──────────────────────────────────────────────────────
+# Tracks consecutive proxy failures (502 Bad Gateway, Tunnel connection failed, etc)
+# When failures exceed PROXY_CIRCUIT_BREAKER_THRESHOLD, circuit breaker opens and
+# skips yt-dlp proxy attempts immediately without waiting 20s for timeout.
+# Resets after first successful proxy download.
+
+_PROXY_CIRCUIT_BREAKER_THRESHOLD = 5
+_proxy_failure_count = 0
+_proxy_circuit_open = False
+
+
+def report_proxy_success():
+    """Report successful proxy download — resets failure counter."""
+    global _proxy_failure_count, _proxy_circuit_open
+    if _proxy_failure_count > 0 or _proxy_circuit_open:
+        logger.info(f"Proxy circuit breaker reset (was: {_proxy_failure_count} failures, circuit={'open' if _proxy_circuit_open else 'closed'})")
+        _proxy_failure_count = 0
+        _proxy_circuit_open = False
+
+
+def report_proxy_failure():
+    """Report proxy download failure — increments failure counter and may open circuit."""
+    global _proxy_failure_count, _proxy_circuit_open
+    _proxy_failure_count += 1
+    if _proxy_failure_count >= _PROXY_CIRCUIT_BREAKER_THRESHOLD:
+        if not _proxy_circuit_open:
+            _proxy_circuit_open = True
+            logger.warning(
+                f"⚠️ Proxy circuit breaker OPEN — {_proxy_failure_count} consecutive failures. "
+                f"Pausing yt-dlp proxy downloads until proxy recovers."
+            )
+    else:
+        logger.debug(f"Proxy failure count: {_proxy_failure_count}/{_PROXY_CIRCUIT_BREAKER_THRESHOLD}")
+
+
+def is_proxy_circuit_open():
+    """Check if proxy circuit breaker is open."""
+    return _proxy_circuit_open
+
 
 class WhisperTranscriber:
     """Transcribes YouTube videos using Groq Whisper Large V3 Turbo"""
@@ -225,6 +264,7 @@ class WhisperTranscriber:
         # ── Step 4: proxy ────────────────────────────────────────────────────────
         # Geo-restricted → try country proxies ordered by video's source language.
         # Bot-detected   → single regular rotating proxy (YOUTUBE_PROXY_HTTP).
+        # Circuit breaker → skip if proxy has failed 5+ times (502, timeout, etc)
         def _proxy_download(proxy_url: str, label: str):
             """One yt-dlp audio download attempt via proxy_url. Returns True/live/None."""
             attempt_opts: dict = {
@@ -246,14 +286,28 @@ class WhisperTranscriber:
                     ydl.download([youtube_url])
                 if output_path.with_suffix('.opus').exists():
                     logger.info(f"Audio download: {label} successful")
+                    report_proxy_success()
                     return True
             except Exception as e:
                 err = str(e)
                 if "live event has ended" in err.lower():
                     logger.info(f"Audio download ({label}): live/ended stream — {err[:80]}")
                     return "live"
+                # Track proxy failures (502 Bad Gateway, Tunnel connection failed, timeouts, etc)
+                if any(pattern in err.lower() for pattern in (
+                    "502", "bad gateway", "tunnel connection failed",
+                    "connection reset", "unable to connect to proxy",
+                    "proxy connection refused", "503", "service unavailable",
+                    "proxy error", "gateway timeout"
+                )):
+                    report_proxy_failure()
                 logger.warning(f"Audio download ({label}) failed: {err[:120]}")
             return None  # this country failed, try next
+
+        # Check circuit breaker before attempting proxy downloads
+        if is_proxy_circuit_open():
+            logger.warning("Audio download: proxy circuit breaker open — skipping proxy downloads until proxy recovers")
+            return "proxy_unavailable"
 
         if _geo_restricted_detected:
             result = _run_geo_bypass(_proxy_download, language, logger, "Audio download")

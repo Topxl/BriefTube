@@ -44,6 +44,7 @@ from datetime import datetime, time as datetime_time, timedelta, timezone
 # Updated at the start of every delivery_loop iteration.
 # _supervised_delivery_loop monitors this and restarts the task if stuck.
 _delivery_last_beat: float = 0.0
+_delivery_restart_backoff: int = 1  # Exponential backoff counter (1, 2, 3, 4 = max)
 
 # ── Logging ────────────────────────────────────────────────────
 
@@ -345,9 +346,10 @@ async def _process_video(
     # These channels publish music-only videos with no speech; yt-dlp fails with
     # youtube_auth_required or hangs indefinitely on audio download.
     _MUSIC_TITLE_PHRASES = (
-        "worship songs", "worship music", "praise and worship",
-        "praise songs", "praise collection", "gospel songs",
-        "christian praise", "hillsong worship",
+        "worship songs", "worship music", "worship anthems",
+        "praise and worship", "praise songs", "praise collection",
+        "gospel songs", "gospel music", "christian praise",
+        "christian songs", "hillsong worship", "praise music",
     )
     _title_lower = (video_title or "").lower()
     if any(phrase in _title_lower for phrase in _MUSIC_TITLE_PHRASES):
@@ -906,7 +908,7 @@ def _cleanup_stale_r2_audio(days: int = 7, batch: int = 100) -> None:
 
 async def delivery_loop(alert_system: MonitoringAlert):
     """Send completed audio to subscribed users."""
-    global _delivery_last_beat
+    global _delivery_last_beat, _delivery_restart_backoff
     logger.info("Telegram Deliverer started")
 
     _cleanup_counter = 0       # Run delivery cleanup every N cycles
@@ -1049,6 +1051,8 @@ async def delivery_loop(alert_system: MonitoringAlert):
                         # will be reset to 'pending' on next restart — skip mirror to
                         # avoid a false-positive success signal in the admin logs.
                         if _sent_marked:
+                            # Reset backoff on successful delivery (queue is progressing)
+                            _delivery_restart_backoff = 1
                             asyncio.create_task(alert_system.mirror_delivery(
                                 video_id=video_id,
                                 video_title=d["video_title"],
@@ -1132,9 +1136,15 @@ async def _supervised_delivery_loop(alert_system: MonitoringAlert):
     If the heartbeat stops advancing for WATCHDOG_TIMEOUT seconds (DB hang,
     asyncio deadlock, etc.) this supervisor cancels the stuck task and starts
     a fresh one — without taking down the entire worker process.
+
+    Improvements:
+    1. Smart queue check: only restart if there are actual pending deliveries
+    2. Exponential backoff: 5s → 10s → 30s → 60s (resets on successful delivery)
     """
+    global _delivery_restart_backoff
     WATCHDOG_TIMEOUT = 300  # seconds without a heartbeat before declaring stuck
     CHECK_INTERVAL   = 60   # how often to check the heartbeat
+    BACKOFF_LEVELS = [5, 10, 30, 60]  # seconds: 5s → 10s → 30s → 60s max
 
     while True:
         task = asyncio.create_task(delivery_loop(alert_system))
@@ -1145,9 +1155,21 @@ async def _supervised_delivery_loop(alert_system: MonitoringAlert):
             if _delivery_last_beat > 0:
                 age = time.monotonic() - _delivery_last_beat
                 if age > WATCHDOG_TIMEOUT:
+                    # Smart check: only restart if queue is non-empty
+                    try:
+                        pending = await asyncio.to_thread(db.get_pending_deliveries, 1)
+                        if not pending:
+                            # Queue is empty — not truly stuck, just reset timer
+                            logger.debug(f"Delivery loop idle (no pending deliveries), resetting timer")
+                            _delivery_restart_backoff = 1  # Reset backoff
+                            continue
+                    except Exception as e:
+                        logger.warning(f"Could not check queue status: {e}")
+                        # Proceed with restart on DB error
+
                     logger.error(
                         f"Delivery loop has not progressed for {age:.0f}s "
-                        f"(threshold: {WATCHDOG_TIMEOUT}s) — cancelling and restarting"
+                        f"(threshold: {WATCHDOG_TIMEOUT}s) with pending deliveries — cancelling and restarting"
                     )
                     await alert_system.send_alert(
                         f"⚠️ **Delivery loop stuck** ({age:.0f}s) — restarting automatically",
@@ -1168,8 +1190,12 @@ async def _supervised_delivery_loop(alert_system: MonitoringAlert):
             except (asyncio.CancelledError, asyncio.InvalidStateError):
                 pass
 
-        logger.info("Delivery task restarting in 5s")
-        await asyncio.sleep(5)
+        # Exponential backoff on restart
+        backoff_idx = min(_delivery_restart_backoff - 1, len(BACKOFF_LEVELS) - 1)
+        restart_delay = BACKOFF_LEVELS[backoff_idx]
+        logger.info(f"Delivery task restarting in {restart_delay}s (backoff level {_delivery_restart_backoff}/{len(BACKOFF_LEVELS)})")
+        _delivery_restart_backoff = min(_delivery_restart_backoff + 1, len(BACKOFF_LEVELS))
+        await asyncio.sleep(restart_delay)
 
 
 # ── Loop 6: Telegram Bot Polling ──────────────────────────────

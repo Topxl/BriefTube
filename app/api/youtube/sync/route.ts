@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
         channel_name: a.channelName,
         channel_avatar_url: a.avatarUrl,
         active: shouldBeActive,
-        paused_by_system: wantsActive && !canActivate,
+        paused_by_system: !shouldBeActive && wantsActive,
         source_type: "youtube_import",
       };
     });

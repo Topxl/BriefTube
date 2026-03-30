@@ -98,7 +98,7 @@ export const sendOnboardingJ1 = inngest.createFunction(
       await sendEmail({
         from: env.EMAIL_FROM ?? `BriefTube <hello@${SiteConfig.domain}>`,
         to: email,
-        subject: "Getting the most out of BriefTube",
+        subject: "add more channels to your dashboard",
         html,
         headers: getUnsubscribeHeaders(userId, "announcements"),
       });
@@ -157,7 +157,7 @@ export const sendOnboardingJ3 = inngest.createFunction(
       await sendEmail({
         from: env.EMAIL_FROM ?? `BriefTube <hello@${SiteConfig.domain}>`,
         to: email,
-        subject: "BriefTube works in any language",
+        subject: "we support 190+ languages",
         html,
         headers: getUnsubscribeHeaders(userId, "announcements"),
       });

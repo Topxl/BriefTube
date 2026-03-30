@@ -156,7 +156,7 @@ export const sendUserNewsletter = inngest.createFunction(
       await sendEmail({
         from: env.EMAIL_FROM ?? `BriefTube <hello@${SiteConfig.domain}>`,
         to: email,
-        subject: `Your daily summaries — ${date}`,
+        subject: `your ${videos.length} summaries are ready`,
         html,
         headers: getUnsubscribeHeaders(userId, "newsletter"),
       });

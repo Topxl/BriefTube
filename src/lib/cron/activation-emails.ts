@@ -102,7 +102,7 @@ export async function runActivationEmails(): Promise<RunResult> {
         from: "Vin from BriefTube <vin@brief-tube.com>",
         to: user.email,
         replyTo: env.NEXT_PUBLIC_EMAIL_CONTACT ?? "contact@brief-tube.com",
-        subject: "Quick question about your BriefTube account",
+        subject: "your channels are waiting",
         html,
         headers: getUnsubscribeHeaders(user.id, "announcements"),
       });

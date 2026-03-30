@@ -49,7 +49,7 @@ export const EMAIL_WORKFLOWS: WorkflowDef[] = [
     id: "daily_digest",
     name: "Daily Digest",
     description: "Email summary of the day's audio summaries",
-    subject: "Your daily summaries — {date}",
+    subject: "your {count} summaries are ready",
     trigger: {
       type: "inngest",
       label: "Inngest cron — every hour",
@@ -70,7 +70,7 @@ export const EMAIL_WORKFLOWS: WorkflowDef[] = [
     id: "trial_reminder_j3",
     name: "Trial Reminder — J−3",
     description: "Sent 3 days before trial expires",
-    subject: "Your BriefTube trial ends in 3 days",
+    subject: "3 days left to upgrade",
     trigger: { type: "cron", label: "Daily cron" },
     audience: "Free plan users",
     conditions: [
@@ -91,7 +91,7 @@ export const EMAIL_WORKFLOWS: WorkflowDef[] = [
     id: "trial_reminder_j1",
     name: "Trial Reminder — J−1",
     description: "Sent 1 day before trial expires",
-    subject: "Your BriefTube trial ends tomorrow",
+    subject: "last day, don't lose your summaries",
     trigger: { type: "cron", label: "Daily cron" },
     audience: "Free plan users",
     conditions: [
@@ -112,7 +112,7 @@ export const EMAIL_WORKFLOWS: WorkflowDef[] = [
     id: "trial_expired",
     name: "Trial Expired",
     description: "Sent just after trial expires",
-    subject: "Your BriefTube trial has ended",
+    subject: "upgrade now to keep your channels",
     trigger: { type: "cron", label: "Daily cron" },
     audience: "Free plan users",
     conditions: [
@@ -134,7 +134,7 @@ export const EMAIL_WORKFLOWS: WorkflowDef[] = [
     name: "Activation — No platform",
     description:
       "Personal email to users who haven't connected any delivery platform",
-    subject: "Quick question about your BriefTube account",
+    subject: "your channels are waiting",
     trigger: { type: "cron", label: "Daily cron" },
     audience: "Users ~24h after signup",
     conditions: [
@@ -151,7 +151,7 @@ export const EMAIL_WORKFLOWS: WorkflowDef[] = [
     id: "reengagement_7d",
     name: "Re-engagement — 7 days",
     description: "Sent when a Pro user received no summaries in 7 days",
-    subject: "Your BriefTube channels have been quiet this week",
+    subject: "add more channels to stay updated",
     trigger: { type: "cron", label: "Daily cron" },
     audience: "Active Pro users",
     conditions: [
@@ -169,7 +169,7 @@ export const EMAIL_WORKFLOWS: WorkflowDef[] = [
     id: "referral_trial_j3",
     name: "Referral Trial — J−3",
     description: "Sent to referred users 3 days before trial ends",
-    subject: "Your BriefTube trial ends in 3 days",
+    subject: "3 days left to upgrade",
     trigger: { type: "cron", label: "Daily cron" },
     audience: "Referred free plan users",
     conditions: [
@@ -191,7 +191,7 @@ export const EMAIL_WORKFLOWS: WorkflowDef[] = [
     id: "referral_trial_j1",
     name: "Referral Trial — J−1",
     description: "Sent to referred users 1 day before trial ends",
-    subject: "Your BriefTube trial ends tomorrow",
+    subject: "last day, don't lose your summaries",
     trigger: { type: "cron", label: "Daily cron" },
     audience: "Referred free plan users",
     conditions: [
@@ -230,7 +230,7 @@ export const EMAIL_WORKFLOWS: WorkflowDef[] = [
     id: "onboarding_j1",
     name: "Onboarding J+1 — Add more channels",
     description: "Encourages users to add more channels after their first day",
-    subject: "Getting the most out of BriefTube",
+    subject: "add more channels to your dashboard",
     trigger: {
       type: "inngest",
       label: "Inngest cron — every hour",
@@ -251,7 +251,7 @@ export const EMAIL_WORKFLOWS: WorkflowDef[] = [
     id: "onboarding_j3",
     name: "Onboarding J+3 — Languages",
     description: "Highlights multilingual support 3 days after signup",
-    subject: "BriefTube works in any language",
+    subject: "we support 190+ languages",
     trigger: {
       type: "inngest",
       label: "Inngest cron — every hour",
@@ -272,7 +272,7 @@ export const EMAIL_WORKFLOWS: WorkflowDef[] = [
     id: "early_users_thank_you",
     name: "Early Users — Thank You",
     description: "One-time blast sent to first users at launch",
-    subject: "You're one of BriefTube's first users — thank you",
+    subject: "you're one of BriefTube's first users, thank you",
     trigger: { type: "manual", label: "Manual blast" },
     audience: "All users at launch",
     conditions: ["Sent manually once to all existing users"],
