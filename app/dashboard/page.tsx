@@ -78,12 +78,20 @@ async function ChannelsSheetSection({ userId }: { userId: string }) {
   if (!profile) return null;
 
   const supabase = await createClient();
-  const { data: sources } = await supabase
-    .from("subscriptions")
-    .select("*")
-    .eq("user_id", userId)
-    .or("source_type.is.null,source_type.eq.youtube_channel")
-    .order("created_at", { ascending: false });
+  const [{ data: sources }, { data: listFollowSources }] = await Promise.all([
+    supabase
+      .from("subscriptions")
+      .select("*")
+      .eq("user_id", userId)
+      .or("source_type.is.null,source_type.eq.youtube_channel")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("subscriptions")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("source_type", "list_follow")
+      .order("created_at", { ascending: false }),
+  ]);
 
   const isPro =
     profile.subscription_status === "active" ||
@@ -94,6 +102,7 @@ async function ChannelsSheetSection({ userId }: { userId: string }) {
   return (
     <ChannelsSheet
       initialSources={sources ?? []}
+      initialListFollowSources={listFollowSources ?? []}
       maxChannels={maxChannels}
       isPro={isPro}
     />
