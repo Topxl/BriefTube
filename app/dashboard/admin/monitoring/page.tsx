@@ -123,18 +123,6 @@ type EmailTypeStats = {
   lastSentAt: string | null;
 };
 
-const EMAIL_TYPE_LABELS: Record<string, string> = {
-  trial_reminder_j3: "Trial reminder J-3",
-  trial_reminder_j1: "Trial reminder J-1",
-  trial_expired: "Trial expiré",
-  activation_telegram: "Activation Telegram",
-  reengagement_7d: "Re-engagement 7j",
-  referral_trial_j3: "Parrainage J-3",
-  referral_trial_j1: "Parrainage J-1",
-  onboarding_apology: "Onboarding apology",
-  survey_feedback: "Survey feedback",
-};
-
 // ---------------------------------------------------------------
 // Growth helpers
 // ---------------------------------------------------------------
@@ -689,7 +677,6 @@ export default async function AdminPage() {
     .from("email_logs")
     .select("email_type, created_at");
   const emailLogs = (emailLogsRaw as unknown as EmailLogRow[] | null) ?? [];
-  const totalEmailsSent = emailLogs.length;
   const thirtyDaysAgoTs = thirtyDaysAgo.toISOString();
 
   const emailTypeStatsPartial: Partial<Record<string, EmailTypeStats>> = {};
@@ -720,7 +707,6 @@ export default async function AdminPage() {
     (s, v) => s + v.last30d,
     0,
   );
-  const emailDays14d = buildDailyArray(emailLogs, 14);
 
   // ── Email open rates ──────────────────────────────────────────
   const { count: emailsOpened30d } = await admin
@@ -1478,104 +1464,6 @@ export default async function AdminPage() {
                   </span>
                 </div>
               ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Emails */}
-      <div className="flex flex-col gap-2">
-        <SectionTitle>Emails</SectionTitle>
-
-        {/* Stats cards */}
-        <div className="grid grid-cols-3 gap-2">
-          <StatCard
-            label="Total envoyés"
-            value={totalEmailsSent}
-            icon={<Mail className="h-4 w-4" />}
-            variant={totalEmailsSent > 0 ? "success" : "default"}
-          />
-          <StatCard
-            label="30 derniers jours"
-            value={totalEmailsSent30d}
-            icon={<Send className="h-4 w-4" />}
-            variant={totalEmailsSent30d > 0 ? "success" : "default"}
-          />
-          <StatCard
-            label="Campagnes"
-            value={Object.keys(emailTypeStats).length}
-            sub="types distincts"
-            icon={<Activity className="h-4 w-4" />}
-          />
-        </div>
-
-        {/* Mini bar chart */}
-        <MiniBarChart
-          title="Emails / jour — 14 jours"
-          days={emailDays14d}
-          total={totalEmailsSent}
-          accentColor="bg-sky-500/50"
-          hoverColor="group-hover:bg-sky-500/80"
-        />
-
-        {/* Campaign breakdown */}
-        <div className="nm-raised overflow-hidden rounded-xl">
-          <div className="flex items-center border-b border-white/[0.04] px-4 py-2">
-            <p className="text-muted-foreground flex-1 text-xs font-medium">
-              Campagne
-            </p>
-            <p className="text-muted-foreground w-10 text-right text-[10px]">
-              30j
-            </p>
-            <p className="text-muted-foreground w-12 text-right text-[10px]">
-              total
-            </p>
-          </div>
-          {Object.keys(emailTypeStats).length === 0 ? (
-            <p className="text-muted-foreground px-4 py-4 text-sm">
-              Aucun email envoyé
-            </p>
-          ) : (
-            <div className="divide-y divide-white/[0.04]">
-              {Object.entries(emailTypeStats)
-                .sort((a, b) => b[1].total - a[1].total)
-                .map(([type, stats]) => (
-                  <div
-                    key={type}
-                    className="flex items-center gap-2 px-4 py-2.5"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm">
-                        {EMAIL_TYPE_LABELS[type] ?? type}
-                      </p>
-                      {stats.lastSentAt && (
-                        <p className="text-muted-foreground text-[11px]">
-                          Dernier :{" "}
-                          {new Date(stats.lastSentAt).toLocaleDateString(
-                            "fr-FR",
-                            {
-                              day: "2-digit",
-                              month: "2-digit",
-                              year: "2-digit",
-                            },
-                          )}
-                        </p>
-                      )}
-                    </div>
-                    <span
-                      className={`w-10 text-right text-sm tabular-nums ${
-                        stats.last30d > 0
-                          ? "text-emerald-400"
-                          : "text-muted-foreground/30"
-                      }`}
-                    >
-                      {stats.last30d}
-                    </span>
-                    <span className="w-12 text-right text-sm font-medium tabular-nums">
-                      {stats.total}
-                    </span>
-                  </div>
-                ))}
             </div>
           )}
         </div>
