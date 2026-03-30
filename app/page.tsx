@@ -8,6 +8,7 @@ import { SocialProof } from "@/components/landing/social-proof";
 import { SiteConfig } from "@/site-config";
 import { getStripe } from "@/lib/stripe";
 import { env } from "@/lib/env";
+import { createAdminClient } from "@/lib/supabase/server";
 import type { PricesData } from "@/hooks/use-prices";
 
 const Problem = dynamic(async () =>
@@ -228,6 +229,45 @@ const jsonLd = [
   },
 ];
 
+function formatCount(n: number): string {
+  if (n >= 10000) return `${Math.floor(n / 1000)}k+`;
+  if (n >= 1000) return `${(n / 1000).toFixed(1).replace(/\.0$/, "")}k+`;
+  if (n >= 100) return `${Math.floor(n / 10) * 10}+`;
+  return `${n}+`;
+}
+
+async function fetchStats(): Promise<{ value: string; label: string }[]> {
+  try {
+    const supabase = createAdminClient();
+
+    const [{ count: summaryCount }, { count: channelCount }] =
+      await Promise.all([
+        supabase
+          .from("processed_videos")
+          .select("*", { count: "exact", head: true })
+          .eq("status", "completed"),
+        supabase
+          .from("subscriptions")
+          .select("*", { count: "exact", head: true })
+          .eq("active", true),
+      ]);
+
+    const summaries = summaryCount ?? 0;
+    const channels = channelCount ?? 0;
+
+    return [
+      summaries >= 20
+        ? { value: formatCount(summaries), label: "summaries delivered" }
+        : null,
+      channels >= 10
+        ? { value: formatCount(channels), label: "channels tracked" }
+        : null,
+    ].filter((s): s is { value: string; label: string } => s !== null);
+  } catch {
+    return [];
+  }
+}
+
 async function fetchPrices(): Promise<PricesData | null> {
   try {
     const stripe = getStripe();
@@ -282,7 +322,7 @@ async function fetchPrices(): Promise<PricesData | null> {
 
 export default async function Home() {
   await connection();
-  const prices = await fetchPrices();
+  const [prices, stats] = await Promise.all([fetchPrices(), fetchStats()]);
   return (
     <main className="bg-background min-h-screen">
       {jsonLd.map((schema, i) => (
@@ -302,7 +342,7 @@ export default async function Home() {
       <Navbar />
       <Hero />
       <Suspense fallback={<div className="h-[110px]" />}>
-        <SocialProof />
+        <SocialProof stats={stats} />
       </Suspense>
       <div className="section-divider" />
       <Suspense fallback={<div className="h-64" />}>

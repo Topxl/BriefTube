@@ -318,12 +318,31 @@ export default async function AdminPage() {
   // All data queries use admin client to bypass RLS
   const admin = createAdminClient();
 
-  // Compute date without Date.now() (impure in RSC linting context)
+  // Compute all dates upfront
   const oneDayAgo = new Date();
   oneDayAgo.setDate(oneDayAgo.getDate() - 1);
   const since24h = oneDayAgo.toISOString();
 
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const sevenDaysAgoStr = sevenDaysAgo.toISOString();
+
+  const fourteenDaysAgo = new Date();
+  fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+  const fourteenDaysAgoStr = fourteenDaysAgo.toISOString();
+
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const thirtyDaysAgoStr = thirtyDaysAgo.toISOString();
+
+  const now = new Date().toISOString();
+  const sevenDaysFromNow = new Date();
+  sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+  const sevenDaysFromNowStr = sevenDaysFromNow.toISOString();
+
+  // MASSIVE PARALLEL BATCH: 18+ independent queries
   const [
+    // Batch 1: Core stats
     { count: totalUsers },
     { count: telegramConnected },
     { count: proUsers },
@@ -331,7 +350,50 @@ export default async function AdminPage() {
     { data: videosToday },
     { data: deliveriesToday },
     { count: totalCompleted },
+    // Batch 2: Platform, queue, failed, transcripts
+    { data: platformConnsRaw },
+    { data: pendingQueueRaw },
+    { data: recentFailedRaw },
+    { data: transcriptSourcesRaw },
+    // Batch 3: Funnel
+    { count: trialActive },
+    { count: trialExpired },
+    { count: freeNoTrial },
+    { count: churned },
+    { data: expiringTrialsRaw },
+    // Item 4: Stripe price (independent)
+    stripePrice,
+    // Batch 5: Active deliveries, signups
+    { data: activeDeliveries },
+    { data: recentSignups },
+    // Items 6-9: Referrals (2 queries)
+    { count: totalReferrals },
+    { data: referralData },
+    // Item 10: Languages
+    { data: langData },
+    // Item 11: Top channels
+    { data: allActiveSubs },
+    // Item 12: Cancellation feedbacks
+    { data: cancellationFeedbacksRaw },
+    // Item 13-14: PostHog
+    visitorsTotal30d,
+    visitorDailyRaw,
+    // Item 15-16: Trends (signups & trials 30d)
+    { data: signupsRaw30d },
+    { data: trialStartsRaw30d },
+    // Item 17: Email logs
+    { data: emailLogsRaw },
+    // Item 18: Email open rates
+    { count: emailsOpened30d },
+    // Item 19-22: Onboarding batch
+    { data: usersWithChannelsResult },
+    { count: importSubCount },
+    { count: listFollowSubCount },
+    { count: onboardedCount },
+    // Item 23: activeSubs (needed for atRiskUsers conditional)
+    { data: activeSubs },
   ] = await Promise.all([
+    // Batch 1: Core stats
     admin.from("profiles").select("*", { count: "exact", head: true }),
     admin
       .from("profiles")
@@ -351,15 +413,7 @@ export default async function AdminPage() {
       .from("processed_videos")
       .select("*", { count: "exact", head: true })
       .eq("status", "completed"),
-  ]);
-
-  // ── Parallel batch 2: platform, queue, failed, transcripts ──────
-  const [
-    { data: platformConnsRaw },
-    { data: pendingQueueRaw },
-    { data: recentFailedRaw },
-    { data: transcriptSourcesRaw },
-  ] = await Promise.all([
+    // Batch 2: Platform, queue, failed, transcripts
     admin.from("platform_connections").select("user_id").eq("connected", true),
     admin
       .from("processed_videos")
@@ -377,36 +431,7 @@ export default async function AdminPage() {
       .eq("status", "completed")
       .gte("created_at", since24h)
       .not("transcript_source", "is", null),
-  ]);
-  const platformConnected = new Set(
-    (platformConnsRaw ?? []).map((r) => r.user_id),
-  ).size;
-  const pendingQueue = pendingQueueRaw as unknown as PendingVideo[] | null;
-  const recentFailed = recentFailedRaw as unknown as FailedVideo[] | null;
-
-  const transcriptSources = (transcriptSourcesRaw ?? []).reduce<
-    Record<string, number>
-  >((acc, v) => {
-    const src = (v.transcript_source as string | null) ?? "unknown";
-    acc[src] = (acc[src] ?? 0) + 1;
-    return acc;
-  }, {});
-  const transcriptSourceEntries = Object.entries(transcriptSources).sort(
-    ([, a], [, b]) => b - a,
-  );
-
-  // ── Funnel de conversion ──────────────────────────────────────
-  const now = new Date().toISOString();
-  const sevenDaysFromNow = new Date();
-  sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
-
-  const [
-    { count: trialActive },
-    { count: trialExpired },
-    { count: freeNoTrial },
-    { count: churned },
-    { data: expiringTrialsRaw },
-  ] = await Promise.all([
+    // Batch 3: Funnel
     admin
       .from("profiles")
       .select("*", { count: "exact", head: true })
@@ -432,44 +457,106 @@ export default async function AdminPage() {
       .select("id, email, trial_ends_at")
       .eq("subscription_status", "free")
       .gt("trial_ends_at", now)
-      .lt("trial_ends_at", sevenDaysFromNow.toISOString())
+      .lt("trial_ends_at", sevenDaysFromNowStr)
       .order("trial_ends_at", { ascending: true })
       .limit(10),
+    // Stripe price (wrapped in try/catch)
+    (async () => {
+      try {
+        const stripe = getStripe();
+        const price = await stripe.prices.retrieve(env.STRIPE_PRO_PRICE_ID);
+        return price.unit_amount ?? 0;
+      } catch {
+        return 0;
+      }
+    })(),
+    // Batch 5: Active deliveries, signups
+    admin
+      .from("deliveries")
+      .select("user_id")
+      .eq("status", "sent")
+      .gte("created_at", sevenDaysAgoStr),
+    admin
+      .from("profiles")
+      .select("created_at")
+      .gte("created_at", fourteenDaysAgoStr)
+      .order("created_at", { ascending: true }),
+    // Items 6-9: Referrals
+    admin.from("referrals").select("*", { count: "exact", head: true }),
+    admin.from("referrals").select("referee_id"),
+    // Item 10: Languages
+    admin.from("profiles").select("preferred_language"),
+    // Item 11: Top channels
+    admin
+      .from("subscriptions")
+      .select("channel_id, channel_name")
+      .eq("active", true),
+    // Item 12: Cancellation feedbacks
+    admin
+      .from("cancellation_feedbacks")
+      .select("id, reason, custom_message, offer_accepted, created_at")
+      .order("created_at", { ascending: false })
+      .limit(20),
+    // Item 13-14: PostHog
+    getPostHogTotalVisitors(30),
+    getPostHogDailyVisitors(30),
+    // Item 15-16: Trends (signups & trials 30d)
+    admin
+      .from("profiles")
+      .select("created_at")
+      .gte("created_at", thirtyDaysAgoStr),
+    admin
+      .from("profiles")
+      .select("created_at")
+      .not("trial_ends_at", "is", null)
+      .gte("created_at", thirtyDaysAgoStr),
+    // Item 17: Email logs
+    admin.from("email_logs").select("email_type, created_at"),
+    // Item 18: Email open rates
+    admin
+      .from("email_logs")
+      .select("*", { count: "exact", head: true })
+      .gte("sent_at", thirtyDaysAgoStr)
+      .not("opened_at", "is", null),
+    // Item 19-22: Onboarding batch
+    admin.rpc("count_users_with_channels" as never),
+    admin
+      .from("subscriptions")
+      .select("*", { count: "exact", head: true })
+      .eq("source_type", "youtube_import"),
+    admin
+      .from("subscriptions")
+      .select("*", { count: "exact", head: true })
+      .eq("source_type", "list_follow"),
+    admin
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .eq("onboarding_completed", true),
+    // Item 23: activeSubs (needed for atRiskUsers conditional)
+    admin.from("subscriptions").select("user_id").eq("active", true),
   ]);
+
+  // Process results
+  const platformConnected = new Set(
+    (platformConnsRaw ?? []).map((r) => r.user_id),
+  ).size;
+  const pendingQueue = pendingQueueRaw as unknown as PendingVideo[] | null;
+  const recentFailed = recentFailedRaw as unknown as FailedVideo[] | null;
+
+  const transcriptSources = (transcriptSourcesRaw ?? []).reduce<
+    Record<string, number>
+  >((acc, v) => {
+    const src = (v.transcript_source as string | null) ?? "unknown";
+    acc[src] = (acc[src] ?? 0) + 1;
+    return acc;
+  }, {});
+  const transcriptSourceEntries = Object.entries(transcriptSources).sort(
+    ([, a], [, b]) => b - a,
+  );
+
   const expiringTrials = (expiringTrialsRaw ?? []) as ExpiringTrial[];
 
-  // ── Utilisateurs à risque ─────────────────────────────────────
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-  const { data: activeSubs } = await admin
-    .from("subscriptions")
-    .select("user_id")
-    .eq("active", true);
-  const activeSubUserIds = [
-    ...new Set((activeSubs ?? []).map((s) => s.user_id)),
-  ];
-
-  let atRiskUsers: AtRiskUser[] = [];
-  if (activeSubUserIds.length > 0) {
-    const [{ data: proCandidates }, { data: recentSent }] = await Promise.all([
-      admin
-        .from("profiles")
-        .select("id, email")
-        .eq("subscription_status", "active")
-        .in("id", activeSubUserIds),
-      admin
-        .from("deliveries")
-        .select("user_id")
-        .eq("status", "sent")
-        .gte("created_at", sevenDaysAgo.toISOString())
-        .in("user_id", activeSubUserIds),
-    ]);
-    const recentIds = new Set((recentSent ?? []).map((d) => d.user_id));
-    atRiskUsers = ((proCandidates ?? []) as AtRiskUser[]).filter(
-      (u) => !recentIds.has(u.id),
-    );
-  }
+  const monthlyPriceCents = stripePrice as number;
 
   // Compute stats — Partial<Record> so values are number | undefined → ?? 0 is valid
   const videosByStatus = (videosToday ?? []).reduce<
@@ -504,34 +591,8 @@ export default async function AdminPage() {
   const conversionRate =
     trialsStarted > 0 ? Math.round((proCount / trialsStarted) * 100) : 0;
 
-  // ── MRR ──────────────────────────────────────────────────────
-  let monthlyPriceCents = 0;
-  try {
-    const stripe = getStripe();
-    const price = await stripe.prices.retrieve(env.STRIPE_PRO_PRICE_ID);
-    monthlyPriceCents = price.unit_amount ?? 0;
-  } catch {
-    // Stripe not configured
-  }
   const mrr = Math.round((proCount * monthlyPriceCents) / 100);
 
-  // ── Parallel batch 3: active users, signups, referrals ──────────
-  const fourteenDaysAgo = new Date();
-  fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
-
-  const [{ data: activeDeliveries }, { data: recentSignups }] =
-    await Promise.all([
-      admin
-        .from("deliveries")
-        .select("user_id")
-        .eq("status", "sent")
-        .gte("created_at", sevenDaysAgo.toISOString()),
-      admin
-        .from("profiles")
-        .select("created_at")
-        .gte("created_at", fourteenDaysAgo.toISOString())
-        .order("created_at", { ascending: true }),
-    ]);
   const activeUsersCount = new Set(
     (activeDeliveries ?? []).map((d) => d.user_id),
   ).size;
@@ -560,36 +621,10 @@ export default async function AdminPage() {
   const maxSignups = Math.max(...signupDays.map((d) => d.count), 1);
   const totalSignups14d = signupDays.reduce((s, d) => s + d.count, 0);
 
-  // ── Parrainage ────────────────────────────────────────────────
-  const { count: totalReferrals } = await admin
-    .from("referrals")
-    .select("*", { count: "exact", head: true });
-
-  const { data: referralData } = await admin
-    .from("referrals")
-    .select("referee_id");
   const refereeIds = [
     ...new Set((referralData ?? []).map((r) => r.referee_id)),
   ];
 
-  let convertedReferrals = 0;
-  if (refereeIds.length > 0) {
-    const { count } = await admin
-      .from("profiles")
-      .select("*", { count: "exact", head: true })
-      .eq("subscription_status", "active")
-      .in("id", refereeIds);
-    convertedReferrals = count ?? 0;
-  }
-  const referralConversionRate =
-    (totalReferrals ?? 0) > 0
-      ? Math.round((convertedReferrals / (totalReferrals ?? 1)) * 100)
-      : 0;
-
-  // ── Distribution langues ──────────────────────────────────────
-  const { data: langData } = await admin
-    .from("profiles")
-    .select("preferred_language");
   const langCounts = (langData ?? []).reduce<Record<string, number>>(
     (acc, p) => {
       const lang = p.preferred_language ?? "unknown";
@@ -602,11 +637,6 @@ export default async function AdminPage() {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 8);
 
-  // ── Top chaînes ───────────────────────────────────────────────
-  const { data: allActiveSubs } = await admin
-    .from("subscriptions")
-    .select("channel_id, channel_name")
-    .eq("active", true);
   const channelMap = (allActiveSubs ?? []).reduce<
     Record<string, { name: string; count: number }>
   >((acc, s) => {
@@ -628,12 +658,6 @@ export default async function AdminPage() {
     .slice(0, 10)
     .map(([id, data]) => ({ id, name: data.name, count: data.count }));
 
-  // ── Churn feedbacks ───────────────────────────────────────────
-  const { data: cancellationFeedbacksRaw } = await admin
-    .from("cancellation_feedbacks")
-    .select("id, reason, custom_message, offer_accepted, created_at")
-    .order("created_at", { ascending: false })
-    .limit(20);
   const cancellationFeedbacks =
     (cancellationFeedbacksRaw as unknown as CancellationFeedbackRow[] | null) ??
     [];
@@ -641,43 +665,17 @@ export default async function AdminPage() {
     (f) => f.offer_accepted,
   ).length;
 
-  // ── PostHog — visiteurs 30j ───────────────────────────────────
-  const [visitorsTotal30d, visitorDailyRaw] = await Promise.all([
-    getPostHogTotalVisitors(30),
-    getPostHogDailyVisitors(30),
-  ]);
   const visitorDays30d = visitorDailyRaw
     ? mergeDailyVisitors(visitorDailyRaw, 30)
     : null;
-
-  // ── Tendances 30j — inscrits + trials ─────────────────────────
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-  const [{ data: signupsRaw30d }, { data: trialStartsRaw30d }] =
-    await Promise.all([
-      admin
-        .from("profiles")
-        .select("created_at")
-        .gte("created_at", thirtyDaysAgo.toISOString()),
-      admin
-        .from("profiles")
-        .select("created_at")
-        .not("trial_ends_at", "is", null)
-        .gte("created_at", thirtyDaysAgo.toISOString()),
-    ]);
 
   const signupDays30d = buildDailyArray(signupsRaw30d ?? [], 30);
   const trialStartDays30d = buildDailyArray(trialStartsRaw30d ?? [], 30);
   const newSignups30d = signupDays30d.reduce((s, d) => s + d.count, 0);
   const newTrials30d = trialStartDays30d.reduce((s, d) => s + d.count, 0);
 
-  // ── Email analytics ───────────────────────────────────────────
-  const { data: emailLogsRaw } = await admin
-    .from("email_logs")
-    .select("email_type, created_at");
   const emailLogs = (emailLogsRaw as unknown as EmailLogRow[] | null) ?? [];
-  const thirtyDaysAgoTs = thirtyDaysAgo.toISOString();
+  const thirtyDaysAgoTs = thirtyDaysAgoStr;
 
   const emailTypeStatsPartial: Partial<Record<string, EmailTypeStats>> = {};
   for (const log of emailLogs) {
@@ -708,39 +706,11 @@ export default async function AdminPage() {
     0,
   );
 
-  // ── Email open rates ──────────────────────────────────────────
-  const { count: emailsOpened30d } = await admin
-    .from("email_logs")
-    .select("*", { count: "exact", head: true })
-    .gte("sent_at", thirtyDaysAgo.toISOString())
-    .not("opened_at", "is", null);
   const emailOpenRate =
     totalEmailsSent30d > 0
       ? Math.round(((emailsOpened30d ?? 0) / totalEmailsSent30d) * 100)
       : 0;
 
-  // ── Users who added channels + source breakdown + onboarding ────
-  // Use RPC for accurate distinct count (avoids PostgREST row pagination issues)
-  const [
-    { data: usersWithChannelsResult },
-    { count: importSubCount },
-    { count: listFollowSubCount },
-    { count: onboardedCount },
-  ] = await Promise.all([
-    admin.rpc("count_users_with_channels" as never),
-    admin
-      .from("subscriptions")
-      .select("*", { count: "exact", head: true })
-      .eq("source_type", "youtube_import"),
-    admin
-      .from("subscriptions")
-      .select("*", { count: "exact", head: true })
-      .eq("source_type", "list_follow"),
-    admin
-      .from("profiles")
-      .select("*", { count: "exact", head: true })
-      .eq("onboarding_completed", true),
-  ]);
   const usersWithChannels = (usersWithChannelsResult as unknown as number) || 0;
   const totalSubCount = activeSubscriptions ?? 0;
   const importSubs = importSubCount ?? 0;
@@ -748,6 +718,47 @@ export default async function AdminPage() {
   const manualSubs = Math.max(0, totalSubCount - importSubs - listFollowSubs);
   const onboardingRate =
     total > 0 ? Math.round(((onboardedCount ?? 0) / total) * 100) : 0;
+
+  // ── Utilisateurs à risque — DEPENDENT on activeSubs ──────────────────
+  const activeSubUserIds = [
+    ...new Set((activeSubs ?? []).map((s) => s.user_id)),
+  ];
+
+  let atRiskUsers: AtRiskUser[] = [];
+  if (activeSubUserIds.length > 0) {
+    const [{ data: proCandidates }, { data: recentSent }] = await Promise.all([
+      admin
+        .from("profiles")
+        .select("id, email")
+        .eq("subscription_status", "active")
+        .in("id", activeSubUserIds),
+      admin
+        .from("deliveries")
+        .select("user_id")
+        .eq("status", "sent")
+        .gte("created_at", sevenDaysAgoStr)
+        .in("user_id", activeSubUserIds),
+    ]);
+    const recentIds = new Set((recentSent ?? []).map((d) => d.user_id));
+    atRiskUsers = ((proCandidates ?? []) as AtRiskUser[]).filter(
+      (u) => !recentIds.has(u.id),
+    );
+  }
+
+  // ── Converted referrals — DEPENDENT on referralData ────────────────────
+  let convertedReferrals = 0;
+  if (refereeIds.length > 0) {
+    const { count } = await admin
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .eq("subscription_status", "active")
+      .in("id", refereeIds);
+    convertedReferrals = count ?? 0;
+  }
+  const referralConversionRate =
+    (totalReferrals ?? 0) > 0
+      ? Math.round((convertedReferrals / (totalReferrals ?? 1)) * 100)
+      : 0;
 
   // ── Taux de conversion funnel ─────────────────────────────────
   const allTrialUsers = (trialActive ?? 0) + trialExpiredCount + proCount;
