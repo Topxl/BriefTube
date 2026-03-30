@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-03-31
+
+FEATURE: Admin monitoring — replace transcript sources table with Processing Pipeline (24h) showing text vs audio breakdown, per-source costs, and Failure Reasons (7d) with color-coded severity
+
 ## 2026-03-27
 
 SECURITY: Fix IDOR vulnerability in Discord, Slack, and Notion OAuth callbacks — use authenticated session user instead of untrusted state parameter for database operations
