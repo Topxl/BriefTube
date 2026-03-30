@@ -2,6 +2,7 @@
 
 ## 2026-03-30
 
+UX: lists page — rename "Sub" → "Follow", highlight followed cards with red ring, clearer following state
 FIX: lists page — hide empty lists (0 channels) from Discover section
 FIX: lists page — duplicate list_channels select caused silent query failure (no lists shown)
 

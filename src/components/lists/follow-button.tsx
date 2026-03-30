@@ -48,10 +48,10 @@ export function FollowButton({ listId, initialFollowing }: Props) {
       onClick={(e) => void toggle(e)}
       disabled={loading}
       suppressHydrationWarning
-      className={`ml-2 shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium transition-all disabled:opacity-50 ${
+      className={`ml-auto shrink-0 rounded-full px-3 py-1 text-[11px] font-semibold transition-all disabled:opacity-50 ${
         following
-          ? "nm-inset-sm text-red-400"
-          : "nm-raised-sm text-white/50 hover:text-white/80"
+          ? "bg-red-500/15 text-red-400 ring-1 ring-red-500/30 hover:bg-red-500/25"
+          : "nm-raised-sm text-white/60 hover:text-white"
       }`}
     >
       {loading ? (
@@ -62,7 +62,7 @@ export function FollowButton({ listId, initialFollowing }: Props) {
           Following
         </span>
       ) : (
-        "Sub"
+        "Follow"
       )}
     </button>
   );

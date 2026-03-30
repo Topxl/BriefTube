@@ -61,15 +61,19 @@ function extractCount(val: unknown): number {
 function ListCard({
   list,
   actions,
+  isFollowing,
 }: {
   list: ListData;
   actions: React.ReactNode;
+  isFollowing?: boolean;
 }) {
   const gradient = CATEGORY_GRADIENTS[list.category ?? ""] ?? DEFAULT_GRADIENT;
   const previews = list.channels.slice(0, 4);
 
   return (
-    <div className="nm-raised flex flex-col overflow-hidden rounded-2xl transition-all hover:shadow-lg">
+    <div
+      className={`nm-raised flex flex-col overflow-hidden rounded-2xl transition-all hover:shadow-lg ${isFollowing ? "ring-1 ring-red-500/30" : ""}`}
+    >
       {/* Visual header — avatar mosaic */}
       <Link href={`/lists/${list.id}`} className="block">
         <div className={`relative h-24 bg-gradient-to-br ${gradient} p-0.5`}>
@@ -415,6 +419,7 @@ export default async function DashboardListsPage({
               <ListCard
                 key={list.id}
                 list={list}
+                isFollowing={followedListIds.has(list.id)}
                 actions={
                   <div className="flex w-full items-center gap-2">
                     <span className="text-muted-foreground flex items-center gap-1 text-[10px]">
