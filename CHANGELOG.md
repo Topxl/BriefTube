@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-03-28
+
+CHORE: Lazy-load profile page sections — DeliverySection, NotificationsSection, ReferralSection now use dynamic() with ssr: false
+CHORE: Lazy-load react-qr-code in ReferralSection — import with dynamic() instead of eager import
+
 ## 2026-03-29
 
 REFACTOR: Admin survey results — split responses by persona (active/inactive), read JSONB responses field, show PMF score for active only, display persona-specific sections
@@ -9,6 +14,8 @@ FEATURE: Survey page — persona detection via delivery history (active = receiv
 
 ## 2026-03-30
 
+FIX: survey-form — fix broken JSX fragment structure in ActiveSurveyForm and InactiveSurveyForm (missing closing </>)
+FIX: survey-form — add missing heading and inactive user copy to InactiveSurveyForm
 FIX: worker — pre-filter music compilation videos by title keywords (Hillsong/Worship/Praise) — immediate discard instead of 1-2min failure per slot
 FIX: worker — TTS per-call timeout 300s + store error_reason in metadata
 FIX: worker /services — Invidious checks now run in parallel (was sequential → up to 20s → 502 timeout)

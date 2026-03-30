@@ -66,6 +66,12 @@ function ActiveSurveyForm({ token }: { token: string }) {
         <p className="text-muted-foreground mt-3">
           Your feedback means a lot. Your free month of Pro is now active.
         </p>
+        <a
+          href="/dashboard"
+          className="mt-5 inline-block rounded-lg bg-red-600 px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-500"
+        >
+          Go to dashboard
+        </a>
       </div>
     );
   }
@@ -77,125 +83,144 @@ function ActiveSurveyForm({ token }: { token: string }) {
         <p className="text-muted-foreground mt-3">
           You've already completed this survey. Your free month was activated.
         </p>
+        <a
+          href="/dashboard"
+          className="mt-5 inline-block rounded-lg bg-red-600 px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-500"
+        >
+          Go to dashboard
+        </a>
       </div>
     );
   }
 
   return (
-    // @ts-expect-error - Form type compatibility
-    <Form form={form} className="flex flex-col gap-8">
-      <QuestionSection
-        number={1}
-        title="How would you feel if you could no longer use BriefTube?"
-      >
-        <form.AppField name="q1_pmf">
-          {(field) => (
-            <field.Field>
-              <RadioGroup field={field} options={PMF_OPTIONS} />
-              <field.Message />
-            </field.Field>
-          )}
-        </form.AppField>
-        <form.AppField name="q1_other">
-          {(field) => (
-            <field.Field>
-              <OtherField field={field} />
-            </field.Field>
-          )}
-        </form.AppField>
-      </QuestionSection>
-
-      <QuestionSection
-        number={2}
-        title="What is the main benefit you get from BriefTube?"
-      >
-        <form.AppField name="q2_benefit">
-          {(field) => (
-            <field.Field>
-              <RadioGroup field={field} options={BENEFIT_OPTIONS} />
-              <field.Message />
-            </field.Field>
-          )}
-        </form.AppField>
-        <form.AppField name="q2_other">
-          {(field) => (
-            <field.Field>
-              <OtherField field={field} />
-            </field.Field>
-          )}
-        </form.AppField>
-      </QuestionSection>
-
-      <QuestionSection
-        number={3}
-        title="What would make BriefTube twice as useful?"
-      >
-        <form.AppField name="q3_improvement">
-          {(field) => (
-            <field.Field>
-              <CheckboxGroup field={field} options={IMPROVEMENT_OPTIONS} />
-              <field.Message />
-            </field.Field>
-          )}
-        </form.AppField>
-        <form.AppField name="q3_other">
-          {(field) => (
-            <field.Field>
-              <OtherField field={field} />
-            </field.Field>
-          )}
-        </form.AppField>
-      </QuestionSection>
-
-      <QuestionSection
-        number={4}
-        title="Who in your life would benefit most from BriefTube?"
-      >
-        <form.AppField name="q4_referral">
-          {(field) => (
-            <field.Field>
-              <RadioGroup field={field} options={REFERRAL_OPTIONS} />
-              <field.Message />
-            </field.Field>
-          )}
-        </form.AppField>
-        <form.AppField name="q4_other">
-          {(field) => (
-            <field.Field>
-              <OtherField field={field} />
-            </field.Field>
-          )}
-        </form.AppField>
-      </QuestionSection>
-
-      <QuestionSection
-        number={5}
-        title="Anything else you want us to know?"
-        optional
-      >
-        <form.AppField name="q5_freetext">
-          {(field) => (
-            <field.Field>
-              <field.Textarea
-                placeholder="Optional — but we read every response"
-                className="min-h-[80px] border-white/[0.06] bg-zinc-800"
-              />
-              <field.Message />
-            </field.Field>
-          )}
-        </form.AppField>
-      </QuestionSection>
-
-      {status === "error" && (
-        <p className="text-sm text-red-400">
-          Something went wrong. Please try again.
+    <>
+      <div className="mb-8 text-center">
+        <h1 className="text-2xl font-bold text-white">Help shape BriefTube</h1>
+        <p className="text-muted-foreground mt-2">
+          6 quick questions. Takes about 2 minutes.
+          <br />
+          You'll get <strong className="text-white">
+            1 free month of Pro
+          </strong>{" "}
+          as a thank you.
         </p>
-      )}
+      </div>
+      {/* @ts-expect-error - Form type compatibility */}
+      <Form form={form} className="flex flex-col gap-8">
+        <QuestionSection
+          number={1}
+          title="How would you feel if you could no longer use BriefTube?"
+        >
+          <form.AppField name="q1_pmf">
+            {(field) => (
+              <field.Field>
+                <RadioGroup field={field} options={PMF_OPTIONS} />
+                <field.Message />
+              </field.Field>
+            )}
+          </form.AppField>
+          <form.AppField name="q1_other">
+            {(field) => (
+              <field.Field>
+                <OtherField field={field} />
+              </field.Field>
+            )}
+          </form.AppField>
+        </QuestionSection>
 
-      <form.SubmitButton className="w-full bg-red-600 hover:bg-red-500">
-        Submit & unlock 1 free month
-      </form.SubmitButton>
-    </Form>
+        <QuestionSection
+          number={2}
+          title="What is the main benefit you get from BriefTube?"
+        >
+          <form.AppField name="q2_benefit">
+            {(field) => (
+              <field.Field>
+                <RadioGroup field={field} options={BENEFIT_OPTIONS} />
+                <field.Message />
+              </field.Field>
+            )}
+          </form.AppField>
+          <form.AppField name="q2_other">
+            {(field) => (
+              <field.Field>
+                <OtherField field={field} />
+              </field.Field>
+            )}
+          </form.AppField>
+        </QuestionSection>
+
+        <QuestionSection
+          number={3}
+          title="What would make BriefTube twice as useful?"
+        >
+          <form.AppField name="q3_improvement">
+            {(field) => (
+              <field.Field>
+                <CheckboxGroup field={field} options={IMPROVEMENT_OPTIONS} />
+                <field.Message />
+              </field.Field>
+            )}
+          </form.AppField>
+          <form.AppField name="q3_other">
+            {(field) => (
+              <field.Field>
+                <OtherField field={field} />
+              </field.Field>
+            )}
+          </form.AppField>
+        </QuestionSection>
+
+        <QuestionSection
+          number={4}
+          title="Who in your life would benefit most from BriefTube?"
+        >
+          <form.AppField name="q4_referral">
+            {(field) => (
+              <field.Field>
+                <RadioGroup field={field} options={REFERRAL_OPTIONS} />
+                <field.Message />
+              </field.Field>
+            )}
+          </form.AppField>
+          <form.AppField name="q4_other">
+            {(field) => (
+              <field.Field>
+                <OtherField field={field} />
+              </field.Field>
+            )}
+          </form.AppField>
+        </QuestionSection>
+
+        <QuestionSection
+          number={5}
+          title="Anything else you want us to know?"
+          optional
+        >
+          <form.AppField name="q5_freetext">
+            {(field) => (
+              <field.Field>
+                <field.Textarea
+                  placeholder="Optional — but we read every response"
+                  className="min-h-[80px] border-white/[0.06] bg-zinc-800"
+                />
+                <field.Message />
+              </field.Field>
+            )}
+          </form.AppField>
+        </QuestionSection>
+
+        {status === "error" && (
+          <p className="text-sm text-red-400">
+            Something went wrong. Please try again.
+          </p>
+        )}
+
+        <form.SubmitButton className="w-full bg-red-600 hover:bg-red-500">
+          Submit & unlock 1 free month
+        </form.SubmitButton>
+      </Form>
+    </>
   );
 }
 
@@ -238,6 +263,12 @@ function InactiveSurveyForm({ token }: { token: string }) {
         <p className="text-muted-foreground mt-3">
           Your feedback means a lot. Your free month of Pro is now active.
         </p>
+        <a
+          href="/dashboard"
+          className="mt-5 inline-block rounded-lg bg-red-600 px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-500"
+        >
+          Go to dashboard
+        </a>
       </div>
     );
   }
@@ -249,119 +280,142 @@ function InactiveSurveyForm({ token }: { token: string }) {
         <p className="text-muted-foreground mt-3">
           You've already completed this survey. Your free month was activated.
         </p>
+        <a
+          href="/dashboard"
+          className="mt-5 inline-block rounded-lg bg-red-600 px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-500"
+        >
+          Go to dashboard
+        </a>
       </div>
     );
   }
 
   return (
-    // @ts-expect-error - Form type compatibility
-    <Form form={form} className="flex flex-col gap-8">
-      <QuestionSection number={1} title="What made you sign up for BriefTube?">
-        <form.AppField name="q1_signup_reason">
-          {(field) => (
-            <field.Field>
-              <RadioGroup field={field} options={SIGNUP_REASON_OPTIONS} />
-              <field.Message />
-            </field.Field>
-          )}
-        </form.AppField>
-        <form.AppField name="q1_other">
-          {(field) => (
-            <field.Field>
-              <OtherField field={field} />
-            </field.Field>
-          )}
-        </form.AppField>
-      </QuestionSection>
-
-      <QuestionSection number={2} title="What stopped you from using it?">
-        <form.AppField name="q2_blocker">
-          {(field) => (
-            <field.Field>
-              <CheckboxGroup field={field} options={BLOCKER_OPTIONS} />
-              <field.Message />
-            </field.Field>
-          )}
-        </form.AppField>
-        <form.AppField name="q2_other">
-          {(field) => (
-            <field.Field>
-              <OtherField field={field} />
-            </field.Field>
-          )}
-        </form.AppField>
-      </QuestionSection>
-
-      <QuestionSection
-        number={3}
-        title="What would convince you to try it again?"
-      >
-        <form.AppField name="q3_convince">
-          {(field) => (
-            <field.Field>
-              <CheckboxGroup field={field} options={CONVINCE_OPTIONS} />
-              <field.Message />
-            </field.Field>
-          )}
-        </form.AppField>
-        <form.AppField name="q3_other">
-          {(field) => (
-            <field.Field>
-              <OtherField field={field} />
-            </field.Field>
-          )}
-        </form.AppField>
-      </QuestionSection>
-
-      <QuestionSection
-        number={4}
-        title="How would you prefer to receive summaries?"
-      >
-        <form.AppField name="q4_delivery_pref">
-          {(field) => (
-            <field.Field>
-              <RadioGroup field={field} options={DELIVERY_PREF_OPTIONS} />
-              <field.Message />
-            </field.Field>
-          )}
-        </form.AppField>
-        <form.AppField name="q4_other">
-          {(field) => (
-            <field.Field>
-              <OtherField field={field} />
-            </field.Field>
-          )}
-        </form.AppField>
-      </QuestionSection>
-
-      <QuestionSection
-        number={5}
-        title="Anything else we should know?"
-        optional
-      >
-        <form.AppField name="q5_freetext">
-          {(field) => (
-            <field.Field>
-              <field.Textarea
-                placeholder="Optional — but we read every response"
-                className="min-h-[80px] border-white/[0.06] bg-zinc-800"
-              />
-              <field.Message />
-            </field.Field>
-          )}
-        </form.AppField>
-      </QuestionSection>
-
-      {status === "error" && (
-        <p className="text-sm text-red-400">
-          Something went wrong. Please try again.
+    <>
+      <div className="mb-8 text-center">
+        <h1 className="text-2xl font-bold text-white">Help shape BriefTube</h1>
+        <p className="text-muted-foreground mt-2">
+          We noticed you haven't tried BriefTube yet. Your feedback matters even
+          more.
+          <br />
+          You'll get <strong className="text-white">
+            1 free month of Pro
+          </strong>{" "}
+          as a thank you.
         </p>
-      )}
+      </div>
+      {/* @ts-expect-error - Form type compatibility */}
+      <Form form={form} className="flex flex-col gap-8">
+        <QuestionSection
+          number={1}
+          title="What made you sign up for BriefTube?"
+        >
+          <form.AppField name="q1_signup_reason">
+            {(field) => (
+              <field.Field>
+                <RadioGroup field={field} options={SIGNUP_REASON_OPTIONS} />
+                <field.Message />
+              </field.Field>
+            )}
+          </form.AppField>
+          <form.AppField name="q1_other">
+            {(field) => (
+              <field.Field>
+                <OtherField field={field} />
+              </field.Field>
+            )}
+          </form.AppField>
+        </QuestionSection>
 
-      <form.SubmitButton className="w-full bg-red-600 hover:bg-red-500">
-        Submit & unlock 1 free month
-      </form.SubmitButton>
-    </Form>
+        <QuestionSection number={2} title="What stopped you from using it?">
+          <form.AppField name="q2_blocker">
+            {(field) => (
+              <field.Field>
+                <CheckboxGroup field={field} options={BLOCKER_OPTIONS} />
+                <field.Message />
+              </field.Field>
+            )}
+          </form.AppField>
+          <form.AppField name="q2_other">
+            {(field) => (
+              <field.Field>
+                <OtherField field={field} />
+              </field.Field>
+            )}
+          </form.AppField>
+        </QuestionSection>
+
+        <QuestionSection
+          number={3}
+          title="What would convince you to try it again?"
+        >
+          <form.AppField name="q3_convince">
+            {(field) => (
+              <field.Field>
+                <CheckboxGroup field={field} options={CONVINCE_OPTIONS} />
+                <field.Message />
+              </field.Field>
+            )}
+          </form.AppField>
+          <form.AppField name="q3_other">
+            {(field) => (
+              <field.Field>
+                <OtherField field={field} />
+              </field.Field>
+            )}
+          </form.AppField>
+        </QuestionSection>
+
+        <QuestionSection
+          number={4}
+          title="How would you prefer to receive summaries?"
+        >
+          <form.AppField name="q4_delivery_pref">
+            {(field) => (
+              <field.Field>
+                <RadioGroup field={field} options={DELIVERY_PREF_OPTIONS} />
+                <field.Message />
+              </field.Field>
+            )}
+          </form.AppField>
+          <form.AppField name="q4_other">
+            {(field) => (
+              <field.Field>
+                <OtherField field={field} />
+              </field.Field>
+            )}
+          </form.AppField>
+        </QuestionSection>
+
+        <QuestionSection
+          number={5}
+          title="Anything else we should know?"
+          optional
+        >
+          <form.AppField name="q5_freetext">
+            {(field) => (
+              <field.Field>
+                <field.Textarea
+                  placeholder="Optional — but we read every response"
+                  className="min-h-[80px] border-white/[0.06] bg-zinc-800"
+                />
+                <field.Message />
+              </field.Field>
+            )}
+          </form.AppField>
+        </QuestionSection>
+
+        {status === "error" && (
+          <p className="text-sm text-red-400">
+            Something went wrong. Please try again.
+          </p>
+        )}
+
+        <form.SubmitButton className="w-full bg-red-600 hover:bg-red-500">
+          Submit & unlock 1 free month
+        </form.SubmitButton>
+      </Form>
+    </>
   );
 }
 
