@@ -2,6 +2,7 @@
 
 ## 2026-03-30
 
+FIX: lists page — hide empty lists (0 channels) from Discover section
 FIX: lists page — duplicate list_channels select caused silent query failure (no lists shown)
 
 FEATURE: Survey system — public survey page (/survey/[token]) with 6-question PMF form, no auth required

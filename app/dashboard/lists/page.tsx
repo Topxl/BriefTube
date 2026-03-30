@@ -257,6 +257,7 @@ export default async function DashboardListsPage({
     .sort((a, b) => (b.followerCount || 0) - (a.followerCount || 0));
 
   const sortedPublic = allPublic.filter((l) => {
+    if (l.channelCount === 0) return false;
     if (filter === "following") return followedListIds.has(l.id);
     if (filter === "not-following") return !followedListIds.has(l.id);
     return true;
