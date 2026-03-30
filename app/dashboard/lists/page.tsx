@@ -325,15 +325,20 @@ export default async function DashboardListsPage({
               <ListCard
                 key={list.id}
                 list={list}
+                isFollowing={followedListIds.has(list.id)}
                 actions={
                   <div className="flex w-full items-center gap-1.5">
+                    <FollowButton
+                      listId={list.id}
+                      initialFollowing={followedListIds.has(list.id)}
+                    />
                     <ShareListButton
                       listId={list.id}
                       referralCode={referralCode}
                     />
                     <Link
                       href={`/lists/${list.id}/edit`}
-                      className="text-muted-foreground hover:text-foreground ml-auto transition-colors"
+                      className="text-muted-foreground hover:text-foreground transition-colors"
                     >
                       <Pencil className="h-3.5 w-3.5" />
                     </Link>
