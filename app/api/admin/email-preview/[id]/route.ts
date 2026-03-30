@@ -8,6 +8,7 @@ import { TrialReminderEmail } from "@/components/emails/trial-reminder-email";
 import { TrialExpiredEmail } from "@/components/emails/trial-expired-email";
 import { ReferralTrialEmail } from "@/components/emails/referral-trial-email";
 import { founderEmail, p, signature } from "@/lib/mail/founder-email";
+import { surveyEmailHtml } from "@/components/emails/survey-email";
 
 const SAMPLE_DATE = new Date().toLocaleDateString("fr-FR", {
   weekday: "long",
@@ -94,6 +95,10 @@ async function renderPreview(id: string): Promise<string | null> {
       );
     case "announcement":
       return render(AnnouncementEmail());
+    case "survey_feedback":
+      return surveyEmailHtml({
+        surveyUrl: "https://www.brief-tube.com/survey/preview",
+      });
     default:
       return null;
   }
