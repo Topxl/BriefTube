@@ -97,7 +97,7 @@ async function ChannelsSheetSection({ userId }: { userId: string }) {
         "list_id, channel_lists(id, name, category, list_channels(count))",
       )
       .eq("user_id", userId)
-      .order("created_at", { ascending: false }),
+      .order("followed_at", { ascending: false }),
   ]);
 
   const followedLists: FollowedListMeta[] = (listFollows ?? []).map((item) => {
