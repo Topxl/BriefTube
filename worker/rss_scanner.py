@@ -128,6 +128,11 @@ def scan_all_channels():
     known_video_ids = db.get_all_known_video_ids()
     logger.info(f"Loaded {len(known_video_ids)} known video IDs into memory")
 
+    # Load recent titles per channel (last 2h) for re-upload deduplication
+    # Channels sometimes delete + re-upload the same video → new video_id, same title
+    recent_titles_by_channel = db.get_recent_titles_by_channel(hours=2)
+    logger.info(f"Loaded recent titles for {len(recent_titles_by_channel)} channels (2h window)")
+
     # Fetch all RSS feeds in parallel — 50x faster than sequential
     channel_videos: dict[str, list[dict]] = {}
     with ThreadPoolExecutor(max_workers=50) as executor:
@@ -156,6 +161,17 @@ def scan_all_channels():
             # Duration alone is NOT a signal (6h+ podcasts like Lex Fridman must pass).
             if is_likely_music(video["title"]):
                 logger.info(f"Music/ambient skip (title): {video['title'][:80]} ({vid})")
+                known_video_ids.add(vid)
+                continue
+
+            # Skip re-uploads: same title seen on this channel in the last 2h
+            # (channels delete + re-upload → new video_id, identical title)
+            title_lower = video["title"].lower().strip()
+            if title_lower in recent_titles_by_channel.get(channel_id, set()):
+                logger.info(
+                    f"Duplicate title skip (re-upload, 2h window): "
+                    f"{video['title'][:80]} ({vid})"
+                )
                 known_video_ids.add(vid)
                 continue
 
