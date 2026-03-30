@@ -52,7 +52,10 @@ type ListData = {
 };
 
 function extractCount(val: unknown): number {
-  return (val as { count: number }[])[0]?.count ?? 0;
+  if (Array.isArray(val) && val.length > 0 && "count" in val[0]) {
+    return (val as { count: number }[])[0].count;
+  }
+  return Array.isArray(val) ? val.length : 0;
 }
 
 function ListCard({
@@ -176,7 +179,7 @@ export default async function DashboardListsPage({
     supabase
       .from("channel_lists")
       .select(
-        "id, name, category, list_channels(channel_avatar_url, channel_name), list_channels(count)",
+        "id, name, category, list_channels(channel_avatar_url, channel_name)",
       )
       .eq("created_by", user.id)
       .order("created_at", { ascending: false }),
@@ -188,14 +191,14 @@ export default async function DashboardListsPage({
     supabase
       .from("list_follows")
       .select(
-        "list_id, channel_lists(id, name, category, list_channels(channel_avatar_url, channel_name), list_channels(count))",
+        "list_id, channel_lists(id, name, category, list_channels(channel_avatar_url, channel_name))",
       )
       .eq("user_id", user.id),
     (() => {
       const q = supabase
         .from("channel_lists")
         .select(
-          "id, name, category, list_channels(channel_avatar_url, channel_name), list_channels(count), list_follows(count)",
+          "id, name, category, list_channels(channel_avatar_url, channel_name), list_follows(count)",
         )
         .eq("is_public", true)
         .neq("created_by", user.id);
