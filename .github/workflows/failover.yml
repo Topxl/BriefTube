@@ -1,0 +1,162 @@
+name: Health Check & Failover
+
+on:
+  schedule:
+    - cron: "*/5 * * * *" # Every 5 minutes
+  workflow_dispatch:
+    inputs:
+      force_action:
+        description: "Force action: vps, vercel, or check"
+        required: false
+        default: "check"
+
+env:
+  SITE_URL: "https://www.brief-tube.com"
+  VPS_IP: "138.199.220.195"
+  # Vercel CNAME targets
+  VERCEL_CNAME_ROOT: "cname.vercel-dns.com"
+  VERCEL_CNAME_WWW: "d035e7fcc0a151be.vercel-dns.com"
+
+jobs:
+  healthcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch Cloudflare secrets
+        uses: Infisical/secrets-action@v1.0.7
+        with:
+          client-id: ${{ secrets.INFISICAL_CLIENT_ID }}
+          client-secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+          project-slug: "brieftube-server-qy7-v"
+          env-slug: "prod"
+          secret-path: "/deploy"
+          export-type: "env"
+
+      - name: Health check & failover
+        run: |
+          set -euo pipefail
+
+          CF_TOKEN="${CLOUDFLARE_API_TOKEN}"
+          CF_ZONE="${CLOUDFLARE_ZONE_ID}"
+          FORCE="${{ github.event.inputs.force_action || 'check' }}"
+
+          # ── Helper: get DNS record ID ──────────────────────────
+          get_record_id() {
+            local name="$1" type="$2"
+            curl -s "https://api.cloudflare.com/client/v4/zones/${CF_ZONE}/dns_records?name=${name}&type=${type}" \
+              -H "Authorization: Bearer ${CF_TOKEN}" \
+              -H "Content-Type: application/json" \
+              | jq -r '.result[0].id // empty'
+          }
+
+          get_record_content() {
+            local name="$1"
+            curl -s "https://api.cloudflare.com/client/v4/zones/${CF_ZONE}/dns_records?name=${name}" \
+              -H "Authorization: Bearer ${CF_TOKEN}" \
+              -H "Content-Type: application/json" \
+              | jq -r '.result[0].content // empty'
+          }
+
+          # ── Helper: update DNS record ──────────────────────────
+          update_to_vps() {
+            echo "🔄 Switching to VPS..."
+
+            # Delete existing records for root and www
+            for name in "brief-tube.com" "www.brief-tube.com"; do
+              for type in A CNAME; do
+                id=$(get_record_id "$name" "$type")
+                if [ -n "$id" ]; then
+                  curl -s -X DELETE "https://api.cloudflare.com/client/v4/zones/${CF_ZONE}/dns_records/${id}" \
+                    -H "Authorization: Bearer ${CF_TOKEN}" > /dev/null
+                fi
+              done
+            done
+
+            # Create A records pointing to VPS
+            for name in "brief-tube.com" "www.brief-tube.com"; do
+              curl -s -X POST "https://api.cloudflare.com/client/v4/zones/${CF_ZONE}/dns_records" \
+                -H "Authorization: Bearer ${CF_TOKEN}" \
+                -H "Content-Type: application/json" \
+                --data "{\"type\":\"A\",\"name\":\"${name}\",\"content\":\"${VPS_IP}\",\"proxied\":true}" > /dev/null
+            done
+            echo "✅ DNS → VPS (${VPS_IP})"
+          }
+
+          update_to_vercel() {
+            echo "🔄 Switching to Vercel..."
+
+            # Delete existing A/CNAME records
+            for name in "brief-tube.com" "www.brief-tube.com"; do
+              for type in A CNAME; do
+                id=$(get_record_id "$name" "$type")
+                if [ -n "$id" ]; then
+                  curl -s -X DELETE "https://api.cloudflare.com/client/v4/zones/${CF_ZONE}/dns_records/${id}" \
+                    -H "Authorization: Bearer ${CF_TOKEN}" > /dev/null
+                fi
+              done
+            done
+
+            # Create CNAME records for Vercel
+            curl -s -X POST "https://api.cloudflare.com/client/v4/zones/${CF_ZONE}/dns_records" \
+              -H "Authorization: Bearer ${CF_TOKEN}" \
+              -H "Content-Type: application/json" \
+              --data "{\"type\":\"CNAME\",\"name\":\"brief-tube.com\",\"content\":\"${VERCEL_CNAME_ROOT}\",\"proxied\":false}" > /dev/null
+
+            curl -s -X POST "https://api.cloudflare.com/client/v4/zones/${CF_ZONE}/dns_records" \
+              -H "Authorization: Bearer ${CF_TOKEN}" \
+              -H "Content-Type: application/json" \
+              --data "{\"type\":\"CNAME\",\"name\":\"www.brief-tube.com\",\"content\":\"${VERCEL_CNAME_WWW}\",\"proxied\":false}" > /dev/null
+
+            echo "✅ DNS → Vercel"
+          }
+
+          # ── Force action ───────────────────────────────────────
+          if [ "$FORCE" = "vps" ]; then
+            update_to_vps
+            exit 0
+          elif [ "$FORCE" = "vercel" ]; then
+            update_to_vercel
+            exit 0
+          fi
+
+          # ── Health check ───────────────────────────────────────
+          echo "🏥 Checking ${SITE_URL}..."
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "${SITE_URL}" || echo "000")
+          echo "Response: HTTP ${HTTP_CODE}"
+
+          CURRENT=$(get_record_content "brief-tube.com")
+          echo "Current DNS: ${CURRENT}"
+
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 500 ]; then
+            echo "✅ Site is UP"
+
+            # If currently on Vercel, check if VPS is back
+            if [ "$CURRENT" != "$VPS_IP" ]; then
+              echo "🔍 Site is on Vercel — checking if VPS is back..."
+              VPS_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "http://${VPS_IP}:3000" 2>/dev/null || echo "000")
+              if [ "$VPS_CODE" -ge 200 ] && [ "$VPS_CODE" -lt 500 ]; then
+                echo "✅ VPS is back online — switching back"
+                update_to_vps
+              else
+                echo "⏳ VPS still down (HTTP ${VPS_CODE}) — staying on Vercel"
+              fi
+            fi
+          else
+            echo "❌ Site is DOWN (HTTP ${HTTP_CODE})"
+
+            # Only failover if currently on VPS
+            if [ "$CURRENT" = "$VPS_IP" ]; then
+              # Double-check with a second request
+              sleep 5
+              HTTP_CODE2=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "${SITE_URL}" || echo "000")
+              echo "Second check: HTTP ${HTTP_CODE2}"
+
+              if [ "$HTTP_CODE2" -ge 200 ] && [ "$HTTP_CODE2" -lt 500 ]; then
+                echo "✅ False alarm — site recovered"
+              else
+                echo "🚨 Confirmed DOWN — failover to Vercel"
+                update_to_vercel
+              fi
+            else
+              echo "⚠️ Already on Vercel — nothing to do"
+            fi
+          fi
