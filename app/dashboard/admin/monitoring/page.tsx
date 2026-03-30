@@ -18,13 +18,6 @@ import {
   TrendingUp,
   Mail,
 } from "@/lib/icons";
-import { NewsletterSeedButton } from "@/components/admin/newsletter-seed-button";
-import { TrialRemindersButton } from "@/components/admin/trial-reminders-button";
-import { ActivationEmailsButton } from "@/components/admin/activation-emails-button";
-import { ReengagementEmailsButton } from "@/components/admin/reengagement-emails-button";
-import { ReferralTrialEmailsButton } from "@/components/admin/referral-trial-emails-button";
-import { OnboardingApologyButton } from "@/components/admin/onboarding-apology-button";
-import { ExtendTrialsButton } from "@/components/admin/extend-trials-button";
 import { ServicesHealth } from "@/components/admin/services-health";
 import {
   getPostHogTotalVisitors,
@@ -1612,53 +1605,6 @@ export default async function AdminPage() {
                 ))}
             </div>
           )}
-        </div>
-
-        {/* Action buttons */}
-        <div className="nm-raised flex items-center justify-between rounded-xl px-4 py-3">
-          <p className="text-muted-foreground text-sm">
-            Sync all existing users to Resend audience
-          </p>
-          <NewsletterSeedButton />
-        </div>
-        <div className="nm-raised flex flex-col gap-2 rounded-xl px-4 py-3">
-          <p className="text-muted-foreground text-sm">
-            Send trial expiry reminders (J-3, J-1, expired)
-          </p>
-          <TrialRemindersButton />
-        </div>
-        <div className="nm-raised flex flex-col gap-2 rounded-xl px-4 py-3">
-          <p className="text-muted-foreground text-sm">
-            Recalculate all trials to 30 days from signup date (one-time
-            migration)
-          </p>
-          <ExtendTrialsButton />
-        </div>
-        <div className="nm-raised flex flex-col gap-2 rounded-xl px-4 py-3">
-          <p className="text-muted-foreground text-sm">
-            Send activation emails (Telegram not connected after 24h)
-          </p>
-          <ActivationEmailsButton />
-        </div>
-        <div className="nm-raised flex flex-col gap-2 rounded-xl px-4 py-3">
-          <p className="text-muted-foreground text-sm">
-            Send re-engagement emails (Pro · active subscription · 0 delivery in
-            7 days)
-          </p>
-          <ReengagementEmailsButton />
-        </div>
-        <div className="nm-raised flex flex-col gap-2 rounded-xl px-4 py-3">
-          <p className="text-muted-foreground text-sm">
-            Send referral trial emails (referred users · trial ending in J-3 /
-            J-1)
-          </p>
-          <ReferralTrialEmailsButton />
-        </div>
-        <div className="nm-raised flex flex-col gap-2 rounded-xl border border-yellow-500/20 px-4 py-3">
-          <p className="text-muted-foreground text-sm">
-            Send onboarding apology emails (Feb 22–28 · one-time · deduped)
-          </p>
-          <OnboardingApologyButton />
         </div>
       </div>
 
