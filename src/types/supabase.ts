@@ -161,7 +161,7 @@ export type Database = {
           email_type: string;
           id?: string;
           opened_at?: string | null;
-          sent_at?: string;
+          sent_at: string;
           user_id: string;
         };
         Update: {
@@ -731,6 +731,53 @@ export type Database = {
           },
         ];
       };
+      survey_responses: {
+        Row: {
+          created_at: string | null;
+          id: string;
+          q1_pmf: string;
+          q2_benefit: string;
+          q3_friction: string[];
+          q4_improvement: string[];
+          q5_referral: string;
+          q6_freetext: string | null;
+          reward_granted: boolean | null;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string | null;
+          id?: string;
+          q1_pmf: string;
+          q2_benefit: string;
+          q3_friction?: string[];
+          q4_improvement?: string[];
+          q5_referral: string;
+          q6_freetext?: string | null;
+          reward_granted?: boolean | null;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string | null;
+          id?: string;
+          q1_pmf?: string;
+          q2_benefit?: string;
+          q3_friction?: string[];
+          q4_improvement?: string[];
+          q5_referral?: string;
+          q6_freetext?: string | null;
+          reward_granted?: boolean | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "survey_responses_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       websub_subscriptions: {
         Row: {
           channel_id: string;
@@ -842,6 +889,7 @@ export type Database = {
       };
     };
     Functions: {
+      count_users_with_channels: { Args: never; Returns: number };
       get_feed_deliveries: {
         Args: { p_limit: number; p_offset: number; p_user_id: string };
         Returns: {

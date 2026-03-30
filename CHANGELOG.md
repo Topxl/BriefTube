@@ -2,6 +2,11 @@
 
 ## 2026-03-30
 
+FEATURE: Survey system — public survey page (/survey/[token]) with 6-question PMF form, no auth required
+FEATURE: Survey API — /api/survey endpoint saves responses, grants 1-month Pro trial on completion
+FEATURE: Survey email — founder-style email template, bulk send with deduplication and throttling
+FEATURE: Admin dashboard — survey results section with PMF score, question breakdowns, and free-text responses
+
 REFACTOR: lists page — redesign with visual cards, avatar mosaics, category colors (grid layout, gradient headers)
 REFACTOR: channels sheet — display followed lists as horizontal chips at top, remove "From lists" section
 FIX: lists page — mount FollowedListsSection (was coded but never rendered)
