@@ -341,6 +341,20 @@ async def _process_video(
 
     logger.info(f"[{video_id}] Processing: {video_title}")
 
+    # Pre-filter: music compilation channels — skip immediately before transcript
+    # These channels publish music-only videos with no speech; yt-dlp fails with
+    # youtube_auth_required or hangs indefinitely on audio download.
+    _MUSIC_TITLE_PHRASES = (
+        "worship songs", "worship music", "praise and worship",
+        "praise songs", "praise collection", "gospel songs",
+        "christian praise", "hillsong worship",
+    )
+    _title_lower = (video_title or "").lower()
+    if any(phrase in _title_lower for phrase in _MUSIC_TITLE_PHRASES):
+        logger.info(f"[{video_id}] Skipping permanently (music_content): {video_title[:80]}")
+        db.fail_job(job["id"], immediate=True, error_reason="music_content")
+        return
+
     # Resolve language/voice early (before the try block) so the exception
     # handlers can reference user_language when calling mark_video_failed.
     user_language = job.get("user_language") or "fr"
