@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-03-31
+
+PERF: Admin monitoring — merge 8 sequential query batches into 1 parallel batch (significantly faster page load)
+
+## 2026-03-27
+
+PERF: Landing page — move social proof stats fetch server-side (eliminates client API call)
+
 ## 2026-03-28
 
 FEATURE: Add AWS SES mail adapter for email sending (priority: SES → Resend → Console)
