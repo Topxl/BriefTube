@@ -2,6 +2,7 @@
 
 ## 2026-03-30
 
+FIX: worker /services — Invidious checks now run in parallel (was sequential → up to 20s → 502 timeout)
 FIX: sources-section — add unoptimized to channel avatar Image (YouTube CDN blocks Next.js proxy → 403)
 UX: lists page — add Follow/Unfollow button on owned lists (Mine section)
 UX: lists page — rename "Sub" → "Follow", highlight followed cards with red ring, clearer following state

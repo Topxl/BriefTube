@@ -1462,19 +1462,26 @@ async def health_loop():
             except Exception as e:
                 return {"name": "YouTube Direct", "status": "error", "detail": str(e)[:80]}
 
+        async def _check_one_invidious(s, instance):
+            try:
+                async with s.get(
+                    f"{instance}/api/v1/stats",
+                    timeout=aiohttp.ClientTimeout(total=5),
+                ) as r:
+                    if r.status == 200:
+                        return instance.replace("https://", "").replace("http://", "")
+            except Exception:
+                pass
+            return None
+
         async def check_invidious():
             async with aiohttp.ClientSession() as s:
-                for instance in INVIDIOUS_INSTANCES[:4]:
-                    try:
-                        async with s.get(
-                            f"{instance}/api/v1/stats",
-                            timeout=aiohttp.ClientTimeout(total=5),
-                        ) as r:
-                            if r.status == 200:
-                                host = instance.replace("https://", "").replace("http://", "")
-                                return {"name": "Invidious", "status": "ok", "detail": host}
-                    except Exception:
-                        continue
+                results = await asyncio.gather(
+                    *[_check_one_invidious(s, inst) for inst in INVIDIOUS_INSTANCES[:4]]
+                )
+            ok = next((r for r in results if r), None)
+            if ok:
+                return {"name": "Invidious", "status": "ok", "detail": ok}
             return {"name": "Invidious", "status": "error", "detail": "All instances unreachable"}
 
         async def check_webshare():
@@ -1498,13 +1505,16 @@ async def health_loop():
             except Exception as e:
                 return {"name": "Webshare", "status": "error", "detail": str(e)[:80]}
 
-        (yt_direct, webshare, invidious, groq, gemini, telegram) = await asyncio.gather(
-            _check("YouTube Direct", check_youtube_direct()),
-            _check("Webshare", check_webshare()),
-            _check("Invidious", check_invidious()),
-            _check("Groq / Whisper", check_groq()),
-            _check("Gemini", check_gemini()),
-            _check("Telegram", check_telegram()),
+        (yt_direct, webshare, invidious, groq, gemini, telegram) = await asyncio.wait_for(
+            asyncio.gather(
+                _check("YouTube Direct", check_youtube_direct()),
+                _check("Webshare", check_webshare()),
+                _check("Invidious", check_invidious()),
+                _check("Groq / Whisper", check_groq()),
+                _check("Gemini", check_gemini()),
+                _check("Telegram", check_telegram()),
+            ),
+            timeout=12.0,
         )
 
         groups = [
