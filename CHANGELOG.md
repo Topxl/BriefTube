@@ -2,6 +2,7 @@
 
 ## 2026-03-30
 
+FIX: sources-section — add unoptimized to channel avatar Image (YouTube CDN blocks Next.js proxy → 403)
 UX: lists page — add Follow/Unfollow button on owned lists (Mine section)
 UX: lists page — rename "Sub" → "Follow", highlight followed cards with red ring, clearer following state
 FIX: lists page — hide empty lists (0 channels) from Discover section
