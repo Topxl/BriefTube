@@ -19,15 +19,25 @@ export async function GET(req: NextRequest) {
     redirect("/dashboard/profile?error=discord_invalid_state");
   }
 
-  const expectedHash = createHmac(
-    "sha256",
-    env.DISCORD_CLIENT_SECRET ?? "secret",
-  )
+  if (!env.DISCORD_CLIENT_SECRET) {
+    throw new Error("DISCORD_CLIENT_SECRET is not set");
+  }
+
+  const expectedHash = createHmac("sha256", env.DISCORD_CLIENT_SECRET)
     .update(userId)
     .digest("hex");
 
   if (stateHash !== expectedHash) {
     redirect("/dashboard/profile?error=discord_invalid_state");
+  }
+
+  // Get authenticated user from session
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    redirect("/login");
   }
 
   // Exchange code for token — response includes webhook object
@@ -36,7 +46,7 @@ export async function GET(req: NextRequest) {
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       client_id: env.DISCORD_CLIENT_ID ?? "",
-      client_secret: env.DISCORD_CLIENT_SECRET ?? "",
+      client_secret: env.DISCORD_CLIENT_SECRET,
       grant_type: "authorization_code",
       code,
       redirect_uri: env.DISCORD_REDIRECT_URI ?? "",
@@ -67,10 +77,9 @@ export async function GET(req: NextRequest) {
     webhook.url ??
     `https://discord.com/api/webhooks/${webhook.id}/${webhook.token}`;
 
-  const supabase = await createClient();
   await supabase.from("platform_connections").upsert(
     {
-      user_id: userId,
+      user_id: user.id,
       platform: "discord",
       external_id: webhookUrl,
       credentials: {

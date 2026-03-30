@@ -10,7 +10,11 @@ export async function GET() {
     redirect("/dashboard/profile?error=discord_not_configured");
   }
 
-  const state = createHmac("sha256", env.DISCORD_CLIENT_SECRET ?? "secret")
+  if (!env.DISCORD_CLIENT_SECRET) {
+    throw new Error("DISCORD_CLIENT_SECRET is not set");
+  }
+
+  const state = createHmac("sha256", env.DISCORD_CLIENT_SECRET)
     .update(user.id)
     .digest("hex");
 

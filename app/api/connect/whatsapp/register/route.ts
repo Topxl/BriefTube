@@ -1,15 +1,11 @@
 import { authRoute } from "@/lib/zod-route";
 import { createClient } from "@/lib/supabase/server";
 import { env } from "@/lib/env";
+import { randomBytes } from "crypto";
 import { z } from "zod";
 
 const generateToken = (): string => {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  let token = "bt-";
-  for (let i = 0; i < 6; i++) {
-    token += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return token;
+  return `bt-${  randomBytes(4).toString("hex").toUpperCase()}`;
 };
 
 export const POST = authRoute

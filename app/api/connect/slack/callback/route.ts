@@ -19,12 +19,25 @@ export async function GET(req: NextRequest) {
     redirect("/dashboard/profile?error=slack_invalid_state");
   }
 
-  const expectedHash = createHmac("sha256", env.SLACK_CLIENT_SECRET ?? "secret")
+  if (!env.SLACK_CLIENT_SECRET) {
+    throw new Error("SLACK_CLIENT_SECRET is not set");
+  }
+
+  const expectedHash = createHmac("sha256", env.SLACK_CLIENT_SECRET)
     .update(userId)
     .digest("hex");
 
   if (stateHash !== expectedHash) {
     redirect("/dashboard/profile?error=slack_invalid_state");
+  }
+
+  // Get authenticated user from session
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    redirect("/login");
   }
 
   // Exchange code for access token
@@ -33,7 +46,7 @@ export async function GET(req: NextRequest) {
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       client_id: env.SLACK_CLIENT_ID ?? "",
-      client_secret: env.SLACK_CLIENT_SECRET ?? "",
+      client_secret: env.SLACK_CLIENT_SECRET,
       code,
       redirect_uri: env.SLACK_REDIRECT_URI ?? "",
     }),
@@ -60,10 +73,9 @@ export async function GET(req: NextRequest) {
 
   const webhookUrl = tokenData.incoming_webhook.url;
 
-  const supabase = await createClient();
   await supabase.from("platform_connections").upsert(
     {
-      user_id: userId,
+      user_id: user.id,
       platform: "slack",
       external_id: webhookUrl,
       credentials: {

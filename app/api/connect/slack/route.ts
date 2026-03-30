@@ -10,7 +10,11 @@ export async function GET() {
     redirect("/dashboard/profile?error=slack_not_configured");
   }
 
-  const state = createHmac("sha256", env.SLACK_CLIENT_SECRET ?? "secret")
+  if (!env.SLACK_CLIENT_SECRET) {
+    throw new Error("SLACK_CLIENT_SECRET is not set");
+  }
+
+  const state = createHmac("sha256", env.SLACK_CLIENT_SECRET)
     .update(user.id)
     .digest("hex");
 

@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { surveySchema } from "@/lib/survey/survey-schema";
 import { restoreSystemPausedChannels } from "@/lib/subscriptions";
+import {
+  checkRateLimit,
+  getRequestIp,
+  publicRateLimit,
+} from "@/lib/rate-limit";
 import { z } from "zod";
 
 const bodySchema = z.object({
@@ -11,6 +16,15 @@ const bodySchema = z.object({
 
 export async function POST(req: Request) {
   try {
+    const ip = getRequestIp(req);
+    const rateLimitResponse = await checkRateLimit(
+      publicRateLimit,
+      `survey:${ip}`,
+    );
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     const body = await req.json();
     const parsed = bodySchema.safeParse(body);
     if (!parsed.success) {

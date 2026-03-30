@@ -22,15 +22,29 @@ export async function GET(req: NextRequest) {
     redirect("/dashboard?error=notion_invalid_state");
   }
 
-  const expectedHash = createHmac(
-    "sha256",
-    env.NOTION_CLIENT_SECRET ?? "secret",
-  )
+  if (!env.NOTION_CLIENT_SECRET) {
+    throw new Error("NOTION_CLIENT_SECRET is not set");
+  }
+
+  const expectedHash = createHmac("sha256", env.NOTION_CLIENT_SECRET)
     .update(userId)
     .digest("hex");
 
   if (stateHash !== expectedHash) {
     redirect("/dashboard?error=notion_invalid_state");
+  }
+
+  // Get authenticated user from session
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    redirect("/login");
+  }
+
+  if (!env.NOTION_CLIENT_ID || !env.NOTION_CLIENT_SECRET) {
+    throw new Error("NOTION_CLIENT_ID or NOTION_CLIENT_SECRET is not set");
   }
 
   // Exchange code for access_token
@@ -78,14 +92,12 @@ export async function GET(req: NextRequest) {
     title: db.title[0]?.plain_text ?? "Untitled",
   }));
 
-  const supabase = await createClient();
-
   if (databases.length === 1) {
     // Auto-select the only database
     const db = databases[0];
     await supabase.from("platform_connections").upsert(
       {
-        user_id: userId,
+        user_id: user.id,
         platform: "notion",
         external_id: tokenData.workspace_id,
         credentials: {

@@ -10,8 +10,12 @@ export async function GET() {
     redirect("/dashboard?error=notion_not_configured");
   }
 
+  if (!env.NOTION_CLIENT_SECRET) {
+    throw new Error("NOTION_CLIENT_SECRET is not set");
+  }
+
   // HMAC state to prevent CSRF
-  const state = createHmac("sha256", env.NOTION_CLIENT_SECRET ?? "secret")
+  const state = createHmac("sha256", env.NOTION_CLIENT_SECRET)
     .update(user.id)
     .digest("hex");
 
