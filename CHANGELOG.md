@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-03-28
+
+FEATURE: Add AWS SES mail adapter for email sending (priority: SES → Resend → Console)
+REFACTOR: Replace direct Resend calls with sendEmail abstraction in newsletter, onboarding, and daily-digest modules
+
 ## 2026-03-30
 
 PERF: Landing page — fetch Stripe prices server-side instead of client-side API call (eliminates render waterfall)
