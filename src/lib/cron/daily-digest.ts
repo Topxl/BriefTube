@@ -4,6 +4,7 @@ import { sendEmail } from "@/lib/mail/send-email";
 import { env } from "@/lib/env";
 import { SiteConfig } from "@/site-config";
 import { DailyNewsletterEmail } from "@email/daily-newsletter";
+import { getUnsubscribeHeaders } from "@/lib/mail/unsubscribe";
 
 type NewsletterVideo = {
   videoId: string;
@@ -100,6 +101,7 @@ export async function runDailyDigestForUser(
     to: email,
     subject: `[TEST] Daily digest — ${date}`,
     html,
+    headers: getUnsubscribeHeaders(userId, "digest"),
   });
 
   await supabase.from("email_logs").insert({

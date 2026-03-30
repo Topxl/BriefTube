@@ -8,6 +8,7 @@ import {
   getTrackingPixelHtml,
   type RunResult,
 } from "@/lib/email/email-helpers";
+import { getUnsubscribeHeaders } from "@/lib/mail/unsubscribe";
 
 const EMAIL_TYPE = "survey_feedback";
 
@@ -77,6 +78,7 @@ export async function runSurveyEmails(
         to: profile.email,
         subject: "Quick question about BriefTube (+ 1 free month)",
         html: surveyEmailHtml({ surveyUrl, trackingPixelHtml }),
+        headers: getUnsubscribeHeaders(profile.id, "announcements"),
       });
 
       sent++;

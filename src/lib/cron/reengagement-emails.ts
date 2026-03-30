@@ -9,6 +9,7 @@ import {
   insertEmailLog,
   getTrackingPixelHtml,
 } from "@/lib/email/email-helpers";
+import { getUnsubscribeHeaders } from "@/lib/mail/unsubscribe";
 
 const EMAIL_TYPE = "reengagement_7d";
 
@@ -124,6 +125,7 @@ export async function runReengagementEmails(): Promise<RunResult> {
         replyTo: env.NEXT_PUBLIC_EMAIL_CONTACT ?? "contact@brief-tube.com",
         subject: "Your BriefTube channels have been quiet this week",
         html,
+        headers: getUnsubscribeHeaders(user.id, "announcements"),
       });
 
       result.sent++;

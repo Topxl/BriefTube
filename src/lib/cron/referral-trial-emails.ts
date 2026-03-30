@@ -5,6 +5,7 @@ import { logger } from "@/lib/logger";
 import { SiteConfig } from "@/site-config";
 import type { RunResult } from "@/lib/email/email-helpers";
 import { insertEmailLog, getAlreadySentIds } from "@/lib/email/email-helpers";
+import { getUnsubscribeHeaders } from "@/lib/mail/unsubscribe";
 
 type EmailType = "referral_trial_j3" | "referral_trial_j1";
 
@@ -126,6 +127,7 @@ async function processReferralEmailType(type: EmailType): Promise<RunResult> {
         to: user.email,
         subject,
         html: ReferralTrialEmail({ daysLeft, referrerName, trackingPixelUrl }),
+        headers: getUnsubscribeHeaders(user.id, "announcements"),
       });
 
       result.sent++;

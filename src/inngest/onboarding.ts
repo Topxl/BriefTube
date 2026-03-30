@@ -6,6 +6,7 @@ import { env } from "@/lib/env";
 import { SiteConfig } from "@/site-config";
 import { OnboardingJ1Email } from "@/components/emails/onboarding-j1-email";
 import { OnboardingJ3Email } from "@/components/emails/onboarding-j3-email";
+import { getUnsubscribeHeaders } from "@/lib/mail/unsubscribe";
 
 // ---------------------------------------------------------------------------
 // Helper — fetch users eligible for an onboarding email
@@ -99,6 +100,7 @@ export const sendOnboardingJ1 = inngest.createFunction(
         to: email,
         subject: "Getting the most out of BriefTube",
         html,
+        headers: getUnsubscribeHeaders(userId, "announcements"),
       });
 
       const supabase = createAdminClient();
@@ -157,6 +159,7 @@ export const sendOnboardingJ3 = inngest.createFunction(
         to: email,
         subject: "BriefTube works in any language",
         html,
+        headers: getUnsubscribeHeaders(userId, "announcements"),
       });
 
       const supabase = createAdminClient();
