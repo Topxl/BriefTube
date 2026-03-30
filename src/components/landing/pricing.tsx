@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollReveal } from "@/components/ui/scroll-reveal";
 import { formatCurrency } from "@/lib/format";
-import { usePrices } from "@/hooks/use-prices";
+import type { PricesData } from "@/hooks/use-prices";
 import { t } from "@/locales";
 
 const tl = t.landing.pricing;
@@ -36,8 +36,7 @@ const plans = [
   },
 ];
 
-export function Pricing() {
-  const { data: prices } = usePrices();
+export function Pricing({ prices }: { prices?: PricesData | null }) {
   const [interval, setInterval] = useState<Interval>("month");
 
   const priceData = prices?.monthly.amount

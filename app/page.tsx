@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
 import dynamic from "next/dynamic";
 import { Suspense } from "react";
+import { connection } from "next/server";
 import { Hero } from "@/components/landing/hero";
 import { Navbar } from "@/components/landing/navbar";
 import { SocialProof } from "@/components/landing/social-proof";
 import { SiteConfig } from "@/site-config";
+import { getStripe } from "@/lib/stripe";
+import { env } from "@/lib/env";
+import type { PricesData } from "@/hooks/use-prices";
 
 const Problem = dynamic(async () =>
   import("@/components/landing/problem").then((m) => ({ default: m.Problem })),
@@ -224,7 +228,61 @@ const jsonLd = [
   },
 ];
 
-export default function Home() {
+async function fetchPrices(): Promise<PricesData | null> {
+  try {
+    const stripe = getStripe();
+    const [proMonthly, proAnnual, plusMonthly, plusAnnual] = await Promise.all([
+      stripe.prices.retrieve(env.STRIPE_PRO_PRICE_ID),
+      stripe.prices.retrieve(env.STRIPE_PRO_ANNUAL_PRICE_ID),
+      env.STRIPE_PLUS_PRICE_ID
+        ? stripe.prices.retrieve(env.STRIPE_PLUS_PRICE_ID)
+        : null,
+      env.STRIPE_PLUS_ANNUAL_PRICE_ID
+        ? stripe.prices.retrieve(env.STRIPE_PLUS_ANNUAL_PRICE_ID)
+        : null,
+    ]);
+    return {
+      monthly: {
+        amount: proMonthly.unit_amount ?? 0,
+        currency: proMonthly.currency,
+      },
+      annual: {
+        amount: proAnnual.unit_amount ?? 0,
+        currency: proAnnual.currency,
+      },
+      plus: plusMonthly
+        ? {
+            monthly: {
+              amount: plusMonthly.unit_amount ?? 0,
+              currency: plusMonthly.currency,
+            },
+            annual: plusAnnual
+              ? {
+                  amount: plusAnnual.unit_amount ?? 0,
+                  currency: plusAnnual.currency,
+                }
+              : null,
+          }
+        : null,
+      pro: {
+        monthly: {
+          amount: proMonthly.unit_amount ?? 0,
+          currency: proMonthly.currency,
+        },
+        annual: {
+          amount: proAnnual.unit_amount ?? 0,
+          currency: proAnnual.currency,
+        },
+      },
+    };
+  } catch {
+    return null;
+  }
+}
+
+export default async function Home() {
+  await connection();
+  const prices = await fetchPrices();
   return (
     <main className="bg-background min-h-screen">
       {jsonLd.map((schema, i) => (
@@ -262,7 +320,7 @@ export default function Home() {
         <Features />
       </Suspense>
       <Suspense fallback={<div className="h-64" />}>
-        <Pricing />
+        <Pricing prices={prices} />
       </Suspense>
       <div className="section-divider" />
       <Suspense fallback={<div className="h-64" />}>

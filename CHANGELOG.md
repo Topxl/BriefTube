@@ -2,6 +2,7 @@
 
 ## 2026-03-30
 
+PERF: Landing page — fetch Stripe prices server-side instead of client-side API call (eliminates render waterfall)
 REFACTOR: Profile page perf — move Stripe price fetch to server-side (eliminates 4 client API calls after hydration)
 REFACTOR: Profile page perf — lazy-load DeliverySection, NotificationsSection, ReferralSection with dynamic()
 REFACTOR: Profile page perf — lazy-load react-qr-code (only loaded on click)
