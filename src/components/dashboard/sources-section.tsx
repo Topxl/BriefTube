@@ -51,6 +51,7 @@ type LinkPreview = {
 
 type Props = {
   initialSources: Subscription[];
+  initialListFollowSources?: Subscription[];
   maxChannels: number;
   isPro: boolean;
 };
@@ -171,9 +172,17 @@ function SourceRow({
   );
 }
 
-export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
+export function SourcesSection({
+  initialSources,
+  initialListFollowSources = [],
+  maxChannels,
+  isPro,
+}: Props) {
   const router = useRouter();
   const [sources, setSources] = useState<Subscription[]>(initialSources);
+  const [listFollowSources] = useState<Subscription[]>(
+    initialListFollowSources,
+  );
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
   const [filterStatus, setFilterStatus] = useState<"all" | "active" | "paused">(
@@ -654,7 +663,7 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
       )}
 
       {/* Channel list */}
-      {sources.length === 0 ? (
+      {sources.length === 0 && listFollowSources.length === 0 ? (
         <div className="py-10 text-center">
           <div className="nm-inset mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl">
             <Youtube className="text-muted-foreground h-5 w-5" />
@@ -666,27 +675,53 @@ export function SourcesSection({ initialSources, maxChannels, isPro }: Props) {
         </div>
       ) : !isYT ? (
         <div className="flex flex-col gap-2">
-          <div className="nm-raised overflow-hidden rounded-2xl">
-            {displayedSources.length > 0 ? (
-              <div className="divide-y divide-white/[0.04]">
-                {displayedSources.map((source) => (
-                  <SourceRow
-                    key={source.id}
-                    source={source}
-                    selected={selectedIds.has(source.id)}
-                    onSelect={toggleSelect}
-                    onToggle={toggleActive}
-                    searchQuery={searchNorm}
-                  />
-                ))}
-              </div>
-            ) : (
-              <p className="text-muted-foreground px-4 py-6 text-center text-sm">
-                No channel matching &ldquo;{searchInput}&rdquo;
-              </p>
-            )}
-          </div>
+          {/* Channels section */}
+          {sources.length > 0 && (
+            <div className="nm-raised overflow-hidden rounded-2xl">
+              {displayedSources.length > 0 ? (
+                <div className="divide-y divide-white/[0.04]">
+                  {displayedSources.map((source) => (
+                    <SourceRow
+                      key={source.id}
+                      source={source}
+                      selected={selectedIds.has(source.id)}
+                      onSelect={toggleSelect}
+                      onToggle={toggleActive}
+                      searchQuery={searchNorm}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground px-4 py-6 text-center text-sm">
+                  No channel matching &ldquo;{searchInput}&rdquo;
+                </p>
+              )}
+            </div>
+          )}
           {hasMore && <div ref={sentinelRef} className="h-4" />}
+
+          {/* From lists section */}
+          {listFollowSources.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-muted-foreground/50 px-1 text-xs font-medium tracking-wider uppercase">
+                From lists
+              </p>
+              <div className="nm-raised overflow-hidden rounded-2xl">
+                <div className="divide-y divide-white/[0.04]">
+                  {listFollowSources.map((source) => (
+                    <SourceRow
+                      key={source.id}
+                      source={source}
+                      selected={selectedIds.has(source.id)}
+                      onSelect={toggleSelect}
+                      onToggle={toggleActive}
+                      searchQuery={searchNorm}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       ) : null}
     </div>

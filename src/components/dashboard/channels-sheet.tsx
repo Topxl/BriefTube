@@ -19,11 +19,17 @@ type Subscription = Tables<"subscriptions">;
 
 type Props = {
   initialSources: Subscription[];
+  initialListFollowSources?: Subscription[];
   maxChannels: number;
   isPro: boolean;
 };
 
-export function ChannelsSheet({ initialSources, maxChannels, isPro }: Props) {
+export function ChannelsSheet({
+  initialSources,
+  initialListFollowSources = [],
+  maxChannels,
+  isPro,
+}: Props) {
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
 
@@ -32,7 +38,9 @@ export function ChannelsSheet({ initialSources, maxChannels, isPro }: Props) {
       <SheetTrigger asChild>
         <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-2">
           <Rss className="h-4 w-4" />
-          <span className="text-xs font-medium">{initialSources.length}</span>
+          <span className="text-xs font-medium">
+            {initialSources.length + initialListFollowSources.length}
+          </span>
         </Button>
       </SheetTrigger>
       <SheetContent
@@ -49,7 +57,7 @@ export function ChannelsSheet({ initialSources, maxChannels, isPro }: Props) {
             <div className="flex items-center gap-2">
               <SheetTitle className="text-sm">Channels</SheetTitle>
               <span className="text-muted-foreground/40 text-xs tabular-nums">
-                {initialSources.length}
+                {initialSources.length + initialListFollowSources.length}
               </span>
             </div>
             <SheetClose className="text-muted-foreground/50 hover:text-foreground transition-colors">
@@ -60,6 +68,7 @@ export function ChannelsSheet({ initialSources, maxChannels, isPro }: Props) {
         <div className="px-4 pt-2 pb-4">
           <SourcesSection
             initialSources={initialSources}
+            initialListFollowSources={initialListFollowSources}
             maxChannels={maxChannels}
             isPro={isPro}
           />

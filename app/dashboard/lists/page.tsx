@@ -5,6 +5,7 @@ import { Pencil, Users } from "@/lib/icons";
 import { CreateListButton } from "@/components/lists/create-list-button";
 import { ShareListButton } from "@/components/lists/share-list-button";
 import { FollowButton } from "@/components/lists/follow-button";
+import { FollowedListsSection } from "@/components/lists/followed-lists-section";
 
 const CATEGORIES = [
   "Tech",
@@ -59,7 +60,10 @@ export default async function DashboardListsPage({
       .select("referral_code")
       .eq("id", user.id)
       .single(),
-    supabase.from("list_follows").select("list_id").eq("user_id", user.id),
+    supabase
+      .from("list_follows")
+      .select("list_id, channel_lists(name, category)")
+      .eq("user_id", user.id),
     (() => {
       const q = supabase
         .from("channel_lists")
@@ -72,6 +76,21 @@ export default async function DashboardListsPage({
 
   const referralCode = profileData?.referral_code ?? null;
   const followedListIds = new Set((followedRaw ?? []).map((r) => r.list_id));
+
+  const followedItems = (followedRaw ?? [])
+    .map((r) => {
+      const list = r.channel_lists as {
+        name: string;
+        category: string | null;
+      } | null;
+      return list
+        ? { list_id: r.list_id, name: list.name, category: list.category }
+        : null;
+    })
+    .filter(
+      (x): x is { list_id: string; name: string; category: string | null } =>
+        x !== null,
+    );
 
   const allPublic = (publicLists ?? [])
     .map((l) => ({
@@ -114,6 +133,9 @@ export default async function DashboardListsPage({
 
   return (
     <div className="space-y-6 px-0.5 pt-0.5 pb-2">
+      {/* Following */}
+      <FollowedListsSection initialItems={followedItems} />
+
       {/* My lists */}
       <section className="space-y-2.5">
         <div className="flex items-center justify-between">
