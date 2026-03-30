@@ -108,6 +108,30 @@ export async function triggerSurveyEmails(): Promise<RunResult> {
   return runSurveyEmails();
 }
 
+export async function sendTestSurveyEmail(): Promise<
+  { ok: true } | { ok: false; error: string }
+> {
+  await requireAdmin();
+  const {
+    data: { user },
+  } = await (
+    await (await import("@/lib/supabase/server")).createClient()
+  ).auth.getUser();
+  if (!user?.email) return { ok: false, error: "Not authenticated" };
+
+  const { surveyEmailHtml } = await import("@/components/emails/survey-email");
+  const { sendEmail } = await import("@/lib/mail/send-email");
+
+  const surveyUrl = `${SiteConfig.prodUrl}/survey/${user.id}`;
+  await sendEmail({
+    to: user.email,
+    subject: "[TEST] Quick question about BriefTube (+ 1 free month)",
+    html: surveyEmailHtml({ surveyUrl }),
+  });
+
+  return { ok: true };
+}
+
 export async function triggerTestDailyDigest(): Promise<{
   sent: boolean;
   skipped: boolean;
