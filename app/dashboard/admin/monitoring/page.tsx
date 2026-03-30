@@ -25,12 +25,20 @@ import { ReengagementEmailsButton } from "@/components/admin/reengagement-emails
 import { ReferralTrialEmailsButton } from "@/components/admin/referral-trial-emails-button";
 import { OnboardingApologyButton } from "@/components/admin/onboarding-apology-button";
 import { ExtendTrialsButton } from "@/components/admin/extend-trials-button";
+import { SurveyEmailsButton } from "@/components/admin/survey-emails-button";
 import { ServicesHealth } from "@/components/admin/services-health";
 import {
   getPostHogTotalVisitors,
   getPostHogDailyVisitors,
   type DailyVisitorCount,
 } from "@/lib/posthog-server";
+import {
+  PMF_OPTIONS,
+  BENEFIT_OPTIONS,
+  FRICTION_OPTIONS,
+  IMPROVEMENT_OPTIONS,
+  REFERRAL_OPTIONS,
+} from "@/lib/survey/survey-schema";
 
 // ---------------------------------------------------------------
 // Types
@@ -123,6 +131,18 @@ type CancellationFeedbackRow = {
   created_at: string;
 };
 
+type SurveyResponseRow = {
+  id: string;
+  user_id: string;
+  q1_pmf: string;
+  q2_benefit: string;
+  q3_friction: string[];
+  q4_improvement: string[];
+  q5_referral: string;
+  q6_freetext: string | null;
+  created_at: string;
+};
+
 type EmailLogRow = { email_type: string | null; created_at: string | null };
 type EmailTypeStats = {
   total: number;
@@ -139,6 +159,7 @@ const EMAIL_TYPE_LABELS: Record<string, string> = {
   referral_trial_j3: "Parrainage J-3",
   referral_trial_j1: "Parrainage J-1",
   onboarding_apology: "Onboarding apology",
+  survey_feedback: "Survey feedback",
 };
 
 // ---------------------------------------------------------------
@@ -738,6 +759,14 @@ export default async function AdminPage() {
     totalEmailsSent30d > 0
       ? Math.round(((emailsOpened30d ?? 0) / totalEmailsSent30d) * 100)
       : 0;
+
+  // ── Survey results ─────────────────────────────────────────────
+  const { data: surveyResponsesRaw, count: surveyCount } = await admin
+    .from("survey_responses")
+    .select("*", { count: "exact" })
+    .order("created_at", { ascending: false });
+  const surveyResponses =
+    (surveyResponsesRaw as unknown as SurveyResponseRow[] | null) ?? [];
 
   // ── Users who added channels + source breakdown + onboarding ────
   // Use RPC for accurate distinct count (avoids PostgREST row pagination issues)
@@ -1632,6 +1661,12 @@ export default async function AdminPage() {
           </p>
           <OnboardingApologyButton />
         </div>
+        <div className="nm-raised flex flex-col gap-2 rounded-xl px-4 py-3">
+          <p className="text-muted-foreground text-sm">
+            Send survey emails (users who haven't responded)
+          </p>
+          <SurveyEmailsButton />
+        </div>
       </div>
 
       {/* Churn feedbacks */}
@@ -1679,6 +1714,143 @@ export default async function AdminPage() {
           )}
         </div>
       </div>
+
+      {/* ── Survey Results ─────────────────────────────────────────── */}
+      {surveyResponses.length > 0 && (
+        <section className="flex flex-col gap-4">
+          <h2 className="text-lg font-semibold">
+            Survey Results ({surveyCount})
+          </h2>
+
+          {/* PMF Score */}
+          {(() => {
+            const total = surveyResponses.length;
+            const vd = surveyResponses.filter(
+              (r) => r.q1_pmf === "very_disappointed",
+            ).length;
+            const pmfScore = total > 0 ? Math.round((vd / total) * 100) : 0;
+            const color =
+              pmfScore >= 40
+                ? "text-emerald-400"
+                : pmfScore >= 20
+                  ? "text-yellow-400"
+                  : "text-red-400";
+            return (
+              <div className="rounded-xl border border-white/[0.06] bg-zinc-900 p-5">
+                <p className="text-muted-foreground text-sm">
+                  PMF Score (Sean Ellis)
+                </p>
+                <p className={`text-3xl font-bold ${color}`}>{pmfScore}%</p>
+                <p className="text-muted-foreground mt-1 text-xs">
+                  {vd}/{total} would be "very disappointed" without BriefTube
+                  (target: ≥40%)
+                </p>
+              </div>
+            );
+          })()}
+
+          {/* Q1-Q5 Breakdowns */}
+          {[
+            {
+              key: "q1_pmf" as const,
+              title: "Q1. Feel without BriefTube",
+              options: PMF_OPTIONS,
+            },
+            {
+              key: "q2_benefit" as const,
+              title: "Q2. Main benefit",
+              options: BENEFIT_OPTIONS,
+            },
+            {
+              key: "q3_friction" as const,
+              title: "Q3. What stopped you",
+              options: FRICTION_OPTIONS,
+              multi: true,
+            },
+            {
+              key: "q4_improvement" as const,
+              title: "Q4. What would help",
+              options: IMPROVEMENT_OPTIONS,
+              multi: true,
+            },
+            {
+              key: "q5_referral" as const,
+              title: "Q5. Who would benefit",
+              options: REFERRAL_OPTIONS,
+            },
+          ].map(({ key, title, options, multi }) => {
+            const counts: Record<string, number> = {};
+            options.forEach((o) => {
+              counts[o.value] = 0;
+            });
+            surveyResponses.forEach((r: SurveyResponseRow) => {
+              if (multi) {
+                const arr = r[key] as string[] | null | undefined;
+                (arr ?? []).forEach((v: string) => {
+                  counts[v] = (counts[v] ?? 0) + 1;
+                });
+              } else {
+                const val = r[key];
+                if (val && typeof val === "string") {
+                  counts[val] = (counts[val] ?? 0) + 1;
+                }
+              }
+            });
+            const max = Math.max(...Object.values(counts), 1);
+            return (
+              <div
+                key={key}
+                className="rounded-xl border border-white/[0.06] bg-zinc-900 p-5"
+              >
+                <p className="mb-3 text-sm font-medium text-white">{title}</p>
+                <div className="flex flex-col gap-1.5">
+                  {options.map((o) => (
+                    <div key={o.value} className="flex items-center gap-3">
+                      <div className="w-36 shrink-0 truncate text-xs text-zinc-400">
+                        {o.label}
+                      </div>
+                      <div className="h-4 flex-1 overflow-hidden rounded bg-zinc-800">
+                        <div
+                          className="h-full rounded bg-red-600/60"
+                          style={{
+                            width: `${(counts[o.value] / max) * 100}%`,
+                          }}
+                        />
+                      </div>
+                      <span className="w-8 text-right text-xs text-zinc-500">
+                        {counts[o.value]}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+
+          {surveyResponses.some((r: SurveyResponseRow) => r.q6_freetext) && (
+            <div className="rounded-xl border border-white/[0.06] bg-zinc-900 p-5">
+              <p className="mb-3 text-sm font-medium text-white">
+                Q6. Open feedback
+              </p>
+              <div className="flex max-h-80 flex-col gap-2 overflow-y-auto">
+                {surveyResponses
+                  .filter((r: SurveyResponseRow) => r.q6_freetext)
+                  .map((r: SurveyResponseRow) => (
+                    <div
+                      key={r.id}
+                      className="rounded-lg bg-zinc-800 px-3 py-2"
+                    >
+                      <p className="text-sm text-zinc-300">{r.q6_freetext}</p>
+                      <p className="mt-1 text-xs text-zinc-600">
+                        {new Date(r.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+        </section>
+      )}
     </div>
   );
 }

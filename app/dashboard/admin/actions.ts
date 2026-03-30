@@ -16,6 +16,7 @@ import { SiteConfig } from "@/site-config";
 import { runDailyDigestForUser } from "@/lib/cron/daily-digest";
 import { restoreSystemPausedChannels } from "@/lib/subscriptions";
 import { requireAdmin } from "@/lib/auth/require-admin";
+import { runSurveyEmails } from "@/lib/cron/survey-emails";
 
 type RunResult = { sent: number; skipped: number; errors: number };
 
@@ -100,6 +101,11 @@ export async function triggerReferralTrialEmails(): Promise<ReferralTrialResult>
 export async function triggerOnboardingApologyEmails(): Promise<RunResult> {
   await requireAdmin();
   return runOnboardingApologyEmails();
+}
+
+export async function triggerSurveyEmails(): Promise<RunResult> {
+  await requireAdmin();
+  return runSurveyEmails();
 }
 
 export async function triggerTestDailyDigest(): Promise<{
