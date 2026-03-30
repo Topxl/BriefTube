@@ -1,7 +1,7 @@
 import { render } from "@react-email/render";
 import { inngest } from "./client";
 import { createAdminClient } from "@/lib/supabase/server";
-import { resend } from "@/lib/mail/resend";
+import { sendEmail } from "@/lib/mail/send-email";
 import { env } from "@/lib/env";
 import { SiteConfig } from "@/site-config";
 import { OnboardingJ1Email } from "@/components/emails/onboarding-j1-email";
@@ -94,7 +94,7 @@ export const sendOnboardingJ1 = inngest.createFunction(
         OnboardingJ1Email({ dashboardUrl: `${SiteConfig.prodUrl}/dashboard` }),
       );
 
-      await resend.emails.send({
+      await sendEmail({
         from: env.EMAIL_FROM ?? `BriefTube <hello@${SiteConfig.domain}>`,
         to: email,
         subject: "Getting the most out of BriefTube",
@@ -152,7 +152,7 @@ export const sendOnboardingJ3 = inngest.createFunction(
         }),
       );
 
-      await resend.emails.send({
+      await sendEmail({
         from: env.EMAIL_FROM ?? `BriefTube <hello@${SiteConfig.domain}>`,
         to: email,
         subject: "BriefTube works in any language",

@@ -1,7 +1,7 @@
 import { render } from "@react-email/render";
 import { inngest } from "./client";
 import { createAdminClient } from "@/lib/supabase/server";
-import { resend } from "@/lib/mail/resend";
+import { sendEmail } from "@/lib/mail/send-email";
 import { env } from "@/lib/env";
 import { SiteConfig } from "@/site-config";
 import { DailyNewsletterEmail } from "@email/daily-newsletter";
@@ -152,7 +152,7 @@ export const sendUserNewsletter = inngest.createFunction(
         }),
       );
 
-      await resend.emails.send({
+      await sendEmail({
         from: env.EMAIL_FROM ?? `BriefTube <hello@${SiteConfig.domain}>`,
         to: email,
         subject: `Your daily summaries — ${date}`,
