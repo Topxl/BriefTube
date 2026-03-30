@@ -394,10 +394,9 @@ class TranscriptExtractor:
                 if ip_blocked:
                     mark_direct_blocked()
 
-            # Step 2 removed: do NOT use Webshare here.
-            # If the VPS IP is blocked, Invidious/Piped (steps 2b/2c below) serve
-            # the same transcript for free. Webshare is reserved for yt-dlp as
-            # absolute last resort only.
+            # Step 2 (lightweight proxy): youtube-transcript-api via Webshare is tried
+            # at step 2d, only after free alternatives (Invidious/Piped) fail.
+            # This costs <<1 KB vs 10-100 MB for yt-dlp/Whisper via proxy.
 
             if detected_lang == 'auto' and transcript_data is not None:
                 logger.info("Found transcript via multi-language fallback")
@@ -422,7 +421,23 @@ class TranscriptExtractor:
                     self.last_transcript_source = "piped"
                     return piped_text, piped_lang, None, 0.0
 
-                # Step 2d: Try yt-dlp (detects live/premiere, player_client fallbacks)
+                # Step 2d: youtube-transcript-api via Webshare proxy.
+                # Much lighter than yt-dlp (KB vs MB of metadata) — preferred when
+                # Invidious/Piped are unavailable but native subtitles exist.
+                http_proxy = os.environ.get("YOUTUBE_PROXY_HTTP", "")
+                if http_proxy:
+                    api_proxy = self._get_api(use_proxy=True)
+                    proxy_data, proxy_lang, proxy_blocked = _fetch_with_api(api_proxy)
+                    if proxy_data is not None:
+                        full_text = " ".join([entry.text for entry in proxy_data])
+                        logger.info(
+                            f"✅ YouTube transcript via proxy ({len(full_text)} chars) "
+                            f"in language: {proxy_lang}"
+                        )
+                        self.last_transcript_source = "youtube_api"
+                        return full_text, proxy_lang, None, 0.0
+
+                # Step 2e: Try yt-dlp (detects live/premiere, player_client fallbacks)
                 # Tried after proxies: slower on bot-detected IPs but catches edge cases
                 vtt_text, vtt_lang, vtt_error = self._ytdlp_subtitles(youtube_url, preferred_languages)
                 if vtt_text:
@@ -435,7 +450,7 @@ class TranscriptExtractor:
                     # Live stream in progress — no captions yet, skip Whisper entirely
                     return None, None, "video_is_live", 0.0
 
-                # Step 3: Whisper API fallback (paid, uses Groq quota)
+                # Step 4: Whisper API fallback (paid, uses Groq quota)
                 if self.enable_whisper_fallback and self.whisper_transcriber:
                     logger.warning("YouTube transcripts not available, trying Whisper API fallback...")
                     self.last_transcript_source = "whisper"

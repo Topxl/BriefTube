@@ -2,6 +2,7 @@
 
 ## 2026-03-30
 
+REFACTOR: transcript_extractor — add youtube-transcript-api via proxy (step 2d) before yt-dlp to reduce bandwidth cost
 REFACTOR: Worker — centralize geo-bypass proxy loop into youtube_utils.run_geo_bypass(); eliminate duplicated patterns in transcript_extractor and whisper_transcriber
 CHORE: Worker — remove YOUTUBE_PROXY_HTTP_GEO (replaced by YOUTUBE_PROXY_HTTP_GEO_TEMPLATE); remove get_geo_proxy_urls() (replaced by get_geo_proxy_urls_for_language())
 FEATURE: Worker — expand geo-bypass to 60+ languages and 30 countries; language-mapped country always tried first even if not in default list (TH, KR, IN, BR, etc.)
