@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { Copy, Check, Share2 } from "@/lib/icons";
 import { SiteConfig } from "@/site-config";
-import QRCode from "react-qr-code";
+
+const QRCode = dynamic(async () => import("react-qr-code"), { ssr: false });
 
 const shareText = `I use BriefTube to get AI audio summaries of YouTube videos delivered to my Telegram — try it:`;
 

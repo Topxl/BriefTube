@@ -1,9 +1,10 @@
 # Changelog
 
-## 2026-03-28
+## 2026-03-30
 
-CHORE: Lazy-load profile page sections — DeliverySection, NotificationsSection, ReferralSection now use dynamic() with ssr: false
-CHORE: Lazy-load react-qr-code in ReferralSection — import with dynamic() instead of eager import
+REFACTOR: Profile page perf — move Stripe price fetch to server-side (eliminates 4 client API calls after hydration)
+REFACTOR: Profile page perf — lazy-load DeliverySection, NotificationsSection, ReferralSection with dynamic()
+REFACTOR: Profile page perf — lazy-load react-qr-code (only loaded on click)
 
 ## 2026-03-29
 
