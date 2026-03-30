@@ -103,14 +103,16 @@ export async function triggerOnboardingApologyEmails(): Promise<RunResult> {
   return runOnboardingApologyEmails();
 }
 
-export async function triggerSurveyEmails(): Promise<RunResult> {
+export async function triggerSurveyEmails(
+  target: "all" | "active" | "inactive" = "all",
+): Promise<RunResult> {
   await requireAdmin();
-  return runSurveyEmails();
+  return runSurveyEmails(target);
 }
 
-export async function sendTestSurveyEmail(): Promise<
-  { ok: true } | { ok: false; error: string }
-> {
+export async function sendTestSurveyEmail(
+  persona: "active" | "inactive",
+): Promise<{ ok: true } | { ok: false; error: string }> {
   await requireAdmin();
   const {
     data: { user },
@@ -122,10 +124,11 @@ export async function sendTestSurveyEmail(): Promise<
   const { surveyEmailHtml } = await import("@/components/emails/survey-email");
   const { sendEmail } = await import("@/lib/mail/send-email");
 
-  const surveyUrl = `${SiteConfig.prodUrl}/survey/${user.id}`;
+  // Force the persona in the URL so admin can test both questionnaires
+  const surveyUrl = `${SiteConfig.prodUrl}/survey/${user.id}?persona=${persona}`;
   await sendEmail({
     to: user.email,
-    subject: "[TEST] Quick question about BriefTube (+ 1 free month)",
+    subject: `[TEST-${persona.toUpperCase()}] Quick question about BriefTube (+ 1 free month)`,
     html: surveyEmailHtml({ surveyUrl }),
   });
 

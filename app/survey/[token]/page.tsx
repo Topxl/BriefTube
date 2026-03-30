@@ -10,10 +10,12 @@ export const metadata: Metadata = {
 
 type Props = {
   params: Promise<{ token: string }>;
+  searchParams: Promise<{ persona?: string }>;
 };
 
-export default async function SurveyPage({ params }: Props) {
+export default async function SurveyPage({ params, searchParams }: Props) {
   const { token } = await params;
+  const { persona: personaOverride } = await searchParams;
 
   if (
     !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
@@ -59,7 +61,11 @@ export default async function SurveyPage({ params }: Props) {
     .eq("user_id", token)
     .eq("status", "sent");
 
-  const persona = (deliveryCount ?? 0) > 0 ? "active" : "inactive";
+  const detected = (deliveryCount ?? 0) > 0 ? "active" : "inactive";
+  const persona =
+    personaOverride === "active" || personaOverride === "inactive"
+      ? personaOverride
+      : detected;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-950 px-4 py-12">
