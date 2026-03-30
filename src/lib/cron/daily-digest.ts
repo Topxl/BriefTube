@@ -99,7 +99,7 @@ export async function runDailyDigestForUser(
   await sendEmail({
     from: env.EMAIL_FROM ?? `BriefTube <hello@${SiteConfig.domain}>`,
     to: email,
-    subject: `[TEST] Daily digest — ${date}`,
+    subject: `your ${videos.length} summaries are ready`,
     html,
     headers: getUnsubscribeHeaders(userId, "digest"),
   });

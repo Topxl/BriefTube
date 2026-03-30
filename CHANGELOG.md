@@ -1,12 +1,24 @@
 # Changelog
 
+## 2026-03-27
+
+FEAT: Rewrite email subject lines for higher open rates (trial reminders, activation, digest)
+
+## 2026-03-27
+
+FEAT: Video pages — add HTML5 audio player + AudioObject schema for SEO
+FIX: Data — correct 348 subscriptions with paused_by_system=true but active=true (inconsistent state)
+
 ## 2026-03-28
 
 FEATURE: Add List-Unsubscribe headers to all outgoing emails for improved deliverability (RFC 8058 one-click unsubscribe)
 
 ## 2026-03-31
 
+FIX: Worker audio download — implement proxy circuit breaker (open after 5 consecutive failures, skip timeout waits)
 PERF: Admin monitoring — merge 8 sequential query batches into 1 parallel batch (significantly faster page load)
+FIX: Worker delivery watchdog — skip restart if queue is empty (reduces false-positive restarts)
+FIX: Worker delivery loop — implement exponential backoff on stuck restarts (5s → 10s → 30s → 60s, resets on successful delivery)
 
 ## 2026-03-27
 

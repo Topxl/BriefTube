@@ -20,7 +20,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const { data: video } = await supabase
     .from("processed_videos")
-    .select("video_id, video_title, summary, channel_id, created_at, language")
+    .select(
+      "video_id, video_title, summary, channel_id, created_at, language, audio_url",
+    )
     .eq("video_id", video_id)
     .eq("status", "completed")
     .order("created_at", { ascending: true })
@@ -70,7 +72,9 @@ export default async function VideoPage({ params }: Props) {
   // Fetch video — pick the earliest language version (original) when multiple exist
   const { data: video } = await supabase
     .from("processed_videos")
-    .select("video_id, video_title, summary, channel_id, created_at, language")
+    .select(
+      "video_id, video_title, summary, channel_id, created_at, language, audio_url",
+    )
     .eq("video_id", video_id)
     .eq("status", "completed")
     .order("created_at", { ascending: true })
@@ -139,6 +143,16 @@ export default async function VideoPage({ params }: Props) {
     wordCount,
     articleSection: "YouTube Summary",
     inLanguage: video.language || "en",
+    ...(video.audio_url
+      ? {
+          audio: {
+            "@type": "AudioObject",
+            contentUrl: video.audio_url,
+            encodingFormat: "audio/mpeg",
+            name: `Audio summary of ${video.video_title}`,
+          },
+        }
+      : {}),
   };
 
   const breadcrumbLd = {
@@ -226,6 +240,23 @@ export default async function VideoPage({ params }: Props) {
                 {formattedDate && <span>{formattedDate}</span>}
               </div>
             </header>
+
+            {/* Audio player */}
+            {video.audio_url && (
+              <div className="flex flex-col gap-2">
+                <p className="text-muted-foreground text-xs font-medium tracking-widest uppercase">
+                  Audio Summary
+                </p>
+                <audio
+                  controls
+                  preload="metadata"
+                  className="w-full rounded-lg"
+                  src={video.audio_url}
+                >
+                  Your browser does not support the audio element.
+                </audio>
+              </div>
+            )}
 
             {/* Summary section */}
             <div>
