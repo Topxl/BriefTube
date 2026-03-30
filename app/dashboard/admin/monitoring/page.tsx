@@ -25,7 +25,6 @@ import { ReengagementEmailsButton } from "@/components/admin/reengagement-emails
 import { ReferralTrialEmailsButton } from "@/components/admin/referral-trial-emails-button";
 import { OnboardingApologyButton } from "@/components/admin/onboarding-apology-button";
 import { ExtendTrialsButton } from "@/components/admin/extend-trials-button";
-import { SurveyEmailsButton } from "@/components/admin/survey-emails-button";
 import { ServicesHealth } from "@/components/admin/services-health";
 import {
   getPostHogTotalVisitors,
@@ -1660,12 +1659,6 @@ export default async function AdminPage() {
             Send onboarding apology emails (Feb 22–28 · one-time · deduped)
           </p>
           <OnboardingApologyButton />
-        </div>
-        <div className="nm-raised flex flex-col gap-2 rounded-xl px-4 py-3">
-          <p className="text-muted-foreground text-sm">
-            Send survey emails (users who haven't responded)
-          </p>
-          <SurveyEmailsButton />
         </div>
       </div>
 

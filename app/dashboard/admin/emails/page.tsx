@@ -6,6 +6,7 @@ import { Send, CheckCircle, Eye } from "@/lib/icons";
 import { AdminBreadcrumb } from "@/components/admin/admin-breadcrumb";
 import { DigestTriggerButton } from "@/components/admin/digest-trigger-button";
 import { AnnouncementSendButton } from "@/components/admin/announcement-send-button";
+import { SurveyEmailsButton } from "@/components/admin/survey-emails-button";
 import { EMAIL_WORKFLOWS } from "@/lib/email-workflows";
 import type { WorkflowDef, ConversionMetric } from "@/lib/email-workflows";
 
@@ -498,6 +499,17 @@ export default async function AdminEmailsPage() {
             </div>
           </div>
           <AnnouncementSendButton />
+        </div>
+        <div className="nm-raised flex flex-col gap-3 rounded-xl p-4">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <p className="text-sm leading-tight font-semibold">PMF Survey</p>
+              <p className="text-muted-foreground mt-0.5 text-[11px] leading-snug">
+                6 questions · 1 free month reward · all users
+              </p>
+            </div>
+          </div>
+          <SurveyEmailsButton />
         </div>
       </div>
 
