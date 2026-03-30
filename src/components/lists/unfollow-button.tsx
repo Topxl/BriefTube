@@ -1,17 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Loader2 } from "@/lib/icons";
 import { toast } from "sonner";
 
 type Props = {
   listId: string;
   listName: string;
-  onUnfollowed: () => void;
 };
 
-export function UnfollowButton({ listId, listName, onUnfollowed }: Props) {
+export function UnfollowButton({ listId, listName }: Props) {
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const handleUnfollow = async () => {
     setLoading(true);
@@ -29,7 +30,7 @@ export function UnfollowButton({ listId, listName, onUnfollowed }: Props) {
       }
       if (!data.following) {
         toast.success(`Unfollowed "${listName}"`);
-        onUnfollowed();
+        router.refresh();
       }
     } catch {
       toast.error("Something went wrong");
