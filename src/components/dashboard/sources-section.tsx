@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
@@ -16,6 +17,7 @@ import {
   Check,
   Youtube,
   RefreshCw,
+  Pencil,
 } from "@/lib/icons";
 import { dialogManager } from "@/features/dialog-manager/dialog-manager";
 import { openUpsellModal } from "@/components/dashboard/upsell-modal";
@@ -25,6 +27,12 @@ import { extractVideoId } from "@/lib/youtube-id";
 import type { Tables } from "@/types/supabase";
 
 type Subscription = Tables<"subscriptions">;
+
+type FollowedListMeta = {
+  list_id: string;
+  name: string;
+  channel_count: number;
+};
 
 const INITIAL_VISIBLE = 20;
 const LOAD_MORE_STEP = 10;
@@ -51,7 +59,7 @@ type LinkPreview = {
 
 type Props = {
   initialSources: Subscription[];
-  initialListFollowSources?: Subscription[];
+  followedLists?: FollowedListMeta[];
   maxChannels: number;
   isPro: boolean;
 };
@@ -174,15 +182,12 @@ function SourceRow({
 
 export function SourcesSection({
   initialSources,
-  initialListFollowSources = [],
+  followedLists = [],
   maxChannels,
   isPro,
 }: Props) {
   const router = useRouter();
   const [sources, setSources] = useState<Subscription[]>(initialSources);
-  const [listFollowSources] = useState<Subscription[]>(
-    initialListFollowSources,
-  );
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
   const [filterStatus, setFilterStatus] = useState<"all" | "active" | "paused">(
@@ -468,6 +473,36 @@ export function SourcesSection({
 
   return (
     <div className="flex flex-col gap-2">
+      {/* Followed lists — horizontal scroll */}
+      {followedLists.length > 0 && (
+        <div className="-mx-1 overflow-x-auto pb-1">
+          <div className="flex gap-2 px-1">
+            {followedLists.map((list) => (
+              <div
+                key={list.list_id}
+                className="nm-raised-sm flex shrink-0 items-center gap-1 rounded-xl py-1.5 pr-1 pl-3"
+              >
+                <Link
+                  href={`/lists/${list.list_id}`}
+                  className="flex items-center gap-1.5 text-xs font-medium transition-colors hover:text-white/90"
+                >
+                  <span>{list.name}</span>
+                  <span className="text-muted-foreground/50 text-[10px] font-normal">
+                    {list.channel_count}
+                  </span>
+                </Link>
+                <Link
+                  href={`/lists/${list.list_id}/edit`}
+                  className="text-muted-foreground/30 hover:text-muted-foreground ml-1 rounded-lg p-1 transition-colors"
+                >
+                  <Pencil className="h-2.5 w-2.5" />
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Unified search / add input */}
       <div className="relative">
         {isYT ? (
@@ -663,7 +698,7 @@ export function SourcesSection({
       )}
 
       {/* Channel list */}
-      {sources.length === 0 && listFollowSources.length === 0 ? (
+      {sources.length === 0 ? (
         <div className="py-10 text-center">
           <div className="nm-inset mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl">
             <Youtube className="text-muted-foreground h-5 w-5" />
@@ -699,29 +734,6 @@ export function SourcesSection({
             </div>
           )}
           {hasMore && <div ref={sentinelRef} className="h-4" />}
-
-          {/* From lists section */}
-          {listFollowSources.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-muted-foreground/50 px-1 text-xs font-medium tracking-wider uppercase">
-                From lists
-              </p>
-              <div className="nm-raised overflow-hidden rounded-2xl">
-                <div className="divide-y divide-white/[0.04]">
-                  {listFollowSources.map((source) => (
-                    <SourceRow
-                      key={source.id}
-                      source={source}
-                      selected={selectedIds.has(source.id)}
-                      onSelect={toggleSelect}
-                      onToggle={toggleActive}
-                      searchQuery={searchNorm}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       ) : null}
     </div>

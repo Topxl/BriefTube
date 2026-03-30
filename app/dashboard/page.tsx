@@ -73,12 +73,18 @@ async function DashboardBanners({ userId }: { userId: string }) {
   );
 }
 
+type FollowedListMeta = {
+  list_id: string;
+  name: string;
+  channel_count: number;
+};
+
 async function ChannelsSheetSection({ userId }: { userId: string }) {
   const profile = await getProfile(userId);
   if (!profile) return null;
 
   const supabase = await createClient();
-  const [{ data: sources }, { data: listFollowSources }] = await Promise.all([
+  const [{ data: sources }, { data: listFollows }] = await Promise.all([
     supabase
       .from("subscriptions")
       .select("*")
@@ -86,12 +92,30 @@ async function ChannelsSheetSection({ userId }: { userId: string }) {
       .or("source_type.is.null,source_type.eq.youtube_channel")
       .order("created_at", { ascending: false }),
     supabase
-      .from("subscriptions")
-      .select("*")
+      .from("list_follows")
+      .select(
+        "list_id, channel_lists(id, name, category, list_channels(count))",
+      )
       .eq("user_id", userId)
-      .eq("source_type", "list_follow")
       .order("created_at", { ascending: false }),
   ]);
+
+  const followedLists: FollowedListMeta[] = (listFollows ?? []).map((item) => {
+    const listData = item.channel_lists as {
+      id: string;
+      name: string;
+      category: string | null;
+      list_channels: { count: number }[];
+    } | null;
+    const count =
+      (listData?.list_channels as { count: number }[] | undefined)?.[0]
+        ?.count ?? 0;
+    return {
+      list_id: item.list_id,
+      name: listData?.name ?? "Unknown",
+      channel_count: count,
+    };
+  });
 
   const isPro =
     profile.subscription_status === "active" ||
@@ -102,7 +126,7 @@ async function ChannelsSheetSection({ userId }: { userId: string }) {
   return (
     <ChannelsSheet
       initialSources={sources ?? []}
-      initialListFollowSources={listFollowSources ?? []}
+      followedLists={followedLists}
       maxChannels={maxChannels}
       isPro={isPro}
     />
