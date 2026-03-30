@@ -123,7 +123,7 @@ def mark_video_completed(
     sb.table("processed_videos").update(update_data).eq("video_id", video_id).eq("language", language).execute()
 
 
-def mark_video_failed(video_id: str, language: str = "fr", immediate: bool = False, all_languages: bool = False):
+def mark_video_failed(video_id: str, language: str = "fr", immediate: bool = False, all_languages: bool = False, error_reason: str | None = None):
     sb = get_client()
     # Increment failure_count — use execute() (not .single()) to avoid throwing
     # if the row was deleted between job pick and failure handling.
@@ -140,10 +140,10 @@ def mark_video_failed(video_id: str, language: str = "fr", immediate: bool = Fal
         for row in (res.data or []):
             count = (row.get("failure_count") or 0) + 1
             status = "failed" if (immediate or count >= 3) else "pending"
-            sb.table("processed_videos").update({
-                "failure_count": count,
-                "status": status,
-            }).eq("video_id", video_id).eq("language", row["language"]).execute()
+            update_dict = {"failure_count": count, "status": status}
+            if error_reason:
+                update_dict["metadata"] = {"error": error_reason}
+            sb.table("processed_videos").update(update_dict).eq("video_id", video_id).eq("language", row["language"]).execute()
         return
 
     res = (
@@ -157,10 +157,10 @@ def mark_video_failed(video_id: str, language: str = "fr", immediate: bool = Fal
         return  # Row gone — nothing to update
     count = (res.data[0].get("failure_count") or 0) + 1
     status = "failed" if (immediate or count >= 3) else "pending"
-    sb.table("processed_videos").update({
-        "failure_count": count,
-        "status": status,
-    }).eq("video_id", video_id).eq("language", language).execute()
+    update_dict = {"failure_count": count, "status": status}
+    if error_reason:
+        update_dict["metadata"] = {"error": error_reason}
+    sb.table("processed_videos").update(update_dict).eq("video_id", video_id).eq("language", language).execute()
 
 
 def insert_new_video(video_id: str, channel_id: str, video_title: str, video_url: str, language: str = "fr"):
@@ -263,7 +263,7 @@ def snooze_job(job_id: str, hours: int = 0, minutes: int = 0) -> None:
     logger.info(f"Job {job_id} snoozed for {label}")
 
 
-def fail_job(job_id: str, immediate: bool = False, retry_after_minutes: int = 0) -> bool:
+def fail_job(job_id: str, immediate: bool = False, retry_after_minutes: int = 0, error_reason: str | None = None) -> bool:
     """Mark a job as failed. Returns True if this was a permanent failure.
 
     immediate=True skips the 3-attempt retry cycle and fails permanently on
@@ -295,7 +295,7 @@ def fail_job(job_id: str, immediate: bool = False, retry_after_minutes: int = 0)
         if video_id:
             # Sync ALL pending language variants — if a job fails permanently,
             # the video itself is unreachable so every language row must fail too.
-            mark_video_failed(video_id, language=user_language, immediate=True, all_languages=True)
+            mark_video_failed(video_id, language=user_language, immediate=True, all_languages=True, error_reason=error_reason)
         return True
     return False
 

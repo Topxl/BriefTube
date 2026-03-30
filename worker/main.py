@@ -414,7 +414,7 @@ async def _process_video(
                 logger.info(
                     f"[{video_id}] Skipping permanently ({error}): {video_title[:80]}"
                 )
-                db.fail_job(job["id"], immediate=True)
+                db.fail_job(job["id"], immediate=True, error_reason=error)
                 return
 
             # Premiere/scheduled video — snooze until it starts, no failure notification.
@@ -438,7 +438,7 @@ async def _process_video(
                     logger.info(
                         f"[{video_id}] Premiere stale (>7 days) — failing permanently: {video_title[:80]}"
                     )
-                    db.fail_job(job["id"], immediate=True)
+                    db.fail_job(job["id"], immediate=True, error_reason="premiere_stale")
                 else:
                     logger.info(
                         f"[{video_id}] Premiere/scheduled — snoozed for {hours}h: {video_title[:80]}"
@@ -489,13 +489,14 @@ async def _process_video(
                 permanent = db.fail_job(
                     job["id"],
                     retry_after_minutes=30 if error == "youtube_auth_required" else 0,
+                    error_reason=error,
                 )
                 if permanent:
                     await _notify_video_failure(video_id, alert_system, video_title, error)
             else:
                 # Deterministic failure — fail immediately, notify user.
                 logger.info(f"[{video_id}] Permanent transcript failure ({error}) — no retry")
-                db.fail_job(job["id"], immediate=True)
+                db.fail_job(job["id"], immediate=True, error_reason=error)
                 stats.record_video_failed("TranscriptUnavailable", error or "no_transcript")
                 await _notify_video_failure(video_id, alert_system, video_title, error)
             return
@@ -525,7 +526,7 @@ async def _process_video(
         if not summary:
             if summary_error == "transcript_too_short":
                 logger.info(f"[{video_id}] Transcript too short — skipping permanently: {video_title[:80]}")
-                db.fail_job(job["id"], immediate=True)
+                db.fail_job(job["id"], immediate=True, error_reason="transcript_too_short")
                 return
 
             # Gemini failed — try OpenRouter as fallback
@@ -632,9 +633,9 @@ async def _process_video(
 
     except asyncio.TimeoutError:
         logger.error(f"[{video_id}] Timeout")
-        permanent = db.fail_job(job["id"])
+        permanent = db.fail_job(job["id"], error_reason="timeout")
         if not _video_completed:
-            db.mark_video_failed(video_id, language=user_language)
+            db.mark_video_failed(video_id, language=user_language, error_reason="timeout")
             if permanent:
                 await _notify_video_failure(video_id, alert_system, video_title, "timeout")
         else:
@@ -646,9 +647,9 @@ async def _process_video(
         error_msg = str(e)
         logger.error(f"[{video_id}] Error: {error_msg}")
 
-        permanent = db.fail_job(job["id"])
+        permanent = db.fail_job(job["id"], error_reason=type(e).__name__)
         if not _video_completed:
-            db.mark_video_failed(video_id, language=user_language)
+            db.mark_video_failed(video_id, language=user_language, error_reason=type(e).__name__)
             if permanent:
                 await _notify_video_failure(video_id, alert_system, video_title, type(e).__name__)
         else:
@@ -790,8 +791,8 @@ async def processor_loop(alert_system: MonitoringAlert):
                 except asyncio.TimeoutError:
                     logger.error(f"[{j['video_id']}] Timed out after {VIDEO_TIMEOUT}s — marking failed")
                     try:
-                        permanent = db.fail_job(j["id"])
-                        db.mark_video_failed(j["video_id"], language=j.get("user_language", "fr"))
+                        permanent = db.fail_job(j["id"], error_reason="timeout")
+                        db.mark_video_failed(j["video_id"], language=j.get("user_language", "fr"), error_reason="timeout")
                         if permanent:
                             await _notify_video_failure(j["video_id"], alert_system, j.get("video_title", ""), "permanent_failure")
                     except Exception:

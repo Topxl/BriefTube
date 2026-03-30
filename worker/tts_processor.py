@@ -51,9 +51,18 @@ async def text_to_audio(text: str, voice: str = None, output_filename: str = Non
     for attempt in range(3):
         try:
             communicate = edge_tts.Communicate(text, voice)
-            await communicate.save(str(output_path))
+            await asyncio.wait_for(communicate.save(str(output_path)), timeout=300)
             logger.info(f"Audio generated: {output_path.name} ({voice})")
             return output_path
+        except asyncio.TimeoutError:
+            last_err = RuntimeError(f"Edge TTS timed out after 300s")
+            logger.warning(
+                f"Edge TTS attempt {attempt + 1}/3 timed out — "
+                f"{'retrying' if attempt < 2 else 'falling back to gTTS'}"
+            )
+            output_path.unlink(missing_ok=True)
+            if attempt < 2:
+                await asyncio.sleep(5)
         except Exception as e:
             last_err = e
             if _is_edge_tts_outage(e) and attempt < 2:
