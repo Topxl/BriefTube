@@ -2,6 +2,8 @@
 
 ## 2026-03-30
 
+FIX: lists page — duplicate list_channels select caused silent query failure (no lists shown)
+
 FEATURE: Survey system — public survey page (/survey/[token]) with 6-question PMF form, no auth required
 FEATURE: Survey API — /api/survey endpoint saves responses, grants 1-month Pro trial on completion
 FEATURE: Survey email — founder-style email template, bulk send with deduplication and throttling
