@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { formatCurrency } from "@/lib/format";
 
-type PriceInfo = { amount: number; currency: string };
+export type PriceInfo = { amount: number; currency: string };
 
-type PricesData = {
+export type PricesData = {
   monthly: PriceInfo;
   annual: PriceInfo;
   plus?: {
@@ -22,12 +22,27 @@ async function fetchPrices(): Promise<PricesData> {
   return res.json() as Promise<PricesData>;
 }
 
+// Static fallback so the UI renders instantly without waiting for Stripe API
+const FALLBACK_PRICES: PricesData = {
+  monthly: { amount: 999, currency: "usd" },
+  annual: { amount: 7900, currency: "usd" },
+  plus: {
+    monthly: { amount: 500, currency: "usd" },
+    annual: { amount: 5000, currency: "usd" },
+  },
+  pro: {
+    monthly: { amount: 999, currency: "usd" },
+    annual: { amount: 7900, currency: "usd" },
+  },
+};
+
 export function usePrices() {
   return useQuery({
     queryKey: ["stripe-prices"],
     queryFn: fetchPrices,
-    staleTime: 1000 * 60 * 60, // 1h — prices rarely change
+    staleTime: 1000 * 60 * 60,
     gcTime: 1000 * 60 * 60 * 24,
+    placeholderData: FALLBACK_PRICES,
   });
 }
 
