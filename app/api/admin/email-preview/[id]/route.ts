@@ -7,6 +7,9 @@ import { DailyNewsletterEmail } from "@email/daily-newsletter";
 import { TrialReminderEmail } from "@/components/emails/trial-reminder-email";
 import { TrialExpiredEmail } from "@/components/emails/trial-expired-email";
 import { ReferralTrialEmail } from "@/components/emails/referral-trial-email";
+import { FirstSummaryEmail } from "@/components/emails/first-summary-email";
+import { OnboardingJ1Email } from "@/components/emails/onboarding-j1-email";
+import { OnboardingJ3Email } from "@/components/emails/onboarding-j3-email";
 import { founderEmail, p, signature } from "@/lib/mail/founder-email";
 import { surveyEmailHtml } from "@/components/emails/survey-email";
 
@@ -95,6 +98,39 @@ async function renderPreview(id: string): Promise<string | null> {
       );
     case "announcement":
       return render(AnnouncementEmail());
+    case "first_summary":
+      return render(
+        FirstSummaryEmail({
+          videoTitle: "How Great Leaders Inspire Action",
+          dashboardUrl: "https://www.brief-tube.com/dashboard",
+        }),
+      );
+    case "onboarding_j1":
+      return render(
+        OnboardingJ1Email({
+          dashboardUrl: "https://www.brief-tube.com/dashboard",
+        }),
+      );
+    case "onboarding_j3":
+      return render(
+        OnboardingJ3Email({
+          profileUrl: "https://www.brief-tube.com/dashboard/profile",
+        }),
+      );
+    case "early_users_thank_you":
+      return founderEmail(
+        p("Hey,") +
+          p(
+            "You're one of BriefTube's very first users — and I wanted to say thank you personally.",
+          ) +
+          p(
+            "I built this because I was drowning in YouTube subscriptions and needed a way to stay current without watching everything. The fact that you signed up means the problem resonates.",
+          ) +
+          p(
+            "If you have any feedback, ideas, or frustrations — just hit reply. I read every single message and it directly shapes what I build next.",
+          ) +
+          signature(),
+      );
     case "survey_feedback":
       return surveyEmailHtml({
         surveyUrl: "https://www.brief-tube.com/survey/preview",
