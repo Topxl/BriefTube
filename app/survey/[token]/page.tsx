@@ -53,6 +53,14 @@ export default async function SurveyPage({ params }: Props) {
     );
   }
 
+  const { count: deliveryCount } = await admin
+    .from("deliveries")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", token)
+    .eq("status", "sent");
+
+  const persona = (deliveryCount ?? 0) > 0 ? "active" : "inactive";
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-950 px-4 py-12">
       <div className="w-full max-w-lg">
@@ -61,14 +69,27 @@ export default async function SurveyPage({ params }: Props) {
             Help shape BriefTube
           </h1>
           <p className="text-muted-foreground mt-2">
-            6 quick questions. Takes about 2 minutes.
-            <br />
-            You'll get{" "}
-            <strong className="text-white">1 free month of Pro</strong> as a
-            thank you.
+            {persona === "active" ? (
+              <>
+                6 quick questions. Takes about 2 minutes.
+                <br />
+                You'll get{" "}
+                <strong className="text-white">1 free month of Pro</strong> as a
+                thank you.
+              </>
+            ) : (
+              <>
+                We noticed you haven't tried BriefTube yet. Your feedback
+                matters even more.
+                <br />
+                You'll get{" "}
+                <strong className="text-white">1 free month of Pro</strong> as a
+                thank you.
+              </>
+            )}
           </p>
         </div>
-        <SurveyForm token={token} />
+        <SurveyForm token={token} persona={persona} />
       </div>
     </div>
   );

@@ -1,7 +1,15 @@
 # Changelog
 
+## 2026-03-29
+
+REFACTOR: Admin survey results — split responses by persona (active/inactive), read JSONB responses field, show PMF score for active only, display persona-specific sections
+FEATURE: Survey system — support 2 personas (active/inactive users) with separate question flows
+FEATURE: Survey form — "Other" text fields on each question for additional comments
+FEATURE: Survey page — persona detection via delivery history (active = received ≥1 delivery)
+
 ## 2026-03-30
 
+FIX: worker — pre-filter music compilation videos by title keywords (Hillsong/Worship/Praise) — immediate discard instead of 1-2min failure per slot
 FIX: worker — TTS per-call timeout 300s + store error_reason in metadata
 FIX: worker /services — Invidious checks now run in parallel (was sequential → up to 20s → 502 timeout)
 FIX: sources-section — add unoptimized to channel avatar Image (YouTube CDN blocks Next.js proxy → 403)

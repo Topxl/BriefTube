@@ -4,8 +4,9 @@ import { surveySchema } from "@/lib/survey/survey-schema";
 import { restoreSystemPausedChannels } from "@/lib/subscriptions";
 import { z } from "zod";
 
-const bodySchema = surveySchema.extend({
+const bodySchema = z.object({
   token: z.string().uuid(),
+  data: surveySchema,
 });
 
 export async function POST(req: Request) {
@@ -19,7 +20,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const { token, q6_freetext, ...answers } = parsed.data;
+    const { token, data } = parsed.data;
     const admin = createAdminClient();
 
     const { data: profile } = await admin
@@ -42,19 +43,24 @@ export async function POST(req: Request) {
       return NextResponse.json({ status: "already_responded" });
     }
 
-    const insertData = {
-      user_id: token,
-      q1_pmf: answers.q1_pmf,
-      q2_benefit: answers.q2_benefit,
-      q3_friction: answers.q3_friction,
-      q4_improvement: answers.q4_improvement,
-      q5_referral: answers.q5_referral,
-      q6_freetext: q6_freetext || null,
+    const activeData = data as {
+      q1_pmf: string;
+      q2_benefit: string;
+      q3_improvement: string[];
+      q4_referral: string;
     };
-
-    const insertResult = await admin
-      .from("survey_responses")
-      .insert(insertData as never);
+    const insertResult = await admin.from("survey_responses").insert({
+      user_id: token,
+      persona: data.persona,
+      responses: data,
+      q1_pmf: data.persona === "active" ? activeData.q1_pmf : null,
+      q2_benefit: data.persona === "active" ? activeData.q2_benefit : null,
+      q3_friction: [],
+      q4_improvement:
+        data.persona === "active" ? activeData.q3_improvement : [],
+      q5_referral: data.persona === "active" ? activeData.q4_referral : null,
+      q6_freetext: data.q5_freetext ?? null,
+    } as never);
 
     if (insertResult.error) {
       if (insertResult.error.code === "23505") {
