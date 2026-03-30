@@ -551,17 +551,6 @@ export default async function AdminPage() {
   const pendingQueue = pendingQueueRaw as unknown as PendingVideo[] | null;
   const recentFailed = recentFailedRaw as unknown as FailedVideo[] | null;
 
-  const transcriptSources = (transcriptSourcesRaw ?? []).reduce<
-    Record<string, number>
-  >((acc, v) => {
-    const src = (v.transcript_source as string | null) ?? "unknown";
-    acc[src] = (acc[src] ?? 0) + 1;
-    return acc;
-  }, {});
-  const transcriptSourceEntries = Object.entries(transcriptSources).sort(
-    ([, a], [, b]) => b - a,
-  );
-
   const expiringTrials = (expiringTrialsRaw ?? []) as ExpiringTrial[];
 
   const monthlyPriceCents = stripePrice as number;
@@ -633,20 +622,7 @@ export default async function AdminPage() {
     .filter(([src]) => AUDIO_SOURCES.includes(src))
     .reduce((s, [, v]) => s + v.count, 0);
 
-  const groqCost24h = Object.entries(transcriptSourceStats)
-    .filter(([src]) => AUDIO_SOURCES.includes(src))
-    .reduce((s, [, v]) => s + v.cost, 0);
-
   const totalTranscripts24h = textSourcesTotal + audioSourcesTotal;
-
-  const textPercentage =
-    totalTranscripts24h > 0
-      ? Math.round((textSourcesTotal / totalTranscripts24h) * 100)
-      : 0;
-  const audioPercentage =
-    totalTranscripts24h > 0
-      ? Math.round((audioSourcesTotal / totalTranscripts24h) * 100)
-      : 0;
 
   // Failure reasons breakdown (7 days)
   type FailedVideoRaw = {
