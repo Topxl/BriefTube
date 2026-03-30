@@ -110,7 +110,7 @@ export function TrialReminderEmail({ daysLeft, trackingPixelUrl }: Props) {
               margin: "16px 0 0",
             }}
           >
-            {`Not ready to upgrade? No problem — you'll still keep ${SiteConfig.freeChannelsLimit} channels free forever. No card needed.`}
+            {`Not ready to upgrade? No problem. You'll still keep ${SiteConfig.freeChannelsLimit} channels free forever. No card needed.`}
           </Text>
           <Hr
             style={{

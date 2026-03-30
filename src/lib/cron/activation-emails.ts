@@ -90,7 +90,7 @@ export async function runActivationEmails(): Promise<RunResult> {
             "It takes about 30 seconds to connect: <a href='https://www.brief-tube.com/dashboard/profile' style='color:#1a1a1a;'>brief-tube.com/dashboard/profile</a>",
           ) +
           p(
-            "If something stopped you — wrong platform, unclear setup, something else — just hit reply. I read every response and it directly shapes what we build.",
+            "If something stopped you (wrong platform, unclear setup, something else), just hit reply. I read every response and it directly shapes what we build.",
           ) +
           signature() +
           trackingPixel,
