@@ -503,9 +503,20 @@ export default async function AdminEmailsPage() {
         <div className="nm-raised flex flex-col gap-3 rounded-xl p-4">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <p className="text-sm leading-tight font-semibold">PMF Survey</p>
+              <a
+                href="/dashboard/admin/emails/survey"
+                className="text-sm leading-tight font-semibold hover:underline"
+              >
+                PMF Survey
+              </a>
               <p className="text-muted-foreground mt-0.5 text-[11px] leading-snug">
-                6 questions · 1 free month reward · all users
+                6 questions · 1 free month reward · all users ·{" "}
+                <a
+                  href="/dashboard/admin/emails/survey"
+                  className="text-muted-foreground hover:text-foreground underline transition-colors"
+                >
+                  View results
+                </a>
               </p>
             </div>
           </div>

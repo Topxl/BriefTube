@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { ChevronRight, Shield } from "@/lib/icons";
 
 const PAGES: Record<string, string> = {
+  "/dashboard/admin/emails/survey": "Survey Results",
   "/dashboard/admin/monitoring": "Monitoring",
   "/dashboard/admin/emails": "Emails",
 };
