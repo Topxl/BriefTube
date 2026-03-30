@@ -98,7 +98,7 @@ export function OnboardingJ1Email({ dashboardUrl, trackingPixelUrl }: Props) {
               margin: "16px 0 0",
             }}
           >
-            {`You're on a ${SiteConfig.trialDays}-day Pro trial — add as many channels as you want. After that, ${SiteConfig.freeChannelsLimit} channels stay free forever. No credit card needed.`}
+            {`You're on a ${SiteConfig.trialDays}-day Pro trial. Add as many channels as you want. After that, ${SiteConfig.freeChannelsLimit} channels stay free forever. No credit card needed.`}
           </Text>
           <Hr
             style={{

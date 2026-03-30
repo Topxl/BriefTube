@@ -14,7 +14,7 @@ export function surveyEmailHtml({
   return founderEmail(
     p("Hey,") +
       p(
-        "I'm building BriefTube mostly in the dark — I know you signed up, but I don't really know what you think about it.",
+        "I'm building BriefTube mostly in the dark. I know you signed up, but I don't really know what you think about it.",
       ) +
       p(
         "I'd love to change that. Answer <strong>6 quick questions</strong> (takes about 2 minutes) and I'll unlock <strong>1 free month of Pro</strong> for your account. No strings attached.",

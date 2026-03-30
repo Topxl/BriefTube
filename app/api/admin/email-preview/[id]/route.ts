@@ -39,7 +39,7 @@ async function renderPreview(id: string): Promise<string | null> {
               title: "The future of developer tools",
               youtubeUrl: "https://youtube.com/watch?v=abc123def45",
               summary:
-                "A deep dive into the next generation of developer tools — from AI-powered IDEs to infrastructure-as-code solutions. The presenter argues that productivity gains in software engineering will compound over the next decade.",
+                "A deep dive into the next generation of developer tools, from AI-powered IDEs to infrastructure-as-code solutions. The presenter argues that productivity gains in software engineering will compound over the next decade.",
               briefUrl:
                 "https://www.brief-tube.com/dashboard?video=abc123def45",
             },
@@ -121,13 +121,13 @@ async function renderPreview(id: string): Promise<string | null> {
       return founderEmail(
         p("Hey,") +
           p(
-            "You're one of BriefTube's very first users — and I wanted to say thank you personally.",
+            "You're one of BriefTube's very first users, and I wanted to say thank you personally.",
           ) +
           p(
             "I built this because I was drowning in YouTube subscriptions and needed a way to stay current without watching everything. The fact that you signed up means the problem resonates.",
           ) +
           p(
-            "If you have any feedback, ideas, or frustrations — just hit reply. I read every single message and it directly shapes what I build next.",
+            "If you have any feedback, ideas, or frustrations, just hit reply. I read every single message and it directly shapes what I build next.",
           ) +
           signature(),
       );

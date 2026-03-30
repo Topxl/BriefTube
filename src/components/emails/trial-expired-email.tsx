@@ -69,7 +69,7 @@ export function TrialExpiredEmail({ trackingPixelUrl }: Props = {}) {
               margin: "0 0 16px",
             }}
           >
-            {`You can still use BriefTube for free with up to ${SiteConfig.freeChannelsLimit} channels — forever, no card required.`}
+            {`You can still use BriefTube for free with up to ${SiteConfig.freeChannelsLimit} channels, forever, no card required.`}
           </Text>
           <Text
             style={{
