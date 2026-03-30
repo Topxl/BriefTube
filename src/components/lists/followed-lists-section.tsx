@@ -15,7 +15,7 @@ export function FollowedListsSection({
 }: {
   initialItems: FollowedItem[];
 }) {
-  const [items, setItems] = useState(initialItems);
+  const [items] = useState(initialItems);
 
   if (items.length === 0) return null;
 
@@ -42,15 +42,7 @@ export function FollowedListsSection({
                   </span>
                 )}
               </Link>
-              <UnfollowButton
-                listId={item.list_id}
-                listName={item.name}
-                onUnfollowed={() =>
-                  setItems((prev) =>
-                    prev.filter((i) => i.list_id !== item.list_id),
-                  )
-                }
-              />
+              <UnfollowButton listId={item.list_id} listName={item.name} />
             </div>
           ))}
         </div>

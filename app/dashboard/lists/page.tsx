@@ -297,13 +297,7 @@ export default async function DashboardListsPage({
                 key={list.id}
                 list={list}
                 actions={
-                  <UnfollowButton
-                    listId={list.id}
-                    listName={list.name}
-                    onUnfollowed={() => {
-                      // This would require client component wrapper in real implementation
-                    }}
-                  />
+                  <UnfollowButton listId={list.id} listName={list.name} />
                 }
               />
             ))}
