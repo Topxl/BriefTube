@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-03-28
+
+FEATURE: Add List-Unsubscribe headers to all outgoing emails for improved deliverability (RFC 8058 one-click unsubscribe)
+
 ## 2026-03-31
 
 PERF: Admin monitoring — merge 8 sequential query batches into 1 parallel batch (significantly faster page load)

@@ -6,6 +6,7 @@ import { logger } from "@/lib/logger";
 import { SiteConfig } from "@/site-config";
 import type { RunResult } from "@/lib/email/email-helpers";
 import { getAlreadySentIds, insertEmailLog } from "@/lib/email/email-helpers";
+import { getUnsubscribeHeaders } from "@/lib/mail/unsubscribe";
 
 type EmailType = "trial_reminder_j3" | "trial_reminder_j1" | "trial_expired";
 
@@ -81,6 +82,7 @@ async function sendTrialEmail(
       to: user.email,
       subject: "Your BriefTube trial has ended",
       html: TrialExpiredEmail({ trackingPixelUrl }),
+      headers: getUnsubscribeHeaders(user.id, "announcements"),
     });
   } else {
     await sendEmail({
@@ -90,6 +92,7 @@ async function sendTrialEmail(
           ? "Your BriefTube trial ends tomorrow"
           : `Your BriefTube trial ends in ${daysLeft} days`,
       html: TrialReminderEmail({ daysLeft, trackingPixelUrl }),
+      headers: getUnsubscribeHeaders(user.id, "announcements"),
     });
   }
 }

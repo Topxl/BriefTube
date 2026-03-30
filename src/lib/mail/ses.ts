@@ -51,18 +51,16 @@ export const sesMailAdapter: MailAdapter = {
                 },
               }),
             },
+            ...(params.headers && {
+              Headers: Object.entries(params.headers).map(([Name, Value]) => ({
+                Name,
+                Value,
+              })),
+            }),
           },
         },
         ...(params.replyTo && {
           ReplyToAddresses: [params.replyTo],
-        }),
-        ...(params.headers && {
-          DefaultEmailTags: Object.entries(params.headers).map(
-            ([name, value]) => ({
-              Name: name,
-              Value: value,
-            }),
-          ),
         }),
       });
 

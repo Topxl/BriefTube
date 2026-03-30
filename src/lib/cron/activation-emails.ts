@@ -9,6 +9,7 @@ import {
   insertEmailLog,
   getTrackingPixelHtml,
 } from "@/lib/email/email-helpers";
+import { getUnsubscribeHeaders } from "@/lib/mail/unsubscribe";
 
 // Detection window: signed up between 12h and 36h ago (center at 24h, ±12h)
 function getSignupWindow(): { from: Date; to: Date } {
@@ -103,6 +104,7 @@ export async function runActivationEmails(): Promise<RunResult> {
         replyTo: env.NEXT_PUBLIC_EMAIL_CONTACT ?? "contact@brief-tube.com",
         subject: "Quick question about your BriefTube account",
         html,
+        headers: getUnsubscribeHeaders(user.id, "announcements"),
       });
 
       result.sent++;

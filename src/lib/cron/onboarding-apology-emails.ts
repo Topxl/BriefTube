@@ -9,6 +9,7 @@ import {
   insertEmailLog,
   getTrackingPixelHtml,
 } from "@/lib/email/email-helpers";
+import { getUnsubscribeHeaders } from "@/lib/mail/unsubscribe";
 
 const ADMIN_USER_ID = "67320a39-948c-44d2-98e3-c0de49af1ec6";
 
@@ -81,6 +82,7 @@ export async function runOnboardingApologyEmails(): Promise<RunResult> {
         replyTo: env.NEXT_PUBLIC_EMAIL_CONTACT ?? "contact@brief-tube.com",
         subject: "Sorry, your BriefTube account is now working",
         html,
+        headers: getUnsubscribeHeaders(user.id, "announcements"),
       });
 
       result.sent++;

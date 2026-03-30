@@ -5,6 +5,7 @@ import { sendEmail } from "@/lib/mail/send-email";
 import { env } from "@/lib/env";
 import { SiteConfig } from "@/site-config";
 import { DailyNewsletterEmail } from "@email/daily-newsletter";
+import { getUnsubscribeHeaders } from "@/lib/mail/unsubscribe";
 
 // ---------------------------------------------------------------------------
 // Type for a video entry in the newsletter
@@ -157,6 +158,7 @@ export const sendUserNewsletter = inngest.createFunction(
         to: email,
         subject: `Your daily summaries — ${date}`,
         html,
+        headers: getUnsubscribeHeaders(userId, "newsletter"),
       });
 
       // Log to email_logs so admin dashboard can track digest sends
