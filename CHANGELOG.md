@@ -2,6 +2,7 @@
 
 ## 2026-03-30
 
+REFACTOR: channels sheet — display followed lists as horizontal chips at top, remove "From lists" section
 FIX: lists page — mount FollowedListsSection (was coded but never rendered)
 FIX: channels sheet — show list_follow subscriptions in a separate "From lists" section
 REFACTOR: transcript_extractor — add youtube-transcript-api via proxy (step 2d) before yt-dlp to reduce bandwidth cost
