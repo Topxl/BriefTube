@@ -11,7 +11,11 @@ import {
 
 const EMAIL_TYPE = "survey_feedback";
 
-export async function runSurveyEmails(): Promise<RunResult> {
+export type SurveyTarget = "all" | "active" | "inactive";
+
+export async function runSurveyEmails(
+  target: SurveyTarget = "all",
+): Promise<RunResult> {
   const admin = createAdminClient();
   let sent = 0;
   let skipped = 0;
@@ -21,6 +25,13 @@ export async function runSurveyEmails(): Promise<RunResult> {
   const { data: profiles } = await admin.from("profiles").select("id, email");
 
   if (!profiles?.length) return { sent, skipped, errors };
+
+  // Get active user IDs (have received at least 1 delivery)
+  const { data: deliveryRows } = await admin
+    .from("deliveries")
+    .select("user_id")
+    .eq("status", "sent");
+  const activeUserIds = new Set((deliveryRows ?? []).map((r) => r.user_id));
 
   // Get users who already responded to survey
   let respondedIds = new Set<string>();
@@ -42,9 +53,14 @@ export async function runSurveyEmails(): Promise<RunResult> {
   const alreadySentIds = await getAlreadySentIds(admin, EMAIL_TYPE, allIds);
 
   // Filter eligible users
-  const eligible = profiles.filter(
-    (p) => !respondedIds.has(p.id) && !alreadySentIds.has(p.id) && p.email,
-  );
+  const eligible = profiles.filter((p) => {
+    if (!p.email) return false;
+    if (respondedIds.has(p.id)) return false;
+    if (alreadySentIds.has(p.id)) return false;
+    if (target === "active" && !activeUserIds.has(p.id)) return false;
+    if (target === "inactive" && activeUserIds.has(p.id)) return false;
+    return true;
+  });
 
   for (const profile of eligible) {
     try {
