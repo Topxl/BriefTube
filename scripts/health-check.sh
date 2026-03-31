@@ -141,6 +141,38 @@ check_non_critical "API auth endpoint" "${BASE_URL}/api/auth/google"
 check_non_critical "PostHog proxy" "${BASE_URL}/a/static/array.js"
 
 echo ""
+printf "${BOLD}  --- Auth Checks (critical) ---${RESET}\n"
+
+# Login page returns 200
+check_critical "Login page" "${BASE_URL}/login"
+
+# OAuth redirect returns 302 or 307
+TOTAL=$((TOTAL + 1))
+_auth_start=$(date +%s%N)
+_auth_code=$(curl -s -o /dev/null -w "%{http_code}" --max-time "$TIMEOUT" "${BASE_URL}/api/auth/google" 2>/dev/null) || _auth_code="000"
+_auth_end=$(date +%s%N)
+_auth_elapsed=$(( (_auth_end - _auth_start) / 1000000 ))
+if [[ "$_auth_code" == "302" || "$_auth_code" == "307" ]]; then
+    printf "  ${PASS}  %-30s  %s  (%d ms)\n" "OAuth redirect" "${GREEN}HTTP ${_auth_code}${RESET}" "$_auth_elapsed"
+else
+    printf "  ${FAIL}  %-30s  %s  (%d ms)\n" "OAuth redirect" "${RED}HTTP ${_auth_code} (expected 302/307)${RESET}" "$_auth_elapsed"
+    CRITICAL_FAILED=$((CRITICAL_FAILED + 1))
+fi
+
+# Supabase auth health (401 = no API key but service is UP)
+TOTAL=$((TOTAL + 1))
+_sb_start=$(date +%s%N)
+_sb_code=$(curl -s -o /dev/null -w "%{http_code}" --max-time "$TIMEOUT" "https://zetpgbrzehchzxodwbps.supabase.co/auth/v1/health" 2>/dev/null) || _sb_code="000"
+_sb_end=$(date +%s%N)
+_sb_elapsed=$(( (_sb_end - _sb_start) / 1000000 ))
+if [[ "$_sb_code" == "200" || "$_sb_code" == "401" ]]; then
+    printf "  ${PASS}  %-30s  %s  (%d ms)\n" "Supabase auth health" "${GREEN}HTTP ${_sb_code}${RESET}" "$_sb_elapsed"
+else
+    printf "  ${FAIL}  %-30s  %s  (%d ms)\n" "Supabase auth health" "${RED}HTTP ${_sb_code}${RESET}" "$_sb_elapsed"
+    CRITICAL_FAILED=$((CRITICAL_FAILED + 1))
+fi
+
+echo ""
 printf "${BOLD}  --- SSL ---${RESET}\n"
 
 check_ssl
