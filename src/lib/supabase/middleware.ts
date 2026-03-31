@@ -28,15 +28,37 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let user = null;
+  try {
+    const { data } = await supabase.auth.getUser();
+    user = data.user;
+  } catch {
+    // Corrupted auth cookie — clear all Supabase cookies and continue as unauthenticated
+    const cookieNames = request.cookies
+      .getAll()
+      .map((c) => c.name)
+      .filter((n) => n.startsWith("sb-"));
+    if (cookieNames.length > 0) {
+      supabaseResponse = NextResponse.next({ request });
+      cookieNames.forEach((name) => {
+        supabaseResponse.cookies.set(name, "", { maxAge: 0, path: "/" });
+      });
+    }
+  }
 
   // Redirect unauthenticated users from dashboard to login
   if (!user && request.nextUrl.pathname.startsWith("/dashboard")) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    return NextResponse.redirect(url);
+    const response = NextResponse.redirect(url);
+    // Also clear corrupted cookies on redirect
+    request.cookies
+      .getAll()
+      .filter((c) => c.name.startsWith("sb-"))
+      .forEach((c) => {
+        response.cookies.set(c.name, "", { maxAge: 0, path: "/" });
+      });
+    return response;
   }
 
   // Redirect authenticated users from login/signup to dashboard
