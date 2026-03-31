@@ -46,17 +46,28 @@ class RouteBuilder<TBody = unknown, TParams = unknown> {
         }
       }
 
-      const result = await fn(req, {
-        body: parsedBody,
-        params: context.params,
-        ctx: { user: { id: user.id, email: user.email ?? null } },
-      });
+      try {
+        const result = await fn(req, {
+          body: parsedBody,
+          params: context.params,
+          ctx: { user: { id: user.id, email: user.email ?? null } },
+        });
 
-      if (result instanceof Response || result instanceof NextResponse) {
-        return result;
+        if (result instanceof Response || result instanceof NextResponse) {
+          return result;
+        }
+
+        return NextResponse.json(result);
+      } catch (error) {
+        console.error(
+          `[authRoute] ${req.method} ${req.nextUrl.pathname} failed:`,
+          error,
+        );
+        return NextResponse.json(
+          { error: "Internal server error" },
+          { status: 500 },
+        );
       }
-
-      return NextResponse.json(result);
     };
   }
 }
