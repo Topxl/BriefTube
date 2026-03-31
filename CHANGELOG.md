@@ -8,6 +8,7 @@ CHORE: Add auth smoke tests to post-deploy health check — login page (200), OA
 FEATURE: Add e2e tests for subscription management (add/remove channel), pricing page, and video summary page
 CHORE: Re-enable Playwright tests in CI workflow (remove `if: false` guard)
 SECURITY: Add Zod validation on subscriptions API, fix .or() SQL injection in account delete, validate URLs in link-preview
+FIX: Expand Invidious category gates — Sports (60 min), Entertainment (60 min), Nonprofits & Activism (45 min) + movie keyword check (full movie/film/episode tags) to block non-speech content regardless of language
 FIX: Add Invidious genre/category check at processor level — YouTube category "Film & Animation" + duration > 30 min → permanent skip (catches Nollywood, Bollywood, Turkish dizi regardless of title language)
 FIX: Report caught errors to Sentry in SectionErrorBoundary (previously only logged locally)
 SECURITY: Add rate limiting to remaining low-priority API routes — webhooks (Stripe, Resend, WhatsApp, YouTube), email (unsubscribe, first-summary, track), feed, referrals, stats, stripe/price, connect disconnect routes (Discord, Slack, Notion, WhatsApp), notion/select-database, youtube/callback, and thumbnail
