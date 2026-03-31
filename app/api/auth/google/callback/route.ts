@@ -5,6 +5,7 @@ import { SiteConfig } from "@/site-config";
 import { logger } from "@/lib/logger";
 import { sendEmail } from "@/lib/mail/send-email";
 import { WelcomeEmail } from "@/components/emails/welcome-email";
+import { getBaseUrl } from "@/lib/server-url";
 
 const STATE_COOKIE = "google_oauth_state";
 const REFERRAL_COOKIE = SiteConfig.referral.cookieName;
@@ -15,8 +16,7 @@ export async function GET(request: Request) {
   const state = searchParams.get("state");
   const oauthError = searchParams.get("error");
 
-  const baseUrl =
-    process.env.NEXT_PUBLIC_SITE_URL ?? new URL(request.url).origin;
+  const baseUrl = getBaseUrl(request);
 
   if (oauthError || !code || !state) {
     return NextResponse.redirect(`${baseUrl}/login`);
