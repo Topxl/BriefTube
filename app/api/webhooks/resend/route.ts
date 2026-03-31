@@ -1,5 +1,6 @@
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
+import { checkRateLimit, getRequestIp, publicRateLimit } from "@/lib/rate-limit";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { Webhook } from "svix";
@@ -18,6 +19,9 @@ const ResendWebhookSchema = z.object({
  * @docs Event type https://resend.com/docs/dashboard/webhooks/event-types
  */
 export const POST = async (req: NextRequest) => {
+  const rateLimitResponse = await checkRateLimit(publicRateLimit, `wh-resend:${getRequestIp(req)}`);
+  if (rateLimitResponse) return rateLimitResponse;
+
   if (!env.RESEND_WEBHOOK_SECRET) {
     logger.error("RESEND_WEBHOOK_SECRET is not configured");
     return NextResponse.json(

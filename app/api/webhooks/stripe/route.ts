@@ -1,5 +1,6 @@
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
+import { checkRateLimit, getRequestIp, publicRateLimit } from "@/lib/rate-limit";
 import { createAdminClient } from "@/lib/supabase/server";
 import { stripe } from "@/lib/stripe";
 import { updateSubscriptionStatus } from "@/lib/stripe/helpers";
@@ -17,6 +18,8 @@ import { restoreSystemPausedChannels } from "@/lib/subscriptions";
 export const maxDuration = 300;
 
 export const POST = async (req: NextRequest) => {
+  const rateLimitResponse = await checkRateLimit(publicRateLimit, `wh-stripe:${getRequestIp(req)}`);
+  if (rateLimitResponse) return rateLimitResponse;
   const headerList = await headers();
   const body = await req.text();
 

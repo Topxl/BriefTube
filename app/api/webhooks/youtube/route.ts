@@ -1,5 +1,6 @@
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
+import { checkRateLimit, getRequestIp, publicRateLimit } from "@/lib/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
@@ -10,6 +11,9 @@ export const maxDuration = 10;
 // ── GET — WebSub hub verification ─────────────────────────────
 
 export const GET = async (req: NextRequest) => {
+  const rateLimitResponse = await checkRateLimit(publicRateLimit, `wh-yt:${getRequestIp(req)}`);
+  if (rateLimitResponse) return rateLimitResponse;
+
   const { searchParams } = req.nextUrl;
 
   const mode = searchParams.get("hub.mode");
@@ -62,6 +66,9 @@ export const GET = async (req: NextRequest) => {
 // ── POST — new video notification ──────────────────────────────
 
 export const POST = async (req: NextRequest) => {
+  const rateLimitResponse = await checkRateLimit(publicRateLimit, `wh-yt:${getRequestIp(req)}`);
+  if (rateLimitResponse) return rateLimitResponse;
+
   const body = await req.text();
 
   // Verify HMAC-SHA1 signature if WEBSUB_SECRET is configured

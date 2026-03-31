@@ -1,4 +1,5 @@
 import { authRoute } from "@/lib/zod-route";
+import { checkRateLimit, authRateLimit } from "@/lib/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 
 function maskEmail(email: string): string {
@@ -9,6 +10,9 @@ function maskEmail(email: string): string {
 }
 
 export const GET = authRoute.handler(async (_req, { ctx }) => {
+  const rateLimitResponse = await checkRateLimit(authRateLimit, `referrals:${ctx.user.id}`);
+  if (rateLimitResponse) return rateLimitResponse;
+
   const supabase = await createClient();
 
   const { data: profile } = await supabase

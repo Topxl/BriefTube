@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { checkRateLimit, getRequestIp, publicRateLimit } from "@/lib/rate-limit";
 import { cookies } from "next/headers";
 import { logger } from "@/lib/logger";
 
@@ -75,6 +76,9 @@ async function fetchAllSubscriptions(
 }
 
 export async function GET(request: NextRequest) {
+  const rateLimitResponse = await checkRateLimit(publicRateLimit, `yt-cb:${getRequestIp(request)}`);
+  if (rateLimitResponse) return rateLimitResponse;
+
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");

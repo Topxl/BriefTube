@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { checkRateLimit, getRequestIp, publicRateLimit } from "@/lib/rate-limit";
 import { createAdminClient } from "@/lib/supabase/server";
 
 function formatCount(n: number): string {
@@ -8,7 +10,10 @@ function formatCount(n: number): string {
   return `${n}+`;
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const rateLimitResponse = await checkRateLimit(publicRateLimit, `stats:${getRequestIp(req)}`);
+  if (rateLimitResponse) return rateLimitResponse;
+
   const supabase = createAdminClient();
 
   const [{ count: summaryCount }, { count: channelCount }] = await Promise.all([

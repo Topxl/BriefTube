@@ -5,7 +5,10 @@ import { logger } from "@/lib/logger";
 import { checkRateLimit, heavyRateLimit } from "@/lib/rate-limit";
 
 export const DELETE = authRoute.handler(async (_req, { ctx }) => {
-  const rateLimitResponse = await checkRateLimit(heavyRateLimit, `delete-account:${ctx.user.id}`);
+  const rateLimitResponse = await checkRateLimit(
+    heavyRateLimit,
+    `delete-account:${ctx.user.id}`,
+  );
   if (rateLimitResponse) return rateLimitResponse;
 
   const supabase = await createClient();
@@ -67,10 +70,8 @@ export const DELETE = authRoute.handler(async (_req, { ctx }) => {
   await supabase.from("list_follows").delete().eq("user_id", userId);
   await supabase.from("list_stars").delete().eq("user_id", userId);
   await supabase.from("channel_lists").delete().eq("created_by", userId);
-  await supabase
-    .from("referrals")
-    .delete()
-    .or(`referrer_id.eq.${userId},referee_id.eq.${userId}`);
+  await supabase.from("referrals").delete().eq("referrer_id", userId);
+  await supabase.from("referrals").delete().eq("referee_id", userId);
   await supabase.from("profiles").delete().eq("id", userId);
 
   // 3. Delete the auth user (requires service role key)

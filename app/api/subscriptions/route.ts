@@ -6,6 +6,7 @@ import { getUserPlan } from "@/lib/subscriptions";
 import { queueVideoForProcessing } from "@/lib/video-queue";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { z } from "zod";
 import {
   checkRateLimit,
   authRateLimit,
@@ -103,11 +104,41 @@ export async function POST(request: NextRequest) {
   const rl = await checkRateLimit(heavyRateLimit, user.id);
   if (rl) return rl;
 
-  const body = await request.json();
+  const bodySchema = z
+    .object({
+      url: z.string().max(500).optional(),
+      channelId: z.string().max(100).optional(),
+      channelName: z.string().max(200).optional(),
+      videoId: z.string().max(20).optional(),
+      videoTitle: z.string().max(500).optional(),
+    })
+    .refine((data) => data.url || data.channelId, {
+      message: "Either url or channelId is required",
+    });
+
+  let rawBody: unknown;
+  try {
+    rawBody = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  const parsed = bodySchema.safeParse(rawBody);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+  }
+
+  const body = parsed.data as {
+    url?: string;
+    channelId?: string;
+    channelName?: string;
+    videoId?: string;
+    videoTitle?: string;
+  };
 
   // Support both { url } and { channelId, channelName } formats
-  let channelId: string;
-  let channelName: string;
+  let channelId: string | undefined;
+  let channelName: string | undefined;
   let specificVideoId: string | undefined;
   let specificVideoTitle: string | undefined;
 
@@ -370,15 +401,24 @@ export async function PATCH(request: NextRequest) {
   const rl = await checkRateLimit(authRateLimit, user.id);
   if (rl) return rl;
 
-  const body = (await request.json()) as { id: string; active: boolean };
-  const { id, active } = body;
+  const patchSchema = z.object({
+    id: z.string().uuid(),
+    active: z.boolean(),
+  });
 
-  if (!id || typeof active !== "boolean") {
-    return NextResponse.json(
-      { error: "id and active are required" },
-      { status: 400 },
-    );
+  let rawBody: unknown;
+  try {
+    rawBody = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
+
+  const parsed = patchSchema.safeParse(rawBody);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+  }
+
+  const { id, active } = parsed.data;
 
   // If activating, check the active channel limit
   if (active) {

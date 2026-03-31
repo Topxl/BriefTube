@@ -19,14 +19,21 @@ export async function GET() {
     );
   }
 
+  if (!env.WORKER_API_SECRET) {
+    return NextResponse.json(
+      { error: "WORKER_API_SECRET is required when VPS_WORKER_URL is set" },
+      { status: 500 },
+    );
+  }
+
   const url = `${env.VPS_WORKER_URL}/services`;
   try {
     const res = await fetch(url, {
       signal: AbortSignal.timeout(15_000),
       cache: "no-store",
-      headers: env.WORKER_API_SECRET
-        ? { Authorization: `Bearer ${env.WORKER_API_SECRET}` }
-        : {},
+      headers: {
+        Authorization: `Bearer ${env.WORKER_API_SECRET}`,
+      },
     });
     if (!res.ok) throw new Error(`Worker returned ${res.status}`);
     return NextResponse.json(await res.json());

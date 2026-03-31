@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 import { connection } from "next/server";
+import { checkRateLimit, getRequestIp, publicRateLimit } from "@/lib/rate-limit";
 import { getStripe } from "@/lib/stripe";
 import { env } from "@/lib/env";
 
@@ -22,7 +24,10 @@ type PricesResponse = {
   };
 };
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const rateLimitResponse = await checkRateLimit(publicRateLimit, `stripe-price:${getRequestIp(req)}`);
+  if (rateLimitResponse) return rateLimitResponse;
+
   await connection();
   const stripe = getStripe();
 
