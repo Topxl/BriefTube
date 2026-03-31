@@ -280,8 +280,18 @@ export function ProfileContent({
   const supabase = createClient();
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push("/");
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      // If signOut fails (corrupted cookie), clear cookies manually
+      document.cookie.split(";").forEach((c) => {
+        const name = c.split("=")[0].trim();
+        if (name.startsWith("sb-")) {
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+        }
+      });
+    }
+    window.location.href = "/";
   };
 
   const handleDeleteAccount = () => {
