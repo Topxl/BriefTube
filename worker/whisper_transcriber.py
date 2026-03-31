@@ -97,6 +97,7 @@ class WhisperTranscriber:
             raise ValueError("GROQ_API_KEY must be provided or set in environment")
 
         self.client = Groq(api_key=self.api_key)
+        self._last_video_duration_seconds: int = 0  # set by _download_audio_via_invidious
         logger.info("Groq Whisper transcriber initialized")
 
     def _download_audio(self, youtube_url: str, output_path: Path, language: str | None = None) -> bool:
@@ -309,6 +310,19 @@ class WhisperTranscriber:
             logger.warning("Audio download: proxy circuit breaker open — skipping proxy downloads until proxy recovers")
             return "proxy_unavailable"
 
+        # Duration gate: refuse proxy downloads for videos > 60 min.
+        # Long videos without free transcripts (Nollywood movies, 1-3h dramas)
+        # would download 50-150 MB per retry and never succeed.
+        # Legitimate long content (Lex Fridman 3h) always has a YouTube transcript
+        # and never reaches Whisper.
+        if self._last_video_duration_seconds > self._MAX_PROXY_DURATION_SECONDS:
+            duration_min = self._last_video_duration_seconds // 60
+            logger.warning(
+                f"Audio download: video too long for proxy ({duration_min} min > "
+                f"{self._MAX_PROXY_DURATION_SECONDS // 60} min limit) — skipping proxy permanently"
+            )
+            return "video_too_long_for_whisper"
+
         if _geo_restricted_detected:
             result = _run_geo_bypass(_proxy_download, language, logger, "Audio download")
             if result is True:
@@ -331,12 +345,22 @@ class WhisperTranscriber:
         logger.warning("Audio download: bot detection on all clients + proxy — will retry later")
         return "auth_required"
 
+    # Max video duration (seconds) for proxy audio downloads.
+    # Videos longer than this threshold are refused from the paid proxy —
+    # they can still be downloaded via Invidious/Piped (free).
+    # 3600s = 60 min. Nollywood movies are 1-3h; legit long content
+    # (Lex Fridman 3h+) always has a YouTube transcript and never reaches Whisper.
+    _MAX_PROXY_DURATION_SECONDS = 3600
+
     def _download_audio_via_invidious(self, video_id: str, output_path: Path):
         """Download audio via Invidious public API — free, no proxy bandwidth cost.
 
         Calls /api/v1/videos/{id} on a public Invidious instance to resolve the
         audio stream URL, then downloads it directly with ffmpeg. Returns True on
-        success, "live" for live streams, or False if all instances fail.
+        success, "live" for live streams, "too_long" if duration > threshold,
+        or False if all instances fail.
+
+        Side-effect: sets self._last_video_duration_seconds for proxy gate check.
         """
         instances = list(_INVIDIOUS_INSTANCES)
         random.shuffle(instances)
@@ -346,7 +370,7 @@ class WhisperTranscriber:
                 api_url = (
                     f"{instance}/api/v1/videos/"
                     f"{urllib.parse.quote(video_id, safe='')}"
-                    f"?fields=adaptiveFormats,liveNow"
+                    f"?fields=adaptiveFormats,liveNow,lengthSeconds"
                 )
                 req = urllib.request.Request(
                     api_url, headers={"User-Agent": "Mozilla/5.0"}
@@ -356,6 +380,11 @@ class WhisperTranscriber:
 
                 if data.get("liveNow"):
                     return "live"
+
+                # Store duration for the proxy gate — even if Invidious download fails
+                duration_s = data.get("lengthSeconds", 0)
+                if duration_s:
+                    self._last_video_duration_seconds = int(duration_s)
 
                 adaptive = data.get("adaptiveFormats", [])
                 audio_fmts = [
@@ -555,6 +584,7 @@ class WhisperTranscriber:
         """
         temp_dir = None
         audio_file = None
+        self._last_video_duration_seconds = 0  # reset for each transcription attempt
 
         try:
             temp_dir = tempfile.mkdtemp(prefix="brieftube_whisper_")
@@ -581,6 +611,8 @@ class WhisperTranscriber:
                 return None, None, "youtube_auth_required", 0.0
             if dl_result == "proxy_unavailable":
                 return None, None, "proxy_circuit_open", 0.0
+            if dl_result == "video_too_long_for_whisper":
+                return None, None, "video_too_long_for_whisper", 0.0
             if not dl_result:
                 return None, None, "audio_download_failed", 0.0
 

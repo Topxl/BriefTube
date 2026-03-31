@@ -2,10 +2,12 @@
 
 ## 2026-04-01
 
+SECURITY: Remove hardcoded default secret in unsubscribe HMAC — require RESEND_WEBHOOK_SECRET env var at startup instead of falling back to guessable default
+SECURITY: Require WORKER_API_SECRET when VPS_WORKER_URL is configured — block unauthenticated admin-to-worker API calls in worker and services routes
 SECURITY: Add rate limiting to OAuth connect routes (Discord, Slack, Notion, WhatsApp), push routes (subscribe, unsubscribe, send), and Google auth routes
 SECURITY: Fix POST /api/lists missing authentication — use authRoute instead of manual auth; add rate limiting (authRateLimit/publicRateLimit) to all lists API routes (GET, POST, PATCH, DELETE, star, follow)
 SECURITY: Add rate limiting to Stripe routes (checkout, cancel, portal), account deletion, YouTube sync, and YouTube OAuth auth
-FIX: Add Nollywood/drama movie pre-filter in RSS scanner + processor — skip permanently titles like "interesting movie", "funny movie", etc. that download 50-65 MB via proxy on every retry (Webshare bandwidth explosion)
+FIX: Proxy duration gate — videos > 60 min blocked from Webshare proxy audio download (prevents 50-150 MB/retry for long no-transcript content)\nFIX: Add Nollywood/drama movie pre-filter in RSS scanner + processor — skip permanently titles like "interesting movie", "funny movie", etc. that download 50-65 MB via proxy on every retry (Webshare bandwidth explosion)
 SECURITY: Add rate limiting to heavy API routes — process-video, subscriptions (POST/PATCH/PUT/DELETE), link-preview, and onboarding/follow-list
 REFACTOR: Replace in-memory rate limiting with Upstash Redis (`@/lib/rate-limit`) in demo/summarize and newsletter API routes
 SECURITY: Add Content-Security-Policy and security headers (X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy) to all routes via next.config.ts

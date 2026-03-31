@@ -1,7 +1,15 @@
 import crypto from "crypto";
 import { SiteConfig } from "@/site-config";
 
-const SECRET = process.env.RESEND_WEBHOOK_SECRET ?? "brieftube-unsub-default";
+function getSecret(): string {
+  const secret = process.env.RESEND_WEBHOOK_SECRET;
+  if (!secret) {
+    throw new Error(
+      "RESEND_WEBHOOK_SECRET is not set — cannot generate or verify unsubscribe tokens",
+    );
+  }
+  return secret;
+}
 
 // Generate an HMAC token for a user to unsubscribe
 export function generateUnsubscribeUrl(
@@ -10,7 +18,7 @@ export function generateUnsubscribeUrl(
 ): string {
   const payload = `${userId}:${emailType}`;
   const token = crypto
-    .createHmac("sha256", SECRET)
+    .createHmac("sha256", getSecret())
     .update(payload)
     .digest("hex");
   return `${SiteConfig.prodUrl}/api/email/unsubscribe?uid=${userId}&type=${emailType}&token=${token}`;
@@ -23,7 +31,7 @@ export function verifyUnsubscribeToken(
 ): boolean {
   const payload = `${userId}:${emailType}`;
   const expected = crypto
-    .createHmac("sha256", SECRET)
+    .createHmac("sha256", getSecret())
     .update(payload)
     .digest("hex");
   return crypto.timingSafeEqual(Buffer.from(token), Buffer.from(expected));
