@@ -13,7 +13,9 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Not available" }, { status: 404 });
   }
 
-  const { origin, searchParams } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
+  const origin =
+    process.env.NEXT_PUBLIC_SITE_URL ?? new URL(request.url).origin;
   const rawNext = searchParams.get("next") ?? "/dashboard";
   const next =
     rawNext.startsWith("/") && !rawNext.startsWith("//")

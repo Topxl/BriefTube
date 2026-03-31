@@ -23,8 +23,9 @@ export async function GET(request: Request) {
     path: "/",
   });
 
-  // Use the request origin so local dev redirects to localhost, not production
-  const { origin } = new URL(request.url);
+  // Use NEXT_PUBLIC_SITE_URL in production, request origin in dev
+  const origin =
+    process.env.NEXT_PUBLIC_SITE_URL ?? new URL(request.url).origin;
 
   const params = new URLSearchParams({
     client_id: clientId,
