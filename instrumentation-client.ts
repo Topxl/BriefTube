@@ -4,7 +4,7 @@ const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
 if (!key) throw new Error("NEXT_PUBLIC_POSTHOG_KEY is not set");
 
 posthog.init(key, {
-  api_host: "/ingest",
+  api_host: "/a",
   ui_host: "https://us.posthog.com",
   defaults: "2026-01-30",
   capture_pageview: false, // handled manually via PostHogPageView (App Router)
