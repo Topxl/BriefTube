@@ -351,16 +351,47 @@ class TranscriptExtractor:
                 logger.info(f"[{video_id}] YouTube category is Music — skipping")
                 return None, None, "music_content", 0.0
 
-            # Film & Animation + duration > 30 min → almost certainly a movie or drama
-            # with no speech transcript. Language-agnostic: catches Nollywood, Bollywood,
-            # Turkish dizi, etc. regardless of title language.
-            # Short clips (trailers, reviews, < 30 min) are allowed through.
-            _MOVIE_DURATION_THRESHOLD = 1800  # 30 min
+            # Category + duration gates — language-agnostic, uses YouTube's own metadata.
+            # Each category has its own duration threshold calibrated to allow short
+            # legitimate clips (trailers, highlights, sermons < threshold) while blocking
+            # long content that never has a speech transcript worth processing.
             dur = self.last_video_metadata.get("duration_seconds", 0)
-            if genre.lower() == "film & animation" and dur and dur > _MOVIE_DURATION_THRESHOLD:
+            genre_lower = genre.lower()
+
+            _CATEGORY_DURATION_GATES = {
+                # Movies, Nollywood dramas, anime episodes → trailers/reviews OK (< 30 min)
+                "film & animation": 1800,   # 30 min
+                # Live sports events, full-match recordings → highlights OK (< 60 min)
+                "sports":           3600,   # 60 min
+                # Reality TV, talent shows, full episodes → clips OK (< 60 min)
+                "entertainment":    3600,   # 60 min
+                # Church services, sermons, religious gatherings → short talks OK (< 45 min)
+                "nonprofits & activism": 2700,  # 45 min
+            }
+
+            # Keywords check: creator-set tags indicating raw movie/episode content —
+            # catches cases where genre is mislabelled or missing.
+            _MOVIE_KEYWORDS = {
+                "full movie", "full film", "full episode", "complete movie",
+                "full movie 2025", "full movie 2026",
+                "nollywood movie", "nollywood film",
+                "latest movie", "latest film",
+            }
+            keywords = {kw.lower() for kw in self.last_video_metadata.get("keywords", [])}
+
+            if dur and genre_lower in _CATEGORY_DURATION_GATES:
+                threshold = _CATEGORY_DURATION_GATES[genre_lower]
+                if dur > threshold:
+                    logger.info(
+                        f"[{video_id}] YouTube category={genre!r}, duration={dur//60}min "
+                        f"> {threshold//60}min — skipping (no speech transcript expected)"
+                    )
+                    return None, None, "drama_movie", 0.0
+
+            if dur and dur > 1800 and keywords & _MOVIE_KEYWORDS:
+                matched = keywords & _MOVIE_KEYWORDS
                 logger.info(
-                    f"[{video_id}] YouTube category=Film & Animation, duration={dur//60}min "
-                    f"> {_MOVIE_DURATION_THRESHOLD//60}min — skipping (no speech transcript expected)"
+                    f"[{video_id}] Movie keywords detected: {matched} (duration={dur//60}min) — skipping"
                 )
                 return None, None, "drama_movie", 0.0
 
