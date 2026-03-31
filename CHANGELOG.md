@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-04-01
+
+FIX: Proxy PostHog analytics through Next.js rewrites (/ingest) to prevent ad-blocker retry spam and improve data collection reliability
+
 ## 2026-03-31
 
 FIX: Video failure alerts — only notify admin via log bot (not regular users); default log_mode changed to "errors" so alerts arrive automatically without manual activation
