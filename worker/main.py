@@ -320,19 +320,37 @@ async def _process_video(
 
     logger.info(f"[{video_id}] Processing: {video_title}")
 
-    # Pre-filter: music compilation channels — skip immediately before transcript
-    # These channels publish music-only videos with no speech; yt-dlp fails with
-    # youtube_auth_required or hangs indefinitely on audio download.
+    # Pre-filter: content types that have no speech transcript and would waste
+    # Webshare bandwidth retrying audio downloads endlessly.
     _MUSIC_TITLE_PHRASES = (
         "worship songs", "worship music", "worship anthems",
         "praise and worship", "praise songs", "praise collection",
         "gospel songs", "gospel music", "christian praise",
         "christian songs", "hillsong worship", "praise music",
     )
+    # Nollywood / African drama movies: no YouTube transcripts, 1-3h long,
+    # each Whisper retry downloads 50-65 MB via proxy then fails → bandwidth explosion.
+    _NOLLYWOOD_TITLE_PHRASES = (
+        "interesting movie",
+        "funny movie",
+        "nollywood",
+        "will make you laugh",
+        "teach you never to trust",
+        "disguised prince",
+        "will make you cry",
+        "african movie",
+        "latest nigerian movie",
+        "latest 2026 movie",
+        "latest 2025 movie",
+    )
     _title_lower = (video_title or "").lower()
     if any(phrase in _title_lower for phrase in _MUSIC_TITLE_PHRASES):
         logger.info(f"[{video_id}] Skipping permanently (music_content): {video_title[:80]}")
         db.fail_job(job["id"], immediate=True, error_reason="music_content")
+        return
+    if any(phrase in _title_lower for phrase in _NOLLYWOOD_TITLE_PHRASES):
+        logger.info(f"[{video_id}] Skipping permanently (drama_movie): {video_title[:80]}")
+        db.fail_job(job["id"], immediate=True, error_reason="drama_movie")
         return
 
     # Resolve language/voice early (before the try block) so the exception

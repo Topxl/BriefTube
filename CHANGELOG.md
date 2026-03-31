@@ -2,6 +2,9 @@
 
 ## 2026-04-01
 
+FIX: Add Nollywood/drama movie pre-filter in RSS scanner + processor — skip permanently titles like "interesting movie", "funny movie", etc. that download 50-65 MB via proxy on every retry (Webshare bandwidth explosion)
+SECURITY: Add rate limiting to heavy API routes — process-video, subscriptions (POST/PATCH/PUT/DELETE), link-preview, and onboarding/follow-list
+REFACTOR: Replace in-memory rate limiting with Upstash Redis (`@/lib/rate-limit`) in demo/summarize and newsletter API routes
 SECURITY: Add Content-Security-Policy and security headers (X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy) to all routes via next.config.ts
 FEATURE: Add secrets/sensitive file detection to Claude Code post-file hook — warns on .env files, credentials, .pem/.key files, and hardcoded secret patterns
 REFACTOR: Consolidate URL resolution into `getBaseUrl(request?)` in `src/lib/server-url.ts` — remove dead Vercel checks, replace inline OAuth origin logic with shared helper
