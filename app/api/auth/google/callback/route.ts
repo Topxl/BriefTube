@@ -15,8 +15,8 @@ export async function GET(request: Request) {
   const state = searchParams.get("state");
   const oauthError = searchParams.get("error");
 
-  // Use the request origin so local dev redirects to localhost, not production
-  const baseUrl = new URL(request.url).origin;
+  const baseUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ?? new URL(request.url).origin;
 
   if (oauthError || !code || !state) {
     return NextResponse.redirect(`${baseUrl}/login`);
