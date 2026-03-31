@@ -36,6 +36,29 @@ def is_likely_music(title: str) -> bool:
     return bool(_MUSIC_TITLE_RE.search(title))
 
 
+# Nollywood / African drama movies: no YouTube transcripts, 1-3h long,
+# each Whisper retry downloads 50-65 MB via proxy then fails → bandwidth explosion.
+_DRAMA_MOVIE_PHRASES = (
+    "interesting movie",
+    "funny movie",
+    "nollywood",
+    "will make you laugh",
+    "teach you never to trust",
+    "disguised prince",
+    "will make you cry",
+    "african movie",
+    "latest nigerian movie",
+    "latest 2026 movie",
+    "latest 2025 movie",
+)
+
+
+def is_likely_drama_movie(title: str) -> bool:
+    """Detect Nollywood/drama movies that will never yield a transcript."""
+    title_lower = title.lower()
+    return any(phrase in title_lower for phrase in _DRAMA_MOVIE_PHRASES)
+
+
 _VALID_CHANNEL_ID_RE = re.compile(r"^UC[a-zA-Z0-9_\-]{22}$")
 
 
@@ -161,6 +184,13 @@ def scan_all_channels():
             # Duration alone is NOT a signal (6h+ podcasts like Lex Fridman must pass).
             if is_likely_music(video["title"]):
                 logger.info(f"Music/ambient skip (title): {video['title'][:80]} ({vid})")
+                known_video_ids.add(vid)
+                continue
+
+            # Skip Nollywood/drama movies — no YouTube transcripts, 1-3h long,
+            # Whisper retry downloads 50-65 MB via proxy each time → bandwidth explosion.
+            if is_likely_drama_movie(video["title"]):
+                logger.info(f"Drama movie skip (title): {video['title'][:80]} ({vid})")
                 known_video_ids.add(vid)
                 continue
 
