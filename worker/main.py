@@ -226,31 +226,9 @@ async def _notify_video_failure(
     video_title: str = "",
     error_reason: str = "",
 ) -> None:
-    """Notify all affected Telegram users that a video permanently failed."""
-    if getattr(alert_system, "bot_app", None) is None:
-        return  # Processor-only mode — primary worker handles user notifications
-    try:
-        chat_ids = await asyncio.to_thread(db.get_telegram_chat_ids_for_video, video_id)
-    except Exception as e:
-        logger.warning(f"[{video_id}] Could not fetch chat_ids for failure notification: {e}")
-        return
-    if not chat_ids:
-        return
-
-    reason_label = _ERROR_LABELS.get(error_reason, error_reason or "Unknown error")
-    title_line = f"\n<b>{video_title[:80]}</b>" if video_title else ""
-    msg = (
-        f"A video from one of your channels couldn't be processed.{title_line}\n\n"
-        f"Reason: {reason_label}\n\n"
-        f'<a href="https://youtu.be/{video_id}">Watch on YouTube</a>'
-    )
-    for chat_id in chat_ids:
-        try:
-            await alert_system.bot_app.bot.send_message(
-                chat_id=int(chat_id), text=msg, parse_mode="HTML"
-            )
-        except Exception as e:
-            logger.warning(f"[{video_id}] Failed to notify user {chat_id} of failure: {e}")
+    """Admin-only failure alert — regular users are not notified of processing failures."""
+    # Admin is already alerted via alert_system.send_alert() at the call site.
+    pass
 
 
 async def _notify_push(
