@@ -579,6 +579,8 @@ class WhisperTranscriber:
                 return None, None, "audio_geo_restricted", 0.0
             if dl_result == "auth_required":
                 return None, None, "youtube_auth_required", 0.0
+            if dl_result == "proxy_unavailable":
+                return None, None, "proxy_circuit_open", 0.0
             if not dl_result:
                 return None, None, "audio_download_failed", 0.0
 
