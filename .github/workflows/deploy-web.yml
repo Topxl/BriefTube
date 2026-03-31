@@ -64,6 +64,8 @@ jobs:
             cp -r .next/standalone/* "$WEB_DIR/"
             cp -r .next/standalone/.next "$WEB_DIR/.next"
             cp -r .next/static "$WEB_DIR/.next/static"
+            # standalone includes a partial public/ — replace it with the full one
+            rm -rf "$WEB_DIR/public"
             cp -r public "$WEB_DIR/public"
 
             echo "→ Restarting web service..."

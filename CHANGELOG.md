@@ -2,7 +2,8 @@
 
 ## 2026-04-01
 
-FIX: Proxy PostHog analytics through Next.js rewrites (/ingest) to prevent ad-blocker retry spam and improve data collection reliability
+FIX: Proxy PostHog analytics through Next.js rewrites to prevent ad-blocker retry spam and improve data collection reliability
+FIX: Deploy script — remove partial standalone public/ before copying full public/ to prevent nested public/public/ directory
 
 ## 2026-03-31
 
