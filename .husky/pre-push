@@ -1,3 +1,17 @@
-echo "🏗️  Running pre-push build check..."
-pnpm build || { echo "❌ Build failed — push aborted"; exit 1; }
-echo "✅ Build passed!"
+#!/bin/sh
+
+echo "🔨 Pre-push: building project..."
+
+# Only run on pushes to main
+remote="$1"
+while read local_ref local_sha remote_ref remote_sha; do
+  if echo "$remote_ref" | grep -q "refs/heads/main"; then
+    echo "→ Push to main detected, running build check..."
+    pnpm build
+    if [ $? -ne 0 ]; then
+      echo "❌ Build failed! Push aborted."
+      exit 1
+    fi
+    echo "✅ Build passed, pushing..."
+  fi
+done

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import crypto from "crypto";
+import { getBaseUrl } from "@/lib/server-url";
 
 const STATE_COOKIE = "google_oauth_state";
 
@@ -23,9 +24,7 @@ export async function GET(request: Request) {
     path: "/",
   });
 
-  // Use NEXT_PUBLIC_SITE_URL in production, request origin in dev
-  const origin =
-    process.env.NEXT_PUBLIC_SITE_URL ?? new URL(request.url).origin;
+  const origin = getBaseUrl(request);
 
   const params = new URLSearchParams({
     client_id: clientId,
