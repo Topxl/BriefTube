@@ -66,6 +66,9 @@ worker/test_outputs/
 # Infisical config (project-local only)
 .infisical.json
 
+# Sentry
+.env.sentry-build-plugin
+
 # Local settings and AI agent configurations
 .claude/
 _bmad/

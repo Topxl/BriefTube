@@ -2,6 +2,7 @@
 
 ## 2026-04-01
 
+FEATURE: Add Sentry error tracking integration — client/server/edge configs, global error boundary, tunnel route, and CSP update
 SECURITY: Remove hardcoded default secret in unsubscribe HMAC — require RESEND_WEBHOOK_SECRET env var at startup instead of falling back to guessable default
 SECURITY: Require WORKER_API_SECRET when VPS_WORKER_URL is configured — block unauthenticated admin-to-worker API calls in worker and services routes
 SECURITY: Add rate limiting to OAuth connect routes (Discord, Slack, Notion, WhatsApp), push routes (subscribe, unsubscribe, send), and Google auth routes
