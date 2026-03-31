@@ -2,6 +2,8 @@
 
 ## 2026-04-01
 
+FEATURE: Add database health check script — SSHes to VPS to detect stuck jobs, failed video spikes, stuck deliveries, delivery backlog, and delivery success rate; alerts via Telegram on critical issues
+FEATURE: Add onboarding smoke test script — verifies full user journey (pages, auth chain, core APIs, dashboard redirects, worker health, external services); alerts via Telegram on critical breakage
 FEATURE: Add auth smoke test script — verifies login page, OAuth redirect, Supabase health, callback route, and state cookie; alerts via Telegram on auth breakage
 CHORE: Add Vitest unit tests for critical API routes — Stripe webhook (14 tests), subscriptions CRUD (13 tests), account deletion (7 tests), Stripe checkout (10 tests)
 CHORE: Add E2E auth-flow tests — OAuth redirect params, callback error handling, invalid state, Google button click
