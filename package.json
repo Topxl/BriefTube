@@ -52,6 +52,7 @@
     "@react-email/components": "1.0.1",
     "@react-email/render": "2.0.0",
     "@react-email/tailwind": "2.0.1",
+    "@sentry/nextjs": "^10.47.0",
     "@shikijs/rehype": "^3.20.0",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.95.3",

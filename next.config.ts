@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import bundleAnalyzer from "@next/bundle-analyzer";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === "true",
@@ -45,6 +46,7 @@ const cspDirectives = [
     "https://r.wdfl.co", // Rewardful
     "https://*.google-analytics.com", // GA4 measurement
     "https://*.analytics.google.com", // GA4
+    "https://*.ingest.de.sentry.io", // Sentry error tracking
   ].join(" "),
 
   // Frames: YouTube embeds (not used today, but safe to allow)
@@ -210,4 +212,12 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withBundleAnalyzer(nextConfig);
+export default withSentryConfig(withBundleAnalyzer(nextConfig), {
+  org: "vjfpl",
+  project: "javascript-nextjs",
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: !process.env.CI,
+  widenClientFileUpload: true,
+  disableLogger: true,
+  tunnelRoute: "/monitoring",
+});
