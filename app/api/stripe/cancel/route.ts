@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getStripe } from "@/lib/stripe";
 import { updateSubscriptionStatus } from "@/lib/stripe/helpers";
 import { logger } from "@/lib/logger";
+import { checkRateLimit, authRateLimit } from "@/lib/rate-limit";
 
 const COUPON_ID = "RETENTION_50_3M";
 
@@ -36,6 +37,9 @@ export async function POST(req: Request) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const rateLimitResponse = await checkRateLimit(authRateLimit, `cancel:${user.id}`);
+  if (rateLimitResponse) return rateLimitResponse;
 
   const parsed = bodySchema.safeParse(await req.json());
   if (!parsed.success) {

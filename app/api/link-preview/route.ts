@@ -3,6 +3,7 @@ import { extractVideoId, toThumbnailUrl } from "@/lib/youtube-id";
 import { fetchVideoOembed } from "@/lib/youtube";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { checkRateLimit, authRateLimit } from "@/lib/rate-limit";
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
@@ -13,6 +14,9 @@ export async function GET(request: NextRequest) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const rl = await checkRateLimit(authRateLimit, user.id);
+  if (rl) return rl;
 
   const url = request.nextUrl.searchParams.get("url") ?? "";
   if (!url) {

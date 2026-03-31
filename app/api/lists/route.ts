@@ -1,4 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
+import {
+  checkRateLimit,
+  getRequestIp,
+  authRateLimit,
+  publicRateLimit,
+} from "@/lib/rate-limit";
+import { authRoute } from "@/lib/zod-route";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
@@ -11,6 +18,13 @@ const createListSchema = z.object({
 
 // GET /api/lists — public, list all public lists with counts
 export async function GET(req: NextRequest) {
+  const ip = getRequestIp(req);
+  const rateLimitResponse = await checkRateLimit(
+    publicRateLimit,
+    `lists:${ip}`,
+  );
+  if (rateLimitResponse) return rateLimitResponse;
+
   const supabase = await createClient();
   const { searchParams } = new URL(req.url);
   const category = searchParams.get("category");
@@ -70,51 +84,32 @@ export async function GET(req: NextRequest) {
 }
 
 // POST /api/lists — auth required, create a new list
-export async function POST(req: NextRequest) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+export const POST = authRoute
+  .body(createListSchema)
+  .handler(async (_req, { body, ctx }) => {
+    const rateLimitResponse = await checkRateLimit(authRateLimit, ctx.user.id);
+    if (rateLimitResponse) return rateLimitResponse;
 
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+    const { name, description, category } = body as z.infer<
+      typeof createListSchema
+    >;
 
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json(
-      { error: "Invalid request body" },
-      { status: 400 },
-    );
-  }
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("channel_lists")
+      .insert({
+        created_by: ctx.user.id,
+        name,
+        description: description ?? null,
+        category: category ?? null,
+        is_public: true,
+      })
+      .select()
+      .single();
 
-  const parsed = createListSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.issues[0]?.message ?? "Invalid body" },
-      { status: 400 },
-    );
-  }
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
 
-  const { name, description, category } = parsed.data;
-
-  const { data, error } = await supabase
-    .from("channel_lists")
-    .insert({
-      created_by: user.id,
-      name,
-      description: description ?? null,
-      category: category ?? null,
-      is_public: true,
-    })
-    .select()
-    .single();
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  return NextResponse.json(data, { status: 201 });
-}
+    return NextResponse.json(data, { status: 201 });
+  });

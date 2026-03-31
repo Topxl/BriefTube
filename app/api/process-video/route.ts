@@ -2,6 +2,7 @@ import { authRoute } from "@/lib/zod-route";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { z } from "zod";
 import { queueVideoForProcessing } from "@/lib/video-queue";
+import { checkRateLimit, heavyRateLimit } from "@/lib/rate-limit";
 
 export const POST = authRoute
   .body(
@@ -12,6 +13,8 @@ export const POST = authRoute
     }),
   )
   .handler(async (_req, { body, ctx }) => {
+    const rl = await checkRateLimit(heavyRateLimit, ctx.user.id);
+    if (rl) return rl;
     const supabase = await createClient();
     const adminSupabase = createAdminClient();
     const { videoId, videoTitle, language } = body as {

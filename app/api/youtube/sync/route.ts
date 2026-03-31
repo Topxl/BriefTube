@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
+import { checkRateLimit, authRateLimit, heavyRateLimit } from "@/lib/rate-limit";
 
 const addActionSchema = z.object({
   channelId: z.string().min(1).max(100),
@@ -32,6 +33,9 @@ export async function GET() {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const rateLimitResponse = await checkRateLimit(authRateLimit, `youtube-sync-get:${user.id}`);
+  if (rateLimitResponse) return rateLimitResponse;
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -67,6 +71,9 @@ export async function POST(request: NextRequest) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const rateLimitResponse = await checkRateLimit(heavyRateLimit, `youtube-sync-post:${user.id}`);
+  if (rateLimitResponse) return rateLimitResponse;
 
   const body = await request.json();
 

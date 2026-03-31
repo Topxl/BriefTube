@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { env } from "@/lib/env";
+import { checkRateLimit, authRateLimit } from "@/lib/rate-limit";
 import { createHmac } from "crypto";
 import { redirect } from "next/navigation";
 import type { NextRequest } from "next/server";
@@ -39,6 +40,9 @@ export async function GET(req: NextRequest) {
   if (!user) {
     redirect("/login");
   }
+
+  const rateLimitResponse = await checkRateLimit(authRateLimit, `discord-cb:${user.id}`);
+  if (rateLimitResponse) return rateLimitResponse;
 
   // Exchange code for token — response includes webhook object
   const tokenRes = await fetch("https://discord.com/api/oauth2/token", {

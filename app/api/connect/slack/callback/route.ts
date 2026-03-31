@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { env } from "@/lib/env";
+import { checkRateLimit, authRateLimit } from "@/lib/rate-limit";
 import { createHmac } from "crypto";
 import { redirect } from "next/navigation";
 import type { NextRequest } from "next/server";
@@ -39,6 +40,9 @@ export async function GET(req: NextRequest) {
   if (!user) {
     redirect("/login");
   }
+
+  const rateLimitResponse = await checkRateLimit(authRateLimit, `slack-cb:${user.id}`);
+  if (rateLimitResponse) return rateLimitResponse;
 
   // Exchange code for access token
   const tokenRes = await fetch("https://slack.com/api/oauth.v2.access", {

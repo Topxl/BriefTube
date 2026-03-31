@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { env } from "@/lib/env";
+import { checkRateLimit, authRateLimit } from "@/lib/rate-limit";
 import { createHmac } from "crypto";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
@@ -42,6 +43,9 @@ export async function GET(req: NextRequest) {
   if (!user) {
     redirect("/login");
   }
+
+  const rateLimitResponse = await checkRateLimit(authRateLimit, `notion-cb:${user.id}`);
+  if (rateLimitResponse) return rateLimitResponse;
 
   if (!env.NOTION_CLIENT_ID || !env.NOTION_CLIENT_SECRET) {
     throw new Error("NOTION_CLIENT_ID or NOTION_CLIENT_SECRET is not set");
