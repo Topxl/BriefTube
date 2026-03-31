@@ -34,10 +34,10 @@ jobs:
             cd /home/brieftube/app
 
             echo "→ Pulling latest code..."
-            # Remove runtime files that are now gitignored (worker.pid, log_bot.lock)
-            # to prevent git from blocking the merge when they exist as untracked files
-            git clean -f -- worker/worker.pid worker/log_bot.lock 2>/dev/null || true
-            git pull origin main
+            # Discard any local changes (e.g. from manual SSH deploys) so git pull never blocks.
+            # Runtime-generated files (worker.pid, log_bot.lock) are gitignored so reset is safe.
+            git fetch origin main
+            git reset --hard origin/main
 
             echo "→ Updating dependencies..."
             worker/venv/bin/pip install -r worker/requirements.txt -q
