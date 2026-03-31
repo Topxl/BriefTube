@@ -2,6 +2,7 @@
 
 ## 2026-04-01
 
+FEATURE: Add auth smoke test script — verifies login page, OAuth redirect, Supabase health, callback route, and state cookie; alerts via Telegram on auth breakage
 CHORE: Add Vitest unit tests for critical API routes — Stripe webhook (14 tests), subscriptions CRUD (13 tests), account deletion (7 tests), Stripe checkout (10 tests)
 CHORE: Add E2E auth-flow tests — OAuth redirect params, callback error handling, invalid state, Google button click
 CHORE: Add auth smoke tests to post-deploy health check — login page (200), OAuth redirect (302/307), and Supabase auth health (200) as critical checks
