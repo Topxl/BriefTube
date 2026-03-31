@@ -23,6 +23,24 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "url required" }, { status: 400 });
   }
 
+  try {
+    const parsed = new URL(url);
+    const allowed = [
+      "youtube.com",
+      "www.youtube.com",
+      "youtu.be",
+      "m.youtube.com",
+    ];
+    if (!allowed.includes(parsed.hostname)) {
+      return NextResponse.json(
+        { error: "Only YouTube URLs are supported" },
+        { status: 400 },
+      );
+    }
+  } catch {
+    return NextResponse.json({ error: "Invalid URL" }, { status: 400 });
+  }
+
   // Detect video URL
   const videoId = extractVideoId(url);
 

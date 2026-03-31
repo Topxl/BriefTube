@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { checkRateLimit, getRequestIp, publicRateLimit } from "@/lib/rate-limit";
 import { createAdminClient } from "@/lib/supabase/server";
 
 // 1x1 transparent GIF
@@ -14,6 +15,9 @@ export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const rateLimitResponse = await checkRateLimit(publicRateLimit, `track:${getRequestIp(_req)}`);
+  if (rateLimitResponse) return rateLimitResponse;
+
   const { id } = await params;
 
   if (id && UUID_REGEX.test(id)) {

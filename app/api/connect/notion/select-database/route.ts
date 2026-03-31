@@ -1,4 +1,5 @@
 import { authRoute } from "@/lib/zod-route";
+import { checkRateLimit, authRateLimit } from "@/lib/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
@@ -18,6 +19,9 @@ type Body = z.infer<typeof bodySchema>;
 export const POST = authRoute
   .body(bodySchema)
   .handler(async (_req, { body, ctx }) => {
+    const rateLimitResponse = await checkRateLimit(authRateLimit, `notion-db:${ctx.user.id}`);
+    if (rateLimitResponse) return rateLimitResponse;
+
     const cookieStore = await cookies();
     const accessToken = cookieStore.get(NOTION_PENDING_TOKEN_COOKIE)?.value;
 

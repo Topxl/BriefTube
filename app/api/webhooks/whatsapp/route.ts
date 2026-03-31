@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { env } from "@/lib/env";
+import { checkRateLimit, getRequestIp, publicRateLimit } from "@/lib/rate-limit";
 import { createHmac } from "crypto";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
@@ -23,6 +24,9 @@ function validateTwilioSignature(
 
 // Incoming messages from Twilio WhatsApp (POST)
 export async function POST(req: NextRequest) {
+  const rateLimitResponse = await checkRateLimit(publicRateLimit, `wh-whatsapp:${getRequestIp(req)}`);
+  if (rateLimitResponse) return rateLimitResponse;
+
   const authToken = env.TWILIO_AUTH_TOKEN;
 
   const body = await req.text();

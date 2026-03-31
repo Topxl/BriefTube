@@ -2,8 +2,12 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { verifyUnsubscribeToken } from "@/lib/mail/unsubscribe";
+import { checkRateLimit, getRequestIp, publicRateLimit } from "@/lib/rate-limit";
 
 export async function GET(request: NextRequest) {
+  const rateLimitResponse = await checkRateLimit(publicRateLimit, `unsub:${getRequestIp(request)}`);
+  if (rateLimitResponse) return rateLimitResponse;
+
   const { searchParams } = new URL(request.url);
   const userId = searchParams.get("uid");
   const emailType = searchParams.get("type");

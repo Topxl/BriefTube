@@ -28,14 +28,20 @@ export async function GET() {
 
   // --- VPS remote endpoint (preferred) ---
   if (env.VPS_WORKER_URL) {
+    if (!env.WORKER_API_SECRET) {
+      return NextResponse.json(
+        { error: "WORKER_API_SECRET is required when VPS_WORKER_URL is set" },
+        { status: 500 },
+      );
+    }
     const url = `${env.VPS_WORKER_URL}/logs`;
     try {
       const res = await fetch(url, {
         signal: AbortSignal.timeout(8000),
         cache: "no-store",
-        headers: env.WORKER_API_SECRET
-          ? { Authorization: `Bearer ${env.WORKER_API_SECRET}` }
-          : {},
+        headers: {
+          Authorization: `Bearer ${env.WORKER_API_SECRET}`,
+        },
       });
       if (!res.ok) throw new Error(`VPS returned ${res.status}`);
       const data = await res.json();

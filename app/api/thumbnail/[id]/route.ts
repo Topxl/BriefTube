@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { checkRateLimit, getRequestIp, publicRateLimit } from "@/lib/rate-limit";
 import { readFileSync } from "fs";
 import { join } from "path";
 
@@ -15,6 +16,9 @@ export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const rateLimitResponse = await checkRateLimit(publicRateLimit, `thumb:${getRequestIp(_req)}`);
+  if (rateLimitResponse) return rateLimitResponse;
+
   const { id } = await params;
   const clean = id.replace(/[^a-zA-Z0-9_-]/g, "");
   if (!clean) {

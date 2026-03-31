@@ -351,6 +351,19 @@ class TranscriptExtractor:
                 logger.info(f"[{video_id}] YouTube category is Music — skipping")
                 return None, None, "music_content", 0.0
 
+            # Film & Animation + duration > 30 min → almost certainly a movie or drama
+            # with no speech transcript. Language-agnostic: catches Nollywood, Bollywood,
+            # Turkish dizi, etc. regardless of title language.
+            # Short clips (trailers, reviews, < 30 min) are allowed through.
+            _MOVIE_DURATION_THRESHOLD = 1800  # 30 min
+            dur = self.last_video_metadata.get("duration_seconds", 0)
+            if genre.lower() == "film & animation" and dur and dur > _MOVIE_DURATION_THRESHOLD:
+                logger.info(
+                    f"[{video_id}] YouTube category=Film & Animation, duration={dur//60}min "
+                    f"> {_MOVIE_DURATION_THRESHOLD//60}min — skipping (no speech transcript expected)"
+                )
+                return None, None, "drama_movie", 0.0
+
         try:
             # Try to get transcript in preferred language order
             transcript_data = None

@@ -2,6 +2,11 @@
 
 ## 2026-04-01
 
+SECURITY: Add Zod validation on subscriptions API, fix .or() SQL injection in account delete, validate URLs in link-preview
+FIX: Add Invidious genre/category check at processor level — YouTube category "Film & Animation" + duration > 30 min → permanent skip (catches Nollywood, Bollywood, Turkish dizi regardless of title language)
+FIX: Report caught errors to Sentry in SectionErrorBoundary (previously only logged locally)
+SECURITY: Add rate limiting to remaining low-priority API routes — webhooks (Stripe, Resend, WhatsApp, YouTube), email (unsubscribe, first-summary, track), feed, referrals, stats, stripe/price, connect disconnect routes (Discord, Slack, Notion, WhatsApp), notion/select-database, youtube/callback, and thumbnail
+CHORE: Add test coverage for rate limiting (getRequestIp, checkRateLimit) and lists API auth guard — 25 tests total
 CHORE: Remove deprecated disableLogger from Sentry config and remove unused @vercel/analytics and @vercel/speed-insights packages
 FEATURE: Add Sentry error tracking integration — client/server/edge configs, global error boundary, tunnel route, and CSP update
 SECURITY: Remove hardcoded default secret in unsubscribe HMAC — require RESEND_WEBHOOK_SECRET env var at startup instead of falling back to guessable default

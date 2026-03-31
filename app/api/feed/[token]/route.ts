@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/server";
+import { checkRateLimit, getRequestIp, publicRateLimit } from "@/lib/rate-limit";
 import { SiteConfig } from "@/site-config";
 import type { NextRequest } from "next/server";
 import { connection } from "next/server";
@@ -20,6 +21,9 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ token: string }> },
 ) {
+  const rateLimitResponse = await checkRateLimit(publicRateLimit, `feed:${getRequestIp(_req)}`);
+  if (rateLimitResponse) return rateLimitResponse;
+
   await connection();
   const { token } = await params;
 
