@@ -5,6 +5,92 @@ const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === "true",
 });
 
+// ---------------------------------------------------------------------------
+// Content Security Policy
+// ---------------------------------------------------------------------------
+const cspDirectives = [
+  // Default: only allow same-origin
+  "default-src 'self'",
+
+  // Scripts: self + GTM/Google Ads + Rewardful + inline scripts for gtag init
+  "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://r.wdfl.co",
+
+  // Styles: unsafe-inline required for Tailwind / CSS-in-JS
+  "style-src 'self' 'unsafe-inline'",
+
+  // Images: all remote patterns from next.config + data:/blob: for Next.js Image
+  [
+    "img-src 'self' data: blob:",
+    "https://img.youtube.com",
+    "https://i.ytimg.com",
+    "https://yt3.ggpht.com",
+    "https://yt3.googleusercontent.com",
+    "https://lh3.googleusercontent.com",
+    "https://ui-avatars.com",
+    "https://images.unsplash.com",
+    "https://www.googletagmanager.com", // GTM tracking pixel
+  ].join(" "),
+
+  // Fonts: self only (next/font self-hosts Google Fonts)
+  "font-src 'self'",
+
+  // Connect: APIs the browser calls directly
+  [
+    "connect-src 'self'",
+    "https://*.supabase.co", // Supabase auth + DB
+    "https://noembed.com", // Video title resolution
+    "https://www.youtube.com", // oembed API
+    "https://www.googletagmanager.com", // GTM beacons
+    "https://www.google-analytics.com", // GA4 events
+    "https://r.wdfl.co", // Rewardful
+    "https://*.google-analytics.com", // GA4 measurement
+    "https://*.analytics.google.com", // GA4
+  ].join(" "),
+
+  // Frames: YouTube embeds (not used today, but safe to allow)
+  "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://js.stripe.com",
+
+  // Prevent this site from being embedded (clickjacking protection)
+  "frame-ancestors 'none'",
+
+  // Forms can only submit to same origin
+  "form-action 'self'",
+
+  // Base URI restriction
+  "base-uri 'self'",
+
+  // Block <object>, <embed>, <applet>
+  "object-src 'none'",
+];
+
+const ContentSecurityPolicy = cspDirectives.join("; ");
+
+// ---------------------------------------------------------------------------
+// Security headers applied to all routes
+// ---------------------------------------------------------------------------
+const securityHeaders = [
+  {
+    key: "Content-Security-Policy",
+    value: ContentSecurityPolicy,
+  },
+  {
+    key: "X-Frame-Options",
+    value: "DENY",
+  },
+  {
+    key: "X-Content-Type-Options",
+    value: "nosniff",
+  },
+  {
+    key: "Referrer-Policy",
+    value: "strict-origin-when-cross-origin",
+  },
+  {
+    key: "Permissions-Policy",
+    value: "camera=(), microphone=(), geolocation=()",
+  },
+];
+
 const nextConfig: NextConfig = {
   output: "standalone",
   trailingSlash: false,
@@ -61,6 +147,12 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
+      // Security headers on all routes
+      {
+        source: "/(.*)",
+        headers: securityHeaders,
+      },
+      // Long-term cache for static demo asset
       {
         source: "/demo-thumb-1.webp",
         headers: [

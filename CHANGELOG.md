@@ -2,6 +2,8 @@
 
 ## 2026-04-01
 
+SECURITY: Add Content-Security-Policy and security headers (X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy) to all routes via next.config.ts
+FEATURE: Add secrets/sensitive file detection to Claude Code post-file hook — warns on .env files, credentials, .pem/.key files, and hardcoded secret patterns
 REFACTOR: Consolidate URL resolution into `getBaseUrl(request?)` in `src/lib/server-url.ts` — remove dead Vercel checks, replace inline OAuth origin logic with shared helper
 FIX: Proxy PostHog analytics through Next.js rewrites to prevent ad-blocker retry spam and improve data collection reliability
 FIX: Deploy script — remove partial standalone public/ before copying full public/ to prevent nested public/public/ directory
