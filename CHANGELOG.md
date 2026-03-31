@@ -2,6 +2,11 @@
 
 ## 2026-04-01
 
+CHORE: Add Vitest unit tests for critical API routes — Stripe webhook (14 tests), subscriptions CRUD (13 tests), account deletion (7 tests), Stripe checkout (10 tests)
+CHORE: Add E2E auth-flow tests — OAuth redirect params, callback error handling, invalid state, Google button click
+CHORE: Add auth smoke tests to post-deploy health check — login page (200), OAuth redirect (302/307), and Supabase auth health (200) as critical checks
+FEATURE: Add e2e tests for subscription management (add/remove channel), pricing page, and video summary page
+CHORE: Re-enable Playwright tests in CI workflow (remove `if: false` guard)
 SECURITY: Add Zod validation on subscriptions API, fix .or() SQL injection in account delete, validate URLs in link-preview
 FIX: Add Invidious genre/category check at processor level — YouTube category "Film & Animation" + duration > 30 min → permanent skip (catches Nollywood, Bollywood, Turkish dizi regardless of title language)
 FIX: Report caught errors to Sentry in SectionErrorBoundary (previously only logged locally)
