@@ -949,6 +949,7 @@ class TranscriptExtractor:
             "video_unavailable",        # Premiere / scheduled — retry when live
             "youtube_auth_required",    # YouTube bot-detection — transient, retry later
             "proxy_circuit_open",       # Proxy circuit breaker open — retry when proxy recovers
+            # NOTE: "video_too_long_for_whisper" is intentionally NOT here — permanent failure
         ]
         if error_message in retry_errors:
             return True
