@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { checkRateLimit, authRateLimit } from "@/lib/rate-limit";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
@@ -15,6 +16,9 @@ export async function POST(req: NextRequest, { params }: Params) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const rateLimitResponse = await checkRateLimit(authRateLimit, user.id);
+  if (rateLimitResponse) return rateLimitResponse;
 
   // Check if already starred
   const { data: existing } = await supabase

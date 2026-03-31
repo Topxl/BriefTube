@@ -6,6 +6,11 @@ import { getUserPlan } from "@/lib/subscriptions";
 import { queueVideoForProcessing } from "@/lib/video-queue";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import {
+  checkRateLimit,
+  authRateLimit,
+  heavyRateLimit,
+} from "@/lib/rate-limit";
 
 // GET /api/subscriptions - Get user's YouTube channel subscriptions
 export async function GET() {
@@ -94,6 +99,9 @@ export async function POST(request: NextRequest) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const rl = await checkRateLimit(heavyRateLimit, user.id);
+  if (rl) return rl;
 
   const body = await request.json();
 
@@ -359,6 +367,9 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const rl = await checkRateLimit(authRateLimit, user.id);
+  if (rl) return rl;
+
   const body = (await request.json()) as { id: string; active: boolean };
   const { id, active } = body;
 
@@ -416,6 +427,9 @@ export async function PUT(request: NextRequest) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const rl = await checkRateLimit(authRateLimit, user.id);
+  if (rl) return rl;
 
   const body = (await request.json()) as { action: string };
   const { action } = body;
@@ -513,6 +527,9 @@ export async function DELETE(request: NextRequest) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const rl = await checkRateLimit(authRateLimit, user.id);
+  if (rl) return rl;
 
   const { searchParams } = new URL(request.url);
   const subscriptionId = searchParams.get("id");

@@ -1,10 +1,14 @@
 import { getRequiredUser } from "@/lib/auth/auth-user";
 import { env } from "@/lib/env";
+import { checkRateLimit, authRateLimit } from "@/lib/rate-limit";
 import { createHmac } from "crypto";
 import { redirect } from "next/navigation";
 
 export async function GET() {
   const user = await getRequiredUser();
+
+  const rateLimitResponse = await checkRateLimit(authRateLimit, `discord:${user.id}`);
+  if (rateLimitResponse) return rateLimitResponse;
 
   if (!env.DISCORD_CLIENT_ID || !env.DISCORD_REDIRECT_URI) {
     redirect("/dashboard/profile?error=discord_not_configured");

@@ -2,8 +2,12 @@ import { authRoute } from "@/lib/zod-route";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { stripe } from "@/lib/stripe";
 import { logger } from "@/lib/logger";
+import { checkRateLimit, heavyRateLimit } from "@/lib/rate-limit";
 
 export const DELETE = authRoute.handler(async (_req, { ctx }) => {
+  const rateLimitResponse = await checkRateLimit(heavyRateLimit, `delete-account:${ctx.user.id}`);
+  if (rateLimitResponse) return rateLimitResponse;
+
   const supabase = await createClient();
   const admin = createAdminClient();
   const userId = ctx.user.id;

@@ -4,6 +4,7 @@ import { env } from "@/lib/env";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getOrFindStripeCustomerId } from "@/lib/stripe/helpers";
+import { checkRateLimit, authRateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
@@ -14,6 +15,9 @@ export async function POST(req: NextRequest) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const rateLimitResponse = await checkRateLimit(authRateLimit, `checkout:${user.id}`);
+  if (rateLimitResponse) return rateLimitResponse;
 
   // Read interval, plan, and referral from form body
   const formData = await req.formData().catch(() => null);

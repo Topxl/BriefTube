@@ -1,4 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
+import {
+  checkRateLimit,
+  getRequestIp,
+  authRateLimit,
+  publicRateLimit,
+} from "@/lib/rate-limit";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
@@ -13,6 +19,13 @@ type Params = { params: Promise<{ id: string }> };
 
 // GET /api/lists/[id] — public, get list details + channels + user context
 export async function GET(req: NextRequest, { params }: Params) {
+  const ip = getRequestIp(req);
+  const rateLimitResponse = await checkRateLimit(
+    publicRateLimit,
+    `lists:${ip}`,
+  );
+  if (rateLimitResponse) return rateLimitResponse;
+
   const { id } = await params;
   const supabase = await createClient();
   const {
@@ -94,6 +107,9 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const patchRateLimitResponse = await checkRateLimit(authRateLimit, user.id);
+  if (patchRateLimitResponse) return patchRateLimitResponse;
+
   let body: unknown;
   try {
     body = await req.json();
@@ -138,6 +154,9 @@ export async function DELETE(req: NextRequest, { params }: Params) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const deleteRateLimitResponse = await checkRateLimit(authRateLimit, user.id);
+  if (deleteRateLimitResponse) return deleteRateLimitResponse;
 
   // RLS enforces owner check, but we check explicitly for a clear 403
   const { data: list } = await supabase

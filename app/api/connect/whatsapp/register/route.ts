@@ -1,6 +1,7 @@
 import { authRoute } from "@/lib/zod-route";
 import { createClient } from "@/lib/supabase/server";
 import { env } from "@/lib/env";
+import { checkRateLimit, authRateLimit } from "@/lib/rate-limit";
 import { randomBytes } from "crypto";
 import { z } from "zod";
 
@@ -11,6 +12,9 @@ const generateToken = (): string => {
 export const POST = authRoute
   .body(z.object({}))
   .handler(async (_req, { ctx }) => {
+    const rateLimitResponse = await checkRateLimit(authRateLimit, `whatsapp:${ctx.user.id}`);
+    if (rateLimitResponse) return rateLimitResponse;
+
     const supabase = await createClient();
     const token = generateToken();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();

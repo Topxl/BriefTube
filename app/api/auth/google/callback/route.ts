@@ -6,11 +6,15 @@ import { logger } from "@/lib/logger";
 import { sendEmail } from "@/lib/mail/send-email";
 import { WelcomeEmail } from "@/components/emails/welcome-email";
 import { getBaseUrl } from "@/lib/server-url";
+import { checkRateLimit, getRequestIp, publicRateLimit } from "@/lib/rate-limit";
 
 const STATE_COOKIE = "google_oauth_state";
 const REFERRAL_COOKIE = SiteConfig.referral.cookieName;
 
 export async function GET(request: Request) {
+  const rateLimitResponse = await checkRateLimit(publicRateLimit, `google-callback:${getRequestIp(request)}`);
+  if (rateLimitResponse) return rateLimitResponse;
+
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
   const state = searchParams.get("state");

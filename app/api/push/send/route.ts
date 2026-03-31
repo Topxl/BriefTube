@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { webpush } from "@/lib/web-push";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
+import { checkRateLimit, getRequestIp, publicRateLimit } from "@/lib/rate-limit";
 import { z } from "zod";
 
 const bodySchema = z.object({
@@ -14,6 +15,9 @@ const bodySchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  const rateLimitResponse = await checkRateLimit(publicRateLimit, `push-send:${getRequestIp(req)}`);
+  if (rateLimitResponse) return rateLimitResponse;
+
   const secret = req.headers.get("x-push-secret");
   if (!secret || !env.PUSH_NOTIFY_SECRET || secret !== env.PUSH_NOTIFY_SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

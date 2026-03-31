@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import crypto from "crypto";
+import { checkRateLimit, authRateLimit } from "@/lib/rate-limit";
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
@@ -18,6 +19,9 @@ export async function GET(request: NextRequest) {
       ),
     );
   }
+
+  const rateLimitResponse = await checkRateLimit(authRateLimit, `youtube-auth:${user.id}`);
+  if (rateLimitResponse) return rateLimitResponse;
 
   const clientId = process.env.GOOGLE_CLIENT_ID;
   if (!clientId) {

@@ -3,33 +3,7 @@ import type { NextRequest } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { extractVideoId } from "@/lib/youtube-id";
 import { fetchVideoOembed } from "@/lib/youtube";
-
-// Simple in-memory rate limiting (per IP, 3 requests per 10 min)
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT = 3;
-const RATE_WINDOW_MS = 10 * 60 * 1000;
-
-function getIp(req: NextRequest): string {
-  // x-real-ip is set by the infrastructure and can't be spoofed by the client.
-  // Fall back to the last entry of x-forwarded-for (added by Vercel's edge).
-  return (
-    req.headers.get("x-real-ip") ??
-    req.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim() ??
-    "unknown"
-  );
-}
-
-function isRateLimited(ip: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(ip);
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });
-    return false;
-  }
-  if (entry.count >= RATE_LIMIT) return true;
-  entry.count++;
-  return false;
-}
+import { checkRateLimit, getRequestIp, heavyRateLimit } from "@/lib/rate-limit";
 
 async function tryFetchLang(
   videoId: string,
@@ -77,13 +51,9 @@ async function fetchVideoInfo(
 }
 
 export async function POST(req: NextRequest) {
-  const ip = getIp(req);
-  if (isRateLimited(ip)) {
-    return NextResponse.json(
-      { error: "Too many requests. Please wait a few minutes and try again." },
-      { status: 429 },
-    );
-  }
+  const ip = getRequestIp(req);
+  const rateLimitResponse = await checkRateLimit(heavyRateLimit, `demo:${ip}`);
+  if (rateLimitResponse) return rateLimitResponse;
 
   const body = (await req.json()) as { url?: string };
   const url = body.url?.trim() ?? "";

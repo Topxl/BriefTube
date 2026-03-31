@@ -2,6 +2,9 @@
 
 ## 2026-04-01
 
+SECURITY: Add rate limiting to OAuth connect routes (Discord, Slack, Notion, WhatsApp), push routes (subscribe, unsubscribe, send), and Google auth routes
+SECURITY: Fix POST /api/lists missing authentication — use authRoute instead of manual auth; add rate limiting (authRateLimit/publicRateLimit) to all lists API routes (GET, POST, PATCH, DELETE, star, follow)
+SECURITY: Add rate limiting to Stripe routes (checkout, cancel, portal), account deletion, YouTube sync, and YouTube OAuth auth
 FIX: Add Nollywood/drama movie pre-filter in RSS scanner + processor — skip permanently titles like "interesting movie", "funny movie", etc. that download 50-65 MB via proxy on every retry (Webshare bandwidth explosion)
 SECURITY: Add rate limiting to heavy API routes — process-video, subscriptions (POST/PATCH/PUT/DELETE), link-preview, and onboarding/follow-list
 REFACTOR: Replace in-memory rate limiting with Upstash Redis (`@/lib/rate-limit`) in demo/summarize and newsletter API routes

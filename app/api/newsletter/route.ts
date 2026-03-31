@@ -4,37 +4,16 @@ import { resend } from "@/lib/mail/resend";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import type { NextRequest } from "next/server";
+import { checkRateLimit, getRequestIp, publicRateLimit } from "@/lib/rate-limit";
 
 const bodySchema = z.object({
   email: z.string().email(),
 });
 
-// Simple in-memory rate limit: 3 signups per IP per 10 min (best-effort on serverless)
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT = 3;
-const RATE_WINDOW_MS = 10 * 60 * 1000;
-
-function isRateLimited(ip: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(ip);
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });
-    return false;
-  }
-  if (entry.count >= RATE_LIMIT) return true;
-  entry.count++;
-  return false;
-}
-
 export async function POST(req: NextRequest) {
-  const ip =
-    req.headers.get("x-real-ip") ??
-    req.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim() ??
-    "unknown";
-
-  if (isRateLimited(ip)) {
-    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
-  }
+  const ip = getRequestIp(req);
+  const rateLimitResponse = await checkRateLimit(publicRateLimit, `newsletter:${ip}`);
+  if (rateLimitResponse) return rateLimitResponse;
   const parsed = bodySchema.safeParse(await req.json());
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid email" }, { status: 400 });

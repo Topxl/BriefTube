@@ -3,6 +3,7 @@ import { getYouTubeChannelInfo } from "@/lib/youtube";
 import { getUserPlan } from "@/lib/subscriptions";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { checkRateLimit, heavyRateLimit } from "@/lib/rate-limit";
 
 // POST /api/onboarding/follow-list
 // Subscribe the current user to all channels in one or more curated lists.
@@ -16,6 +17,9 @@ export async function POST(req: NextRequest) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const rl = await checkRateLimit(heavyRateLimit, user.id);
+  if (rl) return rl;
 
   const body = (await req.json()) as { listIds?: string[] };
   if (!body.listIds || body.listIds.length === 0) {
