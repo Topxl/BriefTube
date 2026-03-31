@@ -44,7 +44,9 @@ class MonitoringAlert:
         # Track video_ids already mirrored this session (avoid sending N copies for N subscribers)
         self._mirrored_video_ids: set = set()
         # Log mode: "off" (no alerts/mirrors), "errors" (only ERROR/CRITICAL), "all" (everything)
-        self._log_mode: str = "off"
+        # Default is "errors" so failure/timeout alerts always reach the admin without manual activation.
+        # Use /log_mode all to also mirror all deliveries, or /log_mode off to silence everything.
+        self._log_mode: str = "errors"
 
     async def send_alert(self, message: str, level: str = "INFO"):
         """Queue an alert to be sent to admin via the log bot."""

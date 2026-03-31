@@ -2,7 +2,7 @@
 
 ## 2026-03-31
 
-FIX: Video failure alerts — only notify admin, never send failure messages to regular users
+FIX: Video failure alerts — only notify admin via log bot (not regular users); default log_mode changed to "errors" so alerts arrive automatically without manual activation
 FIX: Whisper — handle proxy_circuit_open return code so FileNotFoundError is never raised; treat as retryable error instead of permanent failure
 FIX: RSS scanner — skip re-uploaded videos with identical title seen in last 2h on same channel (prevents triple-delivery when channel deletes and re-uploads same video)
 FEATURE: Admin monitoring — replace transcript sources table with Processing Pipeline (24h) showing text vs audio breakdown, per-source costs, and Failure Reasons (7d) with color-coded severity
