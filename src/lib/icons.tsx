@@ -86,6 +86,9 @@ import {
   Globe as _Globe,
   Languages as _Languages,
   Rss as _Rss,
+  FileText as _FileText,
+  ListChecks as _ListChecks,
+  MessageSquareText as _MessageSquareText,
 } from "lucide-react";
 
 export type { LucideIcon, LucideProps } from "lucide-react";
@@ -176,3 +179,6 @@ export const Megaphone = wrap(_Megaphone);
 export const Globe = wrap(_Globe);
 export const Languages = wrap(_Languages);
 export const Rss = wrap(_Rss);
+export const FileText = wrap(_FileText);
+export const ListChecks = wrap(_ListChecks);
+export const MessageSquareText = wrap(_MessageSquareText);
