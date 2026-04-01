@@ -5,15 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import {
-  Headphones,
-  Languages,
-  LayoutDashboard,
-  ListVideo,
-  LogOut,
-  Rss,
-  User,
-} from "@/lib/icons";
+import { LayoutDashboard, ListVideo, LogOut, User } from "@/lib/icons";
 import { ChannelSearchBar } from "@/components/dashboard/channel-search-bar";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -133,22 +125,10 @@ function UserAvatar() {
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link href="/dashboard/profile#delivery">
-            <Headphones className="h-4 w-4" />
-            Voice & delivery
-          </Link>
+          <Link href="/dashboard/profile?open=voice">Voice & delivery</Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link href="/dashboard/profile#language">
-            <Languages className="h-4 w-4" />
-            Language
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/dashboard/profile#podcast">
-            <Rss className="h-4 w-4" />
-            Podcast feed
-          </Link>
+          <Link href="/dashboard/profile?open=language">Language</Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem

@@ -74,55 +74,50 @@ function PodcastFeedSection({ rssToken }: { rssToken: string }) {
   };
 
   return (
-    <section className="flex flex-col gap-2">
-      <h2 className="text-muted-foreground/50 px-1 text-xs font-medium tracking-wide uppercase">
-        Podcast feed
-      </h2>
-      <div className="nm-raised overflow-hidden rounded-2xl">
-        <div className="flex items-center gap-3 px-4 py-3.5">
-          <div className="nm-inset-sm flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-orange-500/[0.12]">
+    <>
+      <div className="flex items-center justify-between px-4 py-3.5">
+        <div className="flex items-center gap-2.5">
+          <div className="nm-inset-sm flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
             <Rss className="h-4 w-4 text-orange-400" />
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium">Listen in your podcast app</p>
-            <p className="text-muted-foreground mt-0.5 text-[11px]">
-              Add your personal feed to any podcast app
+          <div>
+            <p className="text-sm font-medium">Podcast feed</p>
+            <p className="text-muted-foreground text-[11px]">
+              Listen in your favorite podcast app
             </p>
           </div>
         </div>
-        <div className="flex flex-col gap-3 border-t border-white/[0.04] px-4 py-3">
-          <div className="nm-inset flex items-center gap-2 rounded-xl px-3 py-2">
-            <span className="text-muted-foreground min-w-0 flex-1 truncate font-mono text-[11px]">
-              {feedUrl}
-            </span>
-            <button
-              onClick={() => void handleCopy()}
-              className="text-muted-foreground hover:text-foreground shrink-0 transition-colors"
-              aria-label="Copy feed URL"
-            >
-              {copied ? (
-                <Check className="h-3.5 w-3.5 text-green-400" />
-              ) : (
-                <Copy className="h-3.5 w-3.5" />
-              )}
-            </button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {PODCAST_APPS.map((app) => (
-              <a
-                key={app.name}
-                href={app.href(feedUrl)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="nm-raised-sm text-muted-foreground hover:text-foreground rounded-full px-3 py-1 text-xs transition-colors"
-              >
-                {app.name}
-              </a>
-            ))}
-          </div>
-        </div>
+        <button
+          onClick={() => void handleCopy()}
+          className="nm-raised-sm text-muted-foreground hover:text-foreground flex items-center gap-1.5 rounded-full px-3 py-1 text-xs transition-all"
+        >
+          {copied ? (
+            <>
+              <Check className="h-3 w-3 text-green-400" />
+              Copied
+            </>
+          ) : (
+            <>
+              <Copy className="h-3 w-3" />
+              Copy link
+            </>
+          )}
+        </button>
       </div>
-    </section>
+      <div className="flex flex-wrap gap-2 px-4 pb-3">
+        {PODCAST_APPS.map((app) => (
+          <a
+            key={app.name}
+            href={app.href(feedUrl)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="nm-raised-sm text-muted-foreground hover:text-foreground rounded-full px-3 py-1 text-xs transition-colors"
+          >
+            {app.name}
+          </a>
+        ))}
+      </div>
+    </>
   );
 }
 
@@ -467,29 +462,41 @@ export function ProfileContent({
         </div>
       </section>
 
-      {/* Delivery */}
-      <DeliverySection
-        initialTelegramConnected={initialTelegramConnected}
-        initialNotionConnected={initialNotionConnected}
-        initialNotionDatabaseName={initialNotionDatabaseName}
-        initialWhatsappConnected={initialWhatsappConnected}
-        initialWhatsappPhone={initialWhatsappPhone}
-        initialDiscordConnected={initialDiscordConnected}
-        initialSlackConnected={initialSlackConnected}
-        initialVoice={initialVoice}
-        initialLanguage={initialLanguage}
-        initialFavorites={initialFavorites}
-      />
+      {/* Platforms */}
+      <section className="flex flex-col gap-2">
+        <h2 className="text-muted-foreground/50 px-1 text-xs font-medium tracking-wide uppercase">
+          Platforms
+        </h2>
+        <div className="nm-raised divide-y divide-white/[0.06] overflow-hidden rounded-2xl">
+          <DeliverySection
+            initialTelegramConnected={initialTelegramConnected}
+            initialNotionConnected={initialNotionConnected}
+            initialNotionDatabaseName={initialNotionDatabaseName}
+            initialWhatsappConnected={initialWhatsappConnected}
+            initialWhatsappPhone={initialWhatsappPhone}
+            initialDiscordConnected={initialDiscordConnected}
+            initialSlackConnected={initialSlackConnected}
+            initialVoice={initialVoice}
+            initialLanguage={initialLanguage}
+            initialFavorites={initialFavorites}
+          />
+        </div>
+      </section>
 
-      {/* Podcast feed */}
-      {rssToken && <PodcastFeedSection rssToken={rssToken} />}
-
-      {/* Summary preferences */}
-      <SummaryPreferencesSection
-        initialLength={initialSummaryLength}
-        initialStyle={initialSummaryStyle}
-        initialCustomInstructions={initialCustomInstructions}
-      />
+      {/* Audio & summaries */}
+      <section className="flex flex-col gap-2">
+        <h2 className="text-muted-foreground/50 px-1 text-xs font-medium tracking-wide uppercase">
+          Audio & summaries
+        </h2>
+        <div className="nm-raised divide-y divide-white/[0.06] overflow-hidden rounded-2xl">
+          <SummaryPreferencesSection
+            initialLength={initialSummaryLength}
+            initialStyle={initialSummaryStyle}
+            initialCustomInstructions={initialCustomInstructions}
+          />
+          {rssToken && <PodcastFeedSection rssToken={rssToken} />}
+        </div>
+      </section>
 
       {/* Notifications */}
       <NotificationsSection
