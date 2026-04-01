@@ -227,25 +227,31 @@ export function SummariesFeed({
   }, [loadDeliveries]);
 
   // Realtime: update video status in-place when processed_videos changes
+  // Wrapped in try-catch: WebSocket may be blocked by strict browsers or corporate networks
   useEffect(() => {
-    const channel = supabase
-      .channel("processed-videos-status")
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "processed_videos" },
-        (payload) => {
-          const updated = payload.new as ProcessedVideo;
-          setDeliveries((prev) =>
-            prev.map((d) =>
-              d.video_id === updated.video_id ? { ...d, video: updated } : d,
-            ),
-          );
-        },
-      )
-      .subscribe();
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    try {
+      channel = supabase
+        .channel("processed-videos-status")
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "processed_videos" },
+          (payload) => {
+            const updated = payload.new as ProcessedVideo;
+            setDeliveries((prev) =>
+              prev.map((d) =>
+                d.video_id === updated.video_id ? { ...d, video: updated } : d,
+              ),
+            );
+          },
+        )
+        .subscribe();
+    } catch {
+      // WebSocket unavailable — degrade gracefully, user can refresh manually
+    }
 
     return () => {
-      void supabase.removeChannel(channel);
+      if (channel) void supabase.removeChannel(channel);
     };
   }, [supabase]);
 
