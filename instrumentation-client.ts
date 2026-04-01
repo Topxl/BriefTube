@@ -6,7 +6,22 @@ Sentry.init({
   tracesSampleRate: process.env.NODE_ENV === "development" ? 1.0 : 0.1,
   replaysSessionSampleRate: 0.05,
   replaysOnErrorSampleRate: 1.0,
-  integrations: [Sentry.replayIntegration()],
+  integrations: [],
 });
+
+// Lazy-load Replay after page is interactive to reduce initial JS bundle
+if (typeof window !== "undefined") {
+  window.addEventListener(
+    "load",
+    () => {
+      setTimeout(() => {
+        void Sentry.lazyLoadIntegration("replayIntegration").then((replay) => {
+          Sentry.addIntegration(replay());
+        });
+      }, 3000);
+    },
+    { once: true },
+  );
+}
 
 export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
