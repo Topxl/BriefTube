@@ -330,10 +330,98 @@ async def send_kpi_report(alert_system: MonitoringAlert, period: str = "daily"):
             f"  Uptime: {summary['uptime']} · Errors: {len(summary['recent_errors'])}"
         )
 
+        # ── Message 3: Health & Anomalies + UX + Conversion ────────
+        try:
+            # Health checks
+            cutoff_15m = (now - timedelta(minutes=15)).isoformat()
+            cutoff_30m = (now - timedelta(minutes=30)).isoformat()
+            hour_ago = (now - timedelta(hours=1)).isoformat()
+
+            stuck_deliveries = supabase.table("deliveries").select("id", count="exact").eq("status", "sending").lt("created_at", cutoff_15m).execute()
+            n_stuck_del = stuck_deliveries.count or 0
+
+            failed_1h = supabase.table("processed_videos").select("id", count="exact").eq("status", "failed").gte("created_at", hour_ago).execute()
+            n_failed_1h = failed_1h.count or 0
+
+            stuck_processing = supabase.table("processing_queue").select("id", count="exact").eq("status", "processing").lt("created_at", cutoff_30m).execute()
+            n_stuck_proc = stuck_processing.count or 0
+
+            auth_ok = "\u2705" if su_24 > 0 else "\u26a0\ufe0f"
+            del_stuck_ok = "\u2705" if n_stuck_del == 0 else "\u26a0\ufe0f"
+            failed_ok = "\u2705" if n_failed_1h <= 20 else "\u26a0\ufe0f"
+            proc_ok = "\u2705" if n_stuck_proc == 0 else "\u26a0\ufe0f"
+
+            # User experience metrics
+            users_with_zero_channels = max(0, n_total - n_activated)
+            zero_ch_pct = (users_with_zero_channels / n_total * 100) if n_total > 0 else 0
+
+            expired_trial_no_upgrade = supabase.table("profiles").select("id", count="exact").eq("subscription_status", "free").not_.is_("trial_ends_at", "null").lt("trial_ends_at", now.isoformat()).execute()
+            n_expired_trial = expired_trial_no_upgrade.count or 0
+
+            disconnected_24h = supabase.table("platform_connections").select("id", count="exact").eq("connected", False).gte("updated_at", day_ago).execute()
+            n_disconnected = disconnected_24h.count or 0
+
+            # Conversion snapshot
+            # Free = subscription_status='free' AND (trial_ends_at IS NULL OR trial_ends_at < now)
+            free_no_trial = supabase.table("profiles").select("id", count="exact").eq("subscription_status", "free").is_("trial_ends_at", "null").execute()
+            free_expired_trial_count = n_expired_trial
+            total_free = (free_no_trial.count or 0) + free_expired_trial_count
+            # n_trial already computed above (active trial users)
+            # n_pro already computed above (active paid users)
+            # n_churned already computed above
+
+            total_all = total_free + n_trial + n_pro + n_churned
+            free_to_trial_pct = (n_trial / (total_free + n_trial) * 100) if (total_free + n_trial) > 0 else 0
+            trial_to_paid_pct = (n_pro / (n_pro + n_trial + n_expired_trial) * 100) if (n_pro + n_trial + n_expired_trial) > 0 else 0
+            paid_to_churned_pct = (n_churned / (n_pro + n_churned) * 100) if (n_pro + n_churned) > 0 else 0
+
+            # Avg trial duration before upgrade (approximate: avg days from created_at to now for paid users)
+            try:
+                paid_users_data = supabase.table("profiles").select("created_at, updated_at").eq("subscription_status", "active").execute()
+                if paid_users_data.data:
+                    durations = []
+                    for row in paid_users_data.data:
+                        created = datetime.fromisoformat(row["created_at"].replace("Z", "+00:00"))
+                        # Use updated_at as a proxy for when they upgraded
+                        upgraded = datetime.fromisoformat(row["updated_at"].replace("Z", "+00:00"))
+                        d = (upgraded - created).days
+                        if 0 < d < 365:  # filter out unreasonable values
+                            durations.append(d)
+                    avg_trial_days = sum(durations) / len(durations) if durations else 0
+                else:
+                    avg_trial_days = 0
+            except Exception:
+                avg_trial_days = 0
+
+            msg3 = (
+                f"\U0001f50d <b>Health &amp; Anomalies</b>\n"
+                f"  Auth: {auth_ok} {su_24} signups (24h)\n"
+                f"  Deliveries stuck: {del_stuck_ok} {n_stuck_del} stuck &gt;15min\n"
+                f"  Failed videos (1h): {failed_ok} {n_failed_1h}\n"
+                f"  Processing queue: {proc_ok} {n_stuck_proc} stuck &gt;30min\n\n"
+
+                f"\U0001f4f1 <b>User Experience</b>\n"
+                f"  Avg channels/user: {avg_channels:.1f}\n"
+                f"  Users with 0 channels: {users_with_zero_channels} ({zero_ch_pct:.0f}% of total)\n"
+                f"  Expired trial (no upgrade): {n_expired_trial}\n"
+                f"  Disconnected platforms (24h): {n_disconnected}\n\n"
+
+                f"\U0001f3af <b>Conversion Snapshot</b>\n"
+                f"  Free\u2192Trial: <b>{free_to_trial_pct:.0f}%</b>\n"
+                f"  Trial\u2192Paid: <b>{trial_to_paid_pct:.0f}%</b>\n"
+                f"  Paid\u2192Churned: <b>{paid_to_churned_pct:.0f}%</b>\n"
+                f"  Avg trial duration before upgrade: {avg_trial_days:.0f} days"
+            )
+        except Exception as e:
+            logger.warning(f"KPI msg3 build failed: {e}")
+            msg3 = None
+
         bot = alert_system._log_bot
         chat = alert_system._log_chat_id
         await bot.send_message(chat_id=chat, text=msg1, parse_mode="HTML")
         await bot.send_message(chat_id=chat, text=msg2, parse_mode="HTML")
+        if msg3:
+            await bot.send_message(chat_id=chat, text=msg3, parse_mode="HTML")
 
     except Exception as e:
         logger.error(f"KPI report failed: {e}")

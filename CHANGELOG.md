@@ -2,6 +2,8 @@
 
 ## 2026-04-01
 
+FEATURE: Add critical anomaly detection loop (every 5min) — monitors auth, stuck deliveries, stuck processing, high failure rate, no deliveries, and CPU/memory; sends immediate Telegram alerts with once-per-incident deduplication
+FEATURE: Add 3rd KPI report message with health & anomalies, user experience metrics (avg channels, zero-channel users, expired trials, disconnected platforms), and conversion snapshot (Free/Trial/Paid/Churned rates, avg trial duration)
 FIX: Add redirects for apple-touch-icon.png, apple-touch-icon-precomposed.png, and manifest.json to eliminate 404s from browsers/crawlers; add security.txt
 FIX: Deploy script — copy .next manifest files (routes-manifest.json, BUILD_ID, etc.) so new routes aren't silently 404 after deploy
 REFACTOR: Optimize landing page performance — ISR with unstable_cache (5min revalidation) for prices/stats, Sentry bundle size optimizations (exclude debug/replay iframe/shadow DOM), reduce Sentry replay session sample rate to 5%, consolidate GTM scripts (load with GA4 ID as primary), defer PostHog init until first use
