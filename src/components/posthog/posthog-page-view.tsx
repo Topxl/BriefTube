@@ -1,6 +1,6 @@
 "use client";
 
-import { posthogClient as posthog } from "@/lib/posthog/client";
+import { posthogClient as posthog, ensurePostHogInit } from "@/lib/posthog/client";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 
@@ -9,6 +9,7 @@ export function PostHogPageView() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
+    ensurePostHogInit();
     if (!posthog.__loaded) return;
     posthog.capture("$pageview", { $current_url: window.location.href });
   }, [pathname, searchParams]);

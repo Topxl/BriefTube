@@ -12,7 +12,7 @@ import dynamic from "next/dynamic";
 import { ThemeProvider } from "next-themes";
 import { PostHogProvider } from "posthog-js/react";
 import { Suspense, type PropsWithChildren } from "react";
-import { posthogClient } from "@/lib/posthog/client";
+import { posthogClient, ensurePostHogInit } from "@/lib/posthog/client";
 
 // Lazy-load PostHog to keep it out of the initial JS bundle (~176 KiB)
 const PostHogPageView = dynamic(
@@ -45,6 +45,7 @@ function getQueryClient() {
 
 export const Providers = ({ children }: PropsWithChildren) => {
   const queryClient = getQueryClient();
+  ensurePostHogInit();
 
   return (
     <PostHogProvider client={posthogClient}>

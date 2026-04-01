@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import dynamic from "next/dynamic";
 import { Suspense } from "react";
-import { connection } from "next/server";
+import { unstable_cache } from "next/cache";
 import { Hero } from "@/components/landing/hero";
 import { Navbar } from "@/components/landing/navbar";
 import { SocialProof } from "@/components/landing/social-proof";
@@ -10,6 +10,18 @@ import { getStripe } from "@/lib/stripe";
 import { env } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/server";
 import type { PricesData } from "@/hooks/use-prices";
+
+const getCachedPrices = unstable_cache(
+  async () => fetchPrices(),
+  ["landing-prices"],
+  { revalidate: 300 },
+);
+
+const getCachedStats = unstable_cache(
+  async () => fetchStats(),
+  ["landing-stats"],
+  { revalidate: 300 },
+);
 
 const Problem = dynamic(async () =>
   import("@/components/landing/problem").then((m) => ({ default: m.Problem })),
@@ -321,8 +333,7 @@ async function fetchPrices(): Promise<PricesData | null> {
 }
 
 export default async function Home() {
-  await connection();
-  const [prices, stats] = await Promise.all([fetchPrices(), fetchStats()]);
+  const [prices, stats] = await Promise.all([getCachedPrices(), getCachedStats()]);
   return (
     <main className="bg-background min-h-screen">
       {jsonLd.map((schema, i) => (
