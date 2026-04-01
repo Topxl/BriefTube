@@ -68,6 +68,11 @@ jobs:
             cp -r .next/standalone/* "$WEB_DIR/"
             cp -r .next/standalone/.next/server "$WEB_DIR/.next/server"
 
+            # Update .next manifest files — glob (*) skips dotfiles so .next/ is not
+            # included above; copy manifests explicitly to register new routes correctly.
+            cp .next/standalone/.next/*.json "$WEB_DIR/.next/"
+            cp .next/standalone/.next/BUILD_ID "$WEB_DIR/.next/" 2>/dev/null || true
+
             # Merge new static chunks with old ones (don't delete old chunks)
             cp -r .next/static/* "$WEB_DIR/.next/static/" 2>/dev/null || cp -r .next/static "$WEB_DIR/.next/static"
 
