@@ -84,7 +84,7 @@
     "next-zod-route": "^1.0.0",
     "nprogress": "^0.2.0",
     "nuqs": "^2.8.5",
-    "posthog-js": "^1.354.0",
+    "posthog-js": "^1.364.4",
     "posthog-node": "^5.26.0",
     "qrcode": "^1.5.4",
     "react": "19.2.3",

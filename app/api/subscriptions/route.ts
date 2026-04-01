@@ -344,7 +344,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  void captureServerEvent({
+  captureServerEvent({
     distinctId: user.id,
     event: "channel_added",
     properties: {
@@ -352,6 +352,21 @@ export async function POST(request: NextRequest) {
       channel_name: finalChannelName,
     },
   });
+
+  // Track "time to first value" — first channel is the key activation moment
+  if ((activeCount ?? 0) === 0) {
+    captureServerEvent({
+      distinctId: user.id,
+      event: "first_channel_added",
+      properties: {
+        channel_id: finalChannelId,
+        channel_name: finalChannelName,
+        time_since_signup_seconds: Math.floor(
+          (Date.now() - new Date(user.created_at).getTime()) / 1000,
+        ),
+      },
+    });
+  }
 
   // Aha moment: deliver a video immediately after subscribing.
   // - If user added via a video URL → deliver that specific video.
@@ -612,7 +627,7 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  void captureServerEvent({
+  captureServerEvent({
     distinctId: user.id,
     event: "channel_removed",
     properties: {

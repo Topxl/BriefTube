@@ -306,7 +306,7 @@ export function ProfileContent({
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-8">
       {/* Subscription */}
       <section className="flex flex-col gap-2">
         <h2 className="text-muted-foreground/50 px-1 text-xs font-medium tracking-wide uppercase">

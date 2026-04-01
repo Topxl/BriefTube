@@ -206,7 +206,7 @@ export function NotificationsSection({
 
       <div className="nm-raised divide-y divide-white/[0.05] overflow-hidden rounded-2xl">
         {/* Browser push */}
-        <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center justify-between px-4 py-3.5">
           <div className="flex items-center gap-2.5">
             <div className="nm-inset-sm flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
               {permissionDenied ? (
@@ -217,37 +217,33 @@ export function NotificationsSection({
                 />
               )}
             </div>
-            <div>
-              <p className="text-sm font-medium">Browser notifications</p>
-              <p className="text-muted-foreground text-[11px]">
-                {permissionDenied
-                  ? "Blocked in browser settings"
-                  : "Instant alert when a new summary is ready"}
-              </p>
-            </div>
+            <p className="text-sm font-medium">
+              Browser notifications
+              {permissionDenied && (
+                <span className="text-muted-foreground ml-1.5 text-[10px] font-normal">
+                  (blocked)
+                </span>
+              )}
+            </p>
           </div>
           <Switch
             checked={pushEnabled && !permissionDenied}
             disabled={savingPush || permissionDenied}
             onCheckedChange={(checked) => void handlePushToggle(checked)}
             className="data-[state=checked]:bg-emerald-500"
+            aria-label="Toggle browser notifications"
           />
         </div>
 
         {/* Newsletter */}
-        <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center justify-between px-4 py-3.5">
           <div className="flex items-center gap-2.5">
             <div className="nm-inset-sm flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
               <Mail
                 className={`h-4 w-4 ${newsletter ? "text-red-400" : "text-muted-foreground"}`}
               />
             </div>
-            <div>
-              <p className="text-sm font-medium">Newsletter</p>
-              <p className="text-muted-foreground text-[11px]">
-                Tips and updates about BriefTube
-              </p>
-            </div>
+            <p className="text-sm font-medium">Newsletter</p>
           </div>
           <Switch
             checked={newsletter}
@@ -259,19 +255,14 @@ export function NotificationsSection({
         </div>
 
         {/* Announcements */}
-        <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center justify-between px-4 py-3.5">
           <div className="flex items-center gap-2.5">
             <div className="nm-inset-sm flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
               <Megaphone
                 className={`h-4 w-4 ${announcements ? "text-red-400" : "text-muted-foreground"}`}
               />
             </div>
-            <div>
-              <p className="text-sm font-medium">Announcements</p>
-              <p className="text-muted-foreground text-[11px]">
-                New features and product updates
-              </p>
-            </div>
+            <p className="text-sm font-medium">Announcements</p>
           </div>
           <Switch
             checked={announcements}
@@ -285,7 +276,7 @@ export function NotificationsSection({
         </div>
 
         {/* Daily digest */}
-        <div className="px-4 py-3">
+        <div className="px-4 py-3.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <div className="nm-inset-sm flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
@@ -293,12 +284,7 @@ export function NotificationsSection({
                   className={`h-4 w-4 ${dailyDigest ? "text-red-400" : "text-muted-foreground"}`}
                 />
               </div>
-              <div>
-                <p className="text-sm font-medium">Daily digest</p>
-                <p className="text-muted-foreground text-[11px]">
-                  Email summary of your videos every day
-                </p>
-              </div>
+              <p className="text-sm font-medium">Daily digest</p>
             </div>
             <Switch
               checked={dailyDigest}
@@ -311,14 +297,8 @@ export function NotificationsSection({
             />
           </div>
           {dailyDigest && (
-            <>
-              <div
-                className="mt-3 flex items-center gap-2 pl-[42px]"
-                suppressHydrationWarning
-              >
-                <p className="text-muted-foreground text-xs">
-                  Delivery time (local)
-                </p>
+            <div className="mt-3 flex items-center justify-between pl-[42px]">
+              <div className="flex items-center gap-2" suppressHydrationWarning>
                 <input
                   type="time"
                   value={`${formatHour(digestHour)}:00`.slice(0, 5)}
@@ -330,12 +310,11 @@ export function NotificationsSection({
                     if (!isNaN(hour)) void handleDigestHourChange(hour);
                   }}
                   className="nm-inset text-foreground rounded-lg px-2 py-1 text-xs outline-none"
+                  aria-label="Digest delivery time"
                 />
               </div>
-              <div className="mt-3 flex items-center justify-between pl-[42px]">
-                <p className="text-muted-foreground text-xs">
-                  Full summaries in email
-                </p>
+              <div className="flex items-center gap-2">
+                <p className="text-muted-foreground text-xs">Full summaries</p>
                 <Switch
                   checked={fullSummary}
                   onCheckedChange={(checked) =>
@@ -345,7 +324,7 @@ export function NotificationsSection({
                   aria-label="Toggle full summaries in digest email"
                 />
               </div>
-            </>
+            </div>
           )}
         </div>
       </div>

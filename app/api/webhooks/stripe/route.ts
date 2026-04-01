@@ -172,7 +172,7 @@ const checkoutSessionCompleted = async (
 
   logger.info(`Subscription activated for user: ${profile.id}`);
 
-  void captureServerEvent({
+  captureServerEvent({
     distinctId: profile.id,
     event: "subscription_activated",
     properties: {

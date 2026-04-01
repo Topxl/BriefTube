@@ -14,6 +14,7 @@ if (
     capture_pageview: false, // We handle this manually in PostHogPageView
     capture_pageleave: true,
     autocapture: true,
+    opt_in_site_apps: true, // Required for PostHog surveys to render
     session_recording: {
       maskAllInputs: true,
       maskTextSelector: "[data-mask]",

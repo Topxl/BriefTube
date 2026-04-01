@@ -51,7 +51,7 @@ export const POST = authRoute
       { onConflict: "user_id,platform" },
     );
 
-    void captureServerEvent({
+    captureServerEvent({
       distinctId: ctx.user.id,
       event: "platform_connected",
       properties: { platform: "notion" },

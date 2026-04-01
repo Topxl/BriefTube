@@ -94,7 +94,7 @@ export async function GET(request: Request) {
             }
 
             // Track signup (fire-and-forget)
-            void captureServerEvent({
+            captureServerEvent({
               distinctId: user.id,
               event: "signup_completed",
               properties: {

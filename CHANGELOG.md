@@ -2,6 +2,9 @@
 
 ## 2026-04-01
 
+FEATURE: Add PostHog feature flags infrastructure — useFeatureFlag/useFeatureFlagEnabled hooks, FeatureFlag wrapper component, server-side getFeatureFlag helper, PostHogProvider wrapping in app providers
+FEATURE: Enable PostHog surveys support — add opt_in_site_apps to client init, track first_channel_added event with time-to-first-value metric
+REFACTOR: Redesign profile page Google-style — compact notifications (no descriptions), collapsible summary preferences, delivery section with Platforms/Audio sub-groups and status dots, group sections under shared headers, increase spacing
 FIX: Resolve import-in-the-middle version mismatch warnings by adding pnpm override to force v3.0.0 across all @opentelemetry/instrumentation dependencies
 FEATURE: Add Web Server logs section to admin dashboard — live error tracking, log viewer, and service control (start/stop/restart) for brieftube-web systemd service
 FEATURE: Add PostHog server-side tracking for onboarding funnel — signup_completed, channel_added, channel_removed, checkout_started, platform_connected (Discord, Slack, Notion)

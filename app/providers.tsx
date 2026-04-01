@@ -10,7 +10,9 @@ import {
 } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import { ThemeProvider } from "next-themes";
+import { PostHogProvider } from "posthog-js/react";
 import { Suspense, type PropsWithChildren } from "react";
+import { posthogClient } from "@/lib/posthog/client";
 
 // Lazy-load PostHog to keep it out of the initial JS bundle (~176 KiB)
 const PostHogPageView = dynamic(
@@ -45,21 +47,23 @@ export const Providers = ({ children }: PropsWithChildren) => {
   const queryClient = getQueryClient();
 
   return (
-    <ThemeProvider
-      attribute="class"
-      defaultTheme="system"
-      enableSystem
-      enableColorScheme
-    >
-      <QueryClientProvider client={queryClient}>
-        <Suspense fallback={null}>
-          <PostHogPageView />
-        </Suspense>
-        <Toaster />
-        <DialogManagerRenderer />
-        <GlobalDialogLazy />
-        {children}
-      </QueryClientProvider>
-    </ThemeProvider>
+    <PostHogProvider client={posthogClient}>
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="system"
+        enableSystem
+        enableColorScheme
+      >
+        <QueryClientProvider client={queryClient}>
+          <Suspense fallback={null}>
+            <PostHogPageView />
+          </Suspense>
+          <Toaster />
+          <DialogManagerRenderer />
+          <GlobalDialogLazy />
+          {children}
+        </QueryClientProvider>
+      </ThemeProvider>
+    </PostHogProvider>
   );
 };
