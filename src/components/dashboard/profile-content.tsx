@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { createClient } from "@/lib/supabase/client";
+
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
@@ -23,6 +23,14 @@ const NotificationsSection = dynamic(
   { ssr: false },
 );
 
+const SummaryPreferencesSection = dynamic(
+  async () =>
+    import("@/components/dashboard/summary-preferences-section").then((m) => ({
+      default: m.SummaryPreferencesSection,
+    })),
+  { ssr: false },
+);
+
 const ReferralSection = dynamic(
   async () =>
     import("@/components/dashboard/referral-section").then((m) => ({
@@ -30,15 +38,7 @@ const ReferralSection = dynamic(
     })),
   { ssr: false },
 );
-import {
-  LogOut,
-  Trash2,
-  ShieldAlert,
-  Loader2,
-  Rss,
-  Copy,
-  Check,
-} from "@/lib/icons";
+import { Trash2, ShieldAlert, Loader2, Rss, Copy, Check } from "@/lib/icons";
 import { SiteConfig } from "@/site-config";
 import { formatCurrency } from "@/lib/format";
 
@@ -74,7 +74,7 @@ function PodcastFeedSection({ rssToken }: { rssToken: string }) {
   };
 
   return (
-    <section className="space-y-2">
+    <section className="flex flex-col gap-2">
       <h2 className="text-muted-foreground/50 px-1 text-xs font-medium tracking-wide uppercase">
         Podcast feed
       </h2>
@@ -157,6 +157,7 @@ type ReferralStats = {
 };
 
 type Props = {
+  avatarUrl: string;
   email: string;
   isTrial: boolean;
   isActivePro: boolean;
@@ -186,10 +187,14 @@ type Props = {
   initialFullSummary: boolean;
   rssToken: string;
   initialPrices: PricesData;
+  initialSummaryLength: string;
+  initialSummaryStyle: string;
+  initialCustomInstructions: string;
 };
 
 export function ProfileContent({
-  email,
+  avatarUrl: _avatarUrl,
+  email: _email,
   isTrial,
   isActivePro,
   trialDaysLeft,
@@ -204,7 +209,7 @@ export function ProfileContent({
   initialVoice,
   initialLanguage,
   initialFavorites,
-  maxChannels,
+  maxChannels: _maxChannels,
   referralCode,
   referralStats,
   isAdmin,
@@ -218,6 +223,9 @@ export function ProfileContent({
   initialFullSummary,
   rssToken,
   initialPrices,
+  initialSummaryLength,
+  initialSummaryStyle,
+  initialCustomInstructions,
 }: Props) {
   const router = useRouter();
 
@@ -277,23 +285,6 @@ export function ProfileContent({
     priceData.currency,
   );
 
-  const supabase = createClient();
-
-  const handleLogout = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch {
-      // If signOut fails (corrupted cookie), clear cookies manually
-      document.cookie.split(";").forEach((c) => {
-        const name = c.split("=")[0].trim();
-        if (name.startsWith("sb-")) {
-          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
-        }
-      });
-    }
-    window.location.href = "/";
-  };
-
   const handleDeleteAccount = () => {
     dialogManager.confirm({
       title: "Delete your account?",
@@ -315,9 +306,9 @@ export function ProfileContent({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       {/* Subscription */}
-      <section className="space-y-2">
+      <section className="flex flex-col gap-2">
         <h2 className="text-muted-foreground/50 px-1 text-xs font-medium tracking-wide uppercase">
           Subscription
         </h2>
@@ -418,12 +409,9 @@ export function ProfileContent({
                   </button>
                 </div>
                 {upgradeInterval === "month" ? (
-                  <button
-                    onClick={() => setUpgradeInterval("year")}
-                    className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-400 transition-colors hover:bg-amber-500/20"
-                  >
+                  <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-400">
                     Save 27%
-                  </button>
+                  </span>
                 ) : (
                   <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
                     You save 27%
@@ -479,57 +467,6 @@ export function ProfileContent({
         </div>
       </section>
 
-      {/* Account */}
-      <section className="space-y-2">
-        <h2 className="text-muted-foreground/50 px-1 text-xs font-medium tracking-wide uppercase">
-          Account
-        </h2>
-        <div className="nm-raised overflow-hidden rounded-2xl">
-          <div className="flex items-center gap-3 px-4 py-3.5">
-            <div className="nm-inset-sm flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-500/[0.12] text-sm font-bold text-red-400">
-              {email.charAt(0).toUpperCase()}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium">{email}</p>
-              <p className="text-muted-foreground mt-0.5 text-[11px]">
-                {isActivePro
-                  ? "Pro — unlimited channels"
-                  : isTrial
-                    ? `Trial · ${trialDaysLeft}d left · ${maxChannels} channels max`
-                    : `Free · ${maxChannels} channels max`}
-              </p>
-            </div>
-            <span
-              className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase ${
-                isActivePro
-                  ? "bg-red-600 text-white"
-                  : isTrial
-                    ? "nm-inset-sm text-amber-400"
-                    : "nm-raised-sm text-muted-foreground"
-              }`}
-            >
-              {isActivePro ? "Pro" : isTrial ? "Trial" : "Free"}
-            </span>
-          </div>
-          <div className="flex items-center justify-between border-t border-white/[0.04] px-4 py-2.5">
-            <button
-              onClick={handleDeleteAccount}
-              className="nm-raised-sm text-muted-foreground hover:text-destructive flex items-center gap-1.5 rounded-full px-3 py-1 text-xs transition-all"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-              Delete account
-            </button>
-            <button
-              onClick={() => void handleLogout()}
-              className="nm-raised-sm text-muted-foreground hover:text-foreground flex items-center gap-1.5 rounded-full px-3 py-1 text-xs transition-all"
-            >
-              <LogOut className="h-3.5 w-3.5" />
-              Sign out
-            </button>
-          </div>
-        </div>
-      </section>
-
       {/* Delivery */}
       <DeliverySection
         initialTelegramConnected={initialTelegramConnected}
@@ -544,6 +481,16 @@ export function ProfileContent({
         initialFavorites={initialFavorites}
       />
 
+      {/* Podcast feed */}
+      {rssToken && <PodcastFeedSection rssToken={rssToken} />}
+
+      {/* Summary preferences */}
+      <SummaryPreferencesSection
+        initialLength={initialSummaryLength}
+        initialStyle={initialSummaryStyle}
+        initialCustomInstructions={initialCustomInstructions}
+      />
+
       {/* Notifications */}
       <NotificationsSection
         initialPushEnabled={initialPushEnabled}
@@ -554,9 +501,6 @@ export function ProfileContent({
         initialFullSummary={initialFullSummary}
       />
 
-      {/* Podcast feed */}
-      {rssToken && <PodcastFeedSection rssToken={rssToken} />}
-
       {/* Referral */}
       <ReferralSection
         referralCode={referralCode ?? ""}
@@ -565,9 +509,33 @@ export function ProfileContent({
         }
       />
 
+      {/* Danger zone */}
+      <section className="flex flex-col gap-2">
+        <h2 className="text-muted-foreground/50 px-1 text-xs font-medium tracking-wide uppercase">
+          Danger zone
+        </h2>
+        <div className="nm-raised overflow-hidden rounded-2xl">
+          <div className="flex items-center justify-between px-4 py-3">
+            <div>
+              <p className="text-sm font-medium">Delete account</p>
+              <p className="text-muted-foreground text-[11px]">
+                Permanently delete all your data
+              </p>
+            </div>
+            <button
+              onClick={handleDeleteAccount}
+              className="nm-raised-sm text-muted-foreground hover:text-destructive flex items-center gap-1.5 rounded-full px-3 py-1 text-xs transition-all"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Delete
+            </button>
+          </div>
+        </div>
+      </section>
+
       {/* Admin */}
       {isAdmin && (
-        <section className="space-y-2">
+        <section className="flex flex-col gap-2">
           <h2 className="text-muted-foreground/50 px-1 text-xs font-medium tracking-wide uppercase">
             Admin
           </h2>

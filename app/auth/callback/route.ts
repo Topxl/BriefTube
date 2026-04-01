@@ -31,6 +31,19 @@ export async function GET(request: Request) {
       } = await supabase.auth.getUser();
 
       if (user) {
+        // Sync Google avatar URL into auth.users metadata if missing
+        const meta = user.user_metadata as Record<string, unknown> | undefined;
+        if (!meta?.avatar_url && user.identities?.[0]?.identity_data) {
+          const googleAvatar = (
+            user.identities[0].identity_data as Record<string, unknown>
+          ).avatar_url as string | undefined;
+          if (googleAvatar) {
+            await supabase.auth.updateUser({
+              data: { avatar_url: googleAvatar },
+            });
+          }
+        }
+
         const { data: profile } = await supabase
           .from("profiles")
           .select("trial_ends_at, referred_by")

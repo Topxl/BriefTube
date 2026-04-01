@@ -105,7 +105,7 @@ export default async function ProfilePage(props: {
     supabase
       .from("profiles")
       .select(
-        "subscription_status, trial_ends_at, stripe_customer_id, tts_voice, preferred_language, favorite_languages, max_channels, referral_code, notify_new_summaries_push, email_newsletter, email_announcements, newsletter_enabled, newsletter_hour, newsletter_full_summary, rss_token",
+        "subscription_status, trial_ends_at, stripe_customer_id, tts_voice, preferred_language, favorite_languages, max_channels, referral_code, notify_new_summaries_push, email_newsletter, email_announcements, newsletter_enabled, newsletter_hour, newsletter_full_summary, rss_token, summary_length_pref, summary_style, summary_custom_instructions",
       )
       .eq("id", user.id)
       .single(),
@@ -188,6 +188,10 @@ export default async function ProfilePage(props: {
 
   return (
     <ProfileContent
+      avatarUrl={
+        ((user.user_metadata as Record<string, unknown> | undefined)
+          ?.avatar_url as string | undefined) ?? ""
+      }
       email={user.email ?? ""}
       isTrial={isTrial}
       isActivePro={isActivePro}
@@ -219,6 +223,9 @@ export default async function ProfilePage(props: {
       initialFullSummary={profile?.newsletter_full_summary ?? false}
       rssToken={rssToken}
       initialPrices={prices}
+      initialSummaryLength={profile?.summary_length_pref ?? "standard"}
+      initialSummaryStyle={profile?.summary_style ?? "narrative"}
+      initialCustomInstructions={profile?.summary_custom_instructions ?? ""}
     />
   );
 }

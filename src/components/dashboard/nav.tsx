@@ -5,9 +5,25 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { LayoutDashboard, ListVideo, User } from "@/lib/icons";
+import {
+  Headphones,
+  Languages,
+  LayoutDashboard,
+  ListVideo,
+  LogOut,
+  Rss,
+  User,
+} from "@/lib/icons";
 import { ChannelSearchBar } from "@/components/dashboard/channel-search-bar";
 import { createClient } from "@/lib/supabase/client";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 function useRecentDeliveriesCount() {
   const { data = 0 } = useQuery({
@@ -27,8 +43,30 @@ function useRecentDeliveriesCount() {
         .gte("created_at", since);
       return n ?? 0;
     },
-    staleTime: 1000 * 60 * 5, // 5 min — pas besoin de refetch à chaque navigation
+    staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 10,
+  });
+  return data;
+}
+
+function useUserProfile() {
+  const { data } = useQuery({
+    queryKey: ["user-profile-nav"],
+    queryFn: async () => {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return null;
+      const meta = user.user_metadata as Record<string, unknown> | undefined;
+      return {
+        email: user.email ?? "",
+        avatarUrl: (meta?.avatar_url as string | undefined) ?? "",
+        initial: (user.email ?? "U").charAt(0).toUpperCase(),
+      };
+    },
+    staleTime: 1000 * 60 * 30,
+    gcTime: 1000 * 60 * 60,
   });
   return data;
 }
@@ -42,6 +80,87 @@ const navItems = [
 function isActive(href: string, pathname: string) {
   if (href === "/dashboard") return pathname === "/dashboard";
   return pathname.startsWith(href);
+}
+
+function UserAvatar() {
+  const profile = useUserProfile();
+  const supabase = createClient();
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      document.cookie.split(";").forEach((c) => {
+        const name = c.split("=")[0].trim();
+        if (name.startsWith("sb-")) {
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+        }
+      });
+    }
+    window.location.href = "/";
+  };
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          className="shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-red-500/50"
+          aria-label="User menu"
+        >
+          {profile?.avatarUrl ? (
+            <img
+              src={profile.avatarUrl}
+              alt=""
+              className="h-8 w-8 rounded-full object-cover"
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            <div className="nm-inset-sm flex h-8 w-8 items-center justify-center rounded-full bg-red-500/[0.12] text-xs font-bold text-red-400">
+              {profile?.initial ?? "U"}
+            </div>
+          )}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuLabel className="font-normal">
+          <p className="truncate text-xs font-medium">{profile?.email ?? ""}</p>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link href="/dashboard/profile">
+            <User className="h-4 w-4" />
+            Profile settings
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/dashboard/profile#delivery">
+            <Headphones className="h-4 w-4" />
+            Voice & delivery
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/dashboard/profile#language">
+            <Languages className="h-4 w-4" />
+            Language
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/dashboard/profile#podcast">
+            <Rss className="h-4 w-4" />
+            Podcast feed
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          variant="destructive"
+          onClick={() => void handleLogout()}
+        >
+          <LogOut className="h-4 w-4" />
+          Sign out
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 }
 
 export function DashboardNav() {
@@ -96,12 +215,15 @@ export function DashboardNav() {
             </div>
           </div>
 
-          {/* Center: search bar — always visible */}
+          {/* Center: search bar */}
           <div className="mx-3 w-full flex-1 md:mx-6 md:max-w-sm">
             <Suspense fallback={null}>
               <ChannelSearchBar />
             </Suspense>
           </div>
+
+          {/* Right: user avatar */}
+          <UserAvatar />
         </div>
       </nav>
 

@@ -49,7 +49,7 @@ export function ReferralSection({ referralCode, stats }: Props) {
   };
 
   return (
-    <section className="space-y-2">
+    <section className="flex flex-col gap-2">
       <h2 className="text-muted-foreground/50 px-1 text-xs font-medium tracking-wide uppercase">
         Referral
       </h2>
@@ -121,6 +121,7 @@ export function ReferralSection({ referralCode, stats }: Props) {
             <button
               onClick={() => setShowQr((v) => !v)}
               className={`nm-raised-sm flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs transition-all ${showQr ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              aria-label="Toggle QR code"
             >
               <svg className="h-3 w-3" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M3 3h7v7H3V3zm1 1v5h5V4H4zm1 1h3v3H5V5zm8-2h7v7h-7V3zm1 1v5h5V4h-5zm1 1h3v3h-3V5zM3 13h7v7H3v-7zm1 1v5h5v-5H4zm1 1h3v3H5v-3zm10 0h2v2h-2v-2zm0 4h2v2h-2v-2zm-2-4h2v2h-2v-2zm4-2h2v2h-2v-2zm-2 0h2v2h-2v-2zm4 4h2v2h-2v-2zm-2 2h2v2h-2v-2z" />
@@ -140,7 +141,7 @@ export function ReferralSection({ referralCode, stats }: Props) {
         )}
 
         {/* Stats grid */}
-        <div className="grid grid-cols-4 divide-x divide-white/[0.04] border-t border-white/[0.04]">
+        <div className="grid grid-cols-2 border-t border-white/[0.04] sm:grid-cols-4">
           <div className="px-4 py-3 text-center">
             <p className="text-foreground text-sm font-semibold">
               {stats.total}

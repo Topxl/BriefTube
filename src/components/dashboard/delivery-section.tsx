@@ -605,7 +605,7 @@ export function DeliverySection({
   };
 
   return (
-    <section className="space-y-2">
+    <section className="flex flex-col gap-2">
       <h2 className="text-muted-foreground/50 px-1 text-xs font-medium tracking-wide uppercase">
         Delivery
       </h2>
