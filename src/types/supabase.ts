@@ -406,6 +406,9 @@ export type Database = {
           retry_after: string | null;
           started_at: string | null;
           status: string | null;
+          summary_custom_instructions: string;
+          summary_length_pref: string;
+          summary_style: string;
           tts_voice: string | null;
           user_language: string | null;
           video_id: string;
@@ -426,6 +429,9 @@ export type Database = {
           retry_after?: string | null;
           started_at?: string | null;
           status?: string | null;
+          summary_custom_instructions?: string;
+          summary_length_pref?: string;
+          summary_style?: string;
           tts_voice?: string | null;
           user_language?: string | null;
           video_id: string;
@@ -446,6 +452,9 @@ export type Database = {
           retry_after?: string | null;
           started_at?: string | null;
           status?: string | null;
+          summary_custom_instructions?: string;
+          summary_length_pref?: string;
+          summary_style?: string;
           tts_voice?: string | null;
           user_language?: string | null;
           video_id?: string;
@@ -476,6 +485,9 @@ export type Database = {
           stripe_customer_id: string | null;
           stripe_subscription_id: string | null;
           subscription_status: string | null;
+          summary_custom_instructions: string;
+          summary_length_pref: string;
+          summary_style: string;
           telegram_chat_id: string | null;
           telegram_connect_token: string | null;
           telegram_connected: boolean | null;
@@ -504,6 +516,9 @@ export type Database = {
           stripe_customer_id?: string | null;
           stripe_subscription_id?: string | null;
           subscription_status?: string | null;
+          summary_custom_instructions?: string;
+          summary_length_pref?: string;
+          summary_style?: string;
           telegram_chat_id?: string | null;
           telegram_connect_token?: string | null;
           telegram_connected?: boolean | null;
@@ -532,6 +547,9 @@ export type Database = {
           stripe_customer_id?: string | null;
           stripe_subscription_id?: string | null;
           subscription_status?: string | null;
+          summary_custom_instructions?: string;
+          summary_length_pref?: string;
+          summary_style?: string;
           telegram_chat_id?: string | null;
           telegram_connect_token?: string | null;
           telegram_connected?: boolean | null;
