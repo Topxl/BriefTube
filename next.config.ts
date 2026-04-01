@@ -39,6 +39,7 @@ const cspDirectives = [
   [
     "connect-src 'self'",
     "https://*.supabase.co", // Supabase auth + DB
+    "wss://*.supabase.co", // Supabase Realtime WebSocket
     "https://noembed.com", // Video title resolution
     "https://www.youtube.com", // oembed API
     "https://www.googletagmanager.com", // GTM beacons
