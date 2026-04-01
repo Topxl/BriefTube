@@ -256,7 +256,7 @@ describe("POST /api/webhooks/stripe", () => {
         eq: vi.fn().mockReturnThis(),
         update: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({ data: null, error: null }),
-        maybeSingle: vi.fn().mockImplementation(() => {
+        maybeSingle: vi.fn().mockImplementation(async () => {
           callCount.n++;
           if (callCount.n === 1) {
             return Promise.resolve({ data: null, error: null });

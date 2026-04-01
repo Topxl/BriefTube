@@ -1,6 +1,6 @@
 "use client";
 
-import posthog from "posthog-js";
+import { posthogClient as posthog } from "@/lib/posthog/client";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 

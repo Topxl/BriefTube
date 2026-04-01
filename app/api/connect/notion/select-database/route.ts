@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { captureServerEvent } from "@/lib/posthog/server";
 
 const NOTION_PENDING_TOKEN_COOKIE = "notion_pending_token";
 
@@ -49,6 +50,12 @@ export const POST = authRoute
       },
       { onConflict: "user_id,platform" },
     );
+
+    void captureServerEvent({
+      distinctId: ctx.user.id,
+      event: "platform_connected",
+      properties: { platform: "notion" },
+    });
 
     // Clear the pending token cookie
     cookieStore.delete(NOTION_PENDING_TOKEN_COOKIE);

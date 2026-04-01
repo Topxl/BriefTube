@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getOrFindStripeCustomerId } from "@/lib/stripe/helpers";
 import { checkRateLimit, authRateLimit } from "@/lib/rate-limit";
+import { captureServerEvent } from "@/lib/posthog/server";
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
@@ -97,6 +98,15 @@ export async function POST(req: NextRequest) {
     cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/dashboard/profile`,
     metadata: {
       userId: user.id,
+    },
+  });
+
+  void captureServerEvent({
+    distinctId: user.id,
+    event: "checkout_started",
+    properties: {
+      plan: String(plan),
+      interval,
     },
   });
 

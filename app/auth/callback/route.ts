@@ -7,6 +7,7 @@ import { sendEmail } from "@/lib/mail/send-email";
 import { WelcomeEmail } from "@/components/emails/welcome-email";
 import { resend } from "@/lib/mail/resend";
 import { env } from "@/lib/env";
+import { captureServerEvent } from "@/lib/posthog/server";
 
 const REFERRAL_COOKIE = SiteConfig.referral.cookieName;
 
@@ -91,6 +92,16 @@ export async function GET(request: Request) {
                   });
               }
             }
+
+            // Track signup (fire-and-forget)
+            void captureServerEvent({
+              distinctId: user.id,
+              event: "signup_completed",
+              properties: {
+                email: user.email,
+                provider: "google",
+              },
+            });
           }
         }
 
