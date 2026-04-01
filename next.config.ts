@@ -210,6 +210,22 @@ const nextConfig: NextConfig = {
         destination: "/login",
         permanent: true,
       },
+      // Common browser/crawler requests → existing routes
+      {
+        source: "/apple-touch-icon.png",
+        destination: "/apple-icon.png",
+        permanent: true,
+      },
+      {
+        source: "/apple-touch-icon-precomposed.png",
+        destination: "/apple-icon.png",
+        permanent: true,
+      },
+      {
+        source: "/manifest.json",
+        destination: "/manifest.webmanifest",
+        permanent: true,
+      },
     ];
   },
 };
