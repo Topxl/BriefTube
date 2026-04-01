@@ -26,7 +26,15 @@ _MUSIC_TITLE_RE = re.compile(
     r'|\b24/?7\s+(?:music|stream|radio|lofi|chill)\b'
     r'|\bmusic\s+(?:mix|playlist|24/?7|radio|live)\b'
     r'|\(official\s+audio\)'           # "Kendrick Lamar - luther (Official Audio)"
-    r'|\s-\s+Topic$',                  # YouTube Music auto-channels: "Artist - Topic"
+    r'|\s-\s+Topic$'                   # YouTube Music auto-channels: "Artist - Topic"
+    # Worship / gospel / Christian praise music — no speech transcript worth processing
+    r'|\bworship\s+(?:songs?|music|anthems?)\b'
+    r'|\bpraise\s+(?:&\s*)?worship\b'
+    r'|\bchristian\s+(?:praise|songs?|music)\b'
+    r'|\bgospel\s+(?:songs?|music)\b'
+    r'|\bhillsong\b'
+    r'|\bnonstop\s+(?:worship|praise|christian|gospel)\b'
+    r'|\bpraise\s+(?:songs?|collection|music)\b',
     re.IGNORECASE,
 )
 
@@ -47,9 +55,21 @@ _DRAMA_MOVIE_PHRASES = (
     "disguised prince",
     "will make you cry",
     "african movie",
-    "latest nigerian movie",
+    "nigerian movie",     # catches "Nigerian Movie" and "Nigerian Movies" (superset of "latest nigerian movie")
+    "nigerian movies",
     "latest 2026 movie",
     "latest 2025 movie",
+    "nollywood movie",
+    "nollywood film",
+    "2026 nigerian",
+    "2025 nigerian",
+    # Long free courses — no transcript, massive audio download, never summarizable
+    "full course 2026",
+    "full course 2025",
+    "full course [free]",
+    "full course for beginners",
+    "tutorial for beginners | simplilearn",
+    "tutorial for beginners | edureka",
 )
 
 

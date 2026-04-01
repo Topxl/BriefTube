@@ -294,14 +294,11 @@ class WhisperTranscriber:
                 if "live event has ended" in err.lower():
                     logger.info(f"Audio download ({label}): live/ended stream — {err[:80]}")
                     return "live"
-                # Track proxy failures (502 Bad Gateway, Tunnel connection failed, timeouts, etc)
-                if any(pattern in err.lower() for pattern in (
-                    "502", "bad gateway", "tunnel connection failed",
-                    "connection reset", "unable to connect to proxy",
-                    "proxy connection refused", "503", "service unavailable",
-                    "proxy error", "gateway timeout"
-                )):
-                    report_proxy_failure()
+                # Any failure inside a proxy attempt counts — includes 502, timeouts,
+                # SSL errors (WRONG_VERSION_NUMBER, UNEXPECTED_EOF), connection resets.
+                # Previously only 502/gateway errors counted, leaving timeouts and SSL
+                # errors invisible to the circuit breaker (source of bandwidth explosion).
+                report_proxy_failure()
                 logger.warning(f"Audio download ({label}) failed: {err[:120]}")
             return None  # this country failed, try next
 

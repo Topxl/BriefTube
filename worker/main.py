@@ -339,9 +339,21 @@ async def _process_video(
         "disguised prince",
         "will make you cry",
         "african movie",
-        "latest nigerian movie",
+        "nigerian movie",
+        "nigerian movies",
         "latest 2026 movie",
         "latest 2025 movie",
+        "nollywood movie",
+        "nollywood film",
+        "2026 nigerian",
+        "2025 nigerian",
+        # Long free courses — no transcript, massive audio download
+        "full course 2026",
+        "full course 2025",
+        "full course [free]",
+        "full course for beginners",
+        "tutorial for beginners | simplilearn",
+        "tutorial for beginners | edureka",
     )
     _title_lower = (video_title or "").lower()
     if any(phrase in _title_lower for phrase in _MUSIC_TITLE_PHRASES):
