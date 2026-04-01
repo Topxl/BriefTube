@@ -1,11 +1,13 @@
 "use client";
 
 import posthog from "posthog-js";
+import { ensurePostHogInit } from "@/lib/posthog/client";
 import { createClient } from "@/lib/supabase/client";
 import { useEffect } from "react";
 
 export function PostHogIdentify() {
   useEffect(() => {
+    ensurePostHogInit();
     const supabase = createClient();
     void supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return;

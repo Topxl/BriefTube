@@ -74,16 +74,16 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://r.wdfl.co" />
         <Script
           async
-          src="https://www.googletagmanager.com/gtag/js?id=AW-17972477350"
+          src="https://www.googletagmanager.com/gtag/js?id=G-NSS12KB41V"
           strategy="lazyOnload"
         />
-        <Script id="google-ads" strategy="lazyOnload">
+        <Script id="gtag-config" strategy="lazyOnload">
           {`
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
-            gtag('config', 'AW-17972477350');
             gtag('config', 'G-NSS12KB41V');
+            gtag('config', 'AW-17972477350');
           `}
         </Script>
       </head>
