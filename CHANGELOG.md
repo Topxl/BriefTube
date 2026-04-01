@@ -2,6 +2,7 @@
 
 ## 2026-04-01
 
+FIX: Smoke tests — add 30s double-check before alerting to eliminate false positives from transient timeouts; increase timeout 15s→20s
 FEATURE: Add database health check script — SSHes to VPS to detect stuck jobs, failed video spikes, stuck deliveries, delivery backlog, and delivery success rate; alerts via Telegram on critical issues
 FEATURE: Add onboarding smoke test script — verifies full user journey (pages, auth chain, core APIs, dashboard redirects, worker health, external services); alerts via Telegram on critical breakage
 FEATURE: Add auth smoke test script — verifies login page, OAuth redirect, Supabase health, callback route, and state cookie; alerts via Telegram on auth breakage

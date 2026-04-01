@@ -17,7 +17,7 @@ SUPABASE_URL="https://zetpgbrzehchzxodwbps.supabase.co"
 TELEGRAM_BOT_TOKEN="${BRIEFTUBE_TELEGRAM_BOT_TOKEN:-}"
 TELEGRAM_CHAT_ID="${BRIEFTUBE_TELEGRAM_CHAT_ID:-}"
 STATE_FILE="/tmp/brieftube-auth-state"
-TIMEOUT=15
+TIMEOUT=20
 
 # Parse args
 while [[ $# -gt 0 ]]; do
@@ -78,6 +78,22 @@ send_telegram() {
 # Measure request time in ms
 timed_curl() {
     curl --max-time "$TIMEOUT" -w "%{time_total}" "$@" 2>/dev/null
+}
+
+# Re-check Supabase and login page after 30s to filter transient timeouts.
+# Returns 0 if still down (alert), 1 if recovered (false positive, skip alert).
+confirm_down() {
+    sleep 30
+    local sb_hdr; sb_hdr=$(mktemp)
+    curl --max-time "$TIMEOUT" -sf -o /dev/null -D "$sb_hdr" "${SUPABASE_URL}/auth/v1/health" 2>/dev/null
+    local sb_code; sb_code=$(head -1 "$sb_hdr" 2>/dev/null | grep -oE '[0-9]{3}' | head -1)
+    rm -f "$sb_hdr"
+    local site_code; site_code=$(curl --max-time "$TIMEOUT" -sf -o /dev/null -w "%{http_code}" "$SITE_URL/login" 2>/dev/null)
+    if { [ -n "$sb_code" ] && [ "$sb_code" -lt 500 ] 2>/dev/null; } || \
+       { [ -n "$site_code" ] && [ "$site_code" -ge 200 ] && [ "$site_code" -lt 500 ] 2>/dev/null; }; then
+        return 1  # Recovered — was a transient timeout
+    fi
+    return 0  # Still down — real outage
 }
 
 # ── Checks ──────────────────────────────────────────────────────────────────────
@@ -200,7 +216,9 @@ echo "$current_status" > "$STATE_FILE"
 timestamp=$(date '+%Y-%m-%d %H:%M:%S')
 
 if [ "$current_status" = "DOWN" ] && [ "$prev_status" = "UP" ]; then
-    send_telegram "🔴 <b>BriefTube AUTH DOWN</b>
+    echo "[$timestamp] Potential auth outage — confirming in 30s..."
+    if confirm_down; then
+        send_telegram "🔴 <b>BriefTube AUTH DOWN</b>
 $timestamp
 
 Auth smoke test failed ($FAILURES/$CHECKS checks):
@@ -208,7 +226,11 @@ $(echo -e "$DETAIL_LOG")
 Users CANNOT log in!
 
 Check: ssh brieftube-vps"
-    echo "[$timestamp] ALERT: Auth is broken ($FAILURES failures)"
+        echo "[$timestamp] ALERT: Auth is broken ($FAILURES failures)"
+    else
+        echo "[$timestamp] False positive — recovered within 30s, skipping alert"
+        echo "UP" > "$STATE_FILE"
+    fi
 elif [ "$current_status" = "UP" ] && [ "$prev_status" = "DOWN" ]; then
     send_telegram "🟢 <b>BriefTube AUTH RECOVERED</b>
 $timestamp
