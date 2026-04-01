@@ -2,6 +2,7 @@
 
 ## 2026-04-01
 
+FIX: Deploy script — copy .next manifest files (routes-manifest.json, BUILD_ID, etc.) so new routes aren't silently 404 after deploy
 REFACTOR: Optimize landing page performance — ISR with unstable_cache (5min revalidation) for prices/stats, Sentry bundle size optimizations (exclude debug/replay iframe/shadow DOM), reduce Sentry replay session sample rate to 5%, consolidate GTM scripts (load with GA4 ID as primary), defer PostHog init until first use
 FIX: Force import-in-the-middle@3.0.0 via pnpm overrides — @fastify/otel (via Sentry) pulled 2.0.6 causing Next.js serverExternalPackages version conflict warning
 FEATURE: Add PostHog feature flags infrastructure — useFeatureFlag/useFeatureFlagEnabled hooks, FeatureFlag wrapper component, server-side getFeatureFlag helper, PostHogProvider wrapping in app providers
