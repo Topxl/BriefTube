@@ -1682,6 +1682,174 @@ async def stats_save_loop():
             logger.warning(f"WorkerStats periodic save failed: {e}")
 
 
+# ── Critical anomaly monitor (every 5 min) ───────────────────
+
+async def critical_monitor_loop(alert_system: MonitoringAlert):
+    """Check for critical anomalies every 5 minutes and send immediate alerts.
+
+    Each alert fires only once per incident (tracked in _active_alerts).
+    When the condition clears, the alert is removed so it can fire again.
+    """
+    if not alert_system._log_bot or not alert_system._log_chat_id:
+        logger.info("Critical monitor: no log bot configured, skipping")
+        return
+
+    _active_alerts: set[str] = set()
+    _first_run = True
+
+    while True:
+        try:
+            await asyncio.sleep(300)  # 5 minutes
+
+            from monitoring import get_system_info
+            supabase = db.get_client()
+            now = datetime.now(timezone.utc)
+            bot = alert_system._log_bot
+            chat = alert_system._log_chat_id
+            ts = now.strftime("%H:%M UTC")
+
+            async def _send_critical(key: str, title: str, details: str, action: str):
+                """Send a critical alert if not already active for this key."""
+                if key in _active_alerts:
+                    return
+                _active_alerts.add(key)
+                msg = (
+                    f"\U0001f6a8 <b>CRITICAL: {title}</b>\n"
+                    f"<i>{ts}</i>\n\n"
+                    f"{details}\n"
+                    f"<b>Action:</b> {action}"
+                )
+                try:
+                    await bot.send_message(chat_id=chat, text=msg, parse_mode="HTML")
+                except Exception as e:
+                    logger.error(f"Critical alert send failed ({key}): {e}")
+
+            def _clear(key: str):
+                """Remove an alert key so it can fire again if the condition recurs."""
+                _active_alerts.discard(key)
+
+            # 1. Auth broken — 0 signups for 24+ hours
+            try:
+                day_ago = (now - timedelta(hours=24)).isoformat()
+                signups = supabase.table("profiles").select("id", count="exact").gte("created_at", day_ago).execute()
+                n_signups = signups.count or 0
+                if n_signups == 0 and not _first_run:
+                    await _send_critical(
+                        "auth_broken",
+                        "No signups in 24h",
+                        f"0 new users in the last 24 hours.",
+                        "Check auth flow, Google OAuth, and Supabase Auth status.",
+                    )
+                else:
+                    _clear("auth_broken")
+            except Exception as e:
+                logger.warning(f"Critical monitor (auth): {e}")
+
+            # 2. Deliveries stuck — status='sending' AND created_at < now - 15min
+            try:
+                cutoff_15m = (now - timedelta(minutes=15)).isoformat()
+                stuck_del = supabase.table("deliveries").select("id", count="exact").eq("status", "sending").lt("created_at", cutoff_15m).execute()
+                n_stuck_del = stuck_del.count or 0
+                if n_stuck_del > 5:
+                    await _send_critical(
+                        "deliveries_stuck",
+                        f"{n_stuck_del} deliveries stuck",
+                        f"{n_stuck_del} deliveries in 'sending' state for &gt;15 minutes.",
+                        "Check delivery loop, Telegram API, and network connectivity.",
+                    )
+                else:
+                    _clear("deliveries_stuck")
+            except Exception as e:
+                logger.warning(f"Critical monitor (deliveries stuck): {e}")
+
+            # 3. Processing queue stuck — status='processing' AND created_at < now - 30min
+            try:
+                cutoff_30m = (now - timedelta(minutes=30)).isoformat()
+                stuck_proc = supabase.table("processing_queue").select("id", count="exact").eq("status", "processing").lt("created_at", cutoff_30m).execute()
+                n_stuck_proc = stuck_proc.count or 0
+                if n_stuck_proc > 3:
+                    await _send_critical(
+                        "processing_stuck",
+                        f"{n_stuck_proc} processing jobs stuck",
+                        f"{n_stuck_proc} jobs in 'processing' state for &gt;30 minutes.",
+                        "Check processor loop, Gemini API, and transcript sources.",
+                    )
+                else:
+                    _clear("processing_stuck")
+            except Exception as e:
+                logger.warning(f"Critical monitor (processing stuck): {e}")
+
+            # 4. High failure rate — >20 failed videos in the last hour
+            try:
+                hour_ago = (now - timedelta(hours=1)).isoformat()
+                failed = supabase.table("processed_videos").select("id", count="exact").eq("status", "failed").gte("created_at", hour_ago).execute()
+                n_failed = failed.count or 0
+                if n_failed > 20:
+                    await _send_critical(
+                        "high_failure_rate",
+                        f"{n_failed} video failures in 1h",
+                        f"{n_failed} videos failed in the last hour (threshold: 20).",
+                        "Check transcript sources, Gemini API limits, and error logs.",
+                    )
+                else:
+                    _clear("high_failure_rate")
+            except Exception as e:
+                logger.warning(f"Critical monitor (failure rate): {e}")
+
+            # 5. No deliveries at all — 0 sent deliveries in 6h with active subscriptions
+            try:
+                six_h_ago = (now - timedelta(hours=6)).isoformat()
+                sent_del = supabase.table("deliveries").select("id", count="exact").eq("status", "sent").gte("created_at", six_h_ago).execute()
+                n_sent = sent_del.count or 0
+                if n_sent == 0:
+                    active_subs = supabase.table("subscriptions").select("id", count="exact").eq("active", True).execute()
+                    if (active_subs.count or 0) > 0:
+                        await _send_critical(
+                            "no_deliveries",
+                            "No deliveries in 6h",
+                            f"0 deliveries sent in the last 6 hours with {active_subs.count} active subscriptions.",
+                            "Check RSS scanner, processing pipeline, and delivery loop.",
+                        )
+                    else:
+                        _clear("no_deliveries")
+                else:
+                    _clear("no_deliveries")
+            except Exception as e:
+                logger.warning(f"Critical monitor (no deliveries): {e}")
+
+            # 6. Worker memory/CPU
+            try:
+                system = get_system_info()
+                cpu = system.get("cpu_percent", 0)
+                mem = system.get("memory_percent", 0)
+                if cpu > 90:
+                    await _send_critical(
+                        "high_cpu",
+                        f"CPU at {cpu}%",
+                        f"CPU usage is {cpu}% (threshold: 90%).",
+                        "Check for stuck processes, consider restarting worker.",
+                    )
+                else:
+                    _clear("high_cpu")
+                if mem > 90:
+                    await _send_critical(
+                        "high_memory",
+                        f"Memory at {mem}%",
+                        f"Memory usage is {mem}% (threshold: 90%).",
+                        "Check for memory leaks, consider restarting worker.",
+                    )
+                else:
+                    _clear("high_memory")
+            except Exception as e:
+                logger.warning(f"Critical monitor (system): {e}")
+
+            _first_run = False
+
+        except Exception as e:
+            logger.error(f"Critical monitor loop error: {e}")
+            await asyncio.sleep(60)
+
+
 # ── KPI report loop (8h + 20h UTC) ─────────────────────────────
 
 async def kpi_report_loop(alert_system: MonitoringAlert):
@@ -1828,6 +1996,7 @@ async def main():
             health_loop(),
             stats_save_loop(),
             kpi_report_loop(alert_system),
+            critical_monitor_loop(alert_system),
         ]
 
         # Add alert processor if admin configured
