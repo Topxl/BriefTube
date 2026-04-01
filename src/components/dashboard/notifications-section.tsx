@@ -204,7 +204,7 @@ export function NotificationsSection({
         Notifications
       </h2>
 
-      <div className="nm-raised divide-y divide-white/[0.05] overflow-hidden rounded-2xl">
+      <div className="nm-raised divide-y divide-white/[0.06] overflow-hidden rounded-2xl">
         {/* Browser push */}
         <div className="flex items-center justify-between px-4 py-3.5">
           <div className="flex items-center gap-2.5">
@@ -217,14 +217,14 @@ export function NotificationsSection({
                 />
               )}
             </div>
-            <p className="text-sm font-medium">
-              Browser notifications
-              {permissionDenied && (
-                <span className="text-muted-foreground ml-1.5 text-[10px] font-normal">
-                  (blocked)
-                </span>
-              )}
-            </p>
+            <div>
+              <p className="text-sm font-medium">Browser notifications</p>
+              <p className="text-muted-foreground text-[11px]">
+                {permissionDenied
+                  ? "Blocked in browser settings"
+                  : "Get notified when a summary is ready"}
+              </p>
+            </div>
           </div>
           <Switch
             checked={pushEnabled && !permissionDenied}
@@ -243,7 +243,12 @@ export function NotificationsSection({
                 className={`h-4 w-4 ${newsletter ? "text-red-400" : "text-muted-foreground"}`}
               />
             </div>
-            <p className="text-sm font-medium">Newsletter</p>
+            <div>
+              <p className="text-sm font-medium">Newsletter</p>
+              <p className="text-muted-foreground text-[11px]">
+                Tips and product updates
+              </p>
+            </div>
           </div>
           <Switch
             checked={newsletter}
@@ -262,7 +267,12 @@ export function NotificationsSection({
                 className={`h-4 w-4 ${announcements ? "text-red-400" : "text-muted-foreground"}`}
               />
             </div>
-            <p className="text-sm font-medium">Announcements</p>
+            <div>
+              <p className="text-sm font-medium">Announcements</p>
+              <p className="text-muted-foreground text-[11px]">
+                New features and releases
+              </p>
+            </div>
           </div>
           <Switch
             checked={announcements}
@@ -284,7 +294,12 @@ export function NotificationsSection({
                   className={`h-4 w-4 ${dailyDigest ? "text-red-400" : "text-muted-foreground"}`}
                 />
               </div>
-              <p className="text-sm font-medium">Daily digest</p>
+              <div>
+                <p className="text-sm font-medium">Daily digest</p>
+                <p className="text-muted-foreground text-[11px]">
+                  Email recap of new summaries
+                </p>
+              </div>
             </div>
             <Switch
               checked={dailyDigest}

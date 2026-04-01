@@ -105,178 +105,171 @@ export function SummaryPreferencesSection({
   };
 
   return (
-    <section className="flex flex-col gap-2">
-      <h2 className="text-muted-foreground/50 px-1 text-xs font-medium tracking-wide uppercase">
-        Summary preferences
-      </h2>
-      <div className="nm-raised divide-y divide-white/[0.05] overflow-hidden rounded-2xl">
-        {/* Length preference — clickable row */}
-        <div>
-          <button
-            type="button"
-            onClick={() =>
-              setExpanded((v) => (v === "length" ? null : "length"))
-            }
-            className="flex w-full items-center justify-between px-4 py-3.5 text-left transition-colors hover:bg-white/[0.02]"
-          >
-            <div className="flex items-center gap-2.5">
-              <div className="nm-inset-sm flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
-                <FileText className="text-muted-foreground h-4 w-4" />
-              </div>
-              <p className="text-sm font-medium">Summary length</p>
+    <>
+      {/* Length preference — clickable row */}
+      <div>
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => (v === "length" ? null : "length"))}
+          className="flex w-full items-center justify-between px-4 py-3.5 text-left transition-colors hover:bg-white/[0.02]"
+        >
+          <div className="flex items-center gap-2.5">
+            <div className="nm-inset-sm flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
+              <FileText className="text-muted-foreground h-4 w-4" />
             </div>
-            <div className="flex items-center gap-2">
-              {saving && (
-                <Loader2 className="text-muted-foreground h-3 w-3 animate-spin" />
-              )}
-              <span className="text-muted-foreground text-xs">
-                {LENGTH_OPTIONS.find((o) => o.value === length)?.label}
-              </span>
-              <span className="text-muted-foreground/50 text-xs">
-                {expanded === "length" ? "−" : "+"}
-              </span>
+            <p className="text-sm font-medium">Summary length</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {saving && (
+              <Loader2 className="text-muted-foreground h-3 w-3 animate-spin" />
+            )}
+            <span className="text-muted-foreground text-xs">
+              {LENGTH_OPTIONS.find((o) => o.value === length)?.label}
+            </span>
+            <span className="text-muted-foreground/50 text-xs">
+              {expanded === "length" ? "−" : "+"}
+            </span>
+          </div>
+        </button>
+        {expanded === "length" && (
+          <div className="flex gap-2 border-t border-white/[0.04] px-4 py-3">
+            {LENGTH_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                disabled={saving}
+                onClick={() => {
+                  setLength(opt.value);
+                  void save("summary_length_pref", opt.value);
+                }}
+                className={`flex flex-1 flex-col rounded-xl px-3 py-2.5 text-left transition-all ${
+                  length === opt.value
+                    ? "nm-inset border border-red-500/20"
+                    : "nm-raised-sm hover:nm-raised"
+                }`}
+              >
+                <span
+                  className={`text-xs font-semibold ${length === opt.value ? "text-red-400" : "text-foreground"}`}
+                >
+                  {opt.label}
+                </span>
+                <span className="text-muted-foreground mt-0.5 text-[10px] leading-tight">
+                  {opt.desc}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Style preference — clickable row */}
+      <div>
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => (v === "style" ? null : "style"))}
+          className="flex w-full items-center justify-between px-4 py-3.5 text-left transition-colors hover:bg-white/[0.02]"
+        >
+          <div className="flex items-center gap-2.5">
+            <div className="nm-inset-sm flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
+              <MessageSquareText className="text-muted-foreground h-4 w-4" />
             </div>
-          </button>
-          {expanded === "length" && (
-            <div className="flex gap-2 border-t border-white/[0.04] px-4 py-3">
-              {LENGTH_OPTIONS.map((opt) => (
+            <p className="text-sm font-medium">Summary style</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground text-xs">
+              {STYLE_OPTIONS.find((o) => o.value === style)?.label}
+            </span>
+            <span className="text-muted-foreground/50 text-xs">
+              {expanded === "style" ? "−" : "+"}
+            </span>
+          </div>
+        </button>
+        {expanded === "style" && (
+          <div className="flex flex-col gap-2 border-t border-white/[0.04] px-4 py-3">
+            {STYLE_OPTIONS.map((opt) => {
+              const Icon = opt.icon;
+              return (
                 <button
                   key={opt.value}
                   disabled={saving}
                   onClick={() => {
-                    setLength(opt.value);
-                    void save("summary_length_pref", opt.value);
+                    setStyle(opt.value);
+                    void save("summary_style", opt.value);
                   }}
-                  className={`flex flex-1 flex-col rounded-xl px-3 py-2.5 text-left transition-all ${
-                    length === opt.value
+                  className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all ${
+                    style === opt.value
                       ? "nm-inset border border-red-500/20"
                       : "nm-raised-sm hover:nm-raised"
                   }`}
                 >
-                  <span
-                    className={`text-xs font-semibold ${length === opt.value ? "text-red-400" : "text-foreground"}`}
-                  >
-                    {opt.label}
-                  </span>
-                  <span className="text-muted-foreground mt-0.5 text-[10px] leading-tight">
-                    {opt.desc}
-                  </span>
+                  <Icon
+                    className={`h-4 w-4 shrink-0 ${style === opt.value ? "text-red-400" : "text-muted-foreground"}`}
+                  />
+                  <div>
+                    <span
+                      className={`text-xs font-semibold ${style === opt.value ? "text-red-400" : "text-foreground"}`}
+                    >
+                      {opt.label}
+                    </span>
+                    <p className="text-muted-foreground text-[10px] leading-tight">
+                      {opt.desc}
+                    </p>
+                  </div>
                 </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Style preference — clickable row */}
-        <div>
-          <button
-            type="button"
-            onClick={() => setExpanded((v) => (v === "style" ? null : "style"))}
-            className="flex w-full items-center justify-between px-4 py-3.5 text-left transition-colors hover:bg-white/[0.02]"
-          >
-            <div className="flex items-center gap-2.5">
-              <div className="nm-inset-sm flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
-                <MessageSquareText className="text-muted-foreground h-4 w-4" />
-              </div>
-              <p className="text-sm font-medium">Summary style</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground text-xs">
-                {STYLE_OPTIONS.find((o) => o.value === style)?.label}
-              </span>
-              <span className="text-muted-foreground/50 text-xs">
-                {expanded === "style" ? "−" : "+"}
-              </span>
-            </div>
-          </button>
-          {expanded === "style" && (
-            <div className="flex flex-col gap-2 border-t border-white/[0.04] px-4 py-3">
-              {STYLE_OPTIONS.map((opt) => {
-                const Icon = opt.icon;
-                return (
-                  <button
-                    key={opt.value}
-                    disabled={saving}
-                    onClick={() => {
-                      setStyle(opt.value);
-                      void save("summary_style", opt.value);
-                    }}
-                    className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all ${
-                      style === opt.value
-                        ? "nm-inset border border-red-500/20"
-                        : "nm-raised-sm hover:nm-raised"
-                    }`}
-                  >
-                    <Icon
-                      className={`h-4 w-4 shrink-0 ${style === opt.value ? "text-red-400" : "text-muted-foreground"}`}
-                    />
-                    <div>
-                      <span
-                        className={`text-xs font-semibold ${style === opt.value ? "text-red-400" : "text-foreground"}`}
-                      >
-                        {opt.label}
-                      </span>
-                      <p className="text-muted-foreground text-[10px] leading-tight">
-                        {opt.desc}
-                      </p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Custom instructions — clickable row */}
-        <div>
-          <button
-            type="button"
-            onClick={() =>
-              setExpanded((v) => (v === "instructions" ? null : "instructions"))
-            }
-            className="flex w-full items-center justify-between px-4 py-3.5 text-left transition-colors hover:bg-white/[0.02]"
-          >
-            <div className="flex items-center gap-2.5">
-              <div className="nm-inset-sm flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
-                <Pencil className="text-muted-foreground h-4 w-4" />
-              </div>
-              <p className="text-sm font-medium">Custom instructions</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground text-xs">
-                {instructions ? "Configured" : "None"}
-              </span>
-              <span className="text-muted-foreground/50 text-xs">
-                {expanded === "instructions" ? "−" : "+"}
-              </span>
-            </div>
-          </button>
-          {expanded === "instructions" && (
-            <div className="border-t border-white/[0.04] px-4 py-3">
-              <textarea
-                value={instructions}
-                maxLength={INSTRUCTIONS_MAX}
-                rows={3}
-                placeholder="Focus on business insights&#10;Ignore sponsored segments&#10;Always mention numbers and data"
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setInstructions(val);
-                  if (saveTimer) clearTimeout(saveTimer);
-                  setSaveTimer(
-                    setTimeout(() => {
-                      void save("summary_custom_instructions", val);
-                    }, 1000),
-                  );
-                }}
-                className="nm-inset text-foreground placeholder:text-muted-foreground/50 w-full resize-none rounded-xl px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-white/20"
-              />
-              <p className="text-muted-foreground/40 mt-1 text-right text-[10px]">
-                {instructions.length}/{INSTRUCTIONS_MAX}
-              </p>
-            </div>
-          )}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
-    </section>
+
+      {/* Custom instructions — clickable row */}
+      <div>
+        <button
+          type="button"
+          onClick={() =>
+            setExpanded((v) => (v === "instructions" ? null : "instructions"))
+          }
+          className="flex w-full items-center justify-between px-4 py-3.5 text-left transition-colors hover:bg-white/[0.02]"
+        >
+          <div className="flex items-center gap-2.5">
+            <div className="nm-inset-sm flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
+              <Pencil className="text-muted-foreground h-4 w-4" />
+            </div>
+            <p className="text-sm font-medium">Custom instructions</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground text-xs">
+              {instructions ? "Configured" : "None"}
+            </span>
+            <span className="text-muted-foreground/50 text-xs">
+              {expanded === "instructions" ? "−" : "+"}
+            </span>
+          </div>
+        </button>
+        {expanded === "instructions" && (
+          <div className="border-t border-white/[0.04] px-4 py-3">
+            <textarea
+              value={instructions}
+              maxLength={INSTRUCTIONS_MAX}
+              rows={3}
+              placeholder="Focus on business insights&#10;Ignore sponsored segments&#10;Always mention numbers and data"
+              onChange={(e) => {
+                const val = e.target.value;
+                setInstructions(val);
+                if (saveTimer) clearTimeout(saveTimer);
+                setSaveTimer(
+                  setTimeout(() => {
+                    void save("summary_custom_instructions", val);
+                  }, 1000),
+                );
+              }}
+              className="nm-inset text-foreground placeholder:text-muted-foreground/50 w-full resize-none rounded-xl px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-white/20"
+            />
+            <p className="text-muted-foreground/40 mt-1 text-right text-[10px]">
+              {instructions.length}/{INSTRUCTIONS_MAX}
+            </p>
+          </div>
+        )}
+      </div>
+    </>
   );
 }
