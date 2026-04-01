@@ -2,6 +2,8 @@
 
 ## 2026-04-01
 
+FIX: Resolve import-in-the-middle version mismatch warnings by adding pnpm override to force v3.0.0 across all @opentelemetry/instrumentation dependencies
+FEATURE: Add Web Server logs section to admin dashboard — live error tracking, log viewer, and service control (start/stop/restart) for brieftube-web systemd service
 FEATURE: Add PostHog server-side tracking for onboarding funnel — signup_completed, channel_added, channel_removed, checkout_started, platform_connected (Discord, Slack, Notion)
 FEATURE: Enrich PostHog user identification with profile properties (plan, trial_ends_at, max_channels, telegram_connected, onboarding_completed, created_at) and plan group tracking for better segmentation
 FIX: Initialize PostHog client-side with posthog.init() — enable session recording, autocapture, and pageview tracking that were previously not working

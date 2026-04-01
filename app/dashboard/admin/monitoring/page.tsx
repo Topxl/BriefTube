@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { AdminBreadcrumb } from "@/components/admin/admin-breadcrumb";
 import { WorkerCard } from "@/components/admin/worker-card";
+import { WebLogsCard } from "@/components/admin/web-logs-card";
 import { getStripe } from "@/lib/stripe";
 import { env } from "@/lib/env";
 import {
@@ -1292,12 +1293,18 @@ export default async function AdminPage() {
         </div>
       </div>
 
-      {/* Main content — worker + sidebar */}
+      {/* Main content — worker + web logs + sidebar */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
-        {/* Worker — left, wider */}
-        <div className="flex flex-col gap-2 lg:col-span-3">
-          <SectionTitle>Worker</SectionTitle>
-          <WorkerCard />
+        {/* Worker & Web Logs — left, wider */}
+        <div className="flex flex-col gap-4 lg:col-span-3">
+          <div className="flex flex-col gap-2">
+            <SectionTitle>Worker</SectionTitle>
+            <WorkerCard />
+          </div>
+          <div className="flex flex-col gap-2">
+            <SectionTitle>Web Server</SectionTitle>
+            <WebLogsCard />
+          </div>
         </div>
 
         {/* Sidebar — right */}

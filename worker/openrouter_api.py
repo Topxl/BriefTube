@@ -52,12 +52,15 @@ class OpenRouterSummarizer:
         source_language: Optional[str] = None,
         target_language: str = "fr",
         model: Optional[str] = None,
+        length_pref: str = "standard",
+        style_pref: str = "narrative",
+        custom_instructions: str = "",
     ) -> Tuple[Optional[str], Optional[str]]:
         """Summarize transcript via OpenRouter. Same interface as GeminiSummarizer."""
         if not transcript or len(transcript.strip()) < 50:
             return None, "transcript_too_short"
 
-        prompt = build_summary_prompt(transcript, source_language, target_language)
+        prompt = build_summary_prompt(transcript, source_language, target_language, length_pref, style_pref, custom_instructions)
         models_to_try = [model] if model else self.MODELS
         all_rate_limited = True
 
