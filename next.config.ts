@@ -110,6 +110,7 @@ const nextConfig: NextConfig = {
       "date-fns",
       "@tanstack/react-query",
       "motion",
+      "posthog-js",
     ],
   },
   cacheComponents: true,
