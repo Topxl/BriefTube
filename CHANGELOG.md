@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-04-02
+
+FIX: Whisper proxy circuit breaker — count ALL exceptions (timeouts, SSL errors) not just 502/gateway errors; prevents bandwidth explosion when proxy is failing silently
+FIX: RSS scanner — expand music filter to catch worship/gospel/Hillsong content; expand drama filter to catch "Nigerian Movie/Movies", Nollywood movie/film, 2025/2026 Nollywood, Simplilearn/Edureka full courses
+FIX: Worker processor — sync drama/Nollywood filter with rss_scanner (same new entries) to catch videos that slip through RSS scan
+CHORE: DB — delete ~600 zombie [pre-subscription] jobs from processing_queue that were retrying since Feb 19
+
 ## 2026-04-01
 
 FEATURE: Add critical anomaly detection loop (every 5min) — monitors auth, stuck deliveries, stuck processing, high failure rate, no deliveries, and CPU/memory; sends immediate Telegram alerts with once-per-incident deduplication
