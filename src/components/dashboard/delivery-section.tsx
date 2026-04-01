@@ -611,14 +611,13 @@ export function DeliverySection({
       </h2>
 
       <div className="nm-raised divide-y divide-white/[0.05] overflow-hidden rounded-2xl">
+        <p className="text-muted-foreground/40 px-4 pt-3 pb-1 text-[10px] font-medium tracking-wider uppercase">
+          Platforms
+        </p>
         {/* Telegram row */}
-        <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center justify-between px-4 py-3.5">
           <div className="flex items-center gap-2.5">
-            <div
-              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
-                telegramConnected ? "nm-inset-sm" : "nm-inset-sm"
-              }`}
-            >
+            <div className="nm-inset-sm flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
               <svg
                 className={`h-4 w-4 ${telegramConnected ? PLATFORM_COLORS.telegram.icon : "text-muted-foreground"}`}
                 viewBox="0 0 24 24"
@@ -627,13 +626,11 @@ export function DeliverySection({
                 <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
               </svg>
             </div>
-            <div>
+            <div className="flex items-center gap-2">
+              {telegramConnected && (
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              )}
               <p className="text-sm font-medium">Telegram</p>
-              <p
-                className={`text-[11px] ${telegramConnected ? PLATFORM_COLORS.telegram.text : "text-muted-foreground"}`}
-              >
-                {telegramConnected ? "Connected" : "Not connected"}
-              </p>
             </div>
           </div>
           {telegramConnected ? (
@@ -767,7 +764,7 @@ export function DeliverySection({
         )}
 
         {/* Discord row */}
-        <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center justify-between px-4 py-3.5">
           <div className="flex items-center gap-2.5">
             <div className="nm-inset-sm flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
               <svg className="h-4 w-4" viewBox="0 0 24 24">
@@ -781,13 +778,11 @@ export function DeliverySection({
                 />
               </svg>
             </div>
-            <div>
+            <div className="flex items-center gap-2">
+              {discordConnected && (
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              )}
               <p className="text-sm font-medium">Discord</p>
-              <p
-                className={`text-[11px] ${discordConnected ? PLATFORM_COLORS.discord.text : "text-muted-foreground"}`}
-              >
-                {discordConnected ? "Connected" : "Not connected"}
-              </p>
             </div>
           </div>
           {discordConnected ? (
@@ -808,7 +803,7 @@ export function DeliverySection({
         </div>
 
         {/* Slack row */}
-        <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center justify-between px-4 py-3.5">
           <div className="flex items-center gap-2.5">
             <div className="nm-inset-sm flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
               {slackConnected ? (
@@ -840,13 +835,11 @@ export function DeliverySection({
                 </svg>
               )}
             </div>
-            <div>
+            <div className="flex items-center gap-2">
+              {slackConnected && (
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              )}
               <p className="text-sm font-medium">Slack</p>
-              <p
-                className={`text-[11px] ${slackConnected ? PLATFORM_COLORS.slack.text : "text-muted-foreground"}`}
-              >
-                {slackConnected ? "Connected" : "Not connected"}
-              </p>
             </div>
           </div>
           {slackConnected ? (
@@ -866,47 +859,47 @@ export function DeliverySection({
           )}
         </div>
 
+        <p className="text-muted-foreground/40 mx-4 border-t border-white/[0.06] pt-3 pb-1 text-[10px] font-medium tracking-wider uppercase">
+          Audio
+        </p>
         {/* Language row */}
-        <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center justify-between px-4 py-3.5">
           <div className="flex items-center gap-2.5">
             <div className="nm-inset-sm flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
               <Languages className="text-muted-foreground h-4 w-4" />
             </div>
-            <div>
-              <p className="text-sm font-medium">Summary language</p>
-              <p className="text-muted-foreground text-[11px]">
-                {currentLanguageMeta?.nativeName ?? "English"} ·{" "}
-                {currentLanguageMeta?.name ?? "English"}
-              </p>
-            </div>
+            <p className="text-sm font-medium">Language</p>
           </div>
-          <button
-            onClick={openLanguagePicker}
-            disabled={savingLanguage}
-            className="nm-raised-sm text-muted-foreground hover:text-foreground flex items-center gap-1.5 rounded-full px-3 py-1 text-xs transition-all disabled:opacity-50"
-          >
-            {savingLanguage ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              "Change"
-            )}
-          </button>
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground text-xs">
+              {currentLanguageMeta?.name ?? "English"}
+            </span>
+            <button
+              onClick={openLanguagePicker}
+              disabled={savingLanguage}
+              className="nm-raised-sm text-muted-foreground hover:text-foreground flex items-center gap-1.5 rounded-full px-3 py-1 text-xs transition-all disabled:opacity-50"
+            >
+              {savingLanguage ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                "Change"
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Voice row */}
-        <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center justify-between px-4 py-3.5">
           <div className="flex items-center gap-2.5">
             <div className="nm-inset-sm flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
               <Headphones className="text-muted-foreground h-4 w-4" />
             </div>
-            <div>
-              <p className="text-sm font-medium">Audio voice</p>
-              <p className="text-muted-foreground text-[11px]">
-                {currentVoiceEntry.label} · {currentVoiceEntry.tone}
-              </p>
-            </div>
+            <p className="text-sm font-medium">Voice</p>
           </div>
           <div className="flex items-center gap-3">
+            <span className="text-muted-foreground text-xs">
+              {currentVoiceEntry.label} · {currentVoiceEntry.tone}
+            </span>
             <button
               onClick={(e) =>
                 previewVoice(

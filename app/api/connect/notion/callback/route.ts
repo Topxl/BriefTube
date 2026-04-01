@@ -115,7 +115,7 @@ export async function GET(req: NextRequest) {
       },
       { onConflict: "user_id,platform" },
     );
-    void captureServerEvent({
+    captureServerEvent({
       distinctId: user.id,
       event: "platform_connected",
       properties: { platform: "notion" },

@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  void captureServerEvent({
+  captureServerEvent({
     distinctId: user.id,
     event: "checkout_started",
     properties: {
