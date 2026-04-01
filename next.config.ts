@@ -32,6 +32,9 @@ const cspDirectives = [
     "https://www.googletagmanager.com", // GTM tracking pixel
   ].join(" "),
 
+  // Media: audio summaries from Supabase Storage
+  "media-src 'self' https://*.supabase.co",
+
   // Fonts: self only (next/font self-hosts Google Fonts)
   "font-src 'self'",
 

@@ -274,7 +274,7 @@ export default async function SurveyResultsPage() {
                 {allFreeText.map((f) => (
                   <div key={f.id} className="rounded-lg bg-zinc-800 px-3 py-2">
                     <p className="text-sm text-zinc-300">{f.text}</p>
-                    <p className="mt-1 text-xs text-zinc-600">
+                    <p className="mt-1 text-xs text-zinc-400">
                       {f.persona} · {new Date(f.date).toLocaleDateString()}
                     </p>
                   </div>

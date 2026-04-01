@@ -141,7 +141,7 @@ function SourceRow({
       <div className="min-w-0 flex-1">
         <p
           className={`truncate text-sm font-medium ${
-            !source.active ? "text-muted-foreground/50" : ""
+            !source.active ? "text-muted-foreground" : ""
           }`}
         >
           {nameEl}
