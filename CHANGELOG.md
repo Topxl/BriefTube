@@ -2,6 +2,11 @@
 
 ## 2026-04-01
 
+FEATURE: Add user avatar with dropdown menu in navbar — Google profile picture (with initial fallback), quick links (profile, voice, language, podcast feed), sign out; replace Account section with minimal "Danger zone" (delete only)
+REFACTOR: Profile page UI/UX audit fixes — reorder sections (Delivery+Podcast near top, Account at bottom), remove redundant plan subtitle in Account, separate Delete/Sign out buttons, add aria-labels on all Switches and QR button, change Switch active color from red to emerald, replace space-y with flex gap everywhere, make referral stats grid responsive (2-col mobile), add saving spinner to summary preferences, fix Save 27% button/span inconsistency
+FEATURE: Add custom instructions for summaries — free-text field (500 chars max) in profile, injected into AI prompt as additional user hints
+FEATURE: Add summary preferences (length: brief/standard/detailed, style: key_points/narrative/actionable) and custom instructions — DB migration, profile UI section, worker prompt integration, on-demand summaries use user prefs via processing_queue
+FEATURE: Enrich login page with value propositions (free channels, trial, setup time) and live social proof stats (summaries delivered, channels tracked) to improve conversion
 FIX: Smoke tests — add 30s double-check before alerting to eliminate false positives from transient timeouts; increase timeout 15s→20s
 FEATURE: Add database health check script — SSHes to VPS to detect stuck jobs, failed video spikes, stuck deliveries, delivery backlog, and delivery success rate; alerts via Telegram on critical issues
 FEATURE: Add onboarding smoke test script — verifies full user journey (pages, auth chain, core APIs, dashboard redirects, worker health, external services); alerts via Telegram on critical breakage

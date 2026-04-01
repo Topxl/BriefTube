@@ -199,7 +199,7 @@ export function NotificationsSection({
   const formatHour = (h: number) => `${String(h).padStart(2, "0")}:00`;
 
   return (
-    <section className="space-y-2">
+    <section className="flex flex-col gap-2">
       <h2 className="text-muted-foreground/50 px-1 text-xs font-medium tracking-wide uppercase">
         Notifications
       </h2>
@@ -230,7 +230,7 @@ export function NotificationsSection({
             checked={pushEnabled && !permissionDenied}
             disabled={savingPush || permissionDenied}
             onCheckedChange={(checked) => void handlePushToggle(checked)}
-            className="data-[state=checked]:bg-red-400"
+            className="data-[state=checked]:bg-emerald-500"
           />
         </div>
 
@@ -253,7 +253,8 @@ export function NotificationsSection({
             checked={newsletter}
             disabled={savingNewsletter}
             onCheckedChange={(checked) => void handleNewsletterToggle(checked)}
-            className="data-[state=checked]:bg-red-400"
+            className="data-[state=checked]:bg-emerald-500"
+            aria-label="Toggle newsletter emails"
           />
         </div>
 
@@ -278,7 +279,8 @@ export function NotificationsSection({
             onCheckedChange={(checked) =>
               void handleAnnouncementsToggle(checked)
             }
-            className="data-[state=checked]:bg-red-400"
+            className="data-[state=checked]:bg-emerald-500"
+            aria-label="Toggle announcement emails"
           />
         </div>
 
@@ -304,7 +306,8 @@ export function NotificationsSection({
               onCheckedChange={(checked) =>
                 void handleDailyDigestToggle(checked)
               }
-              className="data-[state=checked]:bg-red-400"
+              className="data-[state=checked]:bg-emerald-500"
+              aria-label="Toggle daily digest"
             />
           </div>
           {dailyDigest && (
@@ -338,7 +341,8 @@ export function NotificationsSection({
                   onCheckedChange={(checked) =>
                     void handleFullSummaryToggle(checked)
                   }
-                  className="data-[state=checked]:bg-red-400"
+                  className="data-[state=checked]:bg-emerald-500"
+                  aria-label="Toggle full summaries in digest email"
                 />
               </div>
             </>
