@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { checkRateLimit, getRequestIp, publicRateLimit } from "@/lib/rate-limit";
 import { readFileSync } from "fs";
 import { join } from "path";
 
@@ -16,8 +15,8 @@ export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const rateLimitResponse = await checkRateLimit(publicRateLimit, `thumb:${getRequestIp(_req)}`);
-  if (rateLimitResponse) return rateLimitResponse;
+  // No rate limiting on thumbnails — they're loaded in bulk (10+ per page)
+  // and are just a proxy to YouTube thumbnail images (not sensitive)
 
   const { id } = await params;
   const clean = id.replace(/[^a-zA-Z0-9_-]/g, "");
