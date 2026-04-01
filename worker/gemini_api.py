@@ -32,10 +32,29 @@ LANGUAGE_NAMES = {
 }
 
 
+def _style_instruction(style_pref: str) -> str:
+    """Return prompt instruction line for the requested summary style."""
+    if style_pref == 'key_points':
+        return (
+            "4. Structure as a clear list of key points with the main takeaways. "
+            "Use short, punchy sentences suitable for audio listening.\n"
+        )
+    if style_pref == 'actionable':
+        return (
+            "4. Focus on actionable insights: what can the listener do with this information? "
+            "Highlight practical advice, tips, and concrete steps. Direct and useful tone.\n"
+        )
+    # Default: narrative
+    return "4. Natural and direct tone, suitable for audio listening.\n"
+
+
 def build_summary_prompt(
     transcript: str,
     source_language: Optional[str] = None,
     target_language: str = 'fr',
+    length_pref: str = 'standard',
+    style_pref: str = 'narrative',
+    custom_instructions: str = '',
 ) -> str:
     """Build the prompt for summarization.
 
@@ -45,17 +64,24 @@ def build_summary_prompt(
         transcript: Full video transcript text
         source_language: Language code of the transcript (e.g., 'en', 'fr')
         target_language: Desired language for the summary (default: 'fr')
+        length_pref: User preference for summary length ('brief', 'standard', 'detailed')
+        style_pref: User preference for summary style ('key_points', 'narrative', 'actionable')
 
     Returns:
         The complete prompt string
     """
     target_lang_name = LANGUAGE_NAMES.get(target_language.lower(), target_language)
 
-    # Determine target summary length based on transcript length.
+    # Determine target summary length based on transcript length and user preference.
     # Never ask for MORE words than the original — that forces hallucination.
     # Hard cap at AUDIO_MAX_WORDS: beyond this, Gemini would be truncated by
     # max_output_tokens (4096 ≈ 3000 words) producing a cut mid-sentence.
-    AUDIO_MAX_WORDS = 800  # ~4-5 min at normal speech rate
+    LENGTH_CAPS = {
+        'brief': 300,       # ~1-2 min at normal speech rate
+        'standard': 800,    # ~4-5 min
+        'detailed': 1200,   # ~6-8 min
+    }
+    AUDIO_MAX_WORDS = LENGTH_CAPS.get(length_pref, 800)
     transcript_words = len(transcript.split())
 
     if transcript_words < 150:
@@ -110,11 +136,22 @@ def build_summary_prompt(
         f"1. Summary of {length_guidance} — NEVER exceed this limit\n"
         + selectivity_instruction +
         "3. Avoid repetitions and filler.\n"
-        "4. Natural and direct tone, suitable for audio listening.\n"
-        f"5. Output language: {target_lang_name} — mandatory\n\n"
-        f"Transcript:\n{transcript}\n\n"
-        f"Summary in {target_lang_name} ({length_guidance}):"
+        + _style_instruction(style_pref) +
+        f"5. Output language: {target_lang_name} — mandatory\n"
     ]
+
+    # Inject user custom instructions if provided (max 500 chars, treated as hints)
+    cleaned = custom_instructions.strip()[:500] if custom_instructions else ""
+    if cleaned:
+        prompt_parts.append(
+            f"6. Additional user preferences (apply as best you can without "
+            f"contradicting the rules above): {cleaned}\n"
+        )
+
+    prompt_parts.append(
+        f"\nTranscript:\n{transcript}\n\n"
+        f"Summary in {target_lang_name} ({length_guidance}):"
+    )
 
     return "".join(prompt_parts)
 
@@ -152,7 +189,10 @@ class GeminiSummarizer:
         transcript: str,
         source_language: Optional[str] = None,
         target_language: str = 'fr',
-        model: Optional[str] = None
+        model: Optional[str] = None,
+        length_pref: str = 'standard',
+        style_pref: str = 'narrative',
+        custom_instructions: str = '',
     ) -> Tuple[Optional[str], Optional[str]]:
         """
         Summarize a video transcript and translate to target language.
@@ -166,6 +206,9 @@ class GeminiSummarizer:
             source_language: Language code of the transcript (e.g., 'en', 'fr')
             target_language: Desired language for the summary (default: 'fr')
             model: Optional specific model to use (default: tries models in order)
+            length_pref: User preference for summary length ('brief', 'standard', 'detailed')
+            style_pref: User preference for summary style ('key_points', 'narrative', 'actionable')
+            custom_instructions: Free-text user instructions (max 500 chars)
 
         Returns:
             Tuple of (summary_text, error_message)
@@ -173,7 +216,7 @@ class GeminiSummarizer:
         if not transcript or len(transcript.strip()) < 50:
             return None, "transcript_too_short"
 
-        prompt = build_summary_prompt(transcript, source_language, target_language)
+        prompt = build_summary_prompt(transcript, source_language, target_language, length_pref, style_pref, custom_instructions)
 
         # Try models in order
         models_to_try = [model] if model else self.MODELS

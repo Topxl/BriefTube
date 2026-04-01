@@ -357,6 +357,9 @@ async def _process_video(
     # handlers can reference user_language when calling mark_video_failed.
     user_language = job.get("user_language") or "fr"
     tts_voice = _resolve_tts_voice(job.get("tts_voice"), user_language)
+    summary_length_pref = job.get("summary_length_pref") or "standard"
+    summary_style = job.get("summary_style") or "narrative"
+    summary_custom_instructions = job.get("summary_custom_instructions") or ""
     if tts_voice != (job.get("tts_voice") or None):
         logger.info(f"[{video_id}] Voice overridden: '{job.get('tts_voice')}' → '{tts_voice}' (language: {user_language})")
 
@@ -533,6 +536,9 @@ async def _process_video(
             transcript=transcript,
             source_language=source_lang,
             target_language=user_language,
+            length_pref=summary_length_pref,
+            style_pref=summary_style,
+            custom_instructions=summary_custom_instructions,
         )
 
         if not summary:
@@ -551,6 +557,9 @@ async def _process_video(
                     transcript=transcript,
                     source_language=source_lang,
                     target_language=user_language,
+                    length_pref=summary_length_pref,
+                    style_pref=summary_style,
+                    custom_instructions=summary_custom_instructions,
                 )
                 if not summary:
                     # Both Gemini and OpenRouter failed

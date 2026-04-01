@@ -1,0 +1,274 @@
+"use client";
+
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import {
+  AlertCircle,
+  RefreshCw,
+  Terminal,
+  Loader2,
+  Play,
+  Pause,
+  Copy,
+  Check,
+  Activity,
+} from "@/lib/icons";
+import { useState } from "react";
+
+type WebLogsApiResponse = {
+  webStatus: {
+    active: boolean;
+    status: string;
+    pid: string | null;
+    memory: string | null;
+    since: string | null;
+  };
+  logLines: string[];
+  recentErrors: string[];
+  errorCount: number;
+  timestamp: string;
+};
+
+function LogLine({ line }: { line: string }) {
+  const isError =
+    line.includes("ERROR") ||
+    line.includes("error") ||
+    line.includes("failed") ||
+    line.includes("Failed");
+
+  const color = isError ? "text-red-400" : "text-muted-foreground";
+
+  return <p className={`font-mono text-[10px] leading-5 ${color}`}>{line}</p>;
+}
+
+export function WebLogsCard() {
+  const queryClient = useQueryClient();
+  const [copied, setCopied] = useState(false);
+  const [copiedErrors, setCopiedErrors] = useState(false);
+
+  const copyLogs = () => {
+    const lines = (data?.logLines ?? []).join("\n");
+    void navigator.clipboard.writeText(lines).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  const copyErrors = () => {
+    const lines = (data?.recentErrors ?? []).join("\n");
+    void navigator.clipboard.writeText(lines).then(() => {
+      setCopiedErrors(true);
+      setTimeout(() => setCopiedErrors(false), 2000);
+    });
+  };
+
+  const { data, isLoading, dataUpdatedAt } = useQuery<WebLogsApiResponse>({
+    queryKey: ["admin-web-logs"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/web-logs");
+      if (!res.ok) throw new Error("Failed to fetch web logs");
+      return res.json() as Promise<WebLogsApiResponse>;
+    },
+    refetchInterval: 10_000,
+  });
+
+  const actionMutation = useMutation({
+    mutationFn: async (action: "start" | "stop" | "restart") => {
+      const res = await fetch("/api/admin/web-logs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      if (!res.ok) throw new Error("Action failed");
+      return res.json() as Promise<{ success: boolean; action: string }>;
+    },
+    onSuccess: (_, action) => {
+      toast.success(`Web server ${action} sent`);
+      setTimeout(() => {
+        void queryClient.invalidateQueries({ queryKey: ["admin-web-logs"] });
+      }, 2500);
+    },
+    onError: () => {
+      toast.error("Action failed");
+    },
+  });
+
+  const web = data?.webStatus;
+  const isActive = web?.active ?? false;
+  const isBusy = actionMutation.isPending;
+
+  const lastUpdated = dataUpdatedAt
+    ? new Date(dataUpdatedAt).toLocaleTimeString("en-US")
+    : null;
+
+  return (
+    <div className="flex flex-col gap-3">
+      {/* Status header */}
+      <div className="nm-raised flex items-center justify-between rounded-2xl px-4 py-3">
+        <div className="flex items-center gap-3">
+          <div
+            className={`h-2.5 w-2.5 rounded-full ${
+              isLoading
+                ? "bg-yellow-400"
+                : isActive
+                  ? "bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.6)]"
+                  : "bg-red-400 shadow-[0_0_6px_rgba(248,113,113,0.6)]"
+            }`}
+          />
+          <div>
+            <p className="text-sm font-medium">
+              {isLoading ? "Loading…" : (web?.status ?? "unknown")}
+            </p>
+            {web?.since && (
+              <p className="text-muted-foreground text-[11px]">
+                since {web.since}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4">
+          {web?.pid && (
+            <div className="text-right">
+              <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
+                PID
+              </p>
+              <p className="font-mono text-xs font-medium">{web.pid}</p>
+            </div>
+          )}
+          {web?.memory && (
+            <div className="text-right">
+              <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
+                RAM
+              </p>
+              <p className="font-mono text-xs font-medium">{web.memory}</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          className="gap-1.5 rounded-full text-xs"
+          disabled={isBusy || isActive}
+          onClick={() => actionMutation.mutate("start")}
+        >
+          <Play className="h-3 w-3" />
+          Start
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="gap-1.5 rounded-full text-xs"
+          disabled={isBusy || !isActive}
+          onClick={() => actionMutation.mutate("stop")}
+        >
+          <Pause className="h-3 w-3" />
+          Stop
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="gap-1.5 rounded-full text-xs"
+          disabled={isBusy}
+          onClick={() => actionMutation.mutate("restart")}
+        >
+          {isBusy ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : (
+            <RefreshCw className="h-3 w-3" />
+          )}
+          Restart
+        </Button>
+
+        <div className="ml-auto flex items-center gap-1.5 text-[10px] text-white/20">
+          <Activity className="h-3 w-3" />
+          {lastUpdated ? `Updated ${lastUpdated}` : "…"}
+        </div>
+      </div>
+
+      {/* Recent errors */}
+      {(data?.recentErrors.length ?? 0) > 0 && (
+        <div className="nm-raised rounded-2xl border border-red-500/[0.12] bg-red-500/[0.04] px-4 py-3">
+          <div className="mb-2 flex items-center gap-1.5">
+            <AlertCircle className="h-3.5 w-3.5 text-red-400" />
+            <p className="text-xs font-medium text-red-400">
+              {data?.errorCount} recent error
+              {(data?.errorCount ?? 0) > 1 ? "s" : ""}
+            </p>
+            <button
+              onClick={copyErrors}
+              className="ml-auto flex items-center gap-1 rounded px-1 py-0.5 text-[10px] text-red-400/60 transition-colors hover:text-red-400"
+              title="Copy errors"
+            >
+              {copiedErrors ? (
+                <Check className="h-3 w-3 text-emerald-400" />
+              ) : (
+                <Copy className="h-3 w-3" />
+              )}
+              {copiedErrors ? "Copied" : "Copy"}
+            </button>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            {data?.recentErrors.map((line, i) => (
+              <LogLine key={i} line={line} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Live logs */}
+      <div className="nm-raised overflow-hidden rounded-2xl">
+        <div className="flex items-center gap-1.5 border-b border-white/[0.04] px-4 py-2">
+          <Terminal className="text-muted-foreground h-3.5 w-3.5" />
+          <p className="text-muted-foreground text-xs font-medium">
+            Logs (60 dernières lignes)
+          </p>
+          <div className="ml-auto flex items-center gap-2">
+            <button
+              onClick={copyLogs}
+              className="text-muted-foreground hover:text-foreground flex items-center gap-1 rounded px-1 py-0.5 text-[10px] transition-colors"
+              title="Copier les logs"
+            >
+              {copied ? (
+                <Check className="h-3 w-3 text-emerald-400" />
+              ) : (
+                <Copy className="h-3 w-3" />
+              )}
+              {copied ? "Copié" : "Copier"}
+            </button>
+            <div className="flex gap-1">
+              <span className="h-2 w-2 rounded-full bg-red-500/60" />
+              <span className="h-2 w-2 rounded-full bg-yellow-500/60" />
+              <span className="h-2 w-2 rounded-full bg-emerald-500/60" />
+            </div>
+          </div>
+        </div>
+        <div className="max-h-96 overflow-y-auto px-4 py-3">
+          {isLoading ? (
+            <div className="flex items-center gap-2 py-4">
+              <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
+              <span className="text-muted-foreground text-xs">Loading…</span>
+            </div>
+          ) : (
+            <div className="flex flex-col">
+              {(data?.logLines ?? []).map((line, i) => (
+                <LogLine key={i} line={line} />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Service name watermark */}
+      <div className="flex items-center justify-center gap-1.5 py-1">
+        <Terminal className="h-3 w-3 text-white/10" />
+        <span className="text-[10px] text-white/10">brieftube-web.service</span>
+      </div>
+    </div>
+  );
+}
