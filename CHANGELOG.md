@@ -2,6 +2,7 @@
 
 ## 2026-04-01
 
+FIX: Force import-in-the-middle@3.0.0 via pnpm overrides — @fastify/otel (via Sentry) pulled 2.0.6 causing Next.js serverExternalPackages version conflict warning
 FEATURE: Add PostHog feature flags infrastructure — useFeatureFlag/useFeatureFlagEnabled hooks, FeatureFlag wrapper component, server-side getFeatureFlag helper, PostHogProvider wrapping in app providers
 FEATURE: Enable PostHog surveys support — add opt_in_site_apps to client init, track first_channel_added event with time-to-first-value metric
 REFACTOR: Redesign profile page Google-style — compact notifications (no descriptions), collapsible summary preferences, delivery section with Platforms/Audio sub-groups and status dots, group sections under shared headers, increase spacing
