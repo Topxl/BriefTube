@@ -12,6 +12,7 @@ import {
   authRateLimit,
   heavyRateLimit,
 } from "@/lib/rate-limit";
+import { captureServerEvent } from "@/lib/posthog/server";
 
 // GET /api/subscriptions - Get user's YouTube channel subscriptions
 export async function GET() {
@@ -343,6 +344,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  void captureServerEvent({
+    distinctId: user.id,
+    event: "channel_added",
+    properties: {
+      channel_id: finalChannelId,
+      channel_name: finalChannelName,
+    },
+  });
+
   // Aha moment: deliver a video immediately after subscribing.
   // - If user added via a video URL → deliver that specific video.
   // - Otherwise → deliver the most recent video from the channel's RSS feed.
@@ -584,6 +594,14 @@ export async function DELETE(request: NextRequest) {
     );
   }
 
+  // Fetch channel info before deleting (for tracking)
+  const { data: sub } = await supabase
+    .from("subscriptions")
+    .select("channel_id, channel_name")
+    .eq("id", subscriptionId)
+    .eq("user_id", user.id)
+    .single();
+
   const { error } = await supabase
     .from("subscriptions")
     .delete()
@@ -593,6 +611,15 @@ export async function DELETE(request: NextRequest) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  void captureServerEvent({
+    distinctId: user.id,
+    event: "channel_removed",
+    properties: {
+      channel_id: sub?.channel_id,
+      channel_name: sub?.channel_name,
+    },
+  });
 
   return NextResponse.json({ success: true });
 }

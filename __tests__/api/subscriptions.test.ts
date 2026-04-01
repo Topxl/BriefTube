@@ -196,7 +196,7 @@ describe("POST /api/subscriptions", () => {
 
     expect(response.status).toBe(400);
     const body = await response.json();
-    expect(body.error).toBe("Invalid request");
+    expect(body.error).toBe("channelId and channelName are required");
   });
 
   it("returns 422 when channel ID is not a valid YouTube channel ID", async () => {

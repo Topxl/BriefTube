@@ -2,6 +2,9 @@
 
 ## 2026-04-01
 
+FEATURE: Add PostHog server-side tracking for onboarding funnel — signup_completed, channel_added, channel_removed, checkout_started, platform_connected (Discord, Slack, Notion)
+FEATURE: Enrich PostHog user identification with profile properties (plan, trial_ends_at, max_channels, telegram_connected, onboarding_completed, created_at) and plan group tracking for better segmentation
+FIX: Initialize PostHog client-side with posthog.init() — enable session recording, autocapture, and pageview tracking that were previously not working
 FEATURE: Add user avatar with dropdown menu in navbar — Google profile picture (with initial fallback), quick links (profile, voice, language, podcast feed), sign out; replace Account section with minimal "Danger zone" (delete only)
 REFACTOR: Profile page UI/UX audit fixes — reorder sections (Delivery+Podcast near top, Account at bottom), remove redundant plan subtitle in Account, separate Delete/Sign out buttons, add aria-labels on all Switches and QR button, change Switch active color from red to emerald, replace space-y with flex gap everywhere, make referral stats grid responsive (2-col mobile), add saving spinner to summary preferences, fix Save 27% button/span inconsistency
 FEATURE: Add custom instructions for summaries — free-text field (500 chars max) in profile, injected into AI prompt as additional user hints

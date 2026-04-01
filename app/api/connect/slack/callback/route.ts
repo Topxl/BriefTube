@@ -4,6 +4,7 @@ import { checkRateLimit, authRateLimit } from "@/lib/rate-limit";
 import { createHmac } from "crypto";
 import { redirect } from "next/navigation";
 import type { NextRequest } from "next/server";
+import { captureServerEvent } from "@/lib/posthog/server";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
@@ -92,6 +93,12 @@ export async function GET(req: NextRequest) {
     },
     { onConflict: "user_id,platform" },
   );
+
+  void captureServerEvent({
+    distinctId: user.id,
+    event: "platform_connected",
+    properties: { platform: "slack" },
+  });
 
   // Send a welcome message to confirm the channel is working
   await fetch(webhookUrl, {
