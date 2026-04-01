@@ -125,7 +125,14 @@ export async function POST(request: NextRequest) {
 
   const parsed = bodySchema.safeParse(rawBody);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+    logger.error("Subscription validation failed:", {
+      errors: parsed.error.issues,
+      body: rawBody,
+    });
+    return NextResponse.json(
+      { error: "Invalid request", details: parsed.error.issues },
+      { status: 400 },
+    );
   }
 
   const body = parsed.data as {
