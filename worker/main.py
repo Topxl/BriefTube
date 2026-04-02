@@ -327,6 +327,16 @@ async def _process_video(
         "praise and worship", "praise songs", "praise collection",
         "gospel songs", "gospel music", "christian praise",
         "christian songs", "hillsong worship", "praise music",
+        # Hindu / South Asian devotional music
+        "bhajan", "aarti", "chalisa",
+        "nonstop bhajan", "nonstop mantra", "nonstop kirtan",
+        "jukebox",
+        # Tamil / South Indian music
+        "tamil song", "tamil mass song", "mass songs",
+        "vijay songs",
+        # Ambient / healing / frequency music
+        "chakra", "solfeggio", "soundscape", "binaural",
+        "healing frequencies", "meditation frequencies", "sleep frequencies",
     )
     # Nollywood / African drama movies: no YouTube transcripts, 1-3h long,
     # each Whisper retry downloads 50-65 MB via proxy then fails → bandwidth explosion.
