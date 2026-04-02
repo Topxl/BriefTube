@@ -154,9 +154,7 @@ async function FeedSection({ userId }: { userId: string }) {
         "video_id, language, video_title, video_url, summary, audio_url, channel_id, status",
       )
       .in("video_id", videoIds)
-      .in("language", languages)
-      .eq("status", "completed")
-      .not("audio_url", "is", null);
+      .in("language", languages);
 
     const videoMap: Record<string, ProcessedVideo> = {};
     for (const v of videos ?? []) {
@@ -179,16 +177,17 @@ async function FeedSection({ userId }: { userId: string }) {
   // Preload channel subscription states for Active/Paused badges
   const { data: subs } = await supabase
     .from("subscriptions")
-    .select("id, channel_id, active")
+    .select("id, channel_id, active, channel_avatar_url")
     .eq("user_id", userId);
   const initialChannelStates: Record<
     string,
-    { active: boolean; subId: string }
+    { active: boolean; subId: string; avatarUrl: string | null }
   > = {};
   for (const s of subs ?? []) {
     initialChannelStates[s.channel_id] = {
       active: !!s.active,
       subId: s.id,
+      avatarUrl: s.channel_avatar_url,
     };
   }
 
@@ -200,17 +199,14 @@ async function FeedSection({ userId }: { userId: string }) {
       initialChannelStates={initialChannelStates}
       headerRight={
         <>
-          <ChannelsSheetSection userId={userId} />
+          <Suspense
+            fallback={
+              <div className="h-8 w-16 animate-pulse rounded-md bg-white/[0.06]" />
+            }
+          >
+            <ChannelsSheetSection userId={userId} />
+          </Suspense>
           <StatsSheet />
-        </>
-      }
-      banners={
-        <>
-          <DashboardBanners userId={userId} />
-          <VideoHighlighter />
-          <PushNotificationBanner />
-          <PendingVideoProcessor />
-          <ProcessingVideoCard />
         </>
       }
     />
@@ -228,7 +224,20 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col gap-3">
+      <Suspense fallback={null}>
+        <DashboardBanners userId={user.id} />
+      </Suspense>
+      <Suspense fallback={null}>
+        <VideoHighlighter />
+      </Suspense>
+      <Suspense fallback={null}>
+        <PushNotificationBanner />
+      </Suspense>
+      <PendingVideoProcessor />
+      <Suspense fallback={null}>
+        <ProcessingVideoCard />
+      </Suspense>
       <SectionErrorBoundary>
         <Suspense fallback={<SummariesFeedSkeleton />}>
           <FeedSection userId={user.id} />
