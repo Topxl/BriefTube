@@ -46,15 +46,17 @@ export function SummariesFeed({
   const [feedMode, setFeedMode] = useState<"summaries" | "all">("summaries");
   const [deliveries, setDeliveries] =
     useState<EnrichedDelivery[]>(initialDeliveries);
-  const [inboxVideos, setInboxVideos] = useState<
-    {
-      video_id: string;
-      channel_id: string;
-      title: string;
-      published_at: string;
-      is_summarized: boolean;
-    }[]
-  >([]);
+  type InboxVideo = {
+    video_id: string;
+    channel_id: string;
+    title: string;
+    published_at: string;
+    is_summarized: boolean;
+    delivery_id: string | null;
+    language: string | null;
+    video?: ProcessedVideo;
+  };
+  const [inboxVideos, setInboxVideos] = useState<InboxVideo[]>([]);
   const [loading, setLoading] = useState(initialDeliveries.length === 0);
   const [hasMore, setHasMore] = useState(
     initialDeliveries.length === PAGE_SIZE,
@@ -89,15 +91,33 @@ export function SummariesFeed({
         return;
       }
 
-      const typed = data as unknown as {
-        video_id: string;
-        channel_id: string;
-        title: string;
-        published_at: string;
-        is_summarized: boolean;
-      }[];
-      setHasMore(typed.length === PAGE_SIZE);
-      setInboxVideos((prev) => (pageNum === 0 ? typed : [...prev, ...typed]));
+      const raw = data as unknown as InboxVideo[];
+      // Fetch processed_videos for summarized items
+      const summarizedIds = raw
+        .filter((v) => v.is_summarized)
+        .map((v) => v.video_id);
+      const videoMap: Record<string, ProcessedVideo> = {};
+      if (summarizedIds.length > 0) {
+        const { data: videos } = await supabase
+          .from("processed_videos")
+          .select(
+            "video_id, language, video_title, video_url, summary, audio_url, channel_id, status",
+          )
+          .in("video_id", summarizedIds);
+        if (videos) {
+          for (const v of videos) {
+            videoMap[v.video_id] ??= v;
+          }
+        }
+      }
+      const enriched: InboxVideo[] = raw.map((v) => ({
+        ...v,
+        video: videoMap[v.video_id],
+      }));
+      setHasMore(enriched.length === PAGE_SIZE);
+      setInboxVideos((prev) =>
+        pageNum === 0 ? enriched : [...prev, ...enriched],
+      );
       setPage(pageNum);
       setLoading(false);
     },
@@ -411,16 +431,37 @@ export function SummariesFeed({
                   onToggleFavorite={toggleFavorite}
                 />
               ))
-            : inboxVideos.map((v) => (
-                <VideoInboxRow
-                  key={v.video_id}
-                  videoId={v.video_id}
-                  channelId={v.channel_id}
-                  title={v.title}
-                  publishedAt={v.published_at}
-                  onSummarized={() => void loadInboxVideos(0)}
-                />
-              ))}
+            : inboxVideos.map((v) =>
+                v.is_summarized && v.video ? (
+                  <SummaryRow
+                    key={v.video_id}
+                    delivery={{
+                      id: v.delivery_id ?? v.video_id,
+                      video_id: v.video_id,
+                      user_id: "",
+                      status: "sent",
+                      source: null,
+                      sent_at: null,
+                      created_at: v.published_at,
+                      language: v.language ?? undefined,
+                      video: v.video,
+                    }}
+                    resolvedTitle={v.title}
+                    favoriteLanguages={favLangs}
+                    onManageFavorites={openLangPicker}
+                    onToggleFavorite={toggleFavorite}
+                  />
+                ) : (
+                  <VideoInboxRow
+                    key={v.video_id}
+                    videoId={v.video_id}
+                    channelId={v.channel_id}
+                    title={v.title}
+                    publishedAt={v.published_at}
+                    onSummarized={() => void loadInboxVideos(0)}
+                  />
+                ),
+              )}
           {loading &&
             Array.from({ length: 3 }).map((_, i) => (
               <SummaryRowSkeleton key={i} />
