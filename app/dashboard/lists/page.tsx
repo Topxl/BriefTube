@@ -285,26 +285,6 @@ export default async function DashboardListsPage({
 
   return (
     <div className="space-y-8 px-0.5 pt-0.5 pb-4">
-      {/* Following */}
-      {followedLists.length > 0 && (
-        <section className="space-y-3">
-          <p className="text-muted-foreground/70 text-xs font-medium tracking-wider uppercase">
-            Following
-          </p>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {followedLists.map((list) => (
-              <ListCard
-                key={list.id}
-                list={list}
-                actions={
-                  <UnfollowButton listId={list.id} listName={list.name} />
-                }
-              />
-            ))}
-          </div>
-        </section>
-      )}
-
       {/* My lists */}
       {myListsMapped.length > 0 && (
         <section className="space-y-3">

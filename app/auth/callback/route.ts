@@ -32,13 +32,13 @@ export async function GET(request: Request) {
       } = await supabase.auth.getUser();
 
       if (user) {
-        // Sync Google avatar URL into auth.users metadata if missing
-        const meta = user.user_metadata as Record<string, unknown> | undefined;
-        if (!meta?.avatar_url && user.identities?.[0]?.identity_data) {
+        // Sync Google avatar URL into auth.users metadata on every login
+        if (user.identities?.[0]?.identity_data) {
           const googleAvatar = (
             user.identities[0].identity_data as Record<string, unknown>
           ).avatar_url as string | undefined;
-          if (googleAvatar) {
+          const meta = user.user_metadata as Record<string, unknown> | undefined;
+          if (googleAvatar && meta?.avatar_url !== googleAvatar) {
             await supabase.auth.updateUser({
               data: { avatar_url: googleAvatar },
             });

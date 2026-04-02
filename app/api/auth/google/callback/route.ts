@@ -81,6 +81,20 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${baseUrl}/login`);
   }
 
+  // Sync Google avatar from id_token (JWT payload contains 'picture' field)
+  try {
+    const payload = JSON.parse(
+      Buffer.from(tokens.id_token.split(".")[1], "base64url").toString(),
+    ) as { picture?: string };
+    if (payload.picture) {
+      await supabase.auth.updateUser({
+        data: { avatar_url: payload.picture },
+      });
+    }
+  } catch {
+    // Non-critical — continue login
+  }
+
   // Post-login logic (trial + referral + welcome email)
   const {
     data: { user },
