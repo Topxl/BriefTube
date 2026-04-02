@@ -15,10 +15,13 @@ import type {
 
 const PAGE_SIZE = 20;
 
+type ChannelState = { active: boolean; subId: string };
+
 type Props = {
   initialDeliveries?: EnrichedDelivery[];
   initialPreferredLang?: string;
   initialFavLangs?: string[];
+  initialChannelStates?: Record<string, ChannelState>;
   headerRight?: React.ReactNode;
   banners?: React.ReactNode;
 };
@@ -44,6 +47,7 @@ export function SummariesFeed({
   initialDeliveries = [],
   initialPreferredLang = "en",
   initialFavLangs = [],
+  initialChannelStates = {},
   headerRight,
   banners,
 }: Props) {
@@ -61,11 +65,23 @@ export function SummariesFeed({
     video?: ProcessedVideo;
   };
   const [inboxVideos, setInboxVideos] = useState<InboxVideo[]>([]);
-  const [loading, setLoading] = useState(initialDeliveries.length === 0);
-  const [hasMore, setHasMore] = useState(
+  // Per-tab pagination state to preserve cache when switching tabs
+  const [summariesLoading, setSummariesLoading] = useState(
+    initialDeliveries.length === 0,
+  );
+  const [summariesHasMore, setSummariesHasMore] = useState(
     initialDeliveries.length === PAGE_SIZE,
   );
-  const [page, setPage] = useState(0);
+  const [summariesPage, setSummariesPage] = useState(0);
+
+  const [inboxLoading, setInboxLoading] = useState(false);
+  const [inboxHasMore, setInboxHasMore] = useState(true);
+  const [inboxPage, setInboxPage] = useState(0);
+
+  const loading = feedMode === "summaries" ? summariesLoading : inboxLoading;
+  const hasMore = feedMode === "summaries" ? summariesHasMore : inboxHasMore;
+  const _page = feedMode === "summaries" ? summariesPage : inboxPage;
+
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   // IDs déjà tentés (succès ou échec) — évite de re-fetcher sur chaque update realtime
   const fetchedRef = useRef<Set<string>>(new Set());
@@ -73,13 +89,12 @@ export function SummariesFeed({
   const [favLangs, setFavLangs] = useState<string[]>(initialFavLangs);
   const [preferredLang, setPreferredLang] = useState(initialPreferredLang);
   const supabase = useMemo(() => createClient(), []);
-  const [channelStates, setChannelStates] = useState<
-    Record<string, { active: boolean; subId: string }>
-  >({});
+  const [channelStates, setChannelStates] =
+    useState<Record<string, ChannelState>>(initialChannelStates);
 
   const loadInboxVideos = useCallback(
     async (pageNum: number) => {
-      setLoading(true);
+      setInboxLoading(true);
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -94,7 +109,7 @@ export function SummariesFeed({
       });
 
       if (!data) {
-        setLoading(false);
+        setInboxLoading(false);
         return;
       }
 
@@ -121,19 +136,19 @@ export function SummariesFeed({
         ...v,
         video: videoMap[v.video_id],
       }));
-      setHasMore(enriched.length === PAGE_SIZE);
+      setInboxHasMore(enriched.length === PAGE_SIZE);
       setInboxVideos((prev) =>
         pageNum === 0 ? enriched : [...prev, ...enriched],
       );
-      setPage(pageNum);
-      setLoading(false);
+      setInboxPage(pageNum);
+      setInboxLoading(false);
     },
     [supabase],
   );
 
   const loadDeliveries = useCallback(
     async (pageNum: number) => {
-      setLoading(true);
+      setSummariesLoading(true);
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -175,11 +190,11 @@ export function SummariesFeed({
       });
 
       if (!deliveryData) {
-        setLoading(false);
+        setSummariesLoading(false);
         return;
       }
 
-      setHasMore(deliveryData.length === PAGE_SIZE);
+      setSummariesHasMore(deliveryData.length === PAGE_SIZE);
 
       const videoIds = [...new Set(deliveryData.map((d) => d.video_id))];
 
@@ -207,26 +222,33 @@ export function SummariesFeed({
         }
       }
 
-      const enriched: EnrichedDelivery[] = deliveryData.map((d) => ({
-        ...d,
-        video: videoMap[`${d.video_id}:${d.language}`] ?? videoMap[d.video_id],
-      }));
+      const enriched = deliveryData
+        .map(
+          (d) =>
+            ({
+              ...d,
+              video:
+                videoMap[`${d.video_id}:${d.language}`] ?? videoMap[d.video_id],
+            }) as EnrichedDelivery,
+        )
+        // Only show deliveries with a completed video (audio available)
+        .filter((d) => d.video?.audio_url);
 
       setDeliveries((prev) =>
         pageNum === 0 ? enriched : [...prev, ...enriched],
       );
-      setPage(pageNum);
-      setLoading(false);
+      setSummariesPage(pageNum);
+      setSummariesLoading(false);
     },
     [supabase],
   );
 
   useEffect(() => {
-    if (feedMode === "summaries" && initialDeliveries.length === 0) {
+    if (initialDeliveries.length === 0) {
       void loadDeliveries(0);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadDeliveries]);
+  }, []);
 
   // Load channel subscription states on mount (needed for Active/Paused badges)
   useEffect(() => {
@@ -257,19 +279,33 @@ export function SummariesFeed({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [feedMode]);
 
+  // Infinite scroll for both tabs
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && hasMore && !loading)
-          void loadDeliveries(page + 1);
+        if (!entry.isIntersecting || !hasMore || loading) return;
+        if (feedMode === "summaries") {
+          void loadDeliveries(summariesPage + 1);
+        } else {
+          void loadInboxVideos(inboxPage + 1);
+        }
       },
       { threshold: 0.1 },
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [sentinelRef, hasMore, loading, page, loadDeliveries]);
+  }, [
+    sentinelRef,
+    hasMore,
+    loading,
+    feedMode,
+    summariesPage,
+    inboxPage,
+    loadDeliveries,
+    loadInboxVideos,
+  ]);
 
   const toggleFavorite = useCallback(
     (code: string) => {
@@ -440,7 +476,7 @@ export function SummariesFeed({
   return (
     <div className="space-y-2.5">
       {/* Feed mode toggle + header actions */}
-      <div className="bg-background sticky top-14 z-30 -mx-4 flex items-center justify-between border-b border-white/[0.06] px-4 py-2 md:-mx-6 md:px-6">
+      <div className="sticky top-[57px] z-30 -mx-4 flex items-center justify-between border-b border-white/[0.06] bg-[oklch(0.13_0_0)] px-4 py-2 md:-mx-6 md:px-6">
         <div className="nm-raised flex rounded-full p-0.5">
           <button
             onClick={() => setFeedMode("summaries")}
@@ -487,31 +523,33 @@ export function SummariesFeed({
       ) : (
         <div className="space-y-2.5">
           {feedMode === "summaries"
-            ? deliveries.map((delivery) => (
-                <SummaryRow
-                  key={delivery.id}
-                  delivery={delivery}
-                  resolvedTitle={titles[delivery.video_id]}
-                  favoriteLanguages={favLangs}
-                  onManageFavorites={openLangPicker}
-                  onToggleFavorite={toggleFavorite}
-                  channelActive={
-                    delivery.video?.channel_id
-                      ? (
-                          channelStates[delivery.video.channel_id] as
-                            | { active: boolean }
-                            | undefined
-                        )?.active
-                      : undefined
-                  }
-                  onToggleChannel={
-                    delivery.video?.channel_id
-                      ? () =>
-                          void toggleChannel(delivery.video?.channel_id ?? "")
-                      : undefined
-                  }
-                />
-              ))
+            ? deliveries
+                .filter((d) => d.video?.audio_url)
+                .map((delivery) => (
+                  <SummaryRow
+                    key={delivery.id}
+                    delivery={delivery}
+                    resolvedTitle={titles[delivery.video_id]}
+                    favoriteLanguages={favLangs}
+                    onManageFavorites={openLangPicker}
+                    onToggleFavorite={toggleFavorite}
+                    channelActive={
+                      delivery.video?.channel_id
+                        ? (
+                            channelStates[delivery.video.channel_id] as
+                              | { active: boolean }
+                              | undefined
+                          )?.active
+                        : undefined
+                    }
+                    onToggleChannel={
+                      delivery.video?.channel_id
+                        ? () =>
+                            void toggleChannel(delivery.video?.channel_id ?? "")
+                        : undefined
+                    }
+                  />
+                ))
             : inboxVideos.map((v) =>
                 v.is_summarized && v.video ? (
                   <SummaryRow
@@ -552,6 +590,9 @@ export function SummariesFeed({
                 ),
               )}
           {loading &&
+            (feedMode === "summaries"
+              ? deliveries.length === 0
+              : inboxVideos.length === 0) &&
             Array.from({ length: 3 }).map((_, i) => (
               <SummaryRowSkeleton key={i} />
             ))}

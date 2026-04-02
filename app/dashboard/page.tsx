@@ -144,7 +144,7 @@ async function FeedSection({ userId }: { userId: string }) {
     p_offset: 0,
   });
 
-  let initialDeliveries: EnrichedDelivery[] = [];
+  const initialDeliveries: EnrichedDelivery[] = [];
   if (deliveryData && deliveryData.length > 0) {
     const videoIds = [...new Set(deliveryData.map((d) => d.video_id))];
     const languages = [...new Set(deliveryData.map((d) => d.language))];
@@ -154,17 +154,21 @@ async function FeedSection({ userId }: { userId: string }) {
         "video_id, language, video_title, video_url, summary, audio_url, channel_id, status",
       )
       .in("video_id", videoIds)
-      .in("language", languages);
+      .in("language", languages)
+      .eq("status", "completed")
+      .not("audio_url", "is", null);
 
     const videoMap: Record<string, ProcessedVideo> = {};
     for (const v of videos ?? []) {
       videoMap[`${v.video_id}:${v.language}`] = v;
       videoMap[v.video_id] ??= v;
     }
-    initialDeliveries = deliveryData.map((d) => ({
-      ...d,
-      video: videoMap[`${d.video_id}:${d.language}`] ?? videoMap[d.video_id],
-    }));
+    for (const d of deliveryData) {
+      const video = (videoMap[`${d.video_id}:${d.language}`] ??
+        videoMap[d.video_id]) as ProcessedVideo | undefined;
+      if (!video) continue;
+      initialDeliveries.push({ ...d, video });
+    }
   }
 
   const preferredLang = profile.preferred_language ?? "en";
@@ -172,11 +176,28 @@ async function FeedSection({ userId }: { userId: string }) {
     ...new Set([...profile.favorite_languages, preferredLang]),
   ];
 
+  // Preload channel subscription states for Active/Paused badges
+  const { data: subs } = await supabase
+    .from("subscriptions")
+    .select("id, channel_id, active")
+    .eq("user_id", userId);
+  const initialChannelStates: Record<
+    string,
+    { active: boolean; subId: string }
+  > = {};
+  for (const s of subs ?? []) {
+    initialChannelStates[s.channel_id] = {
+      active: !!s.active,
+      subId: s.id,
+    };
+  }
+
   return (
     <SummariesFeed
       initialDeliveries={initialDeliveries}
       initialPreferredLang={preferredLang}
       initialFavLangs={initialFavLangs}
+      initialChannelStates={initialChannelStates}
       headerRight={
         <>
           <ChannelsSheetSection userId={userId} />
