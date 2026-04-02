@@ -150,7 +150,7 @@ export function DashboardNav() {
   return (
     <>
       {/* Top bar */}
-      <nav className="sticky top-0 z-40 border-b border-white/[0.06] bg-[oklch(0.13_0_0)] backdrop-blur-2xl">
+      <nav className="sticky top-0 z-40 border-b border-white/[0.06] bg-transparent backdrop-blur-2xl">
         <div className="mx-auto flex h-14 max-w-[1080px] items-center justify-between px-4 md:px-6">
           {/* Left: logo + nav links */}
           <div className="flex shrink-0 items-center gap-6">
@@ -208,7 +208,7 @@ export function DashboardNav() {
       </nav>
 
       {/* Mobile bottom nav */}
-      <nav className="fixed right-0 bottom-0 left-0 z-40 border-t border-white/[0.06] bg-[oklch(0.13_0_0)] pb-[env(safe-area-inset-bottom)] backdrop-blur-2xl md:hidden">
+      <nav className="bg-background/95 fixed right-0 bottom-0 left-0 z-40 border-t border-white/[0.06] pb-[env(safe-area-inset-bottom)] backdrop-blur-2xl md:hidden">
         <div className="flex items-stretch">
           {navItems.map((item) => {
             const active = isActive(item.href, pathname);
