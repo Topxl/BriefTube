@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-03-28
+
+CHORE: Remove unused AWS SES adapter — staying with Resend for email delivery
+
 ## 2026-04-02
 
 FIX: CSP media-src — allow *.r2.dev so audio playback works in the dashboard (was blocking Cloudflare R2 audio files, had wrong *.supabase.co domain)
