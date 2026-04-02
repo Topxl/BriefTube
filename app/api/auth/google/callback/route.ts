@@ -81,14 +81,27 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${baseUrl}/login`);
   }
 
-  // Sync Google avatar from id_token (JWT payload contains 'picture' field)
+  // Sync Google avatar — try UserInfo API (most reliable), fallback to id_token JWT
   try {
-    const payload = JSON.parse(
-      Buffer.from(tokens.id_token.split(".")[1], "base64url").toString(),
-    ) as { picture?: string };
-    if (payload.picture) {
+    let avatarUrl: string | undefined;
+    if (tokens.access_token) {
+      const userInfoRes = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+        headers: { Authorization: `Bearer ${tokens.access_token}` },
+      });
+      if (userInfoRes.ok) {
+        const userInfo = (await userInfoRes.json()) as { picture?: string };
+        avatarUrl = userInfo.picture;
+      }
+    }
+    if (!avatarUrl && tokens.id_token) {
+      const payload = JSON.parse(
+        Buffer.from(tokens.id_token.split(".")[1], "base64url").toString(),
+      ) as { picture?: string };
+      avatarUrl = payload.picture;
+    }
+    if (avatarUrl) {
       await supabase.auth.updateUser({
-        data: { avatar_url: payload.picture },
+        data: { avatar_url: avatarUrl },
       });
     }
   } catch {
