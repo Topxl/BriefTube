@@ -20,6 +20,7 @@ type Props = {
   initialPreferredLang?: string;
   initialFavLangs?: string[];
   headerRight?: React.ReactNode;
+  banners?: React.ReactNode;
 };
 
 function SummaryRowSkeleton() {
@@ -44,6 +45,7 @@ export function SummariesFeed({
   initialPreferredLang = "en",
   initialFavLangs = [],
   headerRight,
+  banners,
 }: Props) {
   const [feedMode, setFeedMode] = useState<"summaries" | "all">("summaries");
   const [deliveries, setDeliveries] =
@@ -465,6 +467,8 @@ export function SummariesFeed({
           <div className="flex items-center gap-1">{headerRight}</div>
         )}
       </div>
+
+      {banners}
 
       {showEmpty ? (
         <div className="py-12 text-center">

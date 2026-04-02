@@ -183,6 +183,15 @@ async function FeedSection({ userId }: { userId: string }) {
           <StatsSheet />
         </>
       }
+      banners={
+        <>
+          <DashboardBanners userId={userId} />
+          <VideoHighlighter />
+          <PushNotificationBanner />
+          <PendingVideoProcessor />
+          <ProcessingVideoCard />
+        </>
+      }
     />
   );
 }
@@ -198,30 +207,12 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <Suspense fallback={null}>
-        <DashboardBanners userId={user.id} />
-      </Suspense>
-
-      <Suspense fallback={null}>
-        <VideoHighlighter />
-      </Suspense>
-
-      <Suspense fallback={null}>
-        <PushNotificationBanner />
-      </Suspense>
-
-      <div className="flex flex-col gap-3">
-        <PendingVideoProcessor />
-        <Suspense fallback={null}>
-          <ProcessingVideoCard />
+    <div className="flex flex-col gap-3">
+      <SectionErrorBoundary>
+        <Suspense fallback={<SummariesFeedSkeleton />}>
+          <FeedSection userId={user.id} />
         </Suspense>
-        <SectionErrorBoundary>
-          <Suspense fallback={<SummariesFeedSkeleton />}>
-            <FeedSection userId={user.id} />
-          </Suspense>
-        </SectionErrorBoundary>
-      </div>
+      </SectionErrorBoundary>
     </div>
   );
 }
