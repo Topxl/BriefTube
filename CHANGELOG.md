@@ -2,6 +2,10 @@
 
 ## 2026-04-02
 
+FEATURE: Video Inbox — "All videos" toggle in dashboard feed shows every new video from imported channels (active and inactive), with "Summarize" and "Subscribe" buttons for on-demand processing
+FEATURE: New channel_videos table + get_unified_feed RPC for storing and querying all RSS-discovered videos
+FEATURE: RSS scanner now scans all imported channels (not just active ones) and records videos in channel_videos inbox
+FEATURE: Read/unread state on summary cards — listened or opened summaries fade to 60% opacity
 FIX: Add media-src CSP directive for Supabase Storage — audio player was silently blocked by default-src 'self', causing animation without sound
 FIX: Improve paused channel readability — channel name uses text-muted-foreground instead of /50 opacity, image stays dimmed as visual indicator
 FIX: Survey results page text contrast — persona label changed from text-zinc-600 to text-zinc-400 for readability on dark background

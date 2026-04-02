@@ -45,10 +45,37 @@ def reset_client() -> None:
 # ── Subscriptions ──────────────────────────────────────────────
 
 def get_all_channel_ids() -> list[str]:
-    """Get all distinct channel IDs that at least one user is subscribed to."""
+    """Get all distinct channel IDs that at least one user is subscribed to (active or not)."""
+    sb = get_client()
+    res = sb.table("subscriptions").select("channel_id").execute()
+    return list({row["channel_id"] for row in res.data})
+
+
+def get_active_channel_ids() -> set[str]:
+    """Get channel IDs that have at least one active subscriber."""
     sb = get_client()
     res = sb.table("subscriptions").select("channel_id").eq("active", True).execute()
-    return list({row["channel_id"] for row in res.data})
+    return {row["channel_id"] for row in res.data}
+
+
+def bulk_insert_channel_videos(videos: list[dict]) -> int:
+    """Insert discovered videos into channel_videos (upsert, ignore duplicates).
+
+    Each dict must have: video_id, channel_id, title, published_at.
+    Returns the number of rows inserted.
+    """
+    if not videos:
+        return 0
+    sb = get_client()
+    # Batch in chunks of 500 to avoid payload limits
+    inserted = 0
+    for i in range(0, len(videos), 500):
+        chunk = videos[i:i + 500]
+        res = sb.table("channel_videos").upsert(
+            chunk, on_conflict="video_id", ignore_duplicates=True
+        ).execute()
+        inserted += len(res.data) if res.data else 0
+    return inserted
 
 
 # ── Processed Videos ───────────────────────────────────────────

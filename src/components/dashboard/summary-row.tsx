@@ -290,7 +290,7 @@ export function SummaryRow({
     <div
       className={`nm-raised relative overflow-hidden rounded-2xl transition-all duration-200 ${
         playing ? "ring-1 ring-red-500/25" : ""
-      }`}
+      } ${isRead && !playing ? "opacity-60" : ""}`}
     >
       {/* Main row: thumbnail + title + controls */}
       <div className="flex items-center gap-3 p-3">
@@ -322,7 +322,14 @@ export function SummaryRow({
 
         {/* Title + meta — clickable to toggle summary */}
         <button
-          onClick={() => video?.summary && setShowSummary(!showSummary)}
+          onClick={() => {
+            if (!video?.summary) return;
+            setShowSummary(!showSummary);
+            if (!isRead) {
+              localStorage.setItem(`read:${delivery.id}`, "1");
+              setIsRead(true);
+            }
+          }}
           className="min-w-0 flex-1 text-left"
         >
           <p className="line-clamp-2 text-sm leading-snug font-medium">
