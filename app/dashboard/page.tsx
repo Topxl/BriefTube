@@ -177,6 +177,12 @@ async function FeedSection({ userId }: { userId: string }) {
       initialDeliveries={initialDeliveries}
       initialPreferredLang={preferredLang}
       initialFavLangs={initialFavLangs}
+      headerRight={
+        <>
+          <ChannelsSheetSection userId={userId} />
+          <StatsSheet />
+        </>
+      }
     />
   );
 }
@@ -206,19 +212,6 @@ export default async function DashboardPage() {
       </Suspense>
 
       <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold">Recent summaries</h2>
-          <div className="flex items-center gap-1">
-            <Suspense
-              fallback={
-                <div className="h-8 w-16 animate-pulse rounded-md bg-white/[0.06]" />
-              }
-            >
-              <ChannelsSheetSection userId={user.id} />
-            </Suspense>
-            <StatsSheet />
-          </div>
-        </div>
         <PendingVideoProcessor />
         <Suspense fallback={null}>
           <ProcessingVideoCard />
