@@ -26,7 +26,7 @@ export default async function DashboardLayout({
         <PostHogIdentify />
       </Suspense>
       <DashboardNav />
-      <div className="mx-auto max-w-[1080px] px-4 pt-1 pb-24 md:px-6 md:pt-2 md:pb-6">
+      <div className="mx-auto max-w-[1080px] px-4 pb-24 md:px-6 md:pb-6">
         {children}
       </div>
       <Suspense fallback={null}>
