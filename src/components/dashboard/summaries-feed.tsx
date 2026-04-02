@@ -19,6 +19,7 @@ type Props = {
   initialDeliveries?: EnrichedDelivery[];
   initialPreferredLang?: string;
   initialFavLangs?: string[];
+  headerRight?: React.ReactNode;
 };
 
 function SummaryRowSkeleton() {
@@ -42,6 +43,7 @@ export function SummariesFeed({
   initialDeliveries = [],
   initialPreferredLang = "en",
   initialFavLangs = [],
+  headerRight,
 }: Props) {
   const [feedMode, setFeedMode] = useState<"summaries" | "all">("summaries");
   const [deliveries, setDeliveries] =
@@ -435,8 +437,8 @@ export function SummariesFeed({
 
   return (
     <div className="space-y-2.5">
-      {/* Feed mode toggle */}
-      <div className="flex items-center gap-1">
+      {/* Feed mode toggle + header actions */}
+      <div className="flex items-center justify-between">
         <div className="nm-raised flex rounded-full p-0.5">
           <button
             onClick={() => setFeedMode("summaries")}
@@ -459,6 +461,9 @@ export function SummariesFeed({
             All videos
           </button>
         </div>
+        {headerRight && (
+          <div className="flex items-center gap-1">{headerRight}</div>
+        )}
       </div>
 
       {showEmpty ? (
