@@ -2,6 +2,7 @@
 
 ## 2026-04-02
 
+FIX: CSP media-src — allow *.r2.dev so audio playback works in the dashboard (was blocking Cloudflare R2 audio files, had wrong *.supabase.co domain)
 FEATURE: Video Inbox — "All videos" toggle in dashboard feed shows every new video from imported channels (active and inactive), with "Summarize" and "Subscribe" buttons for on-demand processing
 FEATURE: New channel_videos table + get_unified_feed RPC for storing and querying all RSS-discovered videos
 FEATURE: RSS scanner now scans all imported channels (not just active ones) and records videos in channel_videos inbox
