@@ -101,6 +101,7 @@ export function SummaryRow({
   onToggleFavorite,
   channelActive,
   onToggleChannel,
+  channelAvatarUrl,
 }: {
   delivery: EnrichedDelivery;
   resolvedTitle?: string;
@@ -109,6 +110,7 @@ export function SummaryRow({
   onToggleFavorite?: (code: string) => void;
   channelActive?: boolean;
   onToggleChannel?: () => void;
+  channelAvatarUrl?: string | null;
 }) {
   const video = delivery.video;
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -327,6 +329,14 @@ export function SummaryRow({
               )}
             </div>
           </div>
+          {channelAvatarUrl && (
+            <img
+              src={channelAvatarUrl}
+              alt=""
+              className="absolute right-1 bottom-1 z-10 h-6 w-6 rounded-full border-2 border-white/20 object-cover"
+              referrerPolicy="no-referrer"
+            />
+          )}
         </button>
 
         {/* Title + meta — clickable to toggle summary */}
@@ -371,12 +381,21 @@ export function SummaryRow({
               </span>
             )}
             {channelActive !== undefined && onToggleChannel && (
-              <button
+              <span
+                role="button"
+                tabIndex={0}
                 onClick={(e) => {
                   e.stopPropagation();
                   onToggleChannel();
                 }}
-                className={`flex items-center gap-1 rounded-full border px-1.5 py-px text-[10px] font-medium transition-all ${
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    onToggleChannel();
+                  }
+                }}
+                className={`flex cursor-pointer items-center gap-1 rounded-full border px-1.5 py-px text-[10px] font-medium transition-all ${
                   channelActive
                     ? "hover:text-muted-foreground/50 border-green-500/20 text-green-500/60 hover:border-white/10"
                     : "text-muted-foreground/40 hover:text-foreground/60 border-white/[0.07] hover:border-white/10"
@@ -388,7 +407,7 @@ export function SummaryRow({
                   }`}
                 />
                 {channelActive ? "Active" : "Paused"}
-              </button>
+              </span>
             )}
             {video?.summary && (
               <ChevronDown

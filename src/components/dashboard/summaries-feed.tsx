@@ -15,7 +15,11 @@ import type {
 
 const PAGE_SIZE = 20;
 
-type ChannelState = { active: boolean; subId: string };
+type ChannelState = {
+  active: boolean;
+  subId: string;
+  avatarUrl?: string | null;
+};
 
 type Props = {
   initialDeliveries?: EnrichedDelivery[];
@@ -163,7 +167,7 @@ export function SummariesFeed({
             .single(),
           supabase
             .from("subscriptions")
-            .select("id, channel_id, active")
+            .select("id, channel_id, active, channel_avatar_url")
             .eq("user_id", user.id),
         ]);
         const pref = profile?.preferred_language ?? "en";
@@ -173,9 +177,13 @@ export function SummariesFeed({
         ];
         setFavLangs(langs);
         if (subs) {
-          const map: Record<string, { active: boolean; subId: string }> = {};
+          const map: Record<string, ChannelState> = {};
           for (const s of subs) {
-            map[s.channel_id] = { active: !!s.active, subId: s.id };
+            map[s.channel_id] = {
+              active: !!s.active,
+              subId: s.id,
+              avatarUrl: s.channel_avatar_url,
+            };
           }
           setChannelStates(map);
         }
@@ -259,12 +267,16 @@ export function SummariesFeed({
       if (!user) return;
       const { data: subs } = await supabase
         .from("subscriptions")
-        .select("id, channel_id, active")
+        .select("id, channel_id, active, channel_avatar_url")
         .eq("user_id", user.id);
       if (subs) {
-        const map: Record<string, { active: boolean; subId: string }> = {};
+        const map: Record<string, ChannelState> = {};
         for (const s of subs) {
-          map[s.channel_id] = { active: !!s.active, subId: s.id };
+          map[s.channel_id] = {
+            active: !!s.active,
+            subId: s.id,
+            avatarUrl: s.channel_avatar_url,
+          };
         }
         setChannelStates(map);
       }
@@ -476,7 +488,7 @@ export function SummariesFeed({
   return (
     <div className="space-y-2.5">
       {/* Feed mode toggle + header actions */}
-      <div className="bg-background/95 sticky top-[57px] z-30 -mx-4 flex items-center justify-between border-b border-white/[0.06] px-4 py-2 backdrop-blur-2xl md:-mx-6 md:px-6">
+      <div className="bg-background sticky top-[57px] z-30 -mx-4 flex items-center justify-between border-b border-white/[0.06] px-4 py-2 md:-mx-6 md:px-6">
         <div className="nm-raised flex rounded-full p-0.5">
           <button
             onClick={() => setFeedMode("summaries")}
@@ -548,6 +560,15 @@ export function SummariesFeed({
                             void toggleChannel(delivery.video?.channel_id ?? "")
                         : undefined
                     }
+                    channelAvatarUrl={
+                      delivery.video?.channel_id
+                        ? (
+                            channelStates[delivery.video.channel_id] as
+                              | ChannelState
+                              | undefined
+                          )?.avatarUrl
+                        : undefined
+                    }
                   />
                 ))
             : inboxVideos.map((v) =>
@@ -577,6 +598,10 @@ export function SummariesFeed({
                       )?.active
                     }
                     onToggleChannel={() => void toggleChannel(v.channel_id)}
+                    channelAvatarUrl={
+                      (channelStates[v.channel_id] as ChannelState | undefined)
+                        ?.avatarUrl
+                    }
                   />
                 ) : (
                   <VideoInboxRow
