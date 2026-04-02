@@ -224,6 +224,27 @@ export function SummariesFeed({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadDeliveries]);
 
+  // Load channel subscription states on mount (needed for Active/Paused badges)
+  useEffect(() => {
+    void (async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: subs } = await supabase
+        .from("subscriptions")
+        .select("id, channel_id, active")
+        .eq("user_id", user.id);
+      if (subs) {
+        const map: Record<string, { active: boolean; subId: string }> = {};
+        for (const s of subs) {
+          map[s.channel_id] = { active: !!s.active, subId: s.id };
+        }
+        setChannelStates(map);
+      }
+    })();
+  }, [supabase]);
+
   // Load inbox when switching to "all" mode
   useEffect(() => {
     if (feedMode === "all" && inboxVideos.length === 0) {

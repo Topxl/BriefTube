@@ -294,14 +294,14 @@ export function SummaryRow({
     <div
       className={`nm-raised relative overflow-hidden rounded-2xl transition-all duration-200 ${
         playing ? "ring-1 ring-red-500/25" : ""
-      } ${isRead && !playing ? "opacity-60" : ""}`}
+      }`}
     >
       {/* Main row: thumbnail + title + controls */}
       <div className="flex items-start gap-3 p-3">
         {/* Thumbnail with play overlay */}
         <button
           onClick={togglePlay}
-          className="group relative h-[64px] w-[114px] shrink-0 overflow-hidden rounded-lg bg-black/30 sm:h-[72px] sm:w-[128px]"
+          className={`group relative h-[64px] w-[114px] shrink-0 overflow-hidden rounded-lg bg-black/30 sm:h-[72px] sm:w-[128px] ${isRead && !playing ? "opacity-50" : ""}`}
         >
           <div
             className="h-full w-full bg-cover bg-center opacity-80 transition-opacity group-hover:opacity-100"
@@ -368,27 +368,27 @@ export function SummaryRow({
                 className={`text-muted-foreground h-3 w-3 transition-transform duration-200 ${showSummary ? "rotate-180" : ""}`}
               />
             )}
-            {channelActive !== undefined && onToggleChannel && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggleChannel();
-                }}
-                className={`flex items-center gap-1 rounded-full border px-1.5 py-px text-[10px] font-medium transition-all ${
-                  channelActive
-                    ? "hover:text-muted-foreground/50 border-green-500/20 text-green-500/60 hover:border-white/10"
-                    : "text-muted-foreground/40 hover:text-foreground/60 border-white/[0.07] hover:border-white/10"
-                }`}
-              >
-                <span
-                  className={`h-1.5 w-1.5 rounded-full transition-colors ${
-                    channelActive ? "bg-green-500/60" : "bg-muted-foreground/25"
-                  }`}
-                />
-                {channelActive ? "Active" : "Paused"}
-              </button>
-            )}
           </div>
+          {channelActive !== undefined && onToggleChannel && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleChannel();
+              }}
+              className={`mt-1 flex items-center gap-1 self-start rounded-full border px-1.5 py-px text-[10px] font-medium transition-all ${
+                channelActive
+                  ? "hover:text-muted-foreground/50 border-green-500/20 text-green-500/60 hover:border-white/10"
+                  : "text-muted-foreground/40 hover:text-foreground/60 border-white/[0.07] hover:border-white/10"
+              }`}
+            >
+              <span
+                className={`h-1.5 w-1.5 rounded-full transition-colors ${
+                  channelActive ? "bg-green-500/60" : "bg-muted-foreground/25"
+                }`}
+              />
+              {channelActive ? "Active" : "Paused"}
+            </button>
+          )}
         </button>
 
         {/* Right-side actions */}
