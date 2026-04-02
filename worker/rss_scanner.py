@@ -4,6 +4,7 @@ import calendar
 import logging
 import re
 import time
+from datetime import datetime, timezone
 import feedparser
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -157,7 +158,8 @@ def scan_all_channels():
     then processes results sequentially for DB writes.
     """
     channel_ids = db.get_all_channel_ids()
-    logger.info(f"Scanning {len(channel_ids)} channels...")
+    active_channel_ids = db.get_active_channel_ids()
+    logger.info(f"Scanning {len(channel_ids)} channels ({len(active_channel_ids)} active)...")
 
     # Drop invalid channel IDs before doing any work — these are names or URLs
     # accidentally stored in the DB (no UCxxx format). Log once so admins can
@@ -188,6 +190,7 @@ def scan_all_channels():
                 logger.error(f"Error fetching RSS for channel {ch}: {e}")
 
     new_count = 0
+    inbox_batch: list[dict] = []
     for channel_id, videos in channel_videos.items():
         for video in videos:
             vid = video["video_id"]
@@ -227,11 +230,27 @@ def scan_all_channels():
 
             logger.info(f"New video: {video['title']} ({vid})")
 
+            # Always record in channel_videos (inbox for all channels)
+            inbox_batch.append({
+                "video_id": vid,
+                "channel_id": channel_id,
+                "title": video["title"],
+                "published_at": (
+                    datetime.fromtimestamp(video["published_ts"], tz=timezone.utc).isoformat()
+                    if video.get("published_ts")
+                    else datetime.now(timezone.utc).isoformat()
+                ),
+            })
+
             try:
+                # Only process videos from active channels
+                if channel_id not in active_channel_ids:
+                    known_video_ids.add(vid)
+                    continue
+
                 # Get all distinct (language, tts_voice) pairs from current subscribers
                 subscriber_langs = db.get_subscriber_languages(channel_id)
                 if not subscriber_langs:
-                    # Channel has no active subscribers — nothing to process
                     known_video_ids.add(vid)
                     continue
 
@@ -259,5 +278,13 @@ def scan_all_channels():
                     except Exception:
                         pass
 
-    logger.info(f"Scan complete: {new_count} new videos found")
+    # Flush inbox batch to channel_videos
+    if inbox_batch:
+        try:
+            inserted = db.bulk_insert_channel_videos(inbox_batch)
+            logger.info(f"Inbox: {inserted} new videos added to channel_videos ({len(inbox_batch)} candidates)")
+        except Exception as e:
+            logger.error(f"Failed to insert channel_videos batch: {e}")
+
+    logger.info(f"Scan complete: {new_count} new videos queued for processing")
     return new_count

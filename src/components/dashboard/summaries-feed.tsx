@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Inbox } from "@/lib/icons";
 import { SummaryRow } from "@/components/dashboard/summary-row";
+import { VideoInboxRow } from "@/components/dashboard/video-inbox-row";
 import { LanguagePicker } from "@/components/dashboard/language-picker";
 import { dialogManager } from "@/features/dialog-manager/dialog-manager";
 import { toast } from "sonner";
@@ -42,8 +43,18 @@ export function SummariesFeed({
   initialPreferredLang = "en",
   initialFavLangs = [],
 }: Props) {
+  const [feedMode, setFeedMode] = useState<"summaries" | "all">("summaries");
   const [deliveries, setDeliveries] =
     useState<EnrichedDelivery[]>(initialDeliveries);
+  const [inboxVideos, setInboxVideos] = useState<
+    {
+      video_id: string;
+      channel_id: string;
+      title: string;
+      published_at: string;
+      is_summarized: boolean;
+    }[]
+  >([]);
   const [loading, setLoading] = useState(initialDeliveries.length === 0);
   const [hasMore, setHasMore] = useState(
     initialDeliveries.length === PAGE_SIZE,
@@ -56,6 +67,42 @@ export function SummariesFeed({
   const [favLangs, setFavLangs] = useState<string[]>(initialFavLangs);
   const [preferredLang, setPreferredLang] = useState(initialPreferredLang);
   const supabase = useMemo(() => createClient(), []);
+
+  const loadInboxVideos = useCallback(
+    async (pageNum: number) => {
+      setLoading(true);
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const from = pageNum * PAGE_SIZE;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data } = await (supabase.rpc as any)("get_unified_feed", {
+        p_user_id: user.id,
+        p_limit: PAGE_SIZE,
+        p_offset: from,
+      });
+
+      if (!data) {
+        setLoading(false);
+        return;
+      }
+
+      const typed = data as unknown as {
+        video_id: string;
+        channel_id: string;
+        title: string;
+        published_at: string;
+        is_summarized: boolean;
+      }[];
+      setHasMore(typed.length === PAGE_SIZE);
+      setInboxVideos((prev) => (pageNum === 0 ? typed : [...prev, ...typed]));
+      setPage(pageNum);
+      setLoading(false);
+    },
+    [supabase],
+  );
 
   const loadDeliveries = useCallback(
     async (pageNum: number) => {
@@ -135,11 +182,19 @@ export function SummariesFeed({
   );
 
   useEffect(() => {
-    if (initialDeliveries.length === 0) {
+    if (feedMode === "summaries" && initialDeliveries.length === 0) {
       void loadDeliveries(0);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadDeliveries]);
+
+  // Load inbox when switching to "all" mode
+  useEffect(() => {
+    if (feedMode === "all" && inboxVideos.length === 0) {
+      void loadInboxVideos(0);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [feedMode]);
 
   useEffect(() => {
     const el = sentinelRef.current;
@@ -295,38 +350,83 @@ export function SummariesFeed({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deliveries]);
 
-  if (!loading && deliveries.length === 0) {
-    return (
-      <div className="py-12 text-center">
-        <div className="nm-inset mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl">
-          <Inbox className="text-muted-foreground/50 h-4 w-4" />
-        </div>
-        <p className="text-sm font-medium">No summaries yet</p>
-        <p className="text-muted-foreground mt-1 text-xs">
-          Add YouTube channels to receive your first audio summaries.
-        </p>
-      </div>
-    );
-  }
+  const showEmpty =
+    !loading &&
+    (feedMode === "summaries"
+      ? deliveries.length === 0
+      : inboxVideos.length === 0);
 
   return (
     <div className="space-y-2.5">
-      <div className="space-y-2.5">
-        {deliveries.map((delivery) => (
-          <SummaryRow
-            key={delivery.id}
-            delivery={delivery}
-            resolvedTitle={titles[delivery.video_id]}
-            favoriteLanguages={favLangs}
-            onManageFavorites={openLangPicker}
-            onToggleFavorite={toggleFavorite}
-          />
-        ))}
-        {loading &&
-          Array.from({ length: 3 }).map((_, i) => (
-            <SummaryRowSkeleton key={i} />
-          ))}
+      {/* Feed mode toggle */}
+      <div className="flex items-center gap-1">
+        <div className="nm-raised flex rounded-full p-0.5">
+          <button
+            onClick={() => setFeedMode("summaries")}
+            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+              feedMode === "summaries"
+                ? "bg-red-600 text-white"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Summaries
+          </button>
+          <button
+            onClick={() => setFeedMode("all")}
+            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+              feedMode === "all"
+                ? "bg-red-600 text-white"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            All videos
+          </button>
+        </div>
       </div>
+
+      {showEmpty ? (
+        <div className="py-12 text-center">
+          <div className="nm-inset mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl">
+            <Inbox className="text-muted-foreground/50 h-4 w-4" />
+          </div>
+          <p className="text-sm font-medium">
+            {feedMode === "summaries" ? "No summaries yet" : "No videos found"}
+          </p>
+          <p className="text-muted-foreground mt-1 text-xs">
+            {feedMode === "summaries"
+              ? "Add YouTube channels to receive your first audio summaries."
+              : "Videos from your imported channels will appear here after the next scan."}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-2.5">
+          {feedMode === "summaries"
+            ? deliveries.map((delivery) => (
+                <SummaryRow
+                  key={delivery.id}
+                  delivery={delivery}
+                  resolvedTitle={titles[delivery.video_id]}
+                  favoriteLanguages={favLangs}
+                  onManageFavorites={openLangPicker}
+                  onToggleFavorite={toggleFavorite}
+                />
+              ))
+            : inboxVideos.map((v) => (
+                <VideoInboxRow
+                  key={v.video_id}
+                  videoId={v.video_id}
+                  channelId={v.channel_id}
+                  title={v.title}
+                  publishedAt={v.published_at}
+                  onSummarized={() => void loadInboxVideos(0)}
+                />
+              ))}
+          {loading &&
+            Array.from({ length: 3 }).map((_, i) => (
+              <SummaryRowSkeleton key={i} />
+            ))}
+        </div>
+      )}
 
       {hasMore && <div ref={sentinelRef} className="h-4" />}
     </div>
