@@ -97,12 +97,16 @@ export function SummaryRow({
   favoriteLanguages = [],
   onManageFavorites: _onManageFavorites,
   onToggleFavorite,
+  channelActive,
+  onToggleChannel,
 }: {
   delivery: EnrichedDelivery;
   resolvedTitle?: string;
   favoriteLanguages?: string[];
   onManageFavorites?: () => void;
   onToggleFavorite?: (code: string) => void;
+  channelActive?: boolean;
+  onToggleChannel?: () => void;
 }) {
   const video = delivery.video;
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -293,7 +297,7 @@ export function SummaryRow({
       } ${isRead && !playing ? "opacity-60" : ""}`}
     >
       {/* Main row: thumbnail + title + controls */}
-      <div className="flex items-center gap-3 p-3">
+      <div className="flex items-start gap-3 p-3">
         {/* Thumbnail with play overlay */}
         <button
           onClick={togglePlay}
@@ -364,13 +368,33 @@ export function SummaryRow({
                 className={`text-muted-foreground h-3 w-3 transition-transform duration-200 ${showSummary ? "rotate-180" : ""}`}
               />
             )}
+            {channelActive !== undefined && onToggleChannel && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleChannel();
+                }}
+                className={`flex items-center gap-1 rounded-full border px-1.5 py-px text-[10px] font-medium transition-all ${
+                  channelActive
+                    ? "hover:text-muted-foreground/50 border-green-500/20 text-green-500/60 hover:border-white/10"
+                    : "text-muted-foreground/40 hover:text-foreground/60 border-white/[0.07] hover:border-white/10"
+                }`}
+              >
+                <span
+                  className={`h-1.5 w-1.5 rounded-full transition-colors ${
+                    channelActive ? "bg-green-500/60" : "bg-muted-foreground/25"
+                  }`}
+                />
+                {channelActive ? "Active" : "Paused"}
+              </button>
+            )}
           </div>
         </button>
 
         {/* Right-side actions */}
         <button
           onClick={cycleSpeed}
-          className="nm-raised-sm text-muted-foreground hover:text-foreground shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold tabular-nums transition-all"
+          className="nm-raised-sm text-muted-foreground hover:text-foreground shrink-0 self-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold tabular-nums transition-all"
         >
           x{speed}
         </button>
