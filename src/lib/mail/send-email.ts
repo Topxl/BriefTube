@@ -2,7 +2,6 @@ import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { pretty, render } from "@react-email/render";
 import { nanoid } from "nanoid";
-import { sesMailAdapter } from "./ses";
 import { resendMailAdapter } from "./resend";
 import { consoleMailAdapter } from "./console-adapter";
 
@@ -52,12 +51,10 @@ export type MailAdapter = {
  */
 
 // If you use another mail adapter, you can replace the mailAdapter with your own
-// Priority: SES → Resend → Console (dev)
-const mailAdapter: MailAdapter = env.AWS_SES_ACCESS_KEY_ID
-  ? sesMailAdapter
-  : env.RESEND_API_KEY
-    ? resendMailAdapter
-    : consoleMailAdapter;
+// Priority: Resend → Console (dev)
+const mailAdapter: MailAdapter = env.RESEND_API_KEY
+  ? resendMailAdapter
+  : consoleMailAdapter;
 
 type SendEmailParams = Omit<EmailParams, "from" | "html"> & {
   from?: string;
