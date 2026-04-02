@@ -14,7 +14,7 @@ const cspDirectives = [
   "default-src 'self'",
 
   // Scripts: self + GTM/Google Ads + Rewardful + inline scripts for gtag init
-  "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://r.wdfl.co",
+  "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://r.wdfl.co https://us-assets.i.posthog.com",
 
   // Styles: unsafe-inline required for Tailwind / CSS-in-JS
   "style-src 'self' 'unsafe-inline'",
@@ -51,6 +51,8 @@ const cspDirectives = [
     "https://*.google-analytics.com", // GA4 measurement
     "https://*.analytics.google.com", // GA4
     "https://*.ingest.de.sentry.io", // Sentry error tracking
+    "https://us.i.posthog.com", // PostHog analytics (fallback when proxy fails)
+    "https://us-assets.i.posthog.com", // PostHog static assets (surveys, toolbar)
   ].join(" "),
 
   // Frames: YouTube embeds (not used today, but safe to allow)
