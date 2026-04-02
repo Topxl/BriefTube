@@ -69,6 +69,9 @@ export function SummariesFeed({
   const [favLangs, setFavLangs] = useState<string[]>(initialFavLangs);
   const [preferredLang, setPreferredLang] = useState(initialPreferredLang);
   const supabase = useMemo(() => createClient(), []);
+  const [channelStates, setChannelStates] = useState<
+    Record<string, { active: boolean; subId: string }>
+  >({});
 
   const loadInboxVideos = useCallback(
     async (pageNum: number) => {
@@ -133,17 +136,30 @@ export function SummariesFeed({
       if (!user) return;
 
       if (pageNum === 0) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("favorite_languages, preferred_language")
-          .eq("id", user.id)
-          .single();
+        const [{ data: profile }, { data: subs }] = await Promise.all([
+          supabase
+            .from("profiles")
+            .select("favorite_languages, preferred_language")
+            .eq("id", user.id)
+            .single(),
+          supabase
+            .from("subscriptions")
+            .select("id, channel_id, active")
+            .eq("user_id", user.id),
+        ]);
         const pref = profile?.preferred_language ?? "en";
         setPreferredLang(pref);
         const langs = [
           ...new Set([...(profile?.favorite_languages ?? []), pref]),
         ];
         setFavLangs(langs);
+        if (subs) {
+          const map: Record<string, { active: boolean; subId: string }> = {};
+          for (const s of subs) {
+            map[s.channel_id] = { active: !!s.active, subId: s.id };
+          }
+          setChannelStates(map);
+        }
       }
 
       const from = pageNum * PAGE_SIZE;
@@ -370,6 +386,26 @@ export function SummariesFeed({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deliveries]);
 
+  const toggleChannel = useCallback(
+    async (channelId: string) => {
+      const state = channelStates[channelId] as
+        | { active: boolean; subId: string }
+        | undefined;
+      if (!state) return;
+      const newActive = !state.active;
+      setChannelStates((prev) => ({
+        ...prev,
+        [channelId]: { ...prev[channelId], active: newActive },
+      }));
+      await supabase
+        .from("subscriptions")
+        .update({ active: newActive, paused_by_system: false })
+        .eq("id", state.subId);
+      toast.success(newActive ? "Channel activated" : "Channel paused");
+    },
+    [channelStates, supabase],
+  );
+
   const showEmpty =
     !loading &&
     (feedMode === "summaries"
@@ -429,6 +465,21 @@ export function SummariesFeed({
                   favoriteLanguages={favLangs}
                   onManageFavorites={openLangPicker}
                   onToggleFavorite={toggleFavorite}
+                  channelActive={
+                    delivery.video?.channel_id
+                      ? (
+                          channelStates[delivery.video.channel_id] as
+                            | { active: boolean }
+                            | undefined
+                        )?.active
+                      : undefined
+                  }
+                  onToggleChannel={
+                    delivery.video?.channel_id
+                      ? () =>
+                          void toggleChannel(delivery.video?.channel_id ?? "")
+                      : undefined
+                  }
                 />
               ))
             : inboxVideos.map((v) =>
@@ -450,6 +501,14 @@ export function SummariesFeed({
                     favoriteLanguages={favLangs}
                     onManageFavorites={openLangPicker}
                     onToggleFavorite={toggleFavorite}
+                    channelActive={
+                      (
+                        channelStates[v.channel_id] as
+                          | { active: boolean }
+                          | undefined
+                      )?.active
+                    }
+                    onToggleChannel={() => void toggleChannel(v.channel_id)}
                   />
                 ) : (
                   <VideoInboxRow
