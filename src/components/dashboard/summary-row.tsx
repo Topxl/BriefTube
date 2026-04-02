@@ -297,12 +297,8 @@ export function SummaryRow({
 
   return (
     <div
-      className={`relative overflow-hidden rounded-2xl transition-all duration-200 ${
-        playing
-          ? "nm-raised ring-1 ring-red-500/25"
-          : isRead
-            ? "bg-white/[0.02]"
-            : "nm-raised"
+      className={`nm-raised relative overflow-hidden rounded-2xl transition-all duration-200 ${
+        playing ? "ring-1 ring-red-500/25" : ""
       }`}
     >
       {/* Main row: thumbnail + title + controls */}
