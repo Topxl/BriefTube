@@ -4,6 +4,10 @@
 
 CHORE: Remove unused AWS SES adapter — staying with Resend for email delivery
 
+## 2026-04-03
+
+FIX: RSS scanner + worker processor — expand music filter to catch Hindu devotional (bhajan, aarti, chalisa, jukebox), Tamil songs (mass song, vijay songs), and ambient/healing content (chakra, soundscape, binaural, healing frequencies, Hz tones)
+
 ## 2026-04-02
 
 FIX: CSP media-src — allow *.r2.dev so audio playback works in the dashboard (was blocking Cloudflare R2 audio files, had wrong *.supabase.co domain)

@@ -35,7 +35,26 @@ _MUSIC_TITLE_RE = re.compile(
     r'|\bgospel\s+(?:songs?|music)\b'
     r'|\bhillsong\b'
     r'|\bnonstop\s+(?:worship|praise|christian|gospel)\b'
-    r'|\bpraise\s+(?:songs?|collection|music)\b',
+    r'|\bpraise\s+(?:songs?|collection|music)\b'
+    # Hindu / South Asian devotional music — bhajan, aarti, chalisa, jayanti songs
+    r'|\bbhajan\b'                          # "Nonstop Hanuman Bhajan", "Bhajan 2026"
+    r'|\baarti\b'                           # "Aarti Kije Hanuman Lala Ki"
+    r'|\bchalisa\b'                         # "Shree Hanuman Chalisa"
+    r'|\bnonstop\s+(?:bhajan|mantra|kirtan)\b'
+    r'|\b(?:jayanti|janmotsav)\s+(?:special|song|bhajan)\b'
+    r'|\bjukebox\b'                         # "Hanuman Jayanti Jukebox" — audio compilations
+    # Tamil / South Indian music songs
+    r'|\btamil\s+(?:mass\s+)?songs?\b'      # "Tamil Mass Song", "Tamil Song"
+    r'|\bmass\s+songs?\b'                   # "Mass Songs" (Tamil film music slang)
+    r'|\bvijay\s+songs?\b'                  # "Vijay Songs", "Thalapathy Vijay Songs"
+    r'|\bgana\s+\w+\b'                      # "Gana praba" — Tamil street music genre
+    # Ambient / healing / frequency music
+    r'|\bchakra\b'                          # "Heart Chakra", "Solar Plexus Chakra"
+    r'|\bsolfeggio\b'                       # Solfeggio frequencies
+    r'|\b(?:healing|meditation|sleep|relaxing)\s+frequencies?\b'
+    r'|\bsoundscape\b'                      # "Ancient penetrating tuning activating balancing soundscape"
+    r'|\b\d+\s*hz\b'                        # "528 Hz", "432 Hz" healing tones
+    r'|\bbinaural\b',                       # binaural beats
     re.IGNORECASE,
 )
 
