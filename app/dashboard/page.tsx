@@ -207,7 +207,7 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col">
       <SectionErrorBoundary>
         <Suspense fallback={<SummariesFeedSkeleton />}>
           <FeedSection userId={user.id} />
