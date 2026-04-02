@@ -438,7 +438,7 @@ export function SummariesFeed({
   return (
     <div className="space-y-2.5">
       {/* Feed mode toggle + header actions */}
-      <div className="flex items-center justify-between">
+      <div className="bg-background/95 sticky top-14 z-30 flex items-center justify-between py-2 backdrop-blur-xl">
         <div className="nm-raised flex rounded-full p-0.5">
           <button
             onClick={() => setFeedMode("summaries")}
