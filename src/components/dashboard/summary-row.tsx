@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import {
   ChevronDown,
   ExternalLink,
@@ -34,7 +34,9 @@ function formatSummaryDate(dateStr: string): string {
   const toDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const yesterday = new Date(toDay.getTime() - 86400000);
   const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  if (d.getTime() === toDay.getTime()) return "Today";
+  if (d.getTime() === toDay.getTime()) {
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
   if (d.getTime() === yesterday.getTime()) return "Yesterday";
   const dd = String(date.getDate()).padStart(2, "0");
   const mm = String(date.getMonth() + 1).padStart(2, "0");
@@ -116,11 +118,14 @@ export function SummaryRow({
   const [_duration, setDuration] = useState(0);
   const [_currentTime, setCurrentTime] = useState(0);
   const [showSummary, setShowSummary] = useState(false);
-  const [isRead, setIsRead] = useState(
-    () =>
-      typeof window !== "undefined" &&
-      !!localStorage.getItem(`read:${delivery.id}`),
-  );
+  const [isRead, setIsRead] = useState(false);
+
+  // Restore read state from localStorage after mount (SSR-safe)
+  useEffect(() => {
+    if (localStorage.getItem(`read:${delivery.id}`)) {
+      setIsRead(true);
+    }
+  }, [delivery.id]);
 
   const title = video?.video_title ?? resolvedTitle ?? null;
   const thumbnailUrl = `/api/thumbnail/${delivery.video_id}`;
@@ -292,8 +297,12 @@ export function SummaryRow({
 
   return (
     <div
-      className={`nm-raised relative overflow-hidden rounded-2xl transition-all duration-200 ${
-        playing ? "ring-1 ring-red-500/25" : ""
+      className={`relative overflow-hidden rounded-2xl transition-all duration-200 ${
+        playing
+          ? "nm-raised ring-1 ring-red-500/25"
+          : isRead
+            ? "bg-white/[0.02]"
+            : "nm-raised"
       }`}
     >
       {/* Main row: thumbnail + title + controls */}
@@ -336,7 +345,9 @@ export function SummaryRow({
           }}
           className="min-w-0 flex-1 text-left"
         >
-          <p className="line-clamp-2 text-sm leading-snug font-medium">
+          <p
+            className={`line-clamp-2 text-sm leading-snug font-medium ${isRead && !playing ? "text-muted-foreground" : ""}`}
+          >
             {title ?? tl.untitledVideo}
           </p>
           <div className="mt-1 flex items-center gap-2">
@@ -363,14 +374,7 @@ export function SummaryRow({
                 {tl.statusProcessing}
               </span>
             )}
-            {video?.summary && (
-              <ChevronDown
-                className={`text-muted-foreground h-3 w-3 transition-transform duration-200 ${showSummary ? "rotate-180" : ""}`}
-              />
-            )}
-          </div>
-          {channelActive !== undefined && onToggleChannel && (
-            <div className="mt-1">
+            {channelActive !== undefined && onToggleChannel && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -389,8 +393,13 @@ export function SummaryRow({
                 />
                 {channelActive ? "Active" : "Paused"}
               </button>
-            </div>
-          )}
+            )}
+            {video?.summary && (
+              <ChevronDown
+                className={`text-muted-foreground h-3 w-3 transition-transform duration-200 ${showSummary ? "rotate-180" : ""}`}
+              />
+            )}
+          </div>
         </button>
 
         {/* Right-side actions */}
@@ -507,7 +516,7 @@ export function SummaryRow({
         >
           <div className="overflow-hidden">
             <div className="max-h-[60vh] overflow-y-auto border-t border-white/[0.04] px-3 py-3">
-              <p className="text-muted-foreground text-sm leading-relaxed break-words whitespace-pre-line sm:text-xs">
+              <p className="text-foreground text-sm leading-relaxed break-words whitespace-pre-line sm:text-xs">
                 {video.summary}
               </p>
             </div>
