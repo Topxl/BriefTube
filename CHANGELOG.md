@@ -6,6 +6,8 @@ CHORE: Remove unused AWS SES adapter — staying with Resend for email delivery
 
 ## 2026-04-03
 
+FIX: complete_job() now DELETEs the processing_queue row instead of marking it 'completed' — prevents table bloat (was accumulating 13k+ dead rows over months, slowing all DB queries and causing CPU throttling)
+CHORE: DB — manual cleanup of 11 791 orphaned processing_queue entries + 286 stuck deliveries for failed/skipped videos
 FIX: RSS scanner + worker processor — expand music filter to catch Hindu devotional (bhajan, aarti, chalisa, jukebox), Tamil songs (mass song, vijay songs), and ambient/healing content (chakra, soundscape, binaural, healing frequencies, Hz tones)
 
 ## 2026-04-02
