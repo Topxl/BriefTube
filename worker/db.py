@@ -272,7 +272,9 @@ def enqueue_video(video_id: str, youtube_url: str, video_title: str, channel_id:
     if job["status"] in ("queued", "processing"):
         return  # Already active — do not interrupt
 
-    # Job is completed/failed — reuse the slot for a fresh run
+    # Job is failed — reuse the slot for a fresh run.
+    # (completed jobs are now deleted by complete_job(), so this branch
+    #  only triggers for failed jobs that need a manual retry.)
     update = {"status": "queued", "user_language": language, "attempts": 0, "started_at": None}
     if tts_voice:
         update["tts_voice"] = tts_voice
@@ -293,8 +295,14 @@ def pick_next_job() -> dict | None:
 
 
 def complete_job(job_id: str):
+    """Delete the job from processing_queue — the result is tracked in processed_videos.status.
+
+    Deleting (not updating to 'completed') prevents table bloat: completed rows
+    were never re-picked (pick_next_processing_job only picks status='queued'),
+    but accumulated to 13k+ rows over months, slowing down every DB query.
+    """
     sb = get_client()
-    sb.table("processing_queue").update({"status": "completed"}).eq("id", job_id).execute()
+    sb.table("processing_queue").delete().eq("id", job_id).execute()
 
 
 def snooze_job(job_id: str, hours: int = 0, minutes: int = 0) -> None:
