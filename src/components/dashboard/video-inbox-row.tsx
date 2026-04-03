@@ -3,12 +3,16 @@
 import { useState } from "react";
 import { Play, Plus, Loader2 } from "@/lib/icons";
 import { toast } from "sonner";
+import { addProcessingVideo } from "@/lib/processing-videos";
 
 type Props = {
   videoId: string;
   channelId: string;
   title: string;
   publishedAt: string;
+  isSubscribed?: boolean;
+  channelActive?: boolean;
+  onToggleChannel?: () => void;
   onSummarized?: () => void;
 };
 
@@ -30,6 +34,9 @@ export function VideoInboxRow({
   channelId,
   title,
   publishedAt,
+  isSubscribed = false,
+  channelActive,
+  onToggleChannel,
   onSummarized,
 }: Props) {
   const [summarizing, setSummarizing] = useState(false);
@@ -49,7 +56,22 @@ export function VideoInboxRow({
         toast.error(err.error ?? "Failed to start summary");
         return;
       }
-      toast.success("Summary requested — it will appear in your feed shortly");
+      const data = (await res.json()) as { queued?: boolean };
+      if (data.queued) {
+        addProcessingVideo({
+          videoId,
+          title,
+          startedAt: Date.now(),
+        });
+        toast.success("Summary requested — processing started");
+      } else {
+        // Already processed — highlight in feed
+        window.dispatchEvent(
+          new CustomEvent("summariesHighlight", {
+            detail: { videoId },
+          }),
+        );
+      }
       onSummarized?.();
     } catch {
       toast.error("Failed to request summary");
@@ -61,17 +83,27 @@ export function VideoInboxRow({
   const handleSubscribe = async () => {
     setSubscribing(true);
     try {
+      // Use URL format so the API resolves channelName + avatar automatically
       const res = await fetch("/api/subscriptions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ channelId }),
+        body: JSON.stringify({
+          url: `https://www.youtube.com/channel/${channelId}`,
+        }),
       });
+      const data = (await res.json()) as {
+        active?: boolean;
+        error?: string;
+      };
       if (!res.ok) {
-        const err = (await res.json()) as { error?: string };
-        toast.error(err.error ?? "Failed to subscribe");
+        toast.error(data.error ?? "Failed to subscribe");
         return;
       }
-      toast.success("Subscribed — new videos will be summarized automatically");
+      toast.success(
+        data.active
+          ? "Subscribed — new videos will be summarized automatically"
+          : "Channel added but paused — upgrade to activate it",
+      );
     } catch {
       toast.error("Failed to subscribe");
     } finally {
@@ -95,43 +127,74 @@ export function VideoInboxRow({
           </div>
         </div>
 
-        {/* Title + date */}
+        {/* Title + date + actions */}
         <div className="min-w-0 flex-1">
           <p className="line-clamp-2 text-sm leading-snug font-medium">
             {title}
           </p>
-          <p className="text-muted-foreground mt-1 text-xs">
-            {formatDate(publishedAt)}
-          </p>
+          <div className="mt-1 flex items-center gap-2">
+            <span className="text-muted-foreground text-xs">
+              {formatDate(publishedAt)}
+            </span>
+            {channelActive !== undefined && onToggleChannel && (
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleChannel();
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    onToggleChannel();
+                  }
+                }}
+                className={`flex cursor-pointer items-center gap-1 rounded-full border px-1.5 py-px text-[10px] font-medium transition-all ${
+                  channelActive
+                    ? "hover:text-muted-foreground/50 border-green-500/20 text-green-500/60 hover:border-white/10"
+                    : "text-muted-foreground/40 hover:text-foreground/60 border-white/[0.07] hover:border-white/10"
+                }`}
+              >
+                <span
+                  className={`h-1.5 w-1.5 rounded-full transition-colors ${
+                    channelActive ? "bg-green-500/60" : "bg-muted-foreground/25"
+                  }`}
+                />
+                {channelActive ? "Active" : "Paused"}
+              </span>
+            )}
+          </div>
+          <div className="mt-1 flex items-center gap-2">
+            <button
+              onClick={() => void handleSummarize()}
+              disabled={summarizing}
+              className="flex items-center gap-1 rounded-full border border-red-500/20 px-1.5 py-px text-[10px] font-medium text-red-400 transition-all hover:text-red-300 disabled:opacity-50"
+            >
+              {summarizing ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <Play className="h-2.5 w-2.5" />
+              )}
+              Summarize
+            </button>
+            {!isSubscribed && (
+              <button
+                onClick={() => void handleSubscribe()}
+                disabled={subscribing}
+                className="text-muted-foreground/40 hover:text-foreground/60 flex items-center gap-1 rounded-full border border-white/[0.07] px-1.5 py-px text-[10px] font-medium transition-all hover:border-white/10 disabled:opacity-50"
+              >
+                {subscribing ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Plus className="h-2.5 w-2.5" />
+                )}
+                Subscribe
+              </button>
+            )}
+          </div>
         </div>
-      </div>
-
-      {/* Action buttons */}
-      <div className="flex items-center gap-2 border-t border-white/[0.04] px-3 py-2">
-        <button
-          onClick={() => void handleSummarize()}
-          disabled={summarizing}
-          className="nm-raised-sm flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium text-red-400 transition-all hover:text-red-300 disabled:opacity-50"
-        >
-          {summarizing ? (
-            <Loader2 className="h-3 w-3 animate-spin" />
-          ) : (
-            <Play className="h-3 w-3" />
-          )}
-          Summarize
-        </button>
-        <button
-          onClick={() => void handleSubscribe()}
-          disabled={subscribing}
-          className="nm-raised-sm text-muted-foreground hover:text-foreground flex items-center gap-1.5 rounded-full px-3 py-1 text-xs transition-all disabled:opacity-50"
-        >
-          {subscribing ? (
-            <Loader2 className="h-3 w-3 animate-spin" />
-          ) : (
-            <Plus className="h-3 w-3" />
-          )}
-          Subscribe
-        </button>
       </div>
     </div>
   );

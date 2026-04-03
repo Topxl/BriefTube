@@ -64,7 +64,11 @@ async def sync_subscriptions(session: aiohttp.ClientSession) -> tuple[int, int]:
     Processes up to 50 channels in parallel to handle large channel counts
     efficiently (50K channels × 0.1s sequential = 83min → ~30s with concurrency).
     """
-    channel_ids = db.get_all_channel_ids()
+    # Only track active channels — WebSub push notifications only matter when
+    # someone will receive a delivery. Inactive channels are handled by the RSS
+    # scanner (inbox population). Subscribing all 5k+ channels would take 30+
+    # minutes per sync and exhaust the hub's rate limit on every cycle.
+    channel_ids = list(db.get_active_channel_ids())
     if not channel_ids:
         return 0, 0
 
