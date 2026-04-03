@@ -610,6 +610,12 @@ export function SummariesFeed({
                     channelId={v.channel_id}
                     title={v.title}
                     publishedAt={v.published_at}
+                    isSubscribed={v.channel_id in channelStates}
+                    channelActive={
+                      (channelStates[v.channel_id] as ChannelState | undefined)
+                        ?.active
+                    }
+                    onToggleChannel={() => void toggleChannel(v.channel_id)}
                     onSummarized={() => void loadInboxVideos(0)}
                   />
                 ),

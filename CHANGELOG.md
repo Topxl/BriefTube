@@ -7,6 +7,7 @@ CHORE: Remove unused AWS SES adapter — staying with Resend for email delivery
 ## 2026-04-03
 
 FIX: worker/db — get_all_channel_ids(), get_active_channel_ids(), get_websub_subscriptions() were not paginated — silently truncated at 1 000 rows (Supabase default), causing RSS scanner to miss ~5 000 of 5 886 channels
+PERF: WebSub sync now only tracks active channels (886) instead of all channels (5 886) — reduces initial sync from 34 min to ~7 min, avoids hub rate-limit exhaustion; inactive channels are covered by RSS scan
 FIX: worker/db — fail_job() now DELETEs the processing_queue row on permanent failure (like complete_job) instead of leaving dead 'failed' rows that accumulate; manual cleanup of 1 767 stale failed rows
 FIX: webhooks/youtube GET — WebSub hub verification was calling createClient() (anon key, blocked by RLS) to mark subscriptions active; switched to createAdminClient() so subscriptions correctly transition from pending → active
 CHORE: DB — manual cleanup of 1 767 orphaned processing_queue 'failed' rows + 2 'completed' rows
