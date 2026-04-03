@@ -1,7 +1,11 @@
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
-import { checkRateLimit, getRequestIp, publicRateLimit } from "@/lib/rate-limit";
-import { createClient } from "@/lib/supabase/server";
+import {
+  checkRateLimit,
+  getRequestIp,
+  publicRateLimit,
+} from "@/lib/rate-limit";
+import { createAdminClient, createClient } from "@/lib/supabase/server";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
@@ -11,7 +15,10 @@ export const maxDuration = 10;
 // ── GET — WebSub hub verification ─────────────────────────────
 
 export const GET = async (req: NextRequest) => {
-  const rateLimitResponse = await checkRateLimit(publicRateLimit, `wh-yt:${getRequestIp(req)}`);
+  const rateLimitResponse = await checkRateLimit(
+    publicRateLimit,
+    `wh-yt:${getRequestIp(req)}`,
+  );
   if (rateLimitResponse) return rateLimitResponse;
 
   const { searchParams } = req.nextUrl;
@@ -39,7 +46,9 @@ export const GET = async (req: NextRequest) => {
       const lease = parseInt(leaseSeconds, 10);
       const expiresAt = new Date(Date.now() + lease * 1000).toISOString();
       try {
-        const supabase = await createClient();
+        // Must use admin client — this is an unauthenticated webhook request,
+        // so the regular anon client would be blocked by RLS.
+        const supabase = createAdminClient();
         await supabase
           .from("websub_subscriptions")
           .update({ status: "active", expires_at: expiresAt })
@@ -66,7 +75,10 @@ export const GET = async (req: NextRequest) => {
 // ── POST — new video notification ──────────────────────────────
 
 export const POST = async (req: NextRequest) => {
-  const rateLimitResponse = await checkRateLimit(publicRateLimit, `wh-yt:${getRequestIp(req)}`);
+  const rateLimitResponse = await checkRateLimit(
+    publicRateLimit,
+    `wh-yt:${getRequestIp(req)}`,
+  );
   if (rateLimitResponse) return rateLimitResponse;
 
   const body = await req.text();

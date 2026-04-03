@@ -45,17 +45,50 @@ def reset_client() -> None:
 # ── Subscriptions ──────────────────────────────────────────────
 
 def get_all_channel_ids() -> list[str]:
-    """Get all distinct channel IDs that at least one user is subscribed to (active or not)."""
+    """Get all distinct channel IDs that at least one user is subscribed to (active or not).
+
+    Paginated — the subscriptions table can exceed 1 000 rows (Supabase default limit),
+    so a plain .execute() would silently truncate the result and miss channels.
+    """
     sb = get_client()
-    res = sb.table("subscriptions").select("channel_id").execute()
-    return list({row["channel_id"] for row in res.data})
+    channel_ids: set[str] = set()
+    offset = 0
+    while True:
+        res = sb.table("subscriptions").select("channel_id").range(offset, offset + 999).execute()
+        if not res.data:
+            break
+        for row in res.data:
+            channel_ids.add(row["channel_id"])
+        if len(res.data) < 1000:
+            break
+        offset += 1000
+    return list(channel_ids)
 
 
 def get_active_channel_ids() -> set[str]:
-    """Get channel IDs that have at least one active subscriber."""
+    """Get channel IDs that have at least one active subscriber.
+
+    Paginated — same reason as get_all_channel_ids().
+    """
     sb = get_client()
-    res = sb.table("subscriptions").select("channel_id").eq("active", True).execute()
-    return {row["channel_id"] for row in res.data}
+    channel_ids: set[str] = set()
+    offset = 0
+    while True:
+        res = (
+            sb.table("subscriptions")
+            .select("channel_id")
+            .eq("active", True)
+            .range(offset, offset + 999)
+            .execute()
+        )
+        if not res.data:
+            break
+        for row in res.data:
+            channel_ids.add(row["channel_id"])
+        if len(res.data) < 1000:
+            break
+        offset += 1000
+    return channel_ids
 
 
 def bulk_insert_channel_videos(videos: list[dict]) -> int:
@@ -344,19 +377,19 @@ def fail_job(job_id: str, immediate: bool = False, retry_after_minutes: int = 0,
         update_data["retry_after"] = (
             datetime.now(timezone.utc) + timedelta(minutes=retry_after_minutes)
         ).isoformat()
-    sb.table("processing_queue").update(update_data).eq("id", job_id).execute()
-    # Keep processed_videos in sync: when the job permanently fails, mark the
-    # video as failed too so it doesn't stay stuck in "pending" forever.
-    # Always use immediate=True here: processing_queue already decided this is
-    # a permanent failure, so processed_videos must reflect that regardless of
-    # its own failure_count (avoids the "pending forever" bug when failure_count < 3).
     if status == "failed":
+        # DELETE the job — like complete_job(), failed jobs are tracked in
+        # processed_videos.status so keeping them in processing_queue only causes bloat
+        # (pick_next_processing_job never re-picks them anyway).
+        sb.table("processing_queue").delete().eq("id", job_id).execute()
         video_id = res.data[0].get("video_id")
         if video_id:
             # Sync ALL pending language variants — if a job fails permanently,
             # the video itself is unreachable so every language row must fail too.
             mark_video_failed(video_id, language=user_language, immediate=True, all_languages=True, error_reason=error_reason)
         return True
+    else:
+        sb.table("processing_queue").update(update_data).eq("id", job_id).execute()
     return False
 
 
@@ -1353,10 +1386,28 @@ def get_subscription_count(user_id: str) -> int:
 # ── WebSub Subscriptions ────────────────────────────────────────
 
 def get_websub_subscriptions() -> dict[str, dict]:
-    """Return all WebSub subscriptions as {channel_id: {status, expires_at}}."""
+    """Return all WebSub subscriptions as {channel_id: {status, expires_at}}.
+
+    Paginated — websub_subscriptions can exceed 1 000 rows.
+    """
     sb = get_client()
-    res = sb.table("websub_subscriptions").select("channel_id, status, expires_at").execute()
-    return {row["channel_id"]: {"status": row["status"], "expires_at": row["expires_at"]} for row in (res.data or [])}
+    result: dict[str, dict] = {}
+    offset = 0
+    while True:
+        res = (
+            sb.table("websub_subscriptions")
+            .select("channel_id, status, expires_at")
+            .range(offset, offset + 999)
+            .execute()
+        )
+        if not res.data:
+            break
+        for row in res.data:
+            result[row["channel_id"]] = {"status": row["status"], "expires_at": row["expires_at"]}
+        if len(res.data) < 1000:
+            break
+        offset += 1000
+    return result
 
 
 def upsert_websub_subscription(channel_id: str, expires_at: str | None = None, status: str = "pending"):
