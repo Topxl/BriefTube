@@ -83,6 +83,10 @@ _DRAMA_MOVIE_PHRASES = (
     "nollywood film",
     "2026 nigerian",
     "2025 nigerian",
+    # Ethiopian / Amharic drama series — daily soap operas, no useful transcript
+    "ስኩል ላይፍ",           # Amharic "school life" — @liyucinema drama series
+    "አፍላ ፍቅር",           # Amharic "young love" — same series
+    "liyu cinema",        # the channel name itself appears in some titles
     # Long free courses — no transcript, massive audio download, never summarizable
     "full course 2026",
     "full course 2025",
@@ -208,6 +212,20 @@ def scan_all_channels():
             except Exception as e:
                 logger.error(f"Error fetching RSS for channel {ch}: {e}")
 
+    # Detect first-time channels: channels where NONE of their current RSS videos
+    # are in known_video_ids. On first scan, the full 15-day RSS backlog looks
+    # "new" — cap processing at 1 video to avoid a backlog explosion when a user
+    # subscribes to a channel or the scanner gains access to new channels.
+    first_time_channels: set[str] = {
+        ch for ch, vids in channel_videos.items()
+        if not any(v["video_id"] in known_video_ids for v in vids)
+    }
+    if first_time_channels:
+        logger.info(
+            f"First-time channels (will cap at 1 video each): {len(first_time_channels)}"
+        )
+    first_time_processed: dict[str, int] = {}  # channel_id → count processed
+
     new_count = 0
     inbox_batch: list[dict] = []
     for channel_id, videos in channel_videos.items():
@@ -266,6 +284,18 @@ def scan_all_channels():
                 if channel_id not in active_channel_ids:
                     known_video_ids.add(vid)
                     continue
+
+                # First-time channel guard: cap at 1 video to prevent backlog flood.
+                # RSS feeds are newest-first, so the first video we encounter is the
+                # latest. Subsequent scans will pick up new videos normally.
+                if channel_id in first_time_channels:
+                    if first_time_processed.get(channel_id, 0) >= 1:
+                        logger.debug(
+                            f"First-scan cap: skip {video['title'][:60]} ({vid})"
+                        )
+                        known_video_ids.add(vid)
+                        continue
+                    first_time_processed[channel_id] = first_time_processed.get(channel_id, 0) + 1
 
                 # Get all distinct (language, tts_voice) pairs from current subscribers
                 subscriber_langs = db.get_subscriber_languages(channel_id)
