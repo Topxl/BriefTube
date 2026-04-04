@@ -55,7 +55,9 @@ export function SummariesFeed({
   headerRight,
   banners,
 }: Props) {
-  const [feedMode, setFeedMode] = useState<"summaries" | "all">("summaries");
+  const [feedMode, setFeedMode] = useState<"summaries" | "all" | "lists">(
+    "summaries",
+  );
   const [deliveries, setDeliveries] =
     useState<EnrichedDelivery[]>(initialDeliveries);
   type InboxVideo = {
@@ -82,9 +84,29 @@ export function SummariesFeed({
   const [inboxHasMore, setInboxHasMore] = useState(true);
   const [inboxPage, setInboxPage] = useState(0);
 
-  const loading = feedMode === "summaries" ? summariesLoading : inboxLoading;
-  const hasMore = feedMode === "summaries" ? summariesHasMore : inboxHasMore;
-  const _page = feedMode === "summaries" ? summariesPage : inboxPage;
+  const [listVideos, setListVideos] = useState<InboxVideo[]>([]);
+  const [listLoading, setListLoading] = useState(false);
+  const [listHasMore, setListHasMore] = useState(true);
+  const [listPage, setListPage] = useState(0);
+
+  const loading =
+    feedMode === "summaries"
+      ? summariesLoading
+      : feedMode === "all"
+        ? inboxLoading
+        : listLoading;
+  const hasMore =
+    feedMode === "summaries"
+      ? summariesHasMore
+      : feedMode === "all"
+        ? inboxHasMore
+        : listHasMore;
+  const _page =
+    feedMode === "summaries"
+      ? summariesPage
+      : feedMode === "all"
+        ? inboxPage
+        : listPage;
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   // IDs déjà tentés (succès ou échec) — évite de re-fetcher sur chaque update realtime
@@ -118,7 +140,58 @@ export function SummariesFeed({
       }
 
       const raw = data as unknown as InboxVideo[];
-      // Fetch processed_videos for summarized items
+      // Fetch processed_videos for all items (need status for processing/failed badges)
+      const allIds = raw.map((v) => v.video_id);
+      const videoMap: Record<string, ProcessedVideo> = {};
+      if (allIds.length > 0) {
+        const { data: videos } = await supabase
+          .from("processed_videos")
+          .select(
+            "video_id, language, video_title, video_url, summary, audio_url, channel_id, status",
+          )
+          .in("video_id", allIds);
+        if (videos) {
+          for (const v of videos) {
+            videoMap[v.video_id] ??= v;
+          }
+        }
+      }
+      const enriched: InboxVideo[] = raw.map((v) => ({
+        ...v,
+        video: videoMap[v.video_id],
+      }));
+      setInboxHasMore(enriched.length === PAGE_SIZE);
+      setInboxVideos((prev) =>
+        pageNum === 0 ? enriched : [...prev, ...enriched],
+      );
+      setInboxPage(pageNum);
+      setInboxLoading(false);
+    },
+    [supabase],
+  );
+
+  const loadListVideos = useCallback(
+    async (pageNum: number) => {
+      setListLoading(true);
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const from = pageNum * PAGE_SIZE;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data } = await (supabase.rpc as any)("get_list_follow_feed", {
+        p_user_id: user.id,
+        p_limit: PAGE_SIZE,
+        p_offset: from,
+      });
+
+      if (!data) {
+        setListLoading(false);
+        return;
+      }
+
+      const raw = data as unknown as InboxVideo[];
       const summarizedIds = raw
         .filter((v) => v.is_summarized)
         .map((v) => v.video_id);
@@ -140,12 +213,12 @@ export function SummariesFeed({
         ...v,
         video: videoMap[v.video_id],
       }));
-      setInboxHasMore(enriched.length === PAGE_SIZE);
-      setInboxVideos((prev) =>
+      setListHasMore(enriched.length === PAGE_SIZE);
+      setListVideos((prev) =>
         pageNum === 0 ? enriched : [...prev, ...enriched],
       );
-      setInboxPage(pageNum);
-      setInboxLoading(false);
+      setListPage(pageNum);
+      setListLoading(false);
     },
     [supabase],
   );
@@ -287,11 +360,13 @@ export function SummariesFeed({
   useEffect(() => {
     if (feedMode === "all" && inboxVideos.length === 0) {
       void loadInboxVideos(0);
+    } else if (feedMode === "lists" && listVideos.length === 0) {
+      void loadListVideos(0);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [feedMode]);
 
-  // Infinite scroll for both tabs
+  // Infinite scroll for all tabs
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
@@ -300,8 +375,10 @@ export function SummariesFeed({
         if (!entry.isIntersecting || !hasMore || loading) return;
         if (feedMode === "summaries") {
           void loadDeliveries(summariesPage + 1);
-        } else {
+        } else if (feedMode === "all") {
           void loadInboxVideos(inboxPage + 1);
+        } else {
+          void loadListVideos(listPage + 1);
         }
       },
       { threshold: 0.1 },
@@ -315,8 +392,10 @@ export function SummariesFeed({
     feedMode,
     summariesPage,
     inboxPage,
+    listPage,
     loadDeliveries,
     loadInboxVideos,
+    loadListVideos,
   ]);
 
   const toggleFavorite = useCallback(
@@ -483,7 +562,9 @@ export function SummariesFeed({
     !loading &&
     (feedMode === "summaries"
       ? deliveries.length === 0
-      : inboxVideos.length === 0);
+      : feedMode === "all"
+        ? inboxVideos.length === 0
+        : listVideos.length === 0);
 
   return (
     <div className="space-y-2.5">
@@ -510,6 +591,16 @@ export function SummariesFeed({
           >
             All videos
           </button>
+          <button
+            onClick={() => setFeedMode("lists")}
+            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+              feedMode === "lists"
+                ? "bg-red-600 text-white"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Lists
+          </button>
         </div>
         {headerRight && (
           <div className="flex items-center gap-1">{headerRight}</div>
@@ -524,12 +615,18 @@ export function SummariesFeed({
             <Inbox className="text-muted-foreground/50 h-4 w-4" />
           </div>
           <p className="text-sm font-medium">
-            {feedMode === "summaries" ? "No summaries yet" : "No videos found"}
+            {feedMode === "summaries"
+              ? "No summaries yet"
+              : feedMode === "all"
+                ? "No videos found"
+                : "No list videos"}
           </p>
           <p className="text-muted-foreground mt-1 text-xs">
             {feedMode === "summaries"
               ? "Add YouTube channels to receive your first audio summaries."
-              : "Videos from your imported channels will appear here after the next scan."}
+              : feedMode === "all"
+                ? "Videos from your imported channels will appear here after the next scan."
+                : "Follow a list to see videos from its channels here."}
           </p>
         </div>
       ) : (
@@ -571,7 +668,7 @@ export function SummariesFeed({
                     }
                   />
                 ))
-            : inboxVideos.map((v) =>
+            : (feedMode === "all" ? inboxVideos : listVideos).map((v) =>
                 v.is_summarized && v.video ? (
                   <SummaryRow
                     key={v.video_id}
@@ -610,20 +707,27 @@ export function SummariesFeed({
                     channelId={v.channel_id}
                     title={v.title}
                     publishedAt={v.published_at}
+                    videoStatus={v.video?.status ?? undefined}
                     isSubscribed={v.channel_id in channelStates}
                     channelActive={
                       (channelStates[v.channel_id] as ChannelState | undefined)
                         ?.active
                     }
                     onToggleChannel={() => void toggleChannel(v.channel_id)}
-                    onSummarized={() => void loadInboxVideos(0)}
+                    onSummarized={() =>
+                      void (feedMode === "all"
+                        ? loadInboxVideos(0)
+                        : loadListVideos(0))
+                    }
                   />
                 ),
               )}
           {loading &&
             (feedMode === "summaries"
               ? deliveries.length === 0
-              : inboxVideos.length === 0) &&
+              : feedMode === "all"
+                ? inboxVideos.length === 0
+                : listVideos.length === 0) &&
             Array.from({ length: 3 }).map((_, i) => (
               <SummaryRowSkeleton key={i} />
             ))}
