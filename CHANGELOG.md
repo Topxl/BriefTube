@@ -6,6 +6,13 @@ CHORE: Remove unused AWS SES adapter — staying with Resend for email delivery
 
 ## 2026-04-04
 
+FIX: worker/gemini_api — replace deprecated gemini-2.0-flash fallback with gemini-1.5-flash (Google removed 2.0-flash for non-new users, causing all summaries to fall back to slower OpenRouter)
+FIX: worker/tts_processor — reduce Edge TTS timeout from 300s to 60s (300s × 3 retries = 900s blocked per video, causing systematic 1200s processing timeouts all day)
+FIX: DB — channel_videos table had RLS enabled with no policies → 0 rows returned to authenticated users; add SELECT policy + make get_unified_feed and get_list_follow_feed SECURITY DEFINER
+FEATURE: Dashboard — add "Lists" tab showing videos from list-followed channels (source_type='list_follow') with on-demand Summarize button; "All videos" tab now excludes list-follow channels
+FIX: lists follow — ghost subscriptions now created with active=false to prevent auto-processing of list-followed channels
+CHORE: DB — new get_list_follow_feed() RPC for list-followed channel videos; update get_unified_feed() to exclude list_follow subscriptions
+
 FIX: RSS scanner — first-scan backlog explosion: when a channel is seen for the first time (all RSS videos are new), cap processing at 1 video instead of all 15-day backlog; prevents mass delivery flood when pagination fix introduced 5k+ new channels at once
 FIX: RSS scanner — add Ethiopian/Amharic drama filter (ስኩል ላይፍ, አፍላ ፍቅር, liyu cinema) to _DRAMA_MOVIE_PHRASES
 CHORE: DB — clean up deliveries for paused-channel user that were created before channel was paused
