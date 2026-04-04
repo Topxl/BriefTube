@@ -225,9 +225,9 @@ export function ProfileContent({
   const router = useRouter();
 
   const [retryCount, setRetryCount] = useState(0);
-  const [upgradePlan, setUpgradePlan] = useState<Plan>("pro");
+  const [upgradePlan, setUpgradePlan] = useState<Plan>("plus");
   const [upgradeInterval, setUpgradeInterval] = useState<Interval>(
-    defaultInterval ?? "year",
+    defaultInterval ?? "month",
   );
   const [prices] = useState<PricesData>(initialPrices);
   const [referral, setReferral] = useState("");

@@ -71,6 +71,23 @@ export type ProcessedVideo = {
 export type EnrichedDelivery = Delivery & { video?: ProcessedVideo };
 
 const SPEEDS = [1, 1.5, 2, 3] as const;
+const SPEED_STORAGE_KEY = "briefTubePlaybackSpeed";
+
+function getGlobalSpeed(): (typeof SPEEDS)[number] {
+  if (typeof window === "undefined") return 1;
+  const stored = localStorage.getItem(SPEED_STORAGE_KEY);
+  if (stored) {
+    const n = parseFloat(stored);
+    if (SPEEDS.includes(n as (typeof SPEEDS)[number]))
+      return n as (typeof SPEEDS)[number];
+  }
+  return 1;
+}
+
+function setGlobalSpeed(s: (typeof SPEEDS)[number]) {
+  localStorage.setItem(SPEED_STORAGE_KEY, String(s));
+  window.dispatchEvent(new CustomEvent("playbackSpeedChanged", { detail: s }));
+}
 
 const WAVEFORM_HEIGHTS = [0.5, 0.9, 0.65, 1, 0.55, 0.8, 0.4, 0.75, 0.6, 0.95];
 
@@ -141,7 +158,19 @@ export function SummaryRow({
   const video = delivery.video;
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [playing, setPlaying] = useState(false);
-  const [speed, setSpeed] = useState<(typeof SPEEDS)[number]>(1);
+  const [speed, setSpeedLocal] = useState<(typeof SPEEDS)[number]>(1);
+
+  // Sync speed from localStorage on mount + listen for global changes
+  useEffect(() => {
+    setSpeedLocal(getGlobalSpeed());
+    const handler = (e: Event) => {
+      const s = (e as CustomEvent).detail as (typeof SPEEDS)[number];
+      setSpeedLocal(s);
+      if (audioRef.current) audioRef.current.playbackRate = s;
+    };
+    window.addEventListener("playbackSpeedChanged", handler);
+    return () => window.removeEventListener("playbackSpeedChanged", handler);
+  }, []);
   const [progress, setProgress] = useState(0);
   const [_duration, setDuration] = useState(0);
   const [_currentTime, setCurrentTime] = useState(0);
@@ -164,6 +193,7 @@ export function SummaryRow({
     if (playing) {
       audio.pause();
     } else {
+      audio.playbackRate = speed;
       void audio.play();
       if (!isRead) {
         localStorage.setItem(`read:${delivery.id}`, "1");
@@ -171,15 +201,13 @@ export function SummaryRow({
       }
     }
     setPlaying(!playing);
-  }, [playing, isRead, delivery.id]);
+  }, [playing, isRead, delivery.id, speed]);
 
-  const cycleSpeed = useCallback(() => {
-    const audio = audioRef.current;
-    const idx = SPEEDS.indexOf(speed);
-    const next = SPEEDS[(idx + 1) % SPEEDS.length];
-    setSpeed(next);
-    if (audio) audio.playbackRate = next;
-  }, [speed]);
+  const changeSpeed = useCallback((s: (typeof SPEEDS)[number]) => {
+    setSpeedLocal(s);
+    setGlobalSpeed(s);
+    if (audioRef.current) audioRef.current.playbackRate = s;
+  }, []);
 
   const handleTimeUpdate = useCallback(() => {
     const audio = audioRef.current;
@@ -453,12 +481,6 @@ export function SummaryRow({
         </button>
 
         {/* Right-side actions */}
-        <button
-          onClick={cycleSpeed}
-          className="nm-raised-sm text-muted-foreground hover:text-foreground shrink-0 self-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold tabular-nums transition-all"
-        >
-          x{speed}
-        </button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="text-muted-foreground hover:text-foreground absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-md transition-colors">
@@ -540,7 +562,13 @@ export function SummaryRow({
                   onClick={() => onSummaryLengthChange(null)}
                   className="flex items-center gap-2 pl-4"
                 >
-                  <span className={summaryLengthPref == null ? "text-red-400" : "invisible"}>●</span>
+                  <span
+                    className={
+                      summaryLengthPref == null ? "text-red-400" : "invisible"
+                    }
+                  >
+                    ●
+                  </span>
                   Channel default
                 </DropdownMenuItem>
                 {SUMMARY_LENGTH_OPTIONS.map((opt) => (
@@ -549,7 +577,15 @@ export function SummaryRow({
                     onClick={() => onSummaryLengthChange(opt.value)}
                     className="flex items-center gap-2 pl-4"
                   >
-                    <span className={summaryLengthPref === opt.value ? "text-red-400" : "invisible"}>●</span>
+                    <span
+                      className={
+                        summaryLengthPref === opt.value
+                          ? "text-red-400"
+                          : "invisible"
+                      }
+                    >
+                      ●
+                    </span>
                     {opt.label}
                   </DropdownMenuItem>
                 ))}
@@ -566,7 +602,13 @@ export function SummaryRow({
                   onClick={() => onSummaryStyleChange(null)}
                   className="flex items-center gap-2 pl-4"
                 >
-                  <span className={summaryStylePref == null ? "text-red-400" : "invisible"}>●</span>
+                  <span
+                    className={
+                      summaryStylePref == null ? "text-red-400" : "invisible"
+                    }
+                  >
+                    ●
+                  </span>
                   Channel default
                 </DropdownMenuItem>
                 {SUMMARY_STYLE_OPTIONS.map((opt) => (
@@ -575,12 +617,41 @@ export function SummaryRow({
                     onClick={() => onSummaryStyleChange(opt.value)}
                     className="flex items-center gap-2 pl-4"
                   >
-                    <span className={summaryStylePref === opt.value ? "text-red-400" : "invisible"}>●</span>
+                    <span
+                      className={
+                        summaryStylePref === opt.value
+                          ? "text-red-400"
+                          : "invisible"
+                      }
+                    >
+                      ●
+                    </span>
                     {opt.label}
                   </DropdownMenuItem>
                 ))}
               </>
             )}
+            <DropdownMenuSeparator />
+            <div className="px-2 py-1.5">
+              <p className="text-muted-foreground mb-1.5 text-xs font-medium">
+                Playback speed
+              </p>
+              <div className="flex items-center gap-1">
+                {SPEEDS.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => changeSpeed(s)}
+                    className={`flex-1 rounded-md px-1.5 py-1 text-[10px] font-semibold tabular-nums transition-all ${
+                      speed === s
+                        ? "bg-red-600 text-white"
+                        : "nm-raised-sm text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    x{s}
+                  </button>
+                ))}
+              </div>
+            </div>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
