@@ -30,6 +30,9 @@ const cspDirectives = [
     "https://ui-avatars.com",
     "https://images.unsplash.com",
     "https://www.googletagmanager.com", // GTM tracking pixel
+    "https://www.google.com", // Google Ads conversion tracking pixel
+    "https://googleads.g.doubleclick.net", // Google Ads remarketing pixel
+    "https://www.googleadservices.com", // Google Ads conversion
   ].join(" "),
 
   // Media: audio summaries from Cloudflare R2
@@ -51,6 +54,9 @@ const cspDirectives = [
     "https://*.google-analytics.com", // GA4 measurement
     "https://*.analytics.google.com", // GA4
     "https://*.ingest.de.sentry.io", // Sentry error tracking
+    "https://www.google.com", // Google Ads conversion
+    "https://googleads.g.doubleclick.net", // Google Ads remarketing
+    "https://www.googleadservices.com", // Google Ads
     "https://us.i.posthog.com", // PostHog analytics (fallback when proxy fails)
     "https://us-assets.i.posthog.com", // PostHog static assets (surveys, toolbar)
   ].join(" "),
