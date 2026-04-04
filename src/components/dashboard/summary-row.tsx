@@ -18,9 +18,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { t } from "@/locales";
@@ -523,41 +520,27 @@ export function SummaryRow({
             {onSummaryLengthChange && (
               <>
                 <DropdownMenuSeparator />
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger className="flex items-center gap-2">
-                    <FileText className="h-3.5 w-3.5" />
-                    Summary length
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent>
-                    <DropdownMenuItem
-                      onClick={() => onSummaryLengthChange(null)}
-                      className="flex items-center gap-2"
-                    >
-                      {summaryLengthPref == null && (
-                        <span className="text-red-400">●</span>
-                      )}
-                      {summaryLengthPref != null && (
-                        <span className="invisible">●</span>
-                      )}
-                      Channel default
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    {SUMMARY_LENGTH_OPTIONS.map((opt) => (
-                      <DropdownMenuItem
-                        key={opt.value}
-                        onClick={() => onSummaryLengthChange(opt.value)}
-                        className="flex items-center gap-2"
-                      >
-                        {summaryLengthPref === opt.value ? (
-                          <span className="text-red-400">●</span>
-                        ) : (
-                          <span className="invisible">●</span>
-                        )}
-                        {opt.label}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuSubContent>
-                </DropdownMenuSub>
+                <div className="text-muted-foreground flex items-center gap-2 px-2 py-1.5 text-xs font-medium">
+                  <FileText className="h-3.5 w-3.5" />
+                  Summary length
+                </div>
+                <DropdownMenuItem
+                  onClick={() => onSummaryLengthChange(null)}
+                  className="flex items-center gap-2 pl-4"
+                >
+                  <span className={summaryLengthPref == null ? "text-red-400" : "invisible"}>●</span>
+                  Channel default
+                </DropdownMenuItem>
+                {SUMMARY_LENGTH_OPTIONS.map((opt) => (
+                  <DropdownMenuItem
+                    key={opt.value}
+                    onClick={() => onSummaryLengthChange(opt.value)}
+                    className="flex items-center gap-2 pl-4"
+                  >
+                    <span className={summaryLengthPref === opt.value ? "text-red-400" : "invisible"}>●</span>
+                    {opt.label}
+                  </DropdownMenuItem>
+                ))}
               </>
             )}
           </DropdownMenuContent>
