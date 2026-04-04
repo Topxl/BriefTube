@@ -10,6 +10,7 @@ type Props = {
   channelId: string;
   title: string;
   publishedAt: string;
+  videoStatus?: string;
   isSubscribed?: boolean;
   channelActive?: boolean;
   onToggleChannel?: () => void;
@@ -34,6 +35,7 @@ export function VideoInboxRow({
   channelId,
   title,
   publishedAt,
+  videoStatus,
   isSubscribed = false,
   channelActive,
   onToggleChannel,
@@ -167,18 +169,29 @@ export function VideoInboxRow({
             )}
           </div>
           <div className="mt-1 flex items-center gap-2">
-            <button
-              onClick={() => void handleSummarize()}
-              disabled={summarizing}
-              className="flex items-center gap-1 rounded-full border border-red-500/20 px-1.5 py-px text-[10px] font-medium text-red-400 transition-all hover:text-red-300 disabled:opacity-50"
-            >
-              {summarizing ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
-              ) : (
-                <Play className="h-2.5 w-2.5" />
-              )}
-              Summarize
-            </button>
+            {videoStatus === "processing" ? (
+              <span className="flex items-center gap-1 rounded-full border border-amber-500/20 px-1.5 py-px text-[10px] font-medium text-amber-400">
+                <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                Processing
+              </span>
+            ) : videoStatus === "failed" ? (
+              <span className="text-muted-foreground/40 flex items-center gap-1 rounded-full border border-white/[0.07] px-1.5 py-px text-[10px] font-medium">
+                Unavailable
+              </span>
+            ) : (
+              <button
+                onClick={() => void handleSummarize()}
+                disabled={summarizing}
+                className="flex items-center gap-1 rounded-full border border-red-500/20 px-1.5 py-px text-[10px] font-medium text-red-400 transition-all hover:text-red-300 disabled:opacity-50"
+              >
+                {summarizing ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Play className="h-2.5 w-2.5" />
+                )}
+                Summarize
+              </button>
+            )}
             {!isSubscribed && (
               <button
                 onClick={() => void handleSubscribe()}
