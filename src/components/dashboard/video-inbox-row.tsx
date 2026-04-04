@@ -1,16 +1,18 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Play, Plus, Loader2, MoreHorizontal, ExternalLink, Share2 } from "@/lib/icons";
+import { Play, Plus, Loader2, MoreHorizontal, ExternalLink, Share2, Languages, Star } from "@/lib/icons";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { addProcessingVideo } from "@/lib/processing-videos";
 import { SiteConfig } from "@/site-config";
+import { languages as LANGUAGES } from "@/lib/languages";
 
 type Props = {
   videoId: string;
@@ -18,6 +20,8 @@ type Props = {
   title: string;
   publishedAt: string;
   videoStatus?: string;
+  favoriteLanguages?: string[];
+  onManageFavorites?: () => void;
   isSubscribed?: boolean;
   channelActive?: boolean;
   onToggleChannel?: () => void;
@@ -43,6 +47,8 @@ export function VideoInboxRow({
   title,
   publishedAt,
   videoStatus,
+  favoriteLanguages = [],
+  onManageFavorites,
   isSubscribed = false,
   channelActive,
   onToggleChannel,
@@ -50,6 +56,7 @@ export function VideoInboxRow({
 }: Props) {
   const [summarizing, setSummarizing] = useState(false);
   const [subscribing, setSubscribing] = useState(false);
+  const [generatingLang, setGeneratingLang] = useState<string | null>(null);
   const thumbnailUrl = `/api/thumbnail/${videoId}`;
 
   const handleSummarize = async () => {
@@ -120,6 +127,35 @@ export function VideoInboxRow({
     }
   };
 
+  const handleGenerateLang = useCallback(
+    async (langCode: string) => {
+      setGeneratingLang(langCode);
+      try {
+        const res = await fetch("/api/process-video", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ videoId, videoTitle: title, language: langCode }),
+        });
+        if (!res.ok) {
+          toast.error("Generation error");
+          return;
+        }
+        const data = (await res.json()) as { queued?: boolean };
+        if (data.queued) {
+          addProcessingVideo({ videoId, title, startedAt: Date.now() });
+          toast.success("Generation started!");
+        } else {
+          toast.info("Summary already available in this language");
+        }
+      } catch {
+        toast.error("Network error");
+      } finally {
+        setGeneratingLang(null);
+      }
+    },
+    [videoId, title],
+  );
+
   const handleShare = useCallback(async () => {
     const url = `${SiteConfig.prodUrl}/videos/${videoId}`;
     try {
@@ -157,6 +193,33 @@ export function VideoInboxRow({
             <Share2 className="h-3.5 w-3.5" />
             Share
           </DropdownMenuItem>
+          {favoriteLanguages.length > 0 && <DropdownMenuSeparator />}
+          {favoriteLanguages.map((code) => {
+            const lang = LANGUAGES.find((l) => l.code === code);
+            if (!lang) return null;
+            return (
+              <DropdownMenuItem
+                key={code}
+                disabled={generatingLang === code}
+                onClick={() => void handleGenerateLang(code)}
+                className="flex items-center gap-2"
+              >
+                <Star className="h-3 w-3 shrink-0 text-yellow-400" fill="currentColor" />
+                {generatingLang === code
+                  ? "Generating…"
+                  : `Generate in ${new Intl.DisplayNames(["en"], { type: "language" }).of(code) ?? lang.name}`}
+              </DropdownMenuItem>
+            );
+          })}
+          {onManageFavorites && (
+            <DropdownMenuItem
+              onClick={onManageFavorites}
+              className="flex items-center gap-2"
+            >
+              <Languages className="h-3.5 w-3.5" />
+              Other language…
+            </DropdownMenuItem>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
       <div className="flex items-start gap-3 p-3">

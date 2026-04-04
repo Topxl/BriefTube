@@ -708,6 +708,8 @@ export function SummariesFeed({
                     title={v.title}
                     publishedAt={v.published_at}
                     videoStatus={v.video?.status ?? undefined}
+                    favoriteLanguages={favLangs}
+                    onManageFavorites={openLangPicker}
                     isSubscribed={v.channel_id in channelStates}
                     channelActive={
                       (channelStates[v.channel_id] as ChannelState | undefined)
