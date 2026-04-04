@@ -5,7 +5,14 @@ import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Check, Headphones, Languages, Loader2, Play } from "@/lib/icons";
+import {
+  Check,
+  Clock,
+  Headphones,
+  Languages,
+  Loader2,
+  Play,
+} from "@/lib/icons";
 import { dialogManager } from "@/features/dialog-manager/dialog-manager";
 import { LanguagePicker } from "@/components/dashboard/language-picker";
 import { languages } from "@/lib/languages";
@@ -944,6 +951,68 @@ export function DeliverySection({
           )}
         </div>
       </div>
+
+      {/* Playback speed row */}
+      <PlaybackSpeedRow />
     </>
+  );
+}
+
+const PLAYBACK_SPEEDS = [1, 1.5, 2, 3] as const;
+const SPEED_STORAGE_KEY = "briefTubePlaybackSpeed";
+
+function PlaybackSpeedRow() {
+  const [speed, setSpeed] = useState<(typeof PLAYBACK_SPEEDS)[number]>(1);
+
+  useEffect(() => {
+    const stored = localStorage.getItem(SPEED_STORAGE_KEY);
+    if (stored) {
+      const n = parseFloat(stored);
+      if (PLAYBACK_SPEEDS.includes(n as (typeof PLAYBACK_SPEEDS)[number])) {
+        setSpeed(n as (typeof PLAYBACK_SPEEDS)[number]);
+      }
+    }
+    const handler = (e: Event) => {
+      setSpeed((e as CustomEvent).detail as (typeof PLAYBACK_SPEEDS)[number]);
+    };
+    window.addEventListener("playbackSpeedChanged", handler);
+    return () => window.removeEventListener("playbackSpeedChanged", handler);
+  }, []);
+
+  const changeSpeed = (s: (typeof PLAYBACK_SPEEDS)[number]) => {
+    setSpeed(s);
+    localStorage.setItem(SPEED_STORAGE_KEY, String(s));
+    window.dispatchEvent(
+      new CustomEvent("playbackSpeedChanged", { detail: s }),
+    );
+  };
+
+  return (
+    <div className="flex items-center justify-between px-4 py-3.5">
+      <div className="flex items-center gap-2.5">
+        <div className="nm-inset-sm flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
+          <Clock className="text-muted-foreground h-4 w-4" />
+        </div>
+        <div>
+          <p className="text-sm font-medium">Playback speed</p>
+          <p className="text-muted-foreground text-[11px]">x{speed}</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-1">
+        {PLAYBACK_SPEEDS.map((s) => (
+          <button
+            key={s}
+            onClick={() => changeSpeed(s)}
+            className={`rounded-md px-2 py-1 text-[10px] font-semibold tabular-nums transition-all ${
+              speed === s
+                ? "bg-red-600 text-white"
+                : "nm-raised-sm text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            x{s}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
