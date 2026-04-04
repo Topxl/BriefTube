@@ -4,6 +4,7 @@ import { useRef, useState, useCallback, useEffect } from "react";
 import {
   ChevronDown,
   ExternalLink,
+  FileText,
   Play,
   MoreHorizontal,
   RefreshCw,
@@ -17,6 +18,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { t } from "@/locales";
@@ -94,6 +98,14 @@ function AudioWaveform() {
   );
 }
 
+type SummaryLengthPref = "brief" | "standard" | "detailed";
+
+const SUMMARY_LENGTH_OPTIONS: { value: SummaryLengthPref; label: string }[] = [
+  { value: "brief", label: "Brief" },
+  { value: "standard", label: "Standard" },
+  { value: "detailed", label: "Detailed" },
+];
+
 export function SummaryRow({
   delivery,
   resolvedTitle,
@@ -103,6 +115,8 @@ export function SummaryRow({
   channelActive,
   onToggleChannel,
   channelAvatarUrl,
+  summaryLengthPref,
+  onSummaryLengthChange,
 }: {
   delivery: EnrichedDelivery;
   resolvedTitle?: string;
@@ -112,6 +126,8 @@ export function SummaryRow({
   channelActive?: boolean;
   onToggleChannel?: () => void;
   channelAvatarUrl?: string | null;
+  summaryLengthPref?: SummaryLengthPref | null;
+  onSummaryLengthChange?: (length: SummaryLengthPref | null) => void;
 }) {
   const video = delivery.video;
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -504,6 +520,46 @@ export function SummaryRow({
               <Languages className="h-3.5 w-3.5" />
               Other language…
             </DropdownMenuItem>
+            {onSummaryLengthChange && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger className="flex items-center gap-2">
+                    <FileText className="h-3.5 w-3.5" />
+                    Summary length
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuItem
+                      onClick={() => onSummaryLengthChange(null)}
+                      className="flex items-center gap-2"
+                    >
+                      {summaryLengthPref == null && (
+                        <span className="text-red-400">●</span>
+                      )}
+                      {summaryLengthPref != null && (
+                        <span className="invisible">●</span>
+                      )}
+                      Channel default
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    {SUMMARY_LENGTH_OPTIONS.map((opt) => (
+                      <DropdownMenuItem
+                        key={opt.value}
+                        onClick={() => onSummaryLengthChange(opt.value)}
+                        className="flex items-center gap-2"
+                      >
+                        {summaryLengthPref === opt.value ? (
+                          <span className="text-red-400">●</span>
+                        ) : (
+                          <span className="invisible">●</span>
+                        )}
+                        {opt.label}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

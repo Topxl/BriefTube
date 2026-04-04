@@ -297,7 +297,7 @@ def scan_all_channels():
                         continue
                     first_time_processed[channel_id] = first_time_processed.get(channel_id, 0) + 1
 
-                # Get all distinct (language, tts_voice) pairs from current subscribers
+                # Get all distinct (language, tts_voice, summary prefs) from current subscribers
                 subscriber_langs = db.get_subscriber_languages(channel_id)
                 if not subscriber_langs:
                     known_video_ids.add(vid)
@@ -307,7 +307,13 @@ def scan_all_channels():
                     lang = lang_info["language"]
                     tts_voice = lang_info["tts_voice"]
                     db.insert_new_video(vid, channel_id, video["title"], video["url"], language=lang)
-                    db.enqueue_video(vid, video["url"], video["title"], channel_id, language=lang, tts_voice=tts_voice)
+                    db.enqueue_video(
+                        vid, video["url"], video["title"], channel_id,
+                        language=lang, tts_voice=tts_voice,
+                        summary_length_pref=lang_info.get("summary_length_pref"),
+                        summary_style=lang_info.get("summary_style"),
+                        summary_custom_instructions=lang_info.get("summary_custom_instructions"),
+                    )
                     db.create_deliveries_for_video(vid, channel_id, language=lang)
 
                 known_video_ids.add(vid)  # prevent double-insert within same scan

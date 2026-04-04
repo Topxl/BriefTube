@@ -166,8 +166,8 @@ class GeminiSummarizer:
     # gemini-2.5-flash: 1M context, $0.15/M input — best cost/quality for summaries
     # gemini-3 preview models removed: free-tier only (20 req/day), not pay-as-you-go
     MODELS = [
-        "gemini-2.5-flash",        # Primary — 1M context, cheap, fast
-        "gemini-1.5-flash",        # Stable fallback (gemini-2.0-flash removed by Google)
+        "gemini-2.5-flash",        # Primary — $0.30/$2.50 per 1M tokens, 1M context
+        "gemini-2.5-flash-lite",   # Fallback — $0.10/$0.40 per 1M tokens (2.0/1.5-flash both removed)
     ]
 
     def __init__(self, api_key: Optional[str] = None):

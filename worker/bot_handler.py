@@ -862,7 +862,7 @@ def _get_profile_by_chat_id(chat_id: str) -> dict | None:
     user_id = conn_res.data[0]["user_id"]
     res = (
         sb.table("profiles")
-        .select("id, email, subscription_status, trial_ends_at, max_channels, preferred_language, tts_voice, favorite_languages")
+        .select("id, email, subscription_status, trial_ends_at, max_channels, preferred_language, tts_voice, favorite_languages, summary_length_pref, summary_style, summary_custom_instructions")
         .eq("id", user_id)
         .execute()
     )
@@ -1168,7 +1168,13 @@ async def handle_video_request(update: Update, profile: dict, video_id: str) -> 
     channel_id = ""  # Unknown for on-demand, not tied to a channel subscription
     logger.info(f"[{video_id}] New on-demand video: title={video_title!r}, lang={user_language}, user={user_id}")
     db.insert_new_video(video_id, channel_id, video_title, video_url, language=user_language)
-    db.enqueue_video(video_id, video_url, video_title, channel_id, language=user_language, tts_voice=user_tts_voice)
+    db.enqueue_video(
+        video_id, video_url, video_title, channel_id,
+        language=user_language, tts_voice=user_tts_voice,
+        summary_length_pref=profile.get("summary_length_pref"),
+        summary_style=profile.get("summary_style"),
+        summary_custom_instructions=profile.get("summary_custom_instructions"),
+    )
     sb.table("deliveries").upsert({
         "user_id": user_id,
         "video_id": video_id,

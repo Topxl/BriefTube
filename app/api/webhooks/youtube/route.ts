@@ -115,10 +115,10 @@ export const POST = async (req: NextRequest) => {
   try {
     const supabase = await createClient();
 
-    // Verify channel has active subscribers
+    // Verify channel has active subscribers (include per-channel summary overrides)
     const { data: subs } = await supabase
       .from("subscriptions")
-      .select("user_id")
+      .select("user_id, summary_length_pref, summary_style, summary_custom_instructions")
       .eq("channel_id", channelId)
       .eq("active", true);
 
@@ -144,19 +144,35 @@ export const POST = async (req: NextRequest) => {
     const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
     const videoTitle = title ?? videoId;
 
-    // Get distinct (language, tts_voice) pairs from subscribers
+    // Get distinct (language, tts_voice, summary prefs) from subscribers
     const userIds = [...new Set(subs.map((s) => s.user_id))];
     const { data: profiles } = await supabase
       .from("profiles")
-      .select("id, preferred_language, tts_voice")
+      .select("id, preferred_language, tts_voice, summary_length_pref, summary_style, summary_custom_instructions")
       .in("id", userIds);
 
-    // Build unique language → tts_voice map (preserves insertion order)
-    const langMap = new Map<string, string | null>();
+    // Build user_id → subscription lookup for channel-level overrides
+    const subByUser = new Map(subs.map((s) => [s.user_id, s]));
+
+    // Build unique language → {tts_voice, summary prefs} map (preserves insertion order)
+    // Channel overrides take priority over profile defaults
+    type LangInfo = {
+      ttsVoice: string | null;
+      summaryLengthPref: string | null;
+      summaryStyle: string | null;
+      summaryCustomInstructions: string | null;
+    };
+    const langMap = new Map<string, LangInfo>();
     for (const p of profiles ?? []) {
       const lang = p.preferred_language ?? "fr";
       if (!langMap.has(lang)) {
-        langMap.set(lang, p.tts_voice ?? null);
+        const sub = subByUser.get(p.id);
+        langMap.set(lang, {
+          ttsVoice: p.tts_voice ?? null,
+          summaryLengthPref: sub?.summary_length_pref ?? (p.summary_length_pref as string | null),
+          summaryStyle: sub?.summary_style ?? (p.summary_style as string | null),
+          summaryCustomInstructions: sub?.summary_custom_instructions ?? (p.summary_custom_instructions as string | null),
+        });
       }
     }
 
@@ -194,7 +210,7 @@ export const POST = async (req: NextRequest) => {
       .limit(1);
 
     if (!existingJob || existingJob.length === 0) {
-      const [firstLang, firstVoice] = [...langMap.entries()][0];
+      const [firstLang, firstInfo] = [...langMap.entries()][0];
       await supabase.from("processing_queue").insert({
         video_id: videoId,
         youtube_url: videoUrl,
@@ -202,7 +218,10 @@ export const POST = async (req: NextRequest) => {
         channel_id: channelId,
         status: "queued",
         user_language: firstLang,
-        ...(firstVoice ? { tts_voice: firstVoice } : {}),
+        ...(firstInfo.ttsVoice ? { tts_voice: firstInfo.ttsVoice } : {}),
+        ...(firstInfo.summaryLengthPref ? { summary_length_pref: firstInfo.summaryLengthPref } : {}),
+        ...(firstInfo.summaryStyle ? { summary_style: firstInfo.summaryStyle } : {}),
+        ...(firstInfo.summaryCustomInstructions ? { summary_custom_instructions: firstInfo.summaryCustomInstructions } : {}),
       });
     }
 

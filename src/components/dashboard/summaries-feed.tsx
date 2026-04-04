@@ -15,10 +15,13 @@ import type {
 
 const PAGE_SIZE = 20;
 
+type SummaryLengthPref = "brief" | "standard" | "detailed";
+
 type ChannelState = {
   active: boolean;
   subId: string;
   avatarUrl?: string | null;
+  summaryLengthPref?: SummaryLengthPref | null;
 };
 
 type Props = {
@@ -240,7 +243,7 @@ export function SummariesFeed({
             .single(),
           supabase
             .from("subscriptions")
-            .select("id, channel_id, active, channel_avatar_url")
+            .select("id, channel_id, active, channel_avatar_url, summary_length_pref")
             .eq("user_id", user.id),
         ]);
         const pref = profile?.preferred_language ?? "en";
@@ -256,6 +259,7 @@ export function SummariesFeed({
               active: !!s.active,
               subId: s.id,
               avatarUrl: s.channel_avatar_url,
+              summaryLengthPref: s.summary_length_pref as SummaryLengthPref | null,
             };
           }
           setChannelStates(map);
@@ -340,7 +344,7 @@ export function SummariesFeed({
       if (!user) return;
       const { data: subs } = await supabase
         .from("subscriptions")
-        .select("id, channel_id, active, channel_avatar_url")
+        .select("id, channel_id, active, channel_avatar_url, summary_length_pref")
         .eq("user_id", user.id);
       if (subs) {
         const map: Record<string, ChannelState> = {};
@@ -349,6 +353,7 @@ export function SummariesFeed({
             active: !!s.active,
             subId: s.id,
             avatarUrl: s.channel_avatar_url,
+            summaryLengthPref: s.summary_length_pref as SummaryLengthPref | null,
           };
         }
         setChannelStates(map);
@@ -558,6 +563,44 @@ export function SummariesFeed({
     [channelStates, supabase],
   );
 
+  const updateSummaryLength = useCallback(
+    async (channelId: string, length: SummaryLengthPref | null) => {
+      const state = channelStates[channelId] as ChannelState | undefined;
+      if (!state) return;
+      // Optimistic update
+      setChannelStates((prev) => ({
+        ...prev,
+        [channelId]: { ...prev[channelId], summaryLengthPref: length },
+      }));
+      try {
+        const res = await fetch("/api/subscriptions", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: state.subId,
+            summary_length_pref: length,
+          }),
+        });
+        if (!res.ok) {
+          throw new Error("Failed to update");
+        }
+        toast.success(
+          length
+            ? `Summary length set to ${length}`
+            : "Using profile default length",
+        );
+      } catch {
+        // Revert on error
+        setChannelStates((prev) => ({
+          ...prev,
+          [channelId]: { ...prev[channelId], summaryLengthPref: state.summaryLengthPref },
+        }));
+        toast.error("Failed to update summary preference");
+      }
+    },
+    [channelStates],
+  );
+
   const showEmpty =
     !loading &&
     (feedMode === "summaries"
@@ -666,6 +709,24 @@ export function SummariesFeed({
                           )?.avatarUrl
                         : undefined
                     }
+                    summaryLengthPref={
+                      delivery.video?.channel_id
+                        ? (
+                            channelStates[delivery.video.channel_id] as
+                              | ChannelState
+                              | undefined
+                          )?.summaryLengthPref
+                        : undefined
+                    }
+                    onSummaryLengthChange={
+                      delivery.video?.channel_id
+                        ? (length) =>
+                            void updateSummaryLength(
+                              delivery.video?.channel_id ?? "",
+                              length,
+                            )
+                        : undefined
+                    }
                   />
                 ))
             : (feedMode === "all" ? inboxVideos : listVideos).map((v) =>
@@ -699,6 +760,13 @@ export function SummariesFeed({
                       (channelStates[v.channel_id] as ChannelState | undefined)
                         ?.avatarUrl
                     }
+                    summaryLengthPref={
+                      (channelStates[v.channel_id] as ChannelState | undefined)
+                        ?.summaryLengthPref
+                    }
+                    onSummaryLengthChange={(length) =>
+                      void updateSummaryLength(v.channel_id, length)
+                    }
                   />
                 ) : (
                   <VideoInboxRow
@@ -720,6 +788,13 @@ export function SummariesFeed({
                       void (feedMode === "all"
                         ? loadInboxVideos(0)
                         : loadListVideos(0))
+                    }
+                    summaryLengthPref={
+                      (channelStates[v.channel_id] as ChannelState | undefined)
+                        ?.summaryLengthPref
+                    }
+                    onSummaryLengthChange={(length) =>
+                      void updateSummaryLength(v.channel_id, length)
                     }
                   />
                 ),

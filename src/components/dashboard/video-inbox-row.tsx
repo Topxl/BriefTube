@@ -1,18 +1,29 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Play, Plus, Loader2, MoreHorizontal, ExternalLink, Share2, Languages, Star } from "@/lib/icons";
+import { Play, Plus, Loader2, MoreHorizontal, ExternalLink, Share2, Languages, Star, FileText } from "@/lib/icons";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { addProcessingVideo } from "@/lib/processing-videos";
 import { SiteConfig } from "@/site-config";
 import { languages as LANGUAGES } from "@/lib/languages";
+
+type SummaryLengthPref = "brief" | "standard" | "detailed";
+
+const SUMMARY_LENGTH_OPTIONS: { value: SummaryLengthPref; label: string }[] = [
+  { value: "brief", label: "Brief" },
+  { value: "standard", label: "Standard" },
+  { value: "detailed", label: "Detailed" },
+];
 
 type Props = {
   videoId: string;
@@ -26,6 +37,8 @@ type Props = {
   channelActive?: boolean;
   onToggleChannel?: () => void;
   onSummarized?: () => void;
+  summaryLengthPref?: SummaryLengthPref | null;
+  onSummaryLengthChange?: (length: SummaryLengthPref | null) => void;
 };
 
 function formatDate(dateStr: string) {
@@ -53,6 +66,8 @@ export function VideoInboxRow({
   channelActive,
   onToggleChannel,
   onSummarized,
+  summaryLengthPref,
+  onSummaryLengthChange,
 }: Props) {
   const [summarizing, setSummarizing] = useState(false);
   const [subscribing, setSubscribing] = useState(false);
@@ -219,6 +234,46 @@ export function VideoInboxRow({
               <Languages className="h-3.5 w-3.5" />
               Other language…
             </DropdownMenuItem>
+          )}
+          {onSummaryLengthChange && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger className="flex items-center gap-2">
+                  <FileText className="h-3.5 w-3.5" />
+                  Summary length
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  <DropdownMenuItem
+                    onClick={() => onSummaryLengthChange(null)}
+                    className="flex items-center gap-2"
+                  >
+                    {summaryLengthPref == null && (
+                      <span className="text-red-400">●</span>
+                    )}
+                    {summaryLengthPref != null && (
+                      <span className="invisible">●</span>
+                    )}
+                    Channel default
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  {SUMMARY_LENGTH_OPTIONS.map((opt) => (
+                    <DropdownMenuItem
+                      key={opt.value}
+                      onClick={() => onSummaryLengthChange(opt.value)}
+                      className="flex items-center gap-2"
+                    >
+                      {summaryLengthPref === opt.value ? (
+                        <span className="text-red-400">●</span>
+                      ) : (
+                        <span className="invisible">●</span>
+                      )}
+                      {opt.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+            </>
           )}
         </DropdownMenuContent>
       </DropdownMenu>
