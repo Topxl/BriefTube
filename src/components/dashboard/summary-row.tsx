@@ -12,6 +12,7 @@ import {
   Languages,
   Star,
   Loader2,
+  MessageSquareText,
 } from "@/lib/icons";
 import {
   DropdownMenu,
@@ -96,11 +97,18 @@ function AudioWaveform() {
 }
 
 type SummaryLengthPref = "brief" | "standard" | "detailed";
+type SummaryStylePref = "key_points" | "narrative" | "actionable";
 
 const SUMMARY_LENGTH_OPTIONS: { value: SummaryLengthPref; label: string }[] = [
   { value: "brief", label: "Brief" },
   { value: "standard", label: "Standard" },
   { value: "detailed", label: "Detailed" },
+];
+
+const SUMMARY_STYLE_OPTIONS: { value: SummaryStylePref; label: string }[] = [
+  { value: "key_points", label: "Key points" },
+  { value: "narrative", label: "Narrative" },
+  { value: "actionable", label: "Actionable" },
 ];
 
 export function SummaryRow({
@@ -114,6 +122,8 @@ export function SummaryRow({
   channelAvatarUrl,
   summaryLengthPref,
   onSummaryLengthChange,
+  summaryStylePref,
+  onSummaryStyleChange,
 }: {
   delivery: EnrichedDelivery;
   resolvedTitle?: string;
@@ -125,6 +135,8 @@ export function SummaryRow({
   channelAvatarUrl?: string | null;
   summaryLengthPref?: SummaryLengthPref | null;
   onSummaryLengthChange?: (length: SummaryLengthPref | null) => void;
+  summaryStylePref?: SummaryStylePref | null;
+  onSummaryStyleChange?: (style: SummaryStylePref | null) => void;
 }) {
   const video = delivery.video;
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -538,6 +550,32 @@ export function SummaryRow({
                     className="flex items-center gap-2 pl-4"
                   >
                     <span className={summaryLengthPref === opt.value ? "text-red-400" : "invisible"}>●</span>
+                    {opt.label}
+                  </DropdownMenuItem>
+                ))}
+              </>
+            )}
+            {onSummaryStyleChange && (
+              <>
+                <DropdownMenuSeparator />
+                <div className="text-muted-foreground flex items-center gap-2 px-2 py-1.5 text-xs font-medium">
+                  <MessageSquareText className="h-3.5 w-3.5" />
+                  Summary style
+                </div>
+                <DropdownMenuItem
+                  onClick={() => onSummaryStyleChange(null)}
+                  className="flex items-center gap-2 pl-4"
+                >
+                  <span className={summaryStylePref == null ? "text-red-400" : "invisible"}>●</span>
+                  Channel default
+                </DropdownMenuItem>
+                {SUMMARY_STYLE_OPTIONS.map((opt) => (
+                  <DropdownMenuItem
+                    key={opt.value}
+                    onClick={() => onSummaryStyleChange(opt.value)}
+                    className="flex items-center gap-2 pl-4"
+                  >
+                    <span className={summaryStylePref === opt.value ? "text-red-400" : "invisible"}>●</span>
                     {opt.label}
                   </DropdownMenuItem>
                 ))}
