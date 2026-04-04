@@ -113,7 +113,7 @@ export function VideoInboxRow({
 
   return (
     <div className="nm-raised overflow-hidden rounded-2xl opacity-80 transition-all duration-200 hover:opacity-100">
-      <div className="flex items-center gap-3 p-3">
+      <div className="flex items-start gap-3 p-3">
         {/* Thumbnail */}
         <div className="relative h-[64px] w-[114px] shrink-0 overflow-hidden rounded-lg bg-black/30 sm:h-[72px] sm:w-[128px]">
           <div
