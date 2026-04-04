@@ -268,7 +268,17 @@ def insert_new_video(video_id: str, channel_id: str, video_title: str, video_url
 
 # ── Processing Queue ───────────────────────────────────────────
 
-def enqueue_video(video_id: str, youtube_url: str, video_title: str, channel_id: str, language: str = "fr", tts_voice: str | None = None):
+def enqueue_video(
+    video_id: str,
+    youtube_url: str,
+    video_title: str,
+    channel_id: str,
+    language: str = "fr",
+    tts_voice: str | None = None,
+    summary_length_pref: str | None = None,
+    summary_style: str | None = None,
+    summary_custom_instructions: str | None = None,
+):
     """Enqueue a video for processing in a specific language.
 
     - If no job exists → insert new job.
@@ -289,6 +299,12 @@ def enqueue_video(video_id: str, youtube_url: str, video_title: str, channel_id:
     }
     if tts_voice:
         row["tts_voice"] = tts_voice
+    if summary_length_pref:
+        row["summary_length_pref"] = summary_length_pref
+    if summary_style:
+        row["summary_style"] = summary_style
+    if summary_custom_instructions:
+        row["summary_custom_instructions"] = summary_custom_instructions
 
     existing = (
         sb.table("processing_queue")
@@ -311,6 +327,12 @@ def enqueue_video(video_id: str, youtube_url: str, video_title: str, channel_id:
     update = {"status": "queued", "user_language": language, "attempts": 0, "started_at": None}
     if tts_voice:
         update["tts_voice"] = tts_voice
+    if summary_length_pref:
+        update["summary_length_pref"] = summary_length_pref
+    if summary_style:
+        update["summary_style"] = summary_style
+    if summary_custom_instructions:
+        update["summary_custom_instructions"] = summary_custom_instructions
     sb.table("processing_queue").update(update).eq("id", job["id"]).execute()
 
 
@@ -419,15 +441,16 @@ def mark_user_platform_disconnected(user_id: str, platform: str) -> None:
 # ── Deliveries ─────────────────────────────────────────────────
 
 def get_subscriber_languages(channel_id: str) -> list[dict]:
-    """Return the distinct (language, tts_voice) pairs for active subscribers to a channel.
+    """Return the distinct (language, tts_voice, summary prefs) for active subscribers to a channel.
 
     Each unique preferred_language gets one entry, carrying a representative
-    tts_voice for that language (the first one found among subscribers).
+    tts_voice and summary preferences for that language (the first subscriber found).
+    Per-channel subscription overrides take priority over profile defaults.
     """
     sb = get_client()
     subs = (
         sb.table("subscriptions")
-        .select("user_id")
+        .select("user_id, summary_length_pref, summary_style, summary_custom_instructions")
         .eq("channel_id", channel_id)
         .eq("active", True)
         .execute()
@@ -438,18 +461,37 @@ def get_subscriber_languages(channel_id: str) -> list[dict]:
     user_ids = [s["user_id"] for s in subs.data]
     profiles = (
         sb.table("profiles")
-        .select("preferred_language, tts_voice")
+        .select("id, preferred_language, tts_voice, summary_length_pref, summary_style, summary_custom_instructions")
         .in_("id", user_ids)
         .execute()
     )
 
-    seen: dict[str, str | None] = {}  # language → tts_voice
+    # Build a lookup: user_id → profile
+    profile_by_id: dict[str, dict] = {}
     for p in (profiles.data or []):
-        lang = p.get("preferred_language") or "fr"
-        if lang not in seen:
-            seen[lang] = p.get("tts_voice")
+        profile_by_id[p["id"]] = p
 
-    return [{"language": lang, "tts_voice": voice} for lang, voice in seen.items()]
+    # Build a lookup: user_id → subscription (channel-level overrides)
+    sub_by_user: dict[str, dict] = {}
+    for s in subs.data:
+        sub_by_user[s["user_id"]] = s
+
+    seen: dict[str, dict] = {}  # language → result dict
+    for uid in user_ids:
+        profile = profile_by_id.get(uid, {})
+        sub = sub_by_user.get(uid, {})
+        lang = profile.get("preferred_language") or "fr"
+        if lang not in seen:
+            seen[lang] = {
+                "language": lang,
+                "tts_voice": profile.get("tts_voice"),
+                # Channel overrides take priority over profile defaults
+                "summary_length_pref": sub.get("summary_length_pref") or profile.get("summary_length_pref"),
+                "summary_style": sub.get("summary_style") or profile.get("summary_style"),
+                "summary_custom_instructions": sub.get("summary_custom_instructions") or profile.get("summary_custom_instructions"),
+            }
+
+    return list(seen.values())
 
 
 def create_deliveries_for_video(video_id: str, channel_id: str, language: str = "fr"):

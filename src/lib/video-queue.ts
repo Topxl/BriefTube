@@ -22,15 +22,25 @@ export async function queueVideoForProcessing(
   const { userId, videoId, videoTitle, channelId, userLang } = params;
   const videoUrl = toVideoUrl(videoId);
 
-  // Fetch user's summary preferences
+  // Fetch user's summary preferences (profile defaults)
   const { data: prefs } = await supabase
     .from("profiles")
     .select("summary_length_pref, summary_style, summary_custom_instructions")
     .eq("id", userId)
     .single();
-  const summaryLengthPref = prefs?.summary_length_pref ?? "standard";
-  const summaryStyle = prefs?.summary_style ?? "narrative";
-  const summaryCustomInstructions = prefs?.summary_custom_instructions ?? "";
+
+  // Fetch channel-specific overrides from the subscription (if any)
+  const { data: subscription } = await supabase
+    .from("subscriptions")
+    .select("summary_length_pref, summary_style, summary_custom_instructions")
+    .eq("user_id", userId)
+    .eq("channel_id", channelId)
+    .maybeSingle();
+
+  // Channel overrides take priority over profile defaults
+  const summaryLengthPref = subscription?.summary_length_pref ?? prefs?.summary_length_pref ?? "standard";
+  const summaryStyle = subscription?.summary_style ?? prefs?.summary_style ?? "narrative";
+  const summaryCustomInstructions = subscription?.summary_custom_instructions ?? prefs?.summary_custom_instructions ?? "";
 
   // Check current processing status — filter by language to avoid mixing rows
   // (a video can have separate fr/en rows; maybeSingle() would error on multiple)

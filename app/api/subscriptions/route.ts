@@ -431,7 +431,16 @@ export async function PATCH(request: NextRequest) {
 
   const patchSchema = z.object({
     id: z.string().uuid(),
-    active: z.boolean(),
+    active: z.boolean().optional(),
+    summary_length_pref: z
+      .enum(["brief", "standard", "detailed"])
+      .nullable()
+      .optional(),
+    summary_style: z
+      .enum(["key_points", "narrative", "actionable"])
+      .nullable()
+      .optional(),
+    summary_custom_instructions: z.string().max(500).nullable().optional(),
   });
 
   let rawBody: unknown;
@@ -446,33 +455,59 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 
-  const { id, active } = parsed.data;
+  const {
+    id,
+    active,
+    summary_length_pref,
+    summary_style,
+    summary_custom_instructions,
+  } = parsed.data;
 
-  // If activating, check the active channel limit
-  if (active) {
-    const plan = await getUserPlan(supabase, user.id);
-    const isPro = plan.isPro;
-    const maxActiveChannels = plan.maxChannels;
+  // Build the update payload — only include fields that were explicitly sent
+  const updatePayload: Record<string, unknown> = {};
 
-    if (!isPro) {
-      const { count } = await supabase
-        .from("subscriptions")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .eq("active", true);
+  if (active !== undefined) {
+    // If activating, check the active channel limit
+    if (active) {
+      const plan = await getUserPlan(supabase, user.id);
+      const isPro = plan.isPro;
+      const maxActiveChannels = plan.maxChannels;
 
-      if ((count ?? 0) >= maxActiveChannels) {
-        return NextResponse.json(
-          { error: "Active channel limit reached", maxActiveChannels },
-          { status: 403 },
-        );
+      if (!isPro) {
+        const { count } = await supabase
+          .from("subscriptions")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", user.id)
+          .eq("active", true);
+
+        if ((count ?? 0) >= maxActiveChannels) {
+          return NextResponse.json(
+            { error: "Active channel limit reached", maxActiveChannels },
+            { status: 403 },
+          );
+        }
       }
     }
+    updatePayload.active = active;
+    updatePayload.paused_by_system = false;
+  }
+
+  if (summary_length_pref !== undefined)
+    updatePayload.summary_length_pref = summary_length_pref;
+  if (summary_style !== undefined) updatePayload.summary_style = summary_style;
+  if (summary_custom_instructions !== undefined)
+    updatePayload.summary_custom_instructions = summary_custom_instructions;
+
+  if (Object.keys(updatePayload).length === 0) {
+    return NextResponse.json(
+      { error: "No fields to update" },
+      { status: 400 },
+    );
   }
 
   const { data, error } = await supabase
     .from("subscriptions")
-    .update({ active, paused_by_system: false })
+    .update(updatePayload)
     .eq("id", id)
     .eq("user_id", user.id)
     .select()

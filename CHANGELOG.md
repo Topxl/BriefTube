@@ -1,12 +1,17 @@
 # Changelog
 
+## 2026-04-01
+
+FEATURE: Wire per-channel summary preferences through the processing pipeline — video-queue.ts fetches subscription overrides before profile defaults; RSS scanner (db.py + rss_scanner.py) passes channel-level summary prefs when enqueuing; WebSub webhook handler applies channel overrides; Telegram bot on-demand path passes profile-level prefs; regenerate Supabase types
+FEATURE: Add per-channel summary length preference UI — dropdown submenu in SummaryRow and VideoInboxRow menus to set brief/standard/detailed per channel (falls back to profile default when null); extend PATCH /api/subscriptions to accept summary_length_pref, summary_style, summary_custom_instructions fields; update Supabase types for new subscriptions columns
+
 ## 2026-03-28
 
 CHORE: Remove unused AWS SES adapter — staying with Resend for email delivery
 
 ## 2026-04-04
 
-FIX: worker/gemini_api — replace deprecated gemini-2.0-flash fallback with gemini-1.5-flash (Google removed 2.0-flash for non-new users, causing all summaries to fall back to slower OpenRouter)
+FIX: worker/gemini_api — replace removed gemini-2.0-flash + gemini-1.5-flash (both 404) with gemini-2.5-flash-lite as fallback ($0.10/$0.40 per 1M tokens vs $0.30/$2.50 primary) (Google removed 2.0-flash for non-new users, causing all summaries to fall back to slower OpenRouter)
 FIX: worker/tts_processor — reduce Edge TTS timeout from 300s to 60s (300s × 3 retries = 900s blocked per video, causing systematic 1200s processing timeouts all day)
 FIX: DB — channel_videos table had RLS enabled with no policies → 0 rows returned to authenticated users; add SELECT policy + make get_unified_feed and get_list_follow_feed SECURITY DEFINER
 FEATURE: Dashboard — add "Lists" tab showing videos from list-followed channels (source_type='list_follow') with on-demand Summarize button; "All videos" tab now excludes list-follow channels
