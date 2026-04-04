@@ -119,7 +119,7 @@ export async function POST(req: NextRequest, { params }: Params) {
       channel_id: c.channel_id,
       channel_name: c.channel_name,
       channel_avatar_url: c.channel_avatar_url ?? null,
-      active: true,
+      active: false,
       source_type: "list_follow",
       list_id: id,
     }));
