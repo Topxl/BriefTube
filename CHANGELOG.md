@@ -4,6 +4,12 @@
 
 CHORE: Remove unused AWS SES adapter — staying with Resend for email delivery
 
+## 2026-04-04
+
+FIX: RSS scanner — first-scan backlog explosion: when a channel is seen for the first time (all RSS videos are new), cap processing at 1 video instead of all 15-day backlog; prevents mass delivery flood when pagination fix introduced 5k+ new channels at once
+FIX: RSS scanner — add Ethiopian/Amharic drama filter (ስኩል ላይፍ, አፍላ ፍቅር, liyu cinema) to _DRAMA_MOVIE_PHRASES
+CHORE: DB — clean up deliveries for paused-channel user that were created before channel was paused
+
 ## 2026-04-03
 
 FIX: worker/db — get_all_channel_ids(), get_active_channel_ids(), get_websub_subscriptions() were not paginated — silently truncated at 1 000 rows (Supabase default), causing RSS scanner to miss ~5 000 of 5 886 channels
