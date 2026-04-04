@@ -1,9 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { Play, Plus, Loader2 } from "@/lib/icons";
+import { useState, useCallback } from "react";
+import { Play, Plus, Loader2, MoreHorizontal, ExternalLink, Share2 } from "@/lib/icons";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { addProcessingVideo } from "@/lib/processing-videos";
+import { SiteConfig } from "@/site-config";
 
 type Props = {
   videoId: string;
@@ -113,8 +120,45 @@ export function VideoInboxRow({
     }
   };
 
+  const handleShare = useCallback(async () => {
+    const url = `${SiteConfig.prodUrl}/videos/${videoId}`;
+    try {
+      await navigator.share({ title, url });
+    } catch {
+      await navigator.clipboard.writeText(url);
+      toast.success("Link copied!");
+    }
+  }, [title, videoId]);
+
   return (
-    <div className="nm-raised overflow-hidden rounded-2xl opacity-80 transition-all duration-200 hover:opacity-100">
+    <div className="nm-raised relative overflow-hidden rounded-2xl opacity-80 transition-all duration-200 hover:opacity-100">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button className="text-muted-foreground hover:text-foreground absolute top-2 right-2 z-10 flex h-6 w-6 items-center justify-center rounded-md transition-colors">
+            <MoreHorizontal className="h-4 w-4" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-52">
+          <DropdownMenuItem asChild>
+            <a
+              href={`https://www.youtube.com/watch?v=${videoId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              Open on YouTube
+            </a>
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => void handleShare()}
+            className="flex items-center gap-2"
+          >
+            <Share2 className="h-3.5 w-3.5" />
+            Share
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
       <div className="flex items-start gap-3 p-3">
         {/* Thumbnail */}
         <div className="relative h-[64px] w-[114px] shrink-0 overflow-hidden rounded-lg bg-black/30 sm:h-[72px] sm:w-[128px]">
