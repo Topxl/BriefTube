@@ -10,6 +10,7 @@ import {
   Share2,
   Languages,
   Star,
+  Loader2,
 } from "@/lib/icons";
 import {
   DropdownMenu,
@@ -362,24 +363,6 @@ export function SummaryRow({
                 ? formatSummaryDate(delivery.created_at)
                 : ""}
             </span>
-            {video && (localStatus ?? video.status) !== "completed" && (
-              <span
-                className={`rounded-full px-1.5 py-px text-[10px] font-medium ${
-                  (localStatus ?? video.status) === "failed"
-                    ? "bg-red-500/20 text-red-400"
-                    : "bg-yellow-500/20 text-yellow-400"
-                }`}
-              >
-                {(localStatus ?? video.status) === "failed"
-                  ? tl.statusFailed
-                  : tl.statusProcessing}
-              </span>
-            )}
-            {!video && (
-              <span className="rounded-full bg-yellow-500/20 px-1.5 py-px text-[10px] font-medium text-yellow-400">
-                {tl.statusProcessing}
-              </span>
-            )}
             {channelActive !== undefined && onToggleChannel && (
               <span
                 role="button"
@@ -415,6 +398,33 @@ export function SummaryRow({
               />
             )}
           </div>
+          {/* Line 3: processing/failed status */}
+          {video && (localStatus ?? video.status) !== "completed" && (
+            <div className="mt-1 flex items-center gap-2">
+              <span
+                className={`flex items-center gap-1 rounded-full border px-1.5 py-px text-[10px] font-medium ${
+                  (localStatus ?? video.status) === "failed"
+                    ? "border-red-500/20 text-red-400"
+                    : "border-amber-500/20 text-amber-400"
+                }`}
+              >
+                {(localStatus ?? video.status) !== "failed" && (
+                  <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                )}
+                {(localStatus ?? video.status) === "failed"
+                  ? tl.statusFailed
+                  : tl.statusProcessing}
+              </span>
+            </div>
+          )}
+          {!video && (
+            <div className="mt-1 flex items-center gap-2">
+              <span className="flex items-center gap-1 rounded-full border border-amber-500/20 px-1.5 py-px text-[10px] font-medium text-amber-400">
+                <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                {tl.statusProcessing}
+              </span>
+            </div>
+          )}
         </button>
 
         {/* Right-side actions */}
