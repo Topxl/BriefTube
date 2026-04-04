@@ -16,12 +16,14 @@ import type {
 const PAGE_SIZE = 20;
 
 type SummaryLengthPref = "brief" | "standard" | "detailed";
+type SummaryStylePref = "key_points" | "narrative" | "actionable";
 
 type ChannelState = {
   active: boolean;
   subId: string;
   avatarUrl?: string | null;
   summaryLengthPref?: SummaryLengthPref | null;
+  summaryStylePref?: SummaryStylePref | null;
 };
 
 type Props = {
@@ -243,7 +245,7 @@ export function SummariesFeed({
             .single(),
           supabase
             .from("subscriptions")
-            .select("id, channel_id, active, channel_avatar_url, summary_length_pref")
+            .select("id, channel_id, active, channel_avatar_url, summary_length_pref, summary_style")
             .eq("user_id", user.id),
         ]);
         const pref = profile?.preferred_language ?? "en";
@@ -260,6 +262,7 @@ export function SummariesFeed({
               subId: s.id,
               avatarUrl: s.channel_avatar_url,
               summaryLengthPref: s.summary_length_pref as SummaryLengthPref | null,
+              summaryStylePref: s.summary_style as SummaryStylePref | null,
             };
           }
           setChannelStates(map);
@@ -344,7 +347,7 @@ export function SummariesFeed({
       if (!user) return;
       const { data: subs } = await supabase
         .from("subscriptions")
-        .select("id, channel_id, active, channel_avatar_url, summary_length_pref")
+        .select("id, channel_id, active, channel_avatar_url, summary_length_pref, summary_style")
         .eq("user_id", user.id);
       if (subs) {
         const map: Record<string, ChannelState> = {};
@@ -601,6 +604,40 @@ export function SummariesFeed({
     [channelStates],
   );
 
+  const updateSummaryStyle = useCallback(
+    async (channelId: string, style: SummaryStylePref | null) => {
+      const state = channelStates[channelId] as ChannelState | undefined;
+      if (!state) return;
+      setChannelStates((prev) => ({
+        ...prev,
+        [channelId]: { ...prev[channelId], summaryStylePref: style },
+      }));
+      try {
+        const res = await fetch("/api/subscriptions", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: state.subId,
+            summary_style: style,
+          }),
+        });
+        if (!res.ok) throw new Error("Failed to update");
+        toast.success(
+          style
+            ? `Summary style set to ${style.replace("_", " ")}`
+            : "Using profile default style",
+        );
+      } catch {
+        setChannelStates((prev) => ({
+          ...prev,
+          [channelId]: { ...prev[channelId], summaryStylePref: state.summaryStylePref },
+        }));
+        toast.error("Failed to update summary preference");
+      }
+    },
+    [channelStates],
+  );
+
   const showEmpty =
     !loading &&
     (feedMode === "summaries"
@@ -727,6 +764,24 @@ export function SummariesFeed({
                             )
                         : undefined
                     }
+                    summaryStylePref={
+                      delivery.video?.channel_id
+                        ? (
+                            channelStates[delivery.video.channel_id] as
+                              | ChannelState
+                              | undefined
+                          )?.summaryStylePref
+                        : undefined
+                    }
+                    onSummaryStyleChange={
+                      delivery.video?.channel_id
+                        ? (style) =>
+                            void updateSummaryStyle(
+                              delivery.video?.channel_id ?? "",
+                              style,
+                            )
+                        : undefined
+                    }
                   />
                 ))
             : (feedMode === "all" ? inboxVideos : listVideos).map((v) =>
@@ -766,6 +821,13 @@ export function SummariesFeed({
                     }
                     onSummaryLengthChange={(length) =>
                       void updateSummaryLength(v.channel_id, length)
+                    }
+                    summaryStylePref={
+                      (channelStates[v.channel_id] as ChannelState | undefined)
+                        ?.summaryStylePref
+                    }
+                    onSummaryStyleChange={(style) =>
+                      void updateSummaryStyle(v.channel_id, style)
                     }
                   />
                 ) : (
