@@ -36,8 +36,10 @@ from youtube_utils import (
     mark_direct_blocked,
     is_geo_restricted as _is_geo_restricted,
     get_geo_proxy_urls_for_language as _get_geo_proxy_urls,
+    get_proxy_retry_count as _get_retry_count,
     get_random_static_proxy_url as _get_random_proxy,
     get_static_proxy_pool as _get_proxy_pool,
+    iter_static_proxy_urls as _iter_static_proxy_urls,
     run_geo_bypass as _run_geo_bypass,
 )
 
@@ -210,17 +212,17 @@ class TranscriptExtractor:
             logger.warning("No YouTube cookies found — transcript API may be IP-blocked on cloud IPs")
         self._cookie_health = cookie_health
 
-    def _get_api(self, use_proxy: bool = False) -> YouTubeTranscriptApi:
+    def _get_api(self, use_proxy: bool = False, proxy_url: str | None = None) -> YouTubeTranscriptApi:
         """Return a YouTubeTranscriptApi instance.
 
         Direct-first strategy: by default (use_proxy=False) tries without proxy
-        using cookies. Only switches to rotating residential proxy when caller
-        explicitly sets use_proxy=True after detecting an IP block.
+        using cookies. When use_proxy=True, builds a proxied client using
+        *proxy_url* if provided, else picks a random IP from the static pool.
         This dramatically reduces Webshare bandwidth consumption.
         """
         from youtube_transcript_api.proxies import WebshareProxyConfig, GenericProxyConfig
 
-        http_proxy = _get_random_proxy()
+        http_proxy = proxy_url if proxy_url is not None else _get_random_proxy()
 
         if use_proxy and http_proxy:
             if "p.webshare.io" in http_proxy:
@@ -467,21 +469,30 @@ class TranscriptExtractor:
                     self.last_transcript_source = "piped"
                     return piped_text, piped_lang, None, 0.0
 
-                # Step 2d: youtube-transcript-api via Webshare proxy.
-                # Much lighter than yt-dlp (KB vs MB of metadata) — preferred when
-                # Invidious/Piped are unavailable but native subtitles exist.
-                http_proxy = _get_random_proxy()
-                if http_proxy:
-                    api_proxy = self._get_api(use_proxy=True)
+                # Step 2d: youtube-transcript-api via Static ISP proxy pool.
+                # Much lighter than yt-dlp (KB vs MB of metadata). Each retry
+                # picks a different IP from the pool (sample without replacement),
+                # so transient bot-detection on one IP doesn't kill the attempt.
+                # All retries stay within the flat-rate Static ISP plan.
+                proxy_urls = _iter_static_proxy_urls(_get_retry_count())
+                for i, http_proxy in enumerate(proxy_urls, 1):
+                    api_proxy = self._get_api(use_proxy=True, proxy_url=http_proxy)
                     proxy_data, proxy_lang, proxy_blocked = _fetch_with_api(api_proxy)
                     if proxy_data is not None:
                         full_text = " ".join([entry.text for entry in proxy_data])
+                        host = http_proxy.split("@")[-1] if "@" in http_proxy else "?"
                         logger.info(
-                            f"✅ YouTube transcript via proxy ({len(full_text)} chars) "
-                            f"in language: {proxy_lang}"
+                            f"✅ YouTube transcript via pool[{i}/{len(proxy_urls)}] "
+                            f"({host}) ({len(full_text)} chars) in language: {proxy_lang}"
                         )
                         self.last_transcript_source = "youtube_api"
                         return full_text, proxy_lang, None, 0.0
+                    if i < len(proxy_urls):
+                        host = http_proxy.split("@")[-1] if "@" in http_proxy else "?"
+                        logger.debug(
+                            f"YouTube transcript via pool[{i}/{len(proxy_urls)}] "
+                            f"({host}) failed, trying next IP..."
+                        )
 
                 # Step 2e: Try yt-dlp (detects live/premiere, player_client fallbacks)
                 # Tried after proxies: slower on bot-detected IPs but catches edge cases
@@ -585,7 +596,16 @@ class TranscriptExtractor:
                 "no_warnings": True,
                 "noprogress": True,
                 "nocheckcertificate": True,
-                "extractor_args": {"youtube": {"player_client": player_client}},
+                "extractor_args": {
+                    "youtube": {
+                        "player_client": player_client,
+                        # Force PoToken fetch for PoToken-aware clients
+                        # (web_safari, mweb, tv) via bgutil-pot-provider on
+                        # 127.0.0.1:4416. Drastically reduces "Sign in to
+                        # confirm" bot-detection rate.
+                        "fetch_pot": ["always"],
+                    }
+                },
             }
             if cookies_file:
                 ydl_opts["cookiefile"] = cookies_file
@@ -695,7 +715,16 @@ class TranscriptExtractor:
                 "no_warnings": True,
                 "noprogress": True,
                 "nocheckcertificate": True,
-                "extractor_args": {"youtube": {"player_client": ["tv_embedded"]}},
+                # Use web_safari (PoToken-aware) instead of tv_embedded for
+                # the proxy fallback. Combined with fetch_pot=always and
+                # bgutil-pot-provider, this is the most reliable client for
+                # bypassing YouTube's bot detection through residential proxies.
+                "extractor_args": {
+                    "youtube": {
+                        "player_client": ["web_safari", "mweb"],
+                        "fetch_pot": ["always"],
+                    }
+                },
                 "proxy": proxy_url,
             }
             if cookies_file:
@@ -749,15 +778,26 @@ class TranscriptExtractor:
             result = _run_geo_bypass(_proxy_attempt, source_lang, logger, "yt-dlp subtitle")
             return result if result is not None else (None, None, None)
 
-        # Bot-detected: pick a random static ISP proxy from the pool.
-        # Rotating across the pool distributes load and reduces YouTube
-        # bot-detection on any single IP.
-        http_proxy = _get_random_proxy()
-        if not http_proxy:
+        # Bot-detected: try multiple Static ISP IPs from the pool.
+        # YouTube bot-detection on yt-dlp endpoints is probabilistic — retrying
+        # with different IPs from the same flat-rate plan often succeeds.
+        proxy_urls = _iter_static_proxy_urls(_get_retry_count())
+        if not proxy_urls:
             return None, None, None
-        logger.info("yt-dlp subtitle: all clients bot-detected — retrying with proxy")
-        result = _proxy_attempt(http_proxy, "proxy")
-        return result if result is not None else (None, None, None)
+        logger.info(
+            f"yt-dlp subtitle: all clients bot-detected — trying {len(proxy_urls)} "
+            f"Static ISP IPs from pool..."
+        )
+        for i, http_proxy in enumerate(proxy_urls, 1):
+            host = http_proxy.split("@")[-1] if "@" in http_proxy else http_proxy
+            logger.info(f"yt-dlp subtitle: pool attempt {i}/{len(proxy_urls)} via {host}")
+            result = _proxy_attempt(http_proxy, f"pool[{i}]")
+            if result is not None:
+                return result
+        logger.warning(
+            f"yt-dlp subtitle: all {len(proxy_urls)} pool IPs failed — giving up"
+        )
+        return None, None, None
 
     @staticmethod
     def _parse_vtt_text(content: str) -> Optional[str]:

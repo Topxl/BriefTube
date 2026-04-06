@@ -37,7 +37,9 @@ from youtube_utils import (
     mark_direct_blocked,
     is_geo_restricted as _is_geo_restricted,
     get_geo_proxy_urls_for_language as _get_geo_proxy_urls,
+    get_proxy_retry_count as _get_retry_count,
     get_random_static_proxy_url as _get_random_proxy,
+    iter_static_proxy_urls as _iter_static_proxy_urls,
     run_geo_bypass as _run_geo_bypass,
 )
 
@@ -152,7 +154,12 @@ class WhisperTranscriber:
                         "no_warnings": True,
                         "nocheckcertificate": True,
                         "skip_download": True,
-                        "extractor_args": {"youtube": {"player_client": player_client}},
+                        "extractor_args": {
+                            "youtube": {
+                                "player_client": player_client,
+                                "fetch_pot": ["always"],
+                            }
+                        },
                     }
                     if _cookies_file.exists():
                         pre_opts["cookiefile"] = str(_cookies_file)
@@ -210,7 +217,12 @@ class WhisperTranscriber:
                     'noprogress': True,
                     'nocheckcertificate': True,
                     'max_filesize': 150 * 1024 * 1024,  # 150 MB hard cap
-                    'extractor_args': {'youtube': {'player_client': player_client}},
+                    'extractor_args': {
+                        'youtube': {
+                            'player_client': player_client,
+                            'fetch_pot': ['always'],
+                        }
+                    },
                 }
                 if _cookies_file.exists():
                     ydl_opts['cookiefile'] = str(_cookies_file)
@@ -278,7 +290,15 @@ class WhisperTranscriber:
                 'noprogress': True,
                 'nocheckcertificate': True,
                 'max_filesize': 150 * 1024 * 1024,
-                'extractor_args': {'youtube': {'player_client': ['tv_embedded']}},
+                # web_safari (PoToken-aware) is the most reliable client for
+                # bypassing bot-detection through residential proxies. Combined
+                # with fetch_pot=always and bgutil-pot-provider on 127.0.0.1:4416.
+                'extractor_args': {
+                    'youtube': {
+                        'player_client': ['web_safari', 'mweb'],
+                        'fetch_pot': ['always'],
+                    }
+                },
                 'proxy': proxy_url,
             }
             if _cookies_file.exists():
@@ -330,17 +350,32 @@ class WhisperTranscriber:
             logger.warning("Audio download: all geo-proxy countries failed — video truly geo-restricted")
             return "geo_restricted"
 
-        # Bot-detected: pick a random static ISP proxy from the pool.
-        # Rotating across the pool distributes load and reduces YouTube
-        # bot-detection on any single IP.
-        http_proxy = _get_random_proxy()
-        if http_proxy:
-            logger.info("Audio download: all clients blocked, retrying with proxy (bandwidth cost)...")
-            result = _proxy_download(http_proxy, "proxy")
-            if result is True:
-                return True
-            if result == "live":
-                return "live"
+        # Bot-detected: try multiple Static ISP IPs from the pool.
+        # YouTube bot-detection on the player endpoint is probabilistic and
+        # IP-specific — retrying with different IPs from the same flat-rate
+        # plan often succeeds. We sample without replacement so each retry
+        # hits a distinct IP. Cost stays within the $6 / 250 GB plan.
+        proxy_urls = _iter_static_proxy_urls(_get_retry_count())
+        if proxy_urls:
+            logger.info(
+                f"Audio download: all clients blocked, trying {len(proxy_urls)} "
+                f"Static ISP IPs from pool..."
+            )
+            for i, http_proxy in enumerate(proxy_urls, 1):
+                host = http_proxy.split("@")[-1] if "@" in http_proxy else http_proxy
+                logger.info(f"Audio download: pool attempt {i}/{len(proxy_urls)} via {host}")
+                result = _proxy_download(http_proxy, f"pool[{i}]")
+                if result is True:
+                    return True
+                if result == "live":
+                    return "live"
+                # None = failed this IP, continue to next
+            logger.warning(
+                f"Audio download: all {len(proxy_urls)} pool IPs failed — giving up"
+            )
+            http_proxy = None
+        else:
+            http_proxy = None
 
         logger.warning("Audio download: bot detection on all clients + proxy — will retry later")
         return "auth_required"
