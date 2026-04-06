@@ -442,15 +442,7 @@ export function SummaryRow({
                 Subscribe
               </span>
             ) : null}
-            {video?.summary && (
-              <ChevronDown
-                className={`text-muted-foreground h-3 w-3 transition-transform duration-200 ${showSummary ? "rotate-180" : ""}`}
-              />
-            )}
-          </div>
-          {/* Line 3: processing/failed status */}
-          {video && (localStatus ?? video.status) !== "completed" && (
-            <div className="mt-1 flex items-center gap-2">
+            {video && (localStatus ?? video.status) !== "completed" && (
               <span
                 className={`flex items-center gap-1 rounded-full border px-1.5 py-px text-[10px] font-medium ${
                   (localStatus ?? video.status) === "failed"
@@ -465,16 +457,14 @@ export function SummaryRow({
                   ? tl.statusFailed
                   : tl.statusProcessing}
               </span>
-            </div>
-          )}
-          {!video && (
-            <div className="mt-1 flex items-center gap-2">
+            )}
+            {!video && (
               <span className="flex items-center gap-1 rounded-full border border-amber-500/20 px-1.5 py-px text-[10px] font-medium text-amber-400">
                 <Loader2 className="h-2.5 w-2.5 animate-spin" />
                 {tl.statusProcessing}
               </span>
-            </div>
-          )}
+            )}
+          </div>
         </button>
 
         {/* Right-side actions */}
@@ -692,6 +682,26 @@ export function SummaryRow({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Expand/collapse summary — centered at bottom */}
+      {video?.summary && (
+        <button
+          type="button"
+          onClick={() => {
+            setShowSummary(!showSummary);
+            if (!isRead) {
+              localStorage.setItem(`read:${delivery.id}`, "1");
+              setIsRead(true);
+            }
+          }}
+          aria-label={showSummary ? "Hide summary" : "Show summary"}
+          className="text-muted-foreground/30 hover:text-muted-foreground absolute right-0 bottom-0 left-0 flex items-center justify-center transition-colors"
+        >
+          <ChevronDown
+            className={`h-3 w-3 transition-transform duration-200 ${showSummary ? "rotate-180" : ""}`}
+          />
+        </button>
       )}
     </div>
   );

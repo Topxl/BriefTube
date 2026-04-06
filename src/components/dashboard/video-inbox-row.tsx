@@ -1,7 +1,17 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Play, Plus, Loader2, MoreHorizontal, ExternalLink, Share2, Languages, Star, FileText } from "@/lib/icons";
+import {
+  Play,
+  Plus,
+  Loader2,
+  MoreHorizontal,
+  ExternalLink,
+  Share2,
+  Languages,
+  Star,
+  FileText,
+} from "@/lib/icons";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -129,7 +139,11 @@ export function VideoInboxRow({
         const res = await fetch("/api/process-video", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ videoId, videoTitle: title, language: langCode }),
+          body: JSON.stringify({
+            videoId,
+            videoTitle: title,
+            language: langCode,
+          }),
         });
         if (!res.ok) {
           toast.error("Generation error");
@@ -199,7 +213,10 @@ export function VideoInboxRow({
                 onClick={() => void handleGenerateLang(code)}
                 className="flex items-center gap-2"
               >
-                <Star className="h-3 w-3 shrink-0 text-yellow-400" fill="currentColor" />
+                <Star
+                  className="h-3 w-3 shrink-0 text-yellow-400"
+                  fill="currentColor"
+                />
                 {generatingLang === code
                   ? "Generating…"
                   : `Generate in ${new Intl.DisplayNames(["en"], { type: "language" }).of(code) ?? lang.name}`}
@@ -226,7 +243,13 @@ export function VideoInboxRow({
                 onClick={() => onSummaryLengthChange(null)}
                 className="flex items-center gap-2 pl-4"
               >
-                <span className={summaryLengthPref == null ? "text-red-400" : "invisible"}>●</span>
+                <span
+                  className={
+                    summaryLengthPref == null ? "text-red-400" : "invisible"
+                  }
+                >
+                  ●
+                </span>
                 Channel default
               </DropdownMenuItem>
               {SUMMARY_LENGTH_OPTIONS.map((opt) => (
@@ -235,7 +258,15 @@ export function VideoInboxRow({
                   onClick={() => onSummaryLengthChange(opt.value)}
                   className="flex items-center gap-2 pl-4"
                 >
-                  <span className={summaryLengthPref === opt.value ? "text-red-400" : "invisible"}>●</span>
+                  <span
+                    className={
+                      summaryLengthPref === opt.value
+                        ? "text-red-400"
+                        : "invisible"
+                    }
+                  >
+                    ●
+                  </span>
                   {opt.label}
                 </DropdownMenuItem>
               ))}
@@ -295,8 +326,6 @@ export function VideoInboxRow({
                 {channelActive ? "Active" : "Paused"}
               </span>
             )}
-          </div>
-          <div className="mt-1 flex items-center gap-2">
             {videoStatus === "processing" ? (
               <span className="flex items-center gap-1 rounded-full border border-amber-500/20 px-1.5 py-px text-[10px] font-medium text-amber-400">
                 <Loader2 className="h-2.5 w-2.5 animate-spin" />
