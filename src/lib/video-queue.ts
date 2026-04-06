@@ -63,12 +63,29 @@ export async function queueVideoForProcessing(
     existing?.status === "pending" ||
     existing?.status === "processing"
   ) {
-    await supabase.from("deliveries").insert({
-      user_id: userId,
-      video_id: videoId,
-      status: "pending",
-      language: userLang,
-    });
+    // Check if a delivery already exists for this user+video
+    const { data: existingDelivery } = await supabase
+      .from("deliveries")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("video_id", videoId)
+      .maybeSingle();
+
+    if (existingDelivery) {
+      // Bump created_at to bring the video to the top of the feed
+      await supabase
+        .from("deliveries")
+        .update({ created_at: new Date().toISOString() })
+        .eq("id", existingDelivery.id);
+    } else {
+      // No delivery yet — create one
+      await supabase.from("deliveries").insert({
+        user_id: userId,
+        video_id: videoId,
+        status: "pending",
+        language: userLang,
+      });
+    }
     return { queued: false };
   }
 
