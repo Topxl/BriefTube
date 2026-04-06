@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { addProcessingVideo } from "@/lib/processing-videos";
+import { ProcessingIndicator } from "@/components/dashboard/processing-indicator";
 import { useSummarizeVideo } from "@/hooks/use-summarize-video";
 import { SiteConfig } from "@/site-config";
 import { languages as LANGUAGES } from "@/lib/languages";
@@ -283,7 +284,13 @@ export function VideoInboxRow({
           />
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="flex h-10 w-10 items-center justify-center rounded-full border border-white/[0.1] bg-black/50">
-              <Play className="ml-px h-4 w-4 text-white/50" />
+              {videoStatus &&
+              videoStatus !== "completed" &&
+              videoStatus !== "failed" ? (
+                <ProcessingIndicator />
+              ) : (
+                <Play className="ml-px h-4 w-4 text-white/50" />
+              )}
             </div>
           </div>
         </div>
@@ -326,12 +333,9 @@ export function VideoInboxRow({
                 {channelActive ? "Active" : "Paused"}
               </span>
             )}
-            {videoStatus === "processing" ? (
-              <span className="flex items-center gap-1 rounded-full border border-amber-500/20 px-1.5 py-px text-[10px] font-medium text-amber-400">
-                <Loader2 className="h-2.5 w-2.5 animate-spin" />
-                Processing
-              </span>
-            ) : videoStatus === "failed" ? (
+            {videoStatus &&
+            videoStatus !== "completed" &&
+            videoStatus !== "failed" ? null : videoStatus === "failed" ? (
               <span className="text-muted-foreground/40 flex items-center gap-1 rounded-full border border-white/[0.07] px-1.5 py-px text-[10px] font-medium">
                 Unavailable
               </span>
