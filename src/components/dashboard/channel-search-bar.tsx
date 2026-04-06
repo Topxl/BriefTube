@@ -136,10 +136,10 @@ export function ChannelSearchBar() {
   };
 
   const handleSummarize = async () => {
-    // Fallback to the raw URL if preview didn't extract a videoId — the API normalizes both
-    const videoIdOrUrl = preview?.videoId ?? trimmed;
+    // Try preview first, fallback to client-side extraction, fallback to raw URL
+    const clientVideoId = preview?.videoId ?? extractVideoId(trimmed);
+    const videoIdOrUrl = clientVideoId ?? trimmed;
     if (!videoIdOrUrl) return;
-    const previewVideoId = preview?.videoId;
     const previewTitle = preview?.title;
     await summarize(
       { videoId: videoIdOrUrl, videoTitle: previewTitle },
@@ -148,24 +148,23 @@ export function ChannelSearchBar() {
         // we only want to track the real videoId, so handle tracking manually.
         trackProcessing: false,
         onSuccess: ({ queued }) => {
-          // Only show the processing card when the video actually needs processing.
-          // If queued=false the video was already completed — just a new delivery was added.
-          if (previewVideoId) {
-            if (queued) {
-              addProcessingVideo({
-                videoId: previewVideoId,
-                title: previewTitle ?? previewVideoId,
-                startedAt: Date.now(),
-              });
-            } else {
-              // Video already processed — promote it to the top of the summaries feed
-              window.dispatchEvent(
-                new CustomEvent("summariesHighlight", {
-                  detail: { videoId: previewVideoId },
-                }),
-              );
-            }
+          if (!clientVideoId) return;
+          if (queued) {
+            // New processing job — show processing card
+            addProcessingVideo({
+              videoId: clientVideoId,
+              title: previewTitle ?? clientVideoId,
+              startedAt: Date.now(),
+            });
+          } else {
+            // Video already summarized — promote it to the top of the feed
+            window.dispatchEvent(
+              new CustomEvent("summariesHighlight", {
+                detail: { videoId: clientVideoId },
+              }),
+            );
           }
+          setQ("");
         },
       },
     );
