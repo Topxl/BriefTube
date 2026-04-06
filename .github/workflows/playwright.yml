@@ -32,6 +32,7 @@ jobs:
     env:
       NODE_ENV: "production"
       SKIP_ENV_VALIDATION: "true"
+      ENABLE_TEST_AUTH: "true"
       # Supabase — public URL/anon key are safe to hardcode (NEXT_PUBLIC_* = embedded in client bundle).
       # Service role key fallback is a non-empty placeholder so createAdminClient() doesn't throw;
       # Supabase will return { data: null, error } on 401, pages render with empty data gracefully.
