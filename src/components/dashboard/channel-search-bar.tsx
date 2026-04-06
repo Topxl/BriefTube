@@ -135,7 +135,9 @@ export function ChannelSearchBar() {
   };
 
   const handleSummarize = async () => {
-    if (!preview?.videoId) return;
+    // Fallback to the raw URL if preview didn't extract a videoId — the API normalizes both
+    const videoIdOrUrl = preview?.videoId ?? trimmed;
+    if (!videoIdOrUrl) return;
     setSummarizing(true);
     try {
       // Summarize only — never subscribe
@@ -143,8 +145,8 @@ export function ChannelSearchBar() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          videoId: preview.videoId,
-          videoTitle: preview.title,
+          videoId: videoIdOrUrl,
+          videoTitle: preview?.title,
         }),
       });
       if (!res.ok) {
@@ -155,19 +157,22 @@ export function ChannelSearchBar() {
       const data = (await res.json()) as { queued?: boolean };
       // Only show the processing card when the video actually needs processing.
       // If queued=false the video was already completed — just a new delivery was added.
-      if (data.queued) {
-        addProcessingVideo({
-          videoId: preview.videoId,
-          title: preview.title ?? preview.videoId,
-          startedAt: Date.now(),
-        });
-      } else {
-        // Video already processed — promote it to the top of the summaries feed
-        window.dispatchEvent(
-          new CustomEvent("summariesHighlight", {
-            detail: { videoId: preview.videoId },
-          }),
-        );
+      const previewVideoId = preview?.videoId;
+      if (previewVideoId) {
+        if (data.queued) {
+          addProcessingVideo({
+            videoId: previewVideoId,
+            title: preview.title ?? previewVideoId,
+            startedAt: Date.now(),
+          });
+        } else {
+          // Video already processed — promote it to the top of the summaries feed
+          window.dispatchEvent(
+            new CustomEvent("summariesHighlight", {
+              detail: { videoId: previewVideoId },
+            }),
+          );
+        }
       }
       setQ("");
     } catch {
