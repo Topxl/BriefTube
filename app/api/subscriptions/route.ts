@@ -292,9 +292,11 @@ export async function POST(request: NextRequest) {
     } else {
       // Mark ALL videos as skipped first — this blocks the scanner from picking
       // them up while we insert the subscription below.
+      // Use admin client to bypass RLS (processed_videos has no user-session INSERT policy).
+      const admin = createAdminClient();
       const skipResults = await Promise.all(
         videos.map((v) =>
-          supabase.from("processed_videos").upsert(
+          admin.from("processed_videos").upsert(
             {
               video_id: v.videoId,
               channel_id: finalChannelId,
