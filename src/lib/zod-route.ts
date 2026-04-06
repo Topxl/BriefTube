@@ -38,9 +38,11 @@ class RouteBuilder<TBody = unknown, TParams = unknown> {
         try {
           const rawBody = await req.json();
           parsedBody = this.bodySchema.parse(rawBody) as TBody;
-        } catch {
+        } catch (err) {
+          const details =
+            err instanceof Error ? err.message : "Invalid body";
           return NextResponse.json(
-            { error: "Invalid request body" },
+            { error: "Invalid request body", details },
             { status: 400 },
           );
         }
