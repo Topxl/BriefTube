@@ -209,6 +209,7 @@ async function FeedSection({ userId }: { userId: string }) {
           <StatsSheet />
         </>
       }
+      banners={<ProcessingVideoCard />}
     />
   );
 }
@@ -235,9 +236,6 @@ export default async function DashboardPage() {
         <PushNotificationBanner />
       </Suspense>
       <PendingVideoProcessor />
-      <Suspense fallback={null}>
-        <ProcessingVideoCard />
-      </Suspense>
       <SectionErrorBoundary>
         <Suspense fallback={<SummariesFeedSkeleton />}>
           <FeedSection userId={user.id} />
