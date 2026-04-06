@@ -13,6 +13,7 @@ import {
   Star,
   Loader2,
   MessageSquareText,
+  Plus,
 } from "@/lib/icons";
 import {
   DropdownMenu,
@@ -141,6 +142,7 @@ export function SummaryRow({
   onSummaryLengthChange,
   summaryStylePref,
   onSummaryStyleChange,
+  onSubscribeChannel,
 }: {
   delivery: EnrichedDelivery;
   resolvedTitle?: string;
@@ -154,6 +156,8 @@ export function SummaryRow({
   onSummaryLengthChange?: (length: SummaryLengthPref | null) => void;
   summaryStylePref?: SummaryStylePref | null;
   onSummaryStyleChange?: (style: SummaryStylePref | null) => void;
+  /** Called when user wants to subscribe to the channel (not yet subscribed) */
+  onSubscribeChannel?: () => void;
 }) {
   const video = delivery.video;
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -494,6 +498,18 @@ export function SummaryRow({
               <Share2 className="h-3.5 w-3.5" />
               Share summary
             </DropdownMenuItem>
+            {onSubscribeChannel && channelActive === undefined && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={onSubscribeChannel}
+                  className="flex items-center gap-2"
+                >
+                  <Plus className="h-3.5 w-3.5 text-red-400" />
+                  Subscribe to channel
+                </DropdownMenuItem>
+              </>
+            )}
             <DropdownMenuSeparator />
             {favoriteLanguages
               .filter((l) => l !== delivery.language)

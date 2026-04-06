@@ -568,6 +568,49 @@ export function SummariesFeed({
     [channelStates, supabase],
   );
 
+  const subscribeChannel = useCallback(
+    async (channelId: string, channelName?: string) => {
+      try {
+        const res = await fetch("/api/subscriptions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            channelId,
+            channelName: channelName ?? channelId,
+          }),
+        });
+        if (!res.ok) {
+          const err = (await res.json()) as { error?: string };
+          toast.error(err.error ?? "Failed to subscribe");
+          return;
+        }
+        const data = (await res.json()) as {
+          id?: string;
+          active?: boolean;
+          channel_avatar_url?: string | null;
+        };
+        if (data.id) {
+          setChannelStates((prev) => ({
+            ...prev,
+            [channelId]: {
+              active: data.active ?? true,
+              subId: data.id as string,
+              avatarUrl: data.channel_avatar_url ?? null,
+            },
+          }));
+          toast.success(
+            data.active
+              ? "Channel subscribed"
+              : "Subscribed but paused (limit reached)",
+          );
+        }
+      } catch {
+        toast.error("Failed to subscribe");
+      }
+    },
+    [],
+  );
+
   const updateSummaryLength = useCallback(
     async (channelId: string, length: SummaryLengthPref | null) => {
       const state = channelStates[channelId] as ChannelState | undefined;
@@ -739,6 +782,16 @@ export function SummariesFeed({
                             void toggleChannel(delivery.video?.channel_id ?? "")
                         : undefined
                     }
+                    onSubscribeChannel={
+                      delivery.video?.channel_id &&
+                      !(delivery.video.channel_id in channelStates)
+                        ? () =>
+                            void subscribeChannel(
+                              delivery.video?.channel_id ?? "",
+                              delivery.video?.video_title ?? undefined,
+                            )
+                        : undefined
+                    }
                     channelAvatarUrl={
                       delivery.video?.channel_id
                         ? (
@@ -813,6 +866,11 @@ export function SummariesFeed({
                       )?.active
                     }
                     onToggleChannel={() => void toggleChannel(v.channel_id)}
+                    onSubscribeChannel={
+                      !(v.channel_id in channelStates)
+                        ? () => void subscribeChannel(v.channel_id, v.title)
+                        : undefined
+                    }
                     channelAvatarUrl={
                       (channelStates[v.channel_id] as ChannelState | undefined)
                         ?.avatarUrl
