@@ -23,6 +23,7 @@ import { dialogManager } from "@/features/dialog-manager/dialog-manager";
 import { openUpsellModal } from "@/components/dashboard/upsell-modal";
 import { Banner } from "@/components/nowts/banner";
 import { addProcessingVideo } from "@/lib/processing-videos";
+import { useSummarizeVideo } from "@/hooks/use-summarize-video";
 import { extractVideoId } from "@/lib/youtube-id";
 import type { Tables } from "@/types/supabase";
 
@@ -198,7 +199,7 @@ export function SourcesSection({
   const [preview, setPreview] = useState<LinkPreview | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [subscribing, setSubscribing] = useState(false);
-  const [summarizing, setSummarizing] = useState(false);
+  const { summarize, loading: summarizing } = useSummarizeVideo();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const supabase = createClient();
@@ -310,41 +311,23 @@ export function SourcesSection({
 
   const handleSummarize = async () => {
     if (!preview?.videoId) return;
-    setSummarizing(true);
-    try {
-      const res = await fetch("/api/process-video", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          videoId: preview.videoId,
-          videoTitle: preview.title,
-        }),
-      });
-      if (!res.ok) {
-        const d = (await res.json()) as { error?: string };
-        toast.error(d.error ?? "Failed");
-        return;
-      }
-      const data = (await res.json()) as { queued?: boolean };
-      if (data.queued) {
-        addProcessingVideo({
-          videoId: preview.videoId,
-          title: preview.title ?? preview.videoId,
-          startedAt: Date.now(),
-        });
-      } else {
-        window.dispatchEvent(
-          new CustomEvent("summariesHighlight", {
-            detail: { videoId: preview.videoId },
-          }),
-        );
-      }
-      setSearchInput("");
-    } catch {
-      toast.error("Something went wrong");
-    } finally {
-      setSummarizing(false);
-    }
+    const videoId = preview.videoId;
+    const previewTitle = preview.title;
+    await summarize(
+      { videoId, videoTitle: previewTitle },
+      {
+        onSuccess: ({ queued }) => {
+          if (!queued) {
+            window.dispatchEvent(
+              new CustomEvent("summariesHighlight", {
+                detail: { videoId },
+              }),
+            );
+          }
+          setSearchInput("");
+        },
+      },
+    );
   };
 
   const [displayedIds] = useState<string[]>(() => [

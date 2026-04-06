@@ -7,6 +7,7 @@ import { Search, Youtube, X, Loader2, Play, Check } from "@/lib/icons";
 import { toast } from "sonner";
 import { openUpsellModal } from "@/components/dashboard/upsell-modal";
 import { addProcessingVideo } from "@/lib/processing-videos";
+import { useSummarizeVideo } from "@/hooks/use-summarize-video";
 import { extractVideoId } from "@/lib/youtube-id";
 
 function isYouTubeInput(val: string): boolean {
@@ -34,7 +35,7 @@ export function ChannelSearchBar() {
   const [preview, setPreview] = useState<LinkPreview | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [subscribing, setSubscribing] = useState(false);
-  const [summarizing, setSummarizing] = useState(false);
+  const { summarize, loading: summarizing } = useSummarizeVideo();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const router = useRouter();
 
@@ -138,48 +139,36 @@ export function ChannelSearchBar() {
     // Fallback to the raw URL if preview didn't extract a videoId — the API normalizes both
     const videoIdOrUrl = preview?.videoId ?? trimmed;
     if (!videoIdOrUrl) return;
-    setSummarizing(true);
-    try {
-      // Summarize only — never subscribe
-      const res = await fetch("/api/process-video", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          videoId: videoIdOrUrl,
-          videoTitle: preview?.title,
-        }),
-      });
-      if (!res.ok) {
-        const d = (await res.json()) as { error?: string };
-        toast.error(d.error ?? "Failed");
-        return;
-      }
-      const data = (await res.json()) as { queued?: boolean };
-      // Only show the processing card when the video actually needs processing.
-      // If queued=false the video was already completed — just a new delivery was added.
-      const previewVideoId = preview?.videoId;
-      if (previewVideoId) {
-        if (data.queued) {
-          addProcessingVideo({
-            videoId: previewVideoId,
-            title: preview.title ?? previewVideoId,
-            startedAt: Date.now(),
-          });
-        } else {
-          // Video already processed — promote it to the top of the summaries feed
-          window.dispatchEvent(
-            new CustomEvent("summariesHighlight", {
-              detail: { videoId: previewVideoId },
-            }),
-          );
-        }
-      }
-      setQ("");
-    } catch {
-      toast.error("Something went wrong");
-    } finally {
-      setSummarizing(false);
-    }
+    const previewVideoId = preview?.videoId;
+    const previewTitle = preview?.title;
+    await summarize(
+      { videoId: videoIdOrUrl, videoTitle: previewTitle },
+      {
+        // The hook would track with videoIdOrUrl which could be a raw URL —
+        // we only want to track the real videoId, so handle tracking manually.
+        trackProcessing: false,
+        onSuccess: ({ queued }) => {
+          // Only show the processing card when the video actually needs processing.
+          // If queued=false the video was already completed — just a new delivery was added.
+          if (previewVideoId) {
+            if (queued) {
+              addProcessingVideo({
+                videoId: previewVideoId,
+                title: previewTitle ?? previewVideoId,
+                startedAt: Date.now(),
+              });
+            } else {
+              // Video already processed — promote it to the top of the summaries feed
+              window.dispatchEvent(
+                new CustomEvent("summariesHighlight", {
+                  detail: { videoId: previewVideoId },
+                }),
+              );
+            }
+          }
+        },
+      },
+    );
   };
 
   return (

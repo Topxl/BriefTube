@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { addProcessingVideo } from "@/lib/processing-videos";
+import { useSummarizeVideo } from "@/hooks/use-summarize-video";
 import { SiteConfig } from "@/site-config";
 import { languages as LANGUAGES } from "@/lib/languages";
 
@@ -66,46 +67,28 @@ export function VideoInboxRow({
   summaryLengthPref,
   onSummaryLengthChange,
 }: Props) {
-  const [summarizing, setSummarizing] = useState(false);
+  const { summarize, loading: summarizing } = useSummarizeVideo();
   const [subscribing, setSubscribing] = useState(false);
   const [generatingLang, setGeneratingLang] = useState<string | null>(null);
   const thumbnailUrl = `/api/thumbnail/${videoId}`;
 
   const handleSummarize = async () => {
-    setSummarizing(true);
-    try {
-      const res = await fetch("/api/process-video", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ videoId, videoTitle: title }),
-      });
-      if (!res.ok) {
-        const err = (await res.json()) as { error?: string };
-        toast.error(err.error ?? "Failed to start summary");
-        return;
-      }
-      const data = (await res.json()) as { queued?: boolean };
-      if (data.queued) {
-        addProcessingVideo({
-          videoId,
-          title,
-          startedAt: Date.now(),
-        });
-        toast.success("Summary requested — processing started");
-      } else {
-        // Already processed — highlight in feed
-        window.dispatchEvent(
-          new CustomEvent("summariesHighlight", {
-            detail: { videoId },
-          }),
-        );
-      }
-      onSummarized?.();
-    } catch {
-      toast.error("Failed to request summary");
-    } finally {
-      setSummarizing(false);
-    }
+    await summarize(
+      { videoId, videoTitle: title },
+      {
+        onSuccess: ({ queued }) => {
+          if (!queued) {
+            // Already processed — highlight in feed
+            window.dispatchEvent(
+              new CustomEvent("summariesHighlight", {
+                detail: { videoId },
+              }),
+            );
+          }
+          onSummarized?.();
+        },
+      },
+    );
   };
 
   const handleSubscribe = async () => {

@@ -2,6 +2,7 @@
 
 ## 2026-04-06
 
+REFACTOR: dashboard — migrate video-inbox-row, channel-search-bar, summary-row (retry + generate lang), pending-video-processor and sources-section to use the centralized useSummarizeVideo hook instead of inline /api/process-video fetches
 FIX: worker — refresh YouTube cookies.txt with full auth set (29 cookies incl. LOGIN_INFO, SID, HSID, APISID, SAPISID, SSID and all __Secure-1P/3P variants vs 12 previously), resolving systematic "Sign in to confirm you're not a bot" errors on yt-dlp; direct VPS IP extraction now works again, dramatically reducing reliance on the proxy pool
 FEATURE: worker — add Static ISP proxy pool with random rotation (YOUTUBE_PROXY_HTTP_LIST) to distribute load across owned Webshare Static Residential IPs, reducing YouTube bot-detection risk on any single IP; Rotating Residential backbone (YOUTUBE_PROXY_HTTP_GEO_TEMPLATE) now reserved exclusively for geo-bypass
 REFACTOR: worker/youtube_utils — add get_random_static_proxy_url() and get_static_proxy_pool() helpers; parse newline/comma/semicolon-separated proxy list

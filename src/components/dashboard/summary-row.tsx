@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { t } from "@/locales";
 import { toast } from "sonner";
-import { addProcessingVideo } from "@/lib/processing-videos";
+import { useSummarizeVideo } from "@/hooks/use-summarize-video";
 import { languages as LANGUAGES } from "@/lib/languages";
 import { SiteConfig } from "@/site-config";
 import { LanguagePicker } from "@/components/dashboard/language-picker";
@@ -252,79 +252,52 @@ export function SummaryRow({
   }, [title, delivery.video_id]);
 
   const [generatingLang, setGeneratingLang] = useState<string | null>(null);
-  const [retrying, setRetrying] = useState(false);
   const [localStatus, setLocalStatus] = useState<string | null>(null);
+  const { summarize, loading: retrying } = useSummarizeVideo();
 
   const handleRetry = useCallback(async () => {
-    setRetrying(true);
-    try {
-      const res = await fetch("/api/process-video", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          videoId: delivery.video_id,
-          videoTitle: title ?? delivery.video_id,
-          language: delivery.language ?? "fr",
-        }),
-      });
-      if (!res.ok) {
-        toast.error("Retry failed");
-        return;
-      }
-      const data = (await res.json()) as { queued?: boolean };
-      if (data.queued) {
-        addProcessingVideo({
-          videoId: delivery.video_id,
-          title: title ?? delivery.video_id,
-          startedAt: Date.now(),
-        });
-        setLocalStatus("processing");
-        toast.success("Retry started!");
-      } else {
-        toast.info("Video is already being processed");
-      }
-    } catch {
-      toast.error("Network error");
-    } finally {
-      setRetrying(false);
-    }
-  }, [delivery.video_id, delivery.language, title]);
+    await summarize(
+      {
+        videoId: delivery.video_id,
+        videoTitle: title ?? delivery.video_id,
+        language: delivery.language ?? "fr",
+      },
+      {
+        toasts: {
+          queued: "Retry started!",
+          alreadyProcessed: "Video is already being processed",
+          failed: "Retry failed",
+        },
+        onSuccess: ({ queued }) => {
+          if (queued) setLocalStatus("processing");
+        },
+      },
+    );
+  }, [summarize, delivery.video_id, delivery.language, title]);
 
   const handleGenerateLang = useCallback(
     async (langCode: string) => {
       setGeneratingLang(langCode);
       try {
-        const res = await fetch("/api/process-video", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+        await summarize(
+          {
             videoId: delivery.video_id,
             videoTitle: title ?? delivery.video_id,
             language: langCode,
-          }),
-        });
-        if (!res.ok) {
-          toast.error("Generation error");
-          return;
-        }
-        const data = (await res.json()) as { queued?: boolean };
-        if (data.queued) {
-          addProcessingVideo({
-            videoId: delivery.video_id,
-            title: title ?? delivery.video_id,
-            startedAt: Date.now(),
-          });
-          toast.success("Generation started!");
-        } else {
-          toast.info("Summary already available in this language");
-        }
-      } catch {
-        toast.error("Network error");
+          },
+          {
+            toasts: {
+              queued: "Generation started!",
+              alreadyProcessed: "Summary already available in this language",
+              failed: "Generation error",
+            },
+          },
+        );
       } finally {
         setGeneratingLang(null);
       }
     },
-    [delivery.video_id, title],
+    [summarize, delivery.video_id, title],
   );
 
   const handleOpenLangPicker = useCallback(() => {
