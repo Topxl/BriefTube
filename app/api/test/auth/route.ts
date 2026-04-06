@@ -9,7 +9,11 @@ import { createAdminClient } from "@/lib/supabase/server";
 const TEST_EMAIL = "e2e-test@brieftube.local";
 
 export async function GET(request: Request) {
-  if (process.env.NODE_ENV === "production") {
+  // Available in dev and when explicitly enabled (e.g. E2E CI)
+  const enabled =
+    process.env.NODE_ENV !== "production" ||
+    process.env.ENABLE_TEST_AUTH === "true";
+  if (!enabled) {
     return NextResponse.json({ error: "Not available" }, { status: 404 });
   }
 
