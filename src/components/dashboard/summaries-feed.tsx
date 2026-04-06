@@ -460,10 +460,12 @@ export function SummariesFeed({
     const handler = (e: Event) => {
       const videoId = (e as CustomEvent<{ videoId: string }>).detail.videoId;
       if (!videoId) return;
+      // Switch to Summaries tab if not already there
+      setFeedMode("summaries");
       setDeliveries((prev) => {
         const idx = prev.findIndex((d) => d.video_id === videoId);
-        if (idx > 0) {
-          // Already in list — move to top instantly, no re-fetch needed
+        if (idx >= 0) {
+          // Already in list — move to top instantly
           const item = prev[idx];
           return [item, ...prev.slice(0, idx), ...prev.slice(idx + 1)];
         }
