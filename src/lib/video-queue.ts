@@ -1,27 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { toVideoUrl } from "@/lib/youtube-id";
-
-async function fetchYouTubeMetadata(
-  videoId: string,
-): Promise<{ title: string | null; channelId: string | null }> {
-  try {
-    const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
-    const res = await fetch(
-      `https://www.youtube.com/oembed?url=${encodeURIComponent(videoUrl)}&format=json`,
-      { signal: AbortSignal.timeout(5000) },
-    );
-    if (!res.ok) return { title: null, channelId: null };
-    const data = (await res.json()) as { title?: string; author_url?: string };
-    // author_url is like "https://www.youtube.com/@handlename"
-    const handleMatch = data.author_url?.match(/@([a-zA-Z0-9_-]+)/);
-    return {
-      title: data.title ?? null,
-      channelId: handleMatch ? `@${handleMatch[1]}` : null,
-    };
-  } catch {
-    return { title: null, channelId: null };
-  }
-}
+import { fetchVideoMetadata } from "@/lib/youtube";
 
 type QueueVideoParams = {
   userId: string;
@@ -139,9 +118,9 @@ export async function queueVideoForProcessing(
     channelId ||
     "";
 
-  // If title OR channel_id is missing, fetch both from YouTube oEmbed in one call
+  // If title OR channel_id is missing, fetch both from YouTube (oEmbed + channel page scrape)
   if (!title || title === videoId || !resolvedChannelId) {
-    const metadata = await fetchYouTubeMetadata(videoId);
+    const metadata = await fetchVideoMetadata(videoId);
     if (!title || title === videoId) {
       title = metadata.title ?? videoId;
     }
