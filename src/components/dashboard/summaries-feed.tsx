@@ -569,15 +569,26 @@ export function SummariesFeed({
   );
 
   const subscribeChannel = useCallback(
-    async (channelId: string, channelName?: string) => {
+    async (
+      channelId: string,
+      channelName?: string,
+      fallbackVideoUrl?: string,
+    ) => {
       try {
+        // If channel_id is empty, fall back to URL-based subscription which
+        // extracts channel info from the video's YouTube page server-side
+        const payload =
+          channelId && channelId !== ""
+            ? { channelId, channelName: channelName ?? channelId }
+            : { url: fallbackVideoUrl };
+        if (!("channelId" in payload) && !("url" in payload && payload.url)) {
+          toast.error("Cannot resolve channel from this video");
+          return;
+        }
         const res = await fetch("/api/subscriptions", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            channelId,
-            channelName: channelName ?? channelId,
-          }),
+          body: JSON.stringify(payload),
         });
         if (!res.ok) {
           const err = (await res.json()) as { error?: string };
@@ -586,13 +597,15 @@ export function SummariesFeed({
         }
         const data = (await res.json()) as {
           id?: string;
+          channel_id?: string;
           active?: boolean;
           channel_avatar_url?: string | null;
         };
         if (data.id) {
+          const resolvedChannelId = data.channel_id ?? channelId;
           setChannelStates((prev) => ({
             ...prev,
-            [channelId]: {
+            [resolvedChannelId]: {
               active: data.active ?? true,
               subId: data.id as string,
               avatarUrl: data.channel_avatar_url ?? null,
@@ -603,6 +616,9 @@ export function SummariesFeed({
               ? "Channel subscribed"
               : "Subscribed but paused (limit reached)",
           );
+          // Refresh the page to update video rows with the new channel_id
+          // (the feed's initialChannelStates may still be stale)
+          window.location.reload();
         }
       } catch {
         toast.error("Failed to subscribe");
@@ -783,12 +799,14 @@ export function SummariesFeed({
                         : undefined
                     }
                     onSubscribeChannel={
-                      delivery.video?.channel_id &&
+                      // Show Subscribe if no channel state (not subscribed) AND we have some way to identify the video
+                      !delivery.video?.channel_id ||
                       !(delivery.video.channel_id in channelStates)
                         ? () =>
                             void subscribeChannel(
                               delivery.video?.channel_id ?? "",
                               delivery.video?.video_title ?? undefined,
+                              delivery.video?.video_url ?? undefined,
                             )
                         : undefined
                     }
@@ -867,8 +885,13 @@ export function SummariesFeed({
                     }
                     onToggleChannel={() => void toggleChannel(v.channel_id)}
                     onSubscribeChannel={
-                      !(v.channel_id in channelStates)
-                        ? () => void subscribeChannel(v.channel_id, v.title)
+                      !v.channel_id || !(v.channel_id in channelStates)
+                        ? () =>
+                            void subscribeChannel(
+                              v.channel_id,
+                              v.title,
+                              v.video?.video_url ?? undefined,
+                            )
                         : undefined
                     }
                     channelAvatarUrl={
