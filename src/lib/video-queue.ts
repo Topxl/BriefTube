@@ -1,6 +1,21 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { toVideoUrl } from "@/lib/youtube-id";
 
+async function fetchYouTubeTitle(videoId: string): Promise<string | null> {
+  try {
+    const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
+    const res = await fetch(
+      `https://www.youtube.com/oembed?url=${encodeURIComponent(videoUrl)}&format=json`,
+      { signal: AbortSignal.timeout(5000) },
+    );
+    if (!res.ok) return null;
+    const data = (await res.json()) as { title?: string };
+    return data.title ?? null;
+  } catch {
+    return null;
+  }
+}
+
 type QueueVideoParams = {
   userId: string;
   videoId: string;
@@ -58,6 +73,17 @@ export async function queueVideoForProcessing(
     .eq("language", userLang)
     .maybeSingle();
 
+  // Also look up any other-language row for this video — useful to inherit
+  // a real title and channel_id when we're creating a new-language entry
+  const { data: otherLang } = await supabase
+    .from("processed_videos")
+    .select("video_title, channel_id")
+    .eq("video_id", videoId)
+    .neq("language", userLang)
+    .neq("video_title", videoId)
+    .limit(1)
+    .maybeSingle();
+
   if (
     existing?.status === "completed" ||
     existing?.status === "pending" ||
@@ -90,18 +116,34 @@ export async function queueVideoForProcessing(
   }
 
   // Prefer a real title over the video_id fallback.
-  // If the caller only had the video_id, the worker will backfill the real title
-  // from YouTube metadata once it fetches it.
-  const title =
-    (videoTitle !== videoId ? videoTitle : null) ||
-    (existing?.video_title !== "[pre-subscription]"
-      ? existing?.video_title
+  // Priority: caller-provided > existing-same-lang > other-lang > oEmbed fetch > videoId
+  let title: string =
+    (videoTitle && videoTitle !== videoId ? videoTitle : null) ||
+    (existing?.video_title && existing.video_title !== videoId && existing.video_title !== "[pre-subscription]"
+      ? existing.video_title
       : null) ||
-    videoId;
+    otherLang?.video_title ||
+    "";
+  if (!title || title === videoId) {
+    // Last resort: fetch the real title from YouTube oEmbed
+    const fetched = await fetchYouTubeTitle(videoId);
+    title = fetched ?? videoId;
+  }
+
+  // Resolve channel_id from existing row, other-language row, or caller
+  const resolvedChannelId =
+    (existing?.channel_id && existing.channel_id !== "" ? existing.channel_id : null) ||
+    (otherLang?.channel_id && otherLang.channel_id !== "" ? otherLang.channel_id : null) ||
+    channelId;
+
   if (existing) {
     await supabase
       .from("processed_videos")
-      .update({ status: "pending", video_title: title })
+      .update({
+        status: "pending",
+        video_title: title,
+        ...(resolvedChannelId !== existing.channel_id ? { channel_id: resolvedChannelId } : {}),
+      })
       .eq("video_id", videoId)
       .eq("language", userLang);
   } else {
@@ -111,7 +153,7 @@ export async function queueVideoForProcessing(
       video_url: videoUrl,
       status: "pending",
       language: userLang,
-      channel_id: channelId,
+      channel_id: resolvedChannelId,
     });
   }
 
@@ -128,7 +170,7 @@ export async function queueVideoForProcessing(
       video_id: videoId,
       youtube_url: videoUrl,
       video_title: title,
-      channel_id: existing?.channel_id ?? channelId,
+      channel_id: resolvedChannelId,
       status: "queued",
       user_language: userLang,
       priority,
