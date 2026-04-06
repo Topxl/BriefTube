@@ -11,7 +11,6 @@ import {
   Share2,
   Languages,
   Star,
-  Loader2,
   MessageSquareText,
   Plus,
 } from "@/lib/icons";
@@ -28,6 +27,7 @@ import { useSummarizeVideo } from "@/hooks/use-summarize-video";
 import { languages as LANGUAGES } from "@/lib/languages";
 import { SiteConfig } from "@/site-config";
 import { LanguagePicker } from "@/components/dashboard/language-picker";
+import { ProcessingIndicator } from "@/components/dashboard/processing-indicator";
 import { dialogManager } from "@/features/dialog-manager/dialog-manager";
 
 const tl = t.dashboard.summaries;
@@ -355,6 +355,10 @@ export function SummaryRow({
             >
               {playing ? (
                 <AudioWaveform />
+              ) : !video ||
+                ((localStatus ?? video.status) !== "completed" &&
+                  (localStatus ?? video.status) !== "failed") ? (
+                <ProcessingIndicator />
               ) : (
                 <Play className="ml-px h-4 w-4 text-white" fill="white" />
               )}
@@ -442,26 +446,9 @@ export function SummaryRow({
                 Subscribe
               </span>
             ) : null}
-            {video && (localStatus ?? video.status) !== "completed" && (
-              <span
-                className={`flex items-center gap-1 rounded-full border px-1.5 py-px text-[10px] font-medium ${
-                  (localStatus ?? video.status) === "failed"
-                    ? "border-red-500/20 text-red-400"
-                    : "border-amber-500/20 text-amber-400"
-                }`}
-              >
-                {(localStatus ?? video.status) !== "failed" && (
-                  <Loader2 className="h-2.5 w-2.5 animate-spin" />
-                )}
-                {(localStatus ?? video.status) === "failed"
-                  ? tl.statusFailed
-                  : tl.statusProcessing}
-              </span>
-            )}
-            {!video && (
-              <span className="flex items-center gap-1 rounded-full border border-amber-500/20 px-1.5 py-px text-[10px] font-medium text-amber-400">
-                <Loader2 className="h-2.5 w-2.5 animate-spin" />
-                {tl.statusProcessing}
+            {video && (localStatus ?? video.status) === "failed" && (
+              <span className="flex items-center gap-1 rounded-full border border-red-500/20 px-1.5 py-px text-[10px] font-medium text-red-400">
+                {tl.statusFailed}
               </span>
             )}
           </div>
