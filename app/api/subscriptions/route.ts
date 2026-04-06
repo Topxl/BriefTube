@@ -389,6 +389,8 @@ export async function POST(request: NextRequest) {
         videoTitle: ahaVideo.title,
         channelId: finalChannelId,
         userLang,
+        // Aha moment: first video from a newly added channel — user is waiting
+        priority: 100,
       });
 
       if (queued) {

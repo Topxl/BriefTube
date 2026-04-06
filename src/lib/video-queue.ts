@@ -7,6 +7,13 @@ type QueueVideoParams = {
   videoTitle: string;
   channelId: string;
   userLang: string;
+  /**
+   * Job priority. Higher = processed first.
+   * - 100: User-initiated on-demand request (search bar, Summarize button) — urgent
+   * - 10: New channel subscription first video — "aha moment"
+   * - 0 (default): Background RSS/WebSub auto-queued videos
+   */
+  priority?: number;
 };
 
 /**
@@ -19,7 +26,7 @@ export async function queueVideoForProcessing(
   supabase: SupabaseClient,
   params: QueueVideoParams,
 ): Promise<{ queued: boolean }> {
-  const { userId, videoId, videoTitle, channelId, userLang } = params;
+  const { userId, videoId, videoTitle, channelId, userLang, priority = 0 } = params;
   const videoUrl = toVideoUrl(videoId);
 
   // Fetch user's summary preferences (profile defaults)
@@ -107,10 +114,18 @@ export async function queueVideoForProcessing(
       channel_id: existing?.channel_id ?? channelId,
       status: "queued",
       user_language: userLang,
+      priority,
       summary_length_pref: summaryLengthPref,
       summary_style: summaryStyle,
       summary_custom_instructions: summaryCustomInstructions,
     });
+  } else if (priority > 0) {
+    // Existing job: bump its priority if the new request is higher priority
+    await supabase
+      .from("processing_queue")
+      .update({ priority })
+      .eq("id", existingJob.id)
+      .lt("priority", priority);
   }
 
   await supabase.from("deliveries").insert({
