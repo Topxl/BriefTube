@@ -45,12 +45,14 @@ export const POST = authRoute
 
     // Use admin client for writes — processed_videos/processing_queue/deliveries
     // have no INSERT RLS for user sessions (service_role only)
+    // User-initiated summarize request → highest priority
     const { queued } = await queueVideoForProcessing(adminSupabase, {
       userId: ctx.user.id,
       videoId,
       videoTitle: videoTitle ?? videoId,
       channelId: "",
       userLang,
+      priority: 100,
     });
 
     return { ok: true, queued };
