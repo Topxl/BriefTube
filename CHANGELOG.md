@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-04-06
+
+FIX: worker — refresh YouTube cookies.txt with full auth set (29 cookies incl. LOGIN_INFO, SID, HSID, APISID, SAPISID, SSID and all __Secure-1P/3P variants vs 12 previously), resolving systematic "Sign in to confirm you're not a bot" errors on yt-dlp; direct VPS IP extraction now works again, dramatically reducing reliance on the proxy pool
+FEATURE: worker — add Static ISP proxy pool with random rotation (YOUTUBE_PROXY_HTTP_LIST) to distribute load across owned Webshare Static Residential IPs, reducing YouTube bot-detection risk on any single IP; Rotating Residential backbone (YOUTUBE_PROXY_HTTP_GEO_TEMPLATE) now reserved exclusively for geo-bypass
+REFACTOR: worker/youtube_utils — add get_random_static_proxy_url() and get_static_proxy_pool() helpers; parse newline/comma/semicolon-separated proxy list
+REFACTOR: worker/transcript_extractor + whisper_transcriber + main — replace single os.environ.get("YOUTUBE_PROXY_HTTP") reads with get_random_static_proxy_url() for rotation at every proxy call site
+CHORE: migrate Webshare plan from Rotating Residential ($65/25GB/mo) to Static Residential ISP ($6/250GB/mo) — saves ~$260/month after overage
+
 ## 2026-04-01
 
 FEATURE: Wire per-channel summary preferences through the processing pipeline — video-queue.ts fetches subscription overrides before profile defaults; RSS scanner (db.py + rss_scanner.py) passes channel-level summary prefs when enqueuing; WebSub webhook handler applies channel overrides; Telegram bot on-demand path passes profile-level prefs; regenerate Supabase types
