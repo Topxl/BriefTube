@@ -67,6 +67,40 @@ def get_static_proxy_pool() -> list[str]:
     return [single] if single else []
 
 
+def iter_static_proxy_urls(max_attempts: int | None = None) -> list[str]:
+    """Return up to *max_attempts* distinct proxy URLs from the static pool.
+
+    Sampled without replacement so each retry hits a different IP. Use this
+    when a proxy operation can fail on a single IP (rate limit, bot detection,
+    transient network error) and you want to retry with another IP from the
+    same flat-rate Static ISP plan — without falling back to the per-GB
+    Rotating Residential.
+
+    If max_attempts is None, returns the full pool shuffled. If the pool has
+    fewer entries than max_attempts, returns all available URLs (no padding).
+    """
+    pool = get_static_proxy_pool()
+    if not pool:
+        return []
+    if max_attempts is None or max_attempts >= len(pool):
+        shuffled = pool.copy()
+        random.shuffle(shuffled)
+        return shuffled
+    return random.sample(pool, max_attempts)
+
+
+# Number of distinct Static ISP IPs to try before giving up on a proxy operation.
+# Each retry uses a different random IP from the pool. Configurable via env var
+# YOUTUBE_PROXY_RETRY_COUNT (default 3). Costs no extra money — all attempts
+# stay within the flat-rate Static ISP plan.
+def get_proxy_retry_count() -> int:
+    """Return how many distinct Static ISP IPs to try per proxy operation."""
+    try:
+        return max(1, int(os.environ.get("YOUTUBE_PROXY_RETRY_COUNT", "3")))
+    except ValueError:
+        return 3
+
+
 # ── Shared "direct connection blocked" state ───────────────────────────────────
 #
 # When YouTube blocks the VPS IP (bot detection / rate limit), every direct
@@ -133,14 +167,37 @@ def hours_until_premiere(err: str) -> int:
 
 
 # ── yt-dlp player clients ─────────────────────────────────────────────────────
+#
+# CRITICAL — PoToken integration (2026):
+#
+# YouTube's bot detection on the /youtubei/v1/player endpoint validates a
+# "Proof of Origin Token" (PoToken) generated client-side. Only certain
+# player_clients consume PoToken:
+#   - PoToken-aware: web, web_safari, mweb, tv (require fetch_pot=always
+#     and bgutil-pot-provider running on 127.0.0.1:4416)
+#   - PoToken-bypass (legacy): ios, android, android_vr, tv_embedded
+#     — these don't validate PoToken but YouTube increasingly bot-detects
+#     them with "Sign in to confirm" since late 2024.
+#
+# Lessons learned (2026-04-06 verification):
+#   - tv client returns "DRM protected" errors (not usable here)
+#   - web_safari + mweb + fetch_pot=always work reliably with bgutil-pot-provider
+#   - ios + android: ~30-40% bot-detection rate even with cookies + residential proxy
+#
+# Verified working chain: web_safari → mweb → tv_embedded (legacy fallback)
+#
+# Whenever you build a yt-dlp call, also add fetch_pot=always to extractor_args
+# so the PoToken provider is invoked for the PoToken-aware clients.
 
-# Full chain: used for subtitle extraction (light requests, worth trying all clients).
-# ios + mweb recommended 2026; android + tv_embedded as additional fallbacks.
-PLAYER_CLIENTS_FULL: list[list[str]] = [["ios"], ["mweb"], ["android"], ["tv_embedded"]]
+PLAYER_CLIENTS_FULL: list[list[str]] = [
+    ["web_safari"],   # PoToken-aware, most reliable
+    ["mweb"],         # PoToken-aware mobile web
+    ["tv_embedded"],  # legacy fallback (no PoToken needed)
+    ["ios"],          # last-resort fallback (often bot-detected in 2026)
+]
 
-# Short chain: used for audio download in Whisper (heavy requests, fail fast).
-# ios + mweb is the recommended 2026 pair (android_vr deprecated, tv_embedded secondary).
-PLAYER_CLIENTS_SHORT: list[list[str]] = [["ios"], ["mweb"]]
+# Short chain: used for audio download in Whisper (fail fast).
+PLAYER_CLIENTS_SHORT: list[list[str]] = [["web_safari"], ["mweb"], ["tv_embedded"]]
 
 
 # ── Bot-detection keywords ────────────────────────────────────────────────────
