@@ -5,8 +5,11 @@ import {
   addProcessingVideo,
   getProcessingVideos,
 } from "@/lib/processing-videos";
+import { useSummarizeVideo } from "@/hooks/use-summarize-video";
 
 export function PendingVideoProcessor() {
+  const { summarize } = useSummarizeVideo();
+
   useEffect(() => {
     const raw = localStorage.getItem("pendingVideo");
     if (!raw) return;
@@ -52,14 +55,13 @@ export function PendingVideoProcessor() {
         /* keep videoId as title */
       }
 
-      // Queue for processing (with best title we have)
-      await fetch("/api/process-video", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ videoId: id }),
-      });
+      // Queue for processing (with best title we have) — silent background call
+      await summarize(
+        { videoId: id },
+        { toasts: false, trackProcessing: false },
+      );
     })();
-  }, []);
+  }, [summarize]);
 
   return null;
 }
