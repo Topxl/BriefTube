@@ -54,26 +54,47 @@ function ProcessingCard({ video }: { video: ProcessingVideo }) {
     return () => clearInterval(interval);
   }, [video.startedAt]);
 
-  // On mount: check if already completed (e.g. card stuck from before Realtime was added)
+  // Poll the status every 5s as a fallback for Realtime (which can lag)
   useEffect(() => {
-    supabase
-      .from("processed_videos")
-      .select("status")
-      .eq("video_id", video.videoId)
-      .maybeSingle()
-      .then(
-        ({ data }) => {
-          if (data?.status === "completed") {
-            setDone(true);
-            setTimeout(() => removeProcessingVideo(video.videoId), 2500);
-          } else if (data?.status === "failed") {
-            removeProcessingVideo(video.videoId);
-          }
-        },
-        (_err) => {
-          /* ignore network errors */
-        },
-      );
+    let cancelled = false;
+    const check = async () => {
+      const { data } = await supabase
+        .from("processed_videos")
+        .select("status, audio_url")
+        .eq("video_id", video.videoId)
+        .not("audio_url", "is", null)
+        .limit(1)
+        .maybeSingle();
+      if (cancelled) return;
+      if (data?.status === "completed") {
+        setDone(true);
+        // Promote the video to the top of the feed immediately
+        window.dispatchEvent(
+          new CustomEvent("summariesHighlight", {
+            detail: { videoId: video.videoId },
+          }),
+        );
+        setTimeout(() => removeProcessingVideo(video.videoId), 2500);
+        return true;
+      }
+      if (data?.status === "failed") {
+        removeProcessingVideo(video.videoId);
+        return true;
+      }
+      return false;
+    };
+    // Immediate check on mount
+    void check();
+    // Then poll every 5s
+    const interval = setInterval(() => {
+      void check().then((stopped) => {
+        if (stopped) clearInterval(interval);
+      });
+    }, 5000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, [video.videoId, supabase]);
 
   // Realtime: auto-dismiss when the video is done
@@ -92,6 +113,11 @@ function ProcessingCard({ video }: { video: ProcessingVideo }) {
           const newStatus = (payload.new as { status?: string }).status;
           if (newStatus === "completed") {
             setDone(true);
+            window.dispatchEvent(
+              new CustomEvent("summariesHighlight", {
+                detail: { videoId: video.videoId },
+              }),
+            );
             setTimeout(() => removeProcessingVideo(video.videoId), 2500);
           } else if (newStatus === "failed") {
             removeProcessingVideo(video.videoId);
