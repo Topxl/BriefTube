@@ -35,6 +35,39 @@ type YouTubeChannelInfo = {
  * Fetch channel info by scraping YouTube page (no API key needed)
  * Simple, free, and works for all channels
  */
+/**
+ * Centralized helper: fetch full video metadata (title + real UC channel ID + channel name).
+ * Uses oEmbed for title/handle, then scrapes the channel page for the real UC ID.
+ * Returns null fields on failure — caller should provide fallbacks.
+ */
+export async function fetchVideoMetadata(videoId: string): Promise<{
+  title: string | null;
+  channelId: string | null;
+  channelName: string | null;
+}> {
+  const oembed = await fetchVideoOembed(videoId);
+  if (!oembed) {
+    return { title: null, channelId: null, channelName: null };
+  }
+  // Extract handle from author_url (e.g. "https://www.youtube.com/@handle")
+  const handleMatch = oembed.author_url.match(/@([a-zA-Z0-9_-]+)/);
+  const handle = handleMatch ? `@${handleMatch[1]}` : null;
+  if (!handle) {
+    return {
+      title: oembed.title,
+      channelId: null,
+      channelName: oembed.author_name,
+    };
+  }
+  // Resolve the handle to a real UC channel ID by scraping the channel page
+  const channelInfo = await getYouTubeChannelInfo(handle);
+  return {
+    title: oembed.title,
+    channelId: channelInfo.channelId,
+    channelName: channelInfo.channelName || oembed.author_name,
+  };
+}
+
 export async function getYouTubeChannelInfo(
   channelIdOrHandle: string,
 ): Promise<YouTubeChannelInfo> {
