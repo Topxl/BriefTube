@@ -393,7 +393,7 @@ export function SummaryRow({
                 ? formatSummaryDate(delivery.created_at)
                 : ""}
             </span>
-            {channelActive !== undefined && onToggleChannel && (
+            {channelActive !== undefined && onToggleChannel ? (
               <span
                 role="button"
                 tabIndex={0}
@@ -421,7 +421,27 @@ export function SummaryRow({
                 />
                 {channelActive ? "Active" : "Paused"}
               </span>
-            )}
+            ) : onSubscribeChannel ? (
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSubscribeChannel();
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    onSubscribeChannel();
+                  }
+                }}
+                className="text-muted-foreground/40 hover:text-foreground/60 flex cursor-pointer items-center gap-1 rounded-full border border-red-500/20 px-1.5 py-px text-[10px] font-medium text-red-400 transition-all hover:text-red-300"
+              >
+                <Plus className="h-2.5 w-2.5" />
+                Subscribe
+              </span>
+            ) : null}
             {video?.summary && (
               <ChevronDown
                 className={`text-muted-foreground h-3 w-3 transition-transform duration-200 ${showSummary ? "rotate-180" : ""}`}
@@ -498,18 +518,6 @@ export function SummaryRow({
               <Share2 className="h-3.5 w-3.5" />
               Share summary
             </DropdownMenuItem>
-            {onSubscribeChannel && channelActive === undefined && (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={onSubscribeChannel}
-                  className="flex items-center gap-2"
-                >
-                  <Plus className="h-3.5 w-3.5 text-red-400" />
-                  Subscribe to channel
-                </DropdownMenuItem>
-              </>
-            )}
             <DropdownMenuSeparator />
             {favoriteLanguages
               .filter((l) => l !== delivery.language)
