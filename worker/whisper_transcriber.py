@@ -37,6 +37,7 @@ from youtube_utils import (
     mark_direct_blocked,
     is_geo_restricted as _is_geo_restricted,
     get_geo_proxy_urls_for_language as _get_geo_proxy_urls,
+    get_random_static_proxy_url as _get_random_proxy,
     run_geo_bypass as _run_geo_bypass,
 )
 
@@ -329,8 +330,10 @@ class WhisperTranscriber:
             logger.warning("Audio download: all geo-proxy countries failed — video truly geo-restricted")
             return "geo_restricted"
 
-        # Bot-detected: single rotating proxy
-        http_proxy = os.environ.get("YOUTUBE_PROXY_HTTP", "")
+        # Bot-detected: pick a random static ISP proxy from the pool.
+        # Rotating across the pool distributes load and reduces YouTube
+        # bot-detection on any single IP.
+        http_proxy = _get_random_proxy()
         if http_proxy:
             logger.info("Audio download: all clients blocked, retrying with proxy (bandwidth cost)...")
             result = _proxy_download(http_proxy, "proxy")

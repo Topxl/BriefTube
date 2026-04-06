@@ -36,6 +36,8 @@ from youtube_utils import (
     mark_direct_blocked,
     is_geo_restricted as _is_geo_restricted,
     get_geo_proxy_urls_for_language as _get_geo_proxy_urls,
+    get_random_static_proxy_url as _get_random_proxy,
+    get_static_proxy_pool as _get_proxy_pool,
     run_geo_bypass as _run_geo_bypass,
 )
 
@@ -218,7 +220,7 @@ class TranscriptExtractor:
         """
         from youtube_transcript_api.proxies import WebshareProxyConfig, GenericProxyConfig
 
-        http_proxy = os.environ.get("YOUTUBE_PROXY_HTTP", "")
+        http_proxy = _get_random_proxy()
 
         if use_proxy and http_proxy:
             if "p.webshare.io" in http_proxy:
@@ -234,9 +236,9 @@ class TranscriptExtractor:
                     )
                     logger.debug(f"Using WebshareProxyConfig (rotating residential, port {port})")
                     return YouTubeTranscriptApi(proxy_config=proxy_config)
-            else:
-                proxy_config = GenericProxyConfig(http_url=http_proxy)
-                return YouTubeTranscriptApi(proxy_config=proxy_config)
+            # Generic proxy (Static ISP IP or non-Webshare) — use GenericProxyConfig
+            proxy_config = GenericProxyConfig(http_url=http_proxy)
+            return YouTubeTranscriptApi(proxy_config=proxy_config)
 
         # No proxy — use cookies-only session if available
         import requests
@@ -468,7 +470,7 @@ class TranscriptExtractor:
                 # Step 2d: youtube-transcript-api via Webshare proxy.
                 # Much lighter than yt-dlp (KB vs MB of metadata) — preferred when
                 # Invidious/Piped are unavailable but native subtitles exist.
-                http_proxy = os.environ.get("YOUTUBE_PROXY_HTTP", "")
+                http_proxy = _get_random_proxy()
                 if http_proxy:
                     api_proxy = self._get_api(use_proxy=True)
                     proxy_data, proxy_lang, proxy_blocked = _fetch_with_api(api_proxy)
@@ -747,8 +749,10 @@ class TranscriptExtractor:
             result = _run_geo_bypass(_proxy_attempt, source_lang, logger, "yt-dlp subtitle")
             return result if result is not None else (None, None, None)
 
-        # Bot-detected: single rotating proxy
-        http_proxy = os.environ.get("YOUTUBE_PROXY_HTTP", "")
+        # Bot-detected: pick a random static ISP proxy from the pool.
+        # Rotating across the pool distributes load and reduces YouTube
+        # bot-detection on any single IP.
+        http_proxy = _get_random_proxy()
         if not http_proxy:
             return None, None, None
         logger.info("yt-dlp subtitle: all clients bot-detected — retrying with proxy")

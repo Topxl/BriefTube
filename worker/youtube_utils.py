@@ -6,11 +6,65 @@ transcript_extractor.py, whisper_transcriber.py and rss_scanner.py.
 
 import logging
 import os
+import random
 import re
 import time
 from typing import Any, Callable
 
 logger = logging.getLogger(__name__)
+
+
+# ── Static ISP proxy pool (rotation across owned static IPs) ──────────────────
+#
+# YOUTUBE_PROXY_HTTP_LIST contains a newline- or comma-separated list of
+# full proxy URLs (http://user:pass@host:port). Each call picks one at random,
+# distributing load across the owned Static ISP IPs. This is the primary
+# proxy pool — used for transcript fetching and Whisper audio downloads.
+#
+# If the list is empty or unset, falls back to the single YOUTUBE_PROXY_HTTP
+# URL for backwards compatibility.
+#
+# YOUTUBE_PROXY_HTTP_GEO_TEMPLATE (separate env var) is used ONLY for
+# geo-restricted videos — it points to the Rotating Residential backbone
+# with a {country} placeholder for country-targeted bypass.
+
+
+def _parse_proxy_list(raw: str) -> list[str]:
+    """Split YOUTUBE_PROXY_HTTP_LIST into individual URLs.
+
+    Accepts newline, comma or semicolon separators. Empty entries stripped.
+    """
+    if not raw:
+        return []
+    for sep in ("\n", ";", ","):
+        if sep in raw:
+            return [u.strip() for u in raw.split(sep) if u.strip()]
+    return [raw.strip()] if raw.strip() else []
+
+
+def get_random_static_proxy_url() -> str:
+    """Return a randomly chosen proxy URL from the static ISP pool.
+
+    Reads YOUTUBE_PROXY_HTTP_LIST (newline/comma-separated). Picks one at
+    random so that load is distributed across owned IPs and YouTube bot
+    detection is less likely to flag a single IP.
+
+    Falls back to YOUTUBE_PROXY_HTTP (single URL) if the list is not set.
+    Returns "" if no proxy is configured at all.
+    """
+    pool = _parse_proxy_list(os.environ.get("YOUTUBE_PROXY_HTTP_LIST", ""))
+    if pool:
+        return random.choice(pool)
+    return os.environ.get("YOUTUBE_PROXY_HTTP", "")
+
+
+def get_static_proxy_pool() -> list[str]:
+    """Return the full pool of static proxy URLs (for stats/logging)."""
+    pool = _parse_proxy_list(os.environ.get("YOUTUBE_PROXY_HTTP_LIST", ""))
+    if pool:
+        return pool
+    single = os.environ.get("YOUTUBE_PROXY_HTTP", "")
+    return [single] if single else []
 
 
 # ── Shared "direct connection blocked" state ───────────────────────────────────

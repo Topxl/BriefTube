@@ -1553,8 +1553,10 @@ async def health_loop():
             return {"name": "Invidious", "status": "error", "detail": "All instances unreachable"}
 
         async def check_webshare():
-            """Test Webshare residential proxy against YouTube."""
-            proxy_url = os.environ.get("YOUTUBE_PROXY_HTTP", "")
+            """Test Webshare proxy pool against YouTube (picks one at random)."""
+            from youtube_utils import get_random_static_proxy_url, get_static_proxy_pool
+            proxy_url = get_random_static_proxy_url()
+            pool_size = len(get_static_proxy_pool())
             if not proxy_url:
                 return {"name": "Webshare", "status": "not_configured"}
             try:
@@ -1565,7 +1567,8 @@ async def health_loop():
                         timeout=aiohttp.ClientTimeout(total=10),
                     ) as r:
                         if r.status == 200:
-                            return {"name": "Webshare", "status": "ok", "detail": "proxy résidentiel actif"}
+                            detail = f"pool de {pool_size} IP{'s' if pool_size > 1 else ''} actif"
+                            return {"name": "Webshare", "status": "ok", "detail": detail}
                         elif r.status == 402:
                             return {"name": "Webshare", "status": "error", "detail": "quota épuisé (402)"}
                         else:
