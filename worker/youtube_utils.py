@@ -406,22 +406,21 @@ def run_geo_bypass(
 # /api/v1/videos/{id}   → adaptiveFormats (audio stream URLs)
 # Shuffled per call for load balancing; fails gracefully if all are down.
 INVIDIOUS_INSTANCES: list[str] = [
-    "https://invidious.privacydev.net",
-    "https://inv.tux.pizza",
+    # Verified working 2026-04-08 — list shrinks fast, recheck periodically.
+    # Test command: curl -sI <url>/api/v1/captions/dQw4w9WgXcQ
+    "https://inv.nadeko.net",
     "https://invidious.nerdvpn.de",
-    "https://iv.datura.network",
-    "https://invidious.lunar.icu",
+    "https://inv.thepixora.com",
 ]
 
 # Public Piped instances — alternative YouTube frontend.
 # /streams/{id} → { audioStreams: [...], subtitles: [...] }
 # Shuffled per call for load balancing; fails gracefully if all are down.
 PIPED_INSTANCES: list[str] = [
-    "https://pipedapi.kavin.rocks",
-    "https://pipedapi.adminforge.de",
-    "https://pipedapi.syncpundit.io",
-    "https://piped-api.garudalinux.org",
+    # Verified working 2026-04-08 — list shrinks fast, recheck periodically.
+    # Test command: curl -sI <url>/streams/dQw4w9WgXcQ
     "https://api.piped.projectsegfau.lt",
+    "https://pipedapi.in.projectsegfau.lt",
 ]
 
 
