@@ -1,6 +1,18 @@
 import type { NextConfig } from "next";
 import bundleAnalyzer from "@next/bundle-analyzer";
-import { withSentryConfig } from "@sentry/nextjs";
+
+// withSentryConfig from @sentry/nextjs has been disabled because it
+// auto-instruments every server-side page module, transitively pulling in
+// @opentelemetry/api + require-in-the-middle which Next.js 16.2 + Turbopack
+// rewrites with content-hashed external module names that fail at runtime
+// (verified 2026-04-07: privacy page require()'d "require-in-the-middle-<hash>"
+// even after instrumentation.ts was emptied). Removing this wrapper keeps
+// Sentry client-side via instrumentation-client.ts but drops:
+//   - source map upload (do it manually if needed)
+//   - tunnelRoute (/monitoring) for ad-blocker bypass
+//   - bundleSizeOptimizations
+// We accept this until Turbopack lands a fix for external module hash
+// resolution in standalone builds.
 
 const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === "true",
@@ -246,16 +258,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withSentryConfig(withBundleAnalyzer(nextConfig), {
-  org: "vjfpl",
-  project: "javascript-nextjs",
-  authToken: process.env.SENTRY_AUTH_TOKEN,
-  silent: !process.env.CI,
-  widenClientFileUpload: true,
-  tunnelRoute: "/monitoring",
-  bundleSizeOptimizations: {
-    excludeDebugStatements: true,
-    excludeReplayIframe: true,
-    excludeReplayShadowDom: true,
-  },
-});
+export default withBundleAnalyzer(nextConfig);
