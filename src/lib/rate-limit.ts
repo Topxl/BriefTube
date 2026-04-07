@@ -60,6 +60,8 @@ export async function checkRateLimit(
   limiter: Ratelimit | null,
   identifier: string,
 ): Promise<NextResponse | null> {
+  // Bypass rate limiting in tests (E2E + unit) — explicit opt-out
+  if (process.env.DISABLE_RATE_LIMIT === "true") return null;
   if (!limiter) return null; // No Redis configured — skip rate limiting
 
   const { success, limit, remaining, reset } = await limiter.limit(identifier);
