@@ -29,6 +29,7 @@ import { SiteConfig } from "@/site-config";
 import { LanguagePicker } from "@/components/dashboard/language-picker";
 import { ProcessingIndicator } from "@/components/dashboard/processing-indicator";
 import { dialogManager } from "@/features/dialog-manager/dialog-manager";
+import { capture } from "@/lib/posthog/client";
 
 const tl = t.dashboard.summaries;
 
@@ -203,15 +204,35 @@ export function SummaryRow({
         localStorage.setItem(`read:${delivery.id}`, "1");
         setIsRead(true);
       }
+      capture("summary_played", {
+        video_id: delivery.video_id,
+        channel_id: delivery.video?.channel_id,
+        language: delivery.language,
+      });
     }
     setPlaying(!playing);
-  }, [playing, isRead, delivery.id, speed]);
+  }, [
+    playing,
+    isRead,
+    delivery.id,
+    delivery.video_id,
+    delivery.video?.channel_id,
+    delivery.language,
+    speed,
+  ]);
 
-  const changeSpeed = useCallback((s: (typeof SPEEDS)[number]) => {
-    setSpeedLocal(s);
-    setGlobalSpeed(s);
-    if (audioRef.current) audioRef.current.playbackRate = s;
-  }, []);
+  const changeSpeed = useCallback(
+    (s: (typeof SPEEDS)[number]) => {
+      setSpeedLocal(s);
+      setGlobalSpeed(s);
+      if (audioRef.current) audioRef.current.playbackRate = s;
+      capture("summary_speed_changed", {
+        video_id: delivery.video_id,
+        speed: s,
+      });
+    },
+    [delivery.video_id],
+  );
 
   const handleTimeUpdate = useCallback(() => {
     const audio = audioRef.current;
@@ -246,12 +267,20 @@ export function SummaryRow({
     if (navigator.share) {
       try {
         await navigator.share({ title: title ?? "BriefTube", url });
+        capture("summary_shared", {
+          video_id: delivery.video_id,
+          method: "native",
+        });
       } catch {
         // cancelled
       }
     } else {
       await navigator.clipboard.writeText(url);
       toast.success("Link copied!");
+      capture("summary_shared", {
+        video_id: delivery.video_id,
+        method: "clipboard",
+      });
     }
   }, [title, delivery.video_id]);
 
@@ -383,6 +412,10 @@ export function SummaryRow({
               localStorage.setItem(`read:${delivery.id}`, "1");
               setIsRead(true);
             }
+            capture("summary_expanded", {
+              video_id: delivery.video_id,
+              expanded: !showSummary,
+            });
           }}
           className="min-w-0 flex-1 text-left"
         >
@@ -681,6 +714,10 @@ export function SummaryRow({
               localStorage.setItem(`read:${delivery.id}`, "1");
               setIsRead(true);
             }
+            capture("summary_expanded", {
+              video_id: delivery.video_id,
+              expanded: !showSummary,
+            });
           }}
           aria-label={showSummary ? "Hide summary" : "Show summary"}
           className="text-muted-foreground/30 hover:text-muted-foreground absolute right-0 bottom-0 left-0 flex items-center justify-center transition-colors"

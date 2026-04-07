@@ -9,6 +9,7 @@ import {
   subscribeToPush,
   unsubscribeFromPush,
 } from "@/lib/push/use-push-subscription";
+import { capture } from "@/lib/posthog/client";
 
 type Props = {
   initialPushEnabled: boolean;
@@ -107,6 +108,10 @@ export function NotificationsSection({
         .eq("id", user.id);
       setNewsletter(checked);
       toast.success(checked ? "Newsletter enabled." : "Newsletter disabled.");
+      capture("newsletter_toggled", {
+        setting: "email_newsletter",
+        enabled: checked,
+      });
     } catch {
       toast.error("Failed to update newsletter preference.");
     } finally {
@@ -129,6 +134,10 @@ export function NotificationsSection({
       toast.success(
         checked ? "Announcements enabled." : "Announcements disabled.",
       );
+      capture("newsletter_toggled", {
+        setting: "email_announcements",
+        enabled: checked,
+      });
     } catch {
       toast.error("Failed to update announcement preference.");
     } finally {
@@ -151,6 +160,10 @@ export function NotificationsSection({
       toast.success(
         checked ? "Daily digest enabled." : "Daily digest disabled.",
       );
+      capture("newsletter_toggled", {
+        setting: "newsletter_enabled",
+        enabled: checked,
+      });
     } catch {
       toast.error("Failed to update daily digest preference.");
     } finally {

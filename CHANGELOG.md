@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-03-28
+
+FEATURE: Add comprehensive PostHog tracking — 16 new events for user behavior analytics across summary playback, feed filtering, upsells, settings changes, onboarding completion, YouTube sync, channel subscriptions, list follows, and platform disconnections
+
 ## 2026-04-07
 
 FIX: remove all server-bundled @sentry/nextjs imports — next.config.ts no longer wraps with withSentryConfig; instrumentation.ts no longer imports Sentry; src/components/nowts/section-error-boundary.tsx and app/global-error.tsx no longer call Sentry.captureException (they continue logging via the project logger). This eliminates every transitive @opentelemetry/api / require-in-the-middle import from the server bundle, fixing the Next.js 16.2 + Turbopack hash bug ("Cannot find module 'require-in-the-middle-<hash>'") that crashed brieftube-web 7 times on 2026-04-07 morning. Verified by grepping the rebuilt .next/standalone for hash patterns: ZERO matches. Client-side Sentry via instrumentation-client.ts is preserved — browser errors, session replay, router transitions all continue working. Trade-offs: no source map upload, no Sentry tunnel route (/monitoring), no server-side error reporting. Re-enable when Turbopack ships a fix or migrate the worker to @sentry/node directly.

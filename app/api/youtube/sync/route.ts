@@ -4,7 +4,12 @@ import { logger } from "@/lib/logger";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
-import { checkRateLimit, authRateLimit, heavyRateLimit } from "@/lib/rate-limit";
+import {
+  checkRateLimit,
+  authRateLimit,
+  heavyRateLimit,
+} from "@/lib/rate-limit";
+import { captureServerEvent } from "@/lib/posthog/server";
 
 const addActionSchema = z.object({
   channelId: z.string().min(1).max(100),
@@ -34,7 +39,10 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const rateLimitResponse = await checkRateLimit(authRateLimit, `youtube-sync-get:${user.id}`);
+  const rateLimitResponse = await checkRateLimit(
+    authRateLimit,
+    `youtube-sync-get:${user.id}`,
+  );
   if (rateLimitResponse) return rateLimitResponse;
 
   const { data: profile } = await supabase
@@ -72,7 +80,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const rateLimitResponse = await checkRateLimit(heavyRateLimit, `youtube-sync-post:${user.id}`);
+  const rateLimitResponse = await checkRateLimit(
+    heavyRateLimit,
+    `youtube-sync-post:${user.id}`,
+  );
   if (rateLimitResponse) return rateLimitResponse;
 
   const body = await request.json();
@@ -180,6 +191,17 @@ export async function POST(request: NextRequest) {
   logger.info(
     `Sync applied: ${insertedCount} added, ${deactivatedCount} deactivated, ${deletedCount} deleted`,
   );
+
+  // Track YouTube sync
+  captureServerEvent({
+    distinctId: user.id,
+    event: "youtube_sync_applied",
+    properties: {
+      inserted: insertedCount,
+      deactivated: deactivatedCount,
+      deleted: deletedCount,
+    },
+  });
 
   return NextResponse.json({
     inserted: insertedCount,

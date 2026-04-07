@@ -2,9 +2,14 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { checkRateLimit, getRequestIp, publicRateLimit } from "@/lib/rate-limit";
+import {
+  checkRateLimit,
+  getRequestIp,
+  publicRateLimit,
+} from "@/lib/rate-limit";
 import { cookies } from "next/headers";
 import { logger } from "@/lib/logger";
+import { captureServerEvent } from "@/lib/posthog/server";
 
 type YouTubeSubscriptionItem = {
   snippet: {
@@ -76,7 +81,10 @@ async function fetchAllSubscriptions(
 }
 
 export async function GET(request: NextRequest) {
-  const rateLimitResponse = await checkRateLimit(publicRateLimit, `yt-cb:${getRequestIp(request)}`);
+  const rateLimitResponse = await checkRateLimit(
+    publicRateLimit,
+    `yt-cb:${getRequestIp(request)}`,
+  );
   if (rateLimitResponse) return rateLimitResponse;
 
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
@@ -234,6 +242,18 @@ export async function GET(request: NextRequest) {
 
   const imported = inserted.length;
   logger.info(`Import complete: ${imported} imported, ${skipped} skipped`);
+
+  // Track YouTube import
+  if (imported > 0 || skipped > 0) {
+    captureServerEvent({
+      distinctId: user.id,
+      event: "youtube_imported",
+      properties: {
+        imported_count: imported,
+        skipped_count: skipped,
+      },
+    });
+  }
 
   // Pre-mark existing RSS videos as "skipped" in the background — after the
   // redirect is sent. This prevents the RSS scanner (every 5 min) from treating
