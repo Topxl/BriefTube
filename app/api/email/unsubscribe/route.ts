@@ -2,10 +2,17 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { verifyUnsubscribeToken } from "@/lib/mail/unsubscribe";
-import { checkRateLimit, getRequestIp, publicRateLimit } from "@/lib/rate-limit";
+import {
+  checkRateLimit,
+  getRequestIp,
+  publicRateLimit,
+} from "@/lib/rate-limit";
 
 export async function GET(request: NextRequest) {
-  const rateLimitResponse = await checkRateLimit(publicRateLimit, `unsub:${getRequestIp(request)}`);
+  const rateLimitResponse = await checkRateLimit(
+    publicRateLimit,
+    `unsub:${getRequestIp(request)}`,
+  );
   if (rateLimitResponse) return rateLimitResponse;
 
   const { searchParams } = new URL(request.url);
@@ -24,21 +31,25 @@ export async function GET(request: NextRequest) {
   const supabase = createAdminClient();
 
   // Map email type to profile field
-  const fieldMap: Record<string, string> = {
-    newsletter: "newsletter_enabled",
-    announcements: "email_announcements",
-    digest: "email_newsletter",
-  };
+  let updatePayload:
+    | { newsletter_enabled: boolean }
+    | { email_announcements: boolean }
+    | { email_newsletter: boolean }
+    | null = null;
 
-  const field = fieldMap[emailType];
-  if (!field) {
+  if (emailType === "newsletter") {
+    updatePayload = { newsletter_enabled: false };
+  } else if (emailType === "announcements") {
+    updatePayload = { email_announcements: false };
+  } else if (emailType === "digest") {
+    updatePayload = { email_newsletter: false };
+  }
+
+  if (!updatePayload) {
     return NextResponse.json({ error: "Unknown email type" }, { status: 400 });
   }
 
-  await supabase
-    .from("profiles")
-    .update({ [field]: false })
-    .eq("id", userId);
+  await supabase.from("profiles").update(updatePayload).eq("id", userId);
 
   // Redirect to a confirmation page or show a simple message
   return new NextResponse(

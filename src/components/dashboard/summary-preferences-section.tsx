@@ -84,16 +84,28 @@ export function SummaryPreferencesSection({
     "length" | "style" | "instructions" | null
   >(null);
 
-  const save = async (field: string, value: string) => {
+  const save = async (
+    field:
+      | "summary_length_pref"
+      | "summary_style"
+      | "summary_custom_instructions",
+    value: string,
+  ) => {
     setSaving(true);
     try {
       const {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) return;
+      const payload =
+        field === "summary_length_pref"
+          ? { summary_length_pref: value }
+          : field === "summary_style"
+            ? { summary_style: value }
+            : { summary_custom_instructions: value };
       const { error } = await supabase
         .from("profiles")
-        .update({ [field]: value })
+        .update(payload)
         .eq("id", user.id);
       if (error) throw error;
       toast.success("Preference updated");

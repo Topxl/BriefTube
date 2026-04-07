@@ -468,7 +468,13 @@ export async function PATCH(request: NextRequest) {
   } = parsed.data;
 
   // Build the update payload — only include fields that were explicitly sent
-  const updatePayload: Record<string, unknown> = {};
+  const updatePayload: {
+    active?: boolean;
+    paused_by_system?: boolean;
+    summary_length_pref?: string | null;
+    summary_style?: string | null;
+    summary_custom_instructions?: string | null;
+  } = {};
 
   if (active !== undefined) {
     // If activating, check the active channel limit
@@ -503,10 +509,7 @@ export async function PATCH(request: NextRequest) {
     updatePayload.summary_custom_instructions = summary_custom_instructions;
 
   if (Object.keys(updatePayload).length === 0) {
-    return NextResponse.json(
-      { error: "No fields to update" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "No fields to update" }, { status: 400 });
   }
 
   const { data, error } = await supabase
