@@ -4,6 +4,8 @@ import Link from "next/link";
 import { Check } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import { t } from "@/locales";
+import { useEffect } from "react";
+import { capture } from "@/lib/posthog/client";
 
 const tl = t.dashboard.stepper;
 
@@ -42,6 +44,27 @@ export function OnboardingStepper({
   const completed = [hasConnection, channelCount > 0, deliveryCount > 0];
   const completedCount = completed.filter(Boolean).length;
   const allDone = completedCount === 3;
+
+  useEffect(() => {
+    if (hasConnection && completedCount >= 1) {
+      capture("onboarding_step_completed", {
+        step: 1,
+        step_name: "telegram_connected",
+      });
+    }
+    if (channelCount > 0 && completedCount >= 2) {
+      capture("onboarding_step_completed", {
+        step: 2,
+        step_name: "first_channel_added",
+      });
+    }
+    if (deliveryCount > 0 && completedCount >= 3) {
+      capture("onboarding_step_completed", {
+        step: 3,
+        step_name: "first_delivery",
+      });
+    }
+  }, [hasConnection, channelCount, deliveryCount, completedCount]);
 
   if (allDone) return null;
 

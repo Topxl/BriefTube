@@ -524,6 +524,31 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // Track channel activation/pause
+  if (active !== undefined) {
+    if (active) {
+      captureServerEvent({
+        distinctId: user.id,
+        event: "channel_activated",
+        properties: {
+          subscription_id: id,
+          channel_id: data.channel_id,
+          channel_name: data.channel_name,
+        },
+      });
+    } else {
+      captureServerEvent({
+        distinctId: user.id,
+        event: "channel_paused",
+        properties: {
+          subscription_id: id,
+          channel_id: data.channel_id,
+          channel_name: data.channel_name,
+        },
+      });
+    }
+  }
+
   return NextResponse.json(data);
 }
 
@@ -673,6 +698,7 @@ export async function DELETE(request: NextRequest) {
     distinctId: user.id,
     event: "channel_removed",
     properties: {
+      subscription_id: subscriptionId,
       channel_id: sub?.channel_id,
       channel_name: sub?.channel_name,
     },

@@ -3,6 +3,7 @@ import { checkRateLimit, authRateLimit } from "@/lib/rate-limit";
 import { getUserPlan } from "@/lib/subscriptions";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { captureServerEvent } from "@/lib/posthog/server";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -53,6 +54,12 @@ export async function POST(req: NextRequest, { params }: Params) {
       .eq("list_id", id)
       .eq("source_type", "list_follow");
 
+    captureServerEvent({
+      distinctId: user.id,
+      event: "list_unfollowed",
+      properties: { list_id: id },
+    });
+
     return NextResponse.json({ following: false });
   }
 
@@ -86,6 +93,11 @@ export async function POST(req: NextRequest, { params }: Params) {
         { status: 500 },
       );
     }
+    captureServerEvent({
+      distinctId: user.id,
+      event: "list_followed",
+      properties: { list_id: id },
+    });
     return NextResponse.json({ following: true });
   }
 
@@ -168,6 +180,12 @@ export async function POST(req: NextRequest, { params }: Params) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
   }
+
+  captureServerEvent({
+    distinctId: user.id,
+    event: "list_followed",
+    properties: { list_id: id },
+  });
 
   return NextResponse.json({ following: true });
 }

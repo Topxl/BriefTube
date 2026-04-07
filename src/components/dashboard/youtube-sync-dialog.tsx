@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Plus, Trash2, Pause, Check, Loader2, X, RefreshCw } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
+import { capture } from "@/lib/posthog/client";
 
 type AddedChannel = {
   channelId: string;
@@ -126,6 +127,11 @@ export function YouTubeSyncDialog() {
       if (result.deleted > 0) parts.push(`${result.deleted} removed`);
 
       toast.success(parts.length > 0 ? parts.join(", ") : "No changes applied");
+      capture("youtube_synced", {
+        added_count: result.inserted,
+        removed_count: result.deleted,
+        unchanged_count: result.deactivated,
+      });
       close();
       router.refresh();
     } catch {

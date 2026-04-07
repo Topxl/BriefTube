@@ -8,6 +8,7 @@ import { VideoInboxRow } from "@/components/dashboard/video-inbox-row";
 import { LanguagePicker } from "@/components/dashboard/language-picker";
 import { dialogManager } from "@/features/dialog-manager/dialog-manager";
 import { toast } from "sonner";
+import { capture } from "@/lib/posthog/client";
 import type {
   EnrichedDelivery,
   ProcessedVideo,
@@ -63,8 +64,7 @@ export function SummariesFeed({
   const [feedMode, setFeedMode] = useState<"summaries" | "all" | "lists">(
     "summaries",
   );
-  const [deliveries, setDeliveries] =
-    useState<EnrichedDelivery[]>(initialDeliveries);
+  const [deliveries, setDeliveries] = useState(initialDeliveries);
   type InboxVideo = {
     video_id: string;
     channel_id: string;
@@ -115,13 +115,12 @@ export function SummariesFeed({
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   // IDs déjà tentés (succès ou échec) — évite de re-fetcher sur chaque update realtime
-  const fetchedRef = useRef<Set<string>>(new Set());
+  const fetchedRef = useRef(new Set());
   const [titles, setTitles] = useState<Record<string, string>>({});
-  const [favLangs, setFavLangs] = useState<string[]>(initialFavLangs);
+  const [favLangs, setFavLangs] = useState(initialFavLangs);
   const [preferredLang, setPreferredLang] = useState(initialPreferredLang);
   const supabase = useMemo(() => createClient(), []);
-  const [channelStates, setChannelStates] =
-    useState<Record<string, ChannelState>>(initialChannelStates);
+  const [channelStates, setChannelStates] = useState(initialChannelStates);
 
   const loadInboxVideos = useCallback(
     async (pageNum: number) => {
@@ -245,7 +244,9 @@ export function SummariesFeed({
             .single(),
           supabase
             .from("subscriptions")
-            .select("id, channel_id, active, channel_avatar_url, summary_length_pref, summary_style")
+            .select(
+              "id, channel_id, active, channel_avatar_url, summary_length_pref, summary_style",
+            )
             .eq("user_id", user.id),
         ]);
         const pref = profile?.preferred_language ?? "en";
@@ -261,7 +262,8 @@ export function SummariesFeed({
               active: !!s.active,
               subId: s.id,
               avatarUrl: s.channel_avatar_url,
-              summaryLengthPref: s.summary_length_pref as SummaryLengthPref | null,
+              summaryLengthPref:
+                s.summary_length_pref as SummaryLengthPref | null,
               summaryStylePref: s.summary_style as SummaryStylePref | null,
             };
           }
@@ -347,7 +349,9 @@ export function SummariesFeed({
       if (!user) return;
       const { data: subs } = await supabase
         .from("subscriptions")
-        .select("id, channel_id, active, channel_avatar_url, summary_length_pref, summary_style")
+        .select(
+          "id, channel_id, active, channel_avatar_url, summary_length_pref, summary_style",
+        )
         .eq("user_id", user.id);
       if (subs) {
         const map: Record<string, ChannelState> = {};
@@ -356,7 +360,8 @@ export function SummariesFeed({
             active: !!s.active,
             subId: s.id,
             avatarUrl: s.channel_avatar_url,
-            summaryLengthPref: s.summary_length_pref as SummaryLengthPref | null,
+            summaryLengthPref:
+              s.summary_length_pref as SummaryLengthPref | null,
           };
         }
         setChannelStates(map);
@@ -657,7 +662,10 @@ export function SummariesFeed({
         // Revert on error
         setChannelStates((prev) => ({
           ...prev,
-          [channelId]: { ...prev[channelId], summaryLengthPref: state.summaryLengthPref },
+          [channelId]: {
+            ...prev[channelId],
+            summaryLengthPref: state.summaryLengthPref,
+          },
         }));
         toast.error("Failed to update summary preference");
       }
@@ -691,7 +699,10 @@ export function SummariesFeed({
       } catch {
         setChannelStates((prev) => ({
           ...prev,
-          [channelId]: { ...prev[channelId], summaryStylePref: state.summaryStylePref },
+          [channelId]: {
+            ...prev[channelId],
+            summaryStylePref: state.summaryStylePref,
+          },
         }));
         toast.error("Failed to update summary preference");
       }
@@ -713,7 +724,10 @@ export function SummariesFeed({
       <div className="bg-background sticky top-[57px] z-30 -mx-4 flex items-center justify-between border-b border-white/[0.06] px-4 py-2 md:-mx-6 md:px-6">
         <div className="nm-raised flex rounded-full p-0.5">
           <button
-            onClick={() => setFeedMode("summaries")}
+            onClick={() => {
+              setFeedMode("summaries");
+              capture("feed_filter_changed", { mode: "summaries" });
+            }}
             className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
               feedMode === "summaries"
                 ? "bg-red-600 text-white"
@@ -723,7 +737,10 @@ export function SummariesFeed({
             Summaries
           </button>
           <button
-            onClick={() => setFeedMode("all")}
+            onClick={() => {
+              setFeedMode("all");
+              capture("feed_filter_changed", { mode: "all" });
+            }}
             className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
               feedMode === "all"
                 ? "bg-red-600 text-white"
@@ -733,7 +750,10 @@ export function SummariesFeed({
             All videos
           </button>
           <button
-            onClick={() => setFeedMode("lists")}
+            onClick={() => {
+              setFeedMode("lists");
+              capture("feed_filter_changed", { mode: "lists" });
+            }}
             className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
               feedMode === "lists"
                 ? "bg-red-600 text-white"

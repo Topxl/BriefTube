@@ -16,6 +16,7 @@ import {
 import { dialogManager } from "@/features/dialog-manager/dialog-manager";
 import { LanguagePicker } from "@/components/dashboard/language-picker";
 import { languages } from "@/lib/languages";
+import { capture } from "@/lib/posthog/client";
 import type { Language } from "@/lib/languages";
 
 // -----------------------------------------------------------------
@@ -370,7 +371,7 @@ export function DeliverySection({
   const [savingVoice, setSavingVoice] = useState(false);
   const [language, setLanguage] = useState(initialLanguage);
   const [savingLanguage, setSavingLanguage] = useState(false);
-  const [favorites, setFavorites] = useState<string[]>(initialFavorites);
+  const [favorites, setFavorites] = useState(initialFavorites);
 
   const currentLanguageMeta = languages.find((l) => l.code === language);
   const voiceList = getVoicesForLanguage(language);
@@ -449,6 +450,7 @@ export function DeliverySection({
     await supabase.from("profiles").update({ tts_voice: v }).eq("id", user.id);
     setSavingVoice(false);
     toast.success("Voice updated");
+    capture("tts_voice_changed", { voice: v });
   };
 
   const openVoicePicker = () => {

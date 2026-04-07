@@ -6,6 +6,7 @@ import { CheckCircle2 } from "@/lib/icons";
 import { dialogManager } from "@/features/dialog-manager/dialog-manager";
 import { formatCurrency } from "@/lib/format";
 import { logger } from "@/lib/logger";
+import { capture } from "@/lib/posthog/client";
 
 type Interval = "month" | "year";
 
@@ -29,6 +30,10 @@ export function UpsellModal({ defaultInterval = "year" }: Props) {
   const [interval, setInterval] = useState<Interval>(defaultInterval);
   const [prices, setPrices] = useState<PricesData | null>(null);
   const [referral, setReferral] = useState("");
+
+  useEffect(() => {
+    capture("upsell_shown", { source: "channel_limit" });
+  }, []);
 
   useEffect(() => {
     const w = window as Window & {
@@ -144,6 +149,9 @@ export function UpsellModal({ defaultInterval = "year" }: Props) {
         method="POST"
         data-form-type="other"
         suppressHydrationWarning
+        onSubmit={() => {
+          capture("upsell_clicked", { plan: "pro" });
+        }}
       >
         <input type="hidden" name="interval" value={interval} />
         <input type="hidden" name="referral" value={referral} />
