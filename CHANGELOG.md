@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-04-07
+
+FIX: worker/whisper_transcriber — circuit breaker counter was incrementing once per retry, so a single failed video with N=7 retries blew past the threshold=5 and locked the whole worker in `proxy_circuit_open` until a success reset it (never happened, since the open breaker blocked all attempts); now counts ONE whole-video failure after the full pool iteration, adds a 5-minute cooldown auto-reset safeguard, and reports success/failure at the pool-iteration level instead of inside _proxy_download
+
 ## 2026-04-06
 
 FIX: worker — switch yt-dlp player_clients from ios+android+tv_embedded to web_safari+mweb+tv_embedded (PoToken-aware) and force fetch_pot=always at every extractor_args call site, finally activating bgutil-pot-provider for player endpoint requests; reduces "Sign in to confirm" bot-detection rate from ~30% to ~0% in production logs (38 successes / 0 errors over 2 min validation window)

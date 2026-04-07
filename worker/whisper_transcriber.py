@@ -46,42 +46,80 @@ from youtube_utils import (
 logger = logging.getLogger(__name__)
 
 # ── Proxy circuit breaker ──────────────────────────────────────────────────────
-# Tracks consecutive proxy failures (502 Bad Gateway, Tunnel connection failed, etc)
-# When failures exceed PROXY_CIRCUIT_BREAKER_THRESHOLD, circuit breaker opens and
-# skips yt-dlp proxy attempts immediately without waiting 20s for timeout.
-# Resets after first successful proxy download.
+# Tracks consecutive whole-video proxy failures (all IPs in the Static ISP pool
+# failed for a single video). When _PROXY_CIRCUIT_BREAKER_THRESHOLD videos in a
+# row fail on the entire pool, the breaker opens and skips the proxy path for
+# _CIRCUIT_BREAKER_COOLDOWN_SECONDS (auto-reset). A single successful download
+# also resets the breaker.
+#
+# IMPORTANT: the counter is incremented ONCE per video (after all pool retries
+# failed), NOT once per retry. Otherwise with N=7 retries a single failed video
+# would exceed a threshold of 5 instantly and lock the whole worker.
+
+import time as _time
 
 _PROXY_CIRCUIT_BREAKER_THRESHOLD = 5
+_CIRCUIT_BREAKER_COOLDOWN_SECONDS = 300  # 5-minute auto-reset safeguard
 _proxy_failure_count = 0
 _proxy_circuit_open = False
+_proxy_circuit_opened_at: float = 0.0
 
 
 def report_proxy_success():
-    """Report successful proxy download — resets failure counter."""
-    global _proxy_failure_count, _proxy_circuit_open
+    """Report successful proxy download — resets failure counter and closes breaker."""
+    global _proxy_failure_count, _proxy_circuit_open, _proxy_circuit_opened_at
     if _proxy_failure_count > 0 or _proxy_circuit_open:
-        logger.info(f"Proxy circuit breaker reset (was: {_proxy_failure_count} failures, circuit={'open' if _proxy_circuit_open else 'closed'})")
+        logger.info(
+            f"Proxy circuit breaker reset "
+            f"(was: {_proxy_failure_count} failed videos, "
+            f"circuit={'open' if _proxy_circuit_open else 'closed'})"
+        )
         _proxy_failure_count = 0
         _proxy_circuit_open = False
+        _proxy_circuit_opened_at = 0.0
 
 
 def report_proxy_failure():
-    """Report proxy download failure — increments failure counter and may open circuit."""
-    global _proxy_failure_count, _proxy_circuit_open
+    """Report a whole-video proxy failure — increments counter, may open circuit.
+
+    Call this ONCE per video when every IP in the Static ISP pool has failed —
+    NOT once per individual retry. The pool iteration has its own loop for that.
+    """
+    global _proxy_failure_count, _proxy_circuit_open, _proxy_circuit_opened_at
     _proxy_failure_count += 1
     if _proxy_failure_count >= _PROXY_CIRCUIT_BREAKER_THRESHOLD:
         if not _proxy_circuit_open:
             _proxy_circuit_open = True
+            _proxy_circuit_opened_at = _time.monotonic()
             logger.warning(
-                f"⚠️ Proxy circuit breaker OPEN — {_proxy_failure_count} consecutive failures. "
-                f"Pausing yt-dlp proxy downloads until proxy recovers."
+                f"⚠️ Proxy circuit breaker OPEN — {_proxy_failure_count} consecutive "
+                f"video failures across the whole pool. Pausing proxy downloads for "
+                f"{_CIRCUIT_BREAKER_COOLDOWN_SECONDS}s."
             )
     else:
-        logger.debug(f"Proxy failure count: {_proxy_failure_count}/{_PROXY_CIRCUIT_BREAKER_THRESHOLD}")
+        logger.debug(
+            f"Proxy video failure count: "
+            f"{_proxy_failure_count}/{_PROXY_CIRCUIT_BREAKER_THRESHOLD}"
+        )
 
 
 def is_proxy_circuit_open():
-    """Check if proxy circuit breaker is open."""
+    """Check if proxy circuit breaker is open.
+
+    Auto-closes the breaker after _CIRCUIT_BREAKER_COOLDOWN_SECONDS to avoid
+    deadlocks where no success can ever reset it.
+    """
+    global _proxy_circuit_open, _proxy_failure_count, _proxy_circuit_opened_at
+    if _proxy_circuit_open and _proxy_circuit_opened_at > 0:
+        elapsed = _time.monotonic() - _proxy_circuit_opened_at
+        if elapsed >= _CIRCUIT_BREAKER_COOLDOWN_SECONDS:
+            logger.info(
+                f"Proxy circuit breaker auto-reset after {elapsed:.0f}s cooldown — "
+                f"will retry proxy path on next video"
+            )
+            _proxy_circuit_open = False
+            _proxy_failure_count = 0
+            _proxy_circuit_opened_at = 0.0
     return _proxy_circuit_open
 
 
@@ -308,18 +346,17 @@ class WhisperTranscriber:
                     ydl.download([youtube_url])
                 if output_path.with_suffix('.opus').exists():
                     logger.info(f"Audio download: {label} successful")
-                    report_proxy_success()
                     return True
             except Exception as e:
                 err = str(e)
                 if "live event has ended" in err.lower():
                     logger.info(f"Audio download ({label}): live/ended stream — {err[:80]}")
                     return "live"
-                # Any failure inside a proxy attempt counts — includes 502, timeouts,
-                # SSL errors (WRONG_VERSION_NUMBER, UNEXPECTED_EOF), connection resets.
-                # Previously only 502/gateway errors counted, leaving timeouts and SSL
-                # errors invisible to the circuit breaker (source of bandwidth explosion).
-                report_proxy_failure()
+                # Per-IP failure — do NOT touch the circuit breaker counter here.
+                # The caller (pool iteration or geo-bypass) is responsible for
+                # deciding whether ALL attempts failed and reporting ONE whole-video
+                # failure to the breaker. Otherwise N retries count as N failures
+                # and open the breaker after a single failed video.
                 logger.warning(f"Audio download ({label}) failed: {err[:120]}")
             return None  # this country failed, try next
 
@@ -344,10 +381,16 @@ class WhisperTranscriber:
         if _geo_restricted_detected:
             result = _run_geo_bypass(_proxy_download, language, logger, "Audio download")
             if result is True:
+                report_proxy_success()
                 return True
             if result == "live":
+                report_proxy_success()
                 return "live"
             logger.warning("Audio download: all geo-proxy countries failed — video truly geo-restricted")
+            # NOTE: we do NOT report a breaker failure here — geo-restriction
+            # means the video is legitimately unavailable from most countries,
+            # not a proxy health issue. Reporting it would open the breaker
+            # incorrectly on legitimate geo-restricted content.
             return "geo_restricted"
 
         # Bot-detected: try multiple Static ISP IPs from the pool.
@@ -366,13 +409,20 @@ class WhisperTranscriber:
                 logger.info(f"Audio download: pool attempt {i}/{len(proxy_urls)} via {host}")
                 result = _proxy_download(http_proxy, f"pool[{i}]")
                 if result is True:
+                    # Any success in the pool closes the breaker (was open from
+                    # previous failed videos, or just confirms proxy is healthy).
+                    report_proxy_success()
                     return True
                 if result == "live":
+                    report_proxy_success()
                     return "live"
                 # None = failed this IP, continue to next
+            # All pool IPs failed for this video — count as ONE whole-video failure
+            # against the breaker, not N per-retry failures.
             logger.warning(
                 f"Audio download: all {len(proxy_urls)} pool IPs failed — giving up"
             )
+            report_proxy_failure()
             http_proxy = None
         else:
             http_proxy = None
