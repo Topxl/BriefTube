@@ -26,7 +26,22 @@ export async function GET() {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // --- VPS remote endpoint (preferred) ---
+  // --- Dev mode: SSH to VPS to fetch worker logs (uses local SSH key) ---
+  // Avoids needing port forwarding or exposing the worker port publicly.
+  if (process.env.NODE_ENV === "development" && env.WORKER_API_SECRET) {
+    try {
+      const cmd = `ssh -o ConnectTimeout=5 brieftube-vps "curl -s -H 'Authorization: Bearer ${env.WORKER_API_SECRET}' http://localhost:8080/logs"`;
+      const { stdout } = await execAsync(cmd, { timeout: 8000 });
+      return NextResponse.json(JSON.parse(stdout));
+    } catch (e) {
+      return NextResponse.json(
+        { error: `Cannot reach VPS worker via SSH: ${String(e)}` },
+        { status: 502 },
+      );
+    }
+  }
+
+  // --- VPS remote endpoint (production) ---
   if (env.VPS_WORKER_URL) {
     if (!env.WORKER_API_SECRET) {
       return NextResponse.json(
