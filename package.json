@@ -53,7 +53,7 @@
     "@react-email/tailwind": "2.0.7",
     "@sentry/nextjs": "^10.47.0",
     "@shikijs/rehype": "^4.0.2",
-    "@supabase/supabase-js": "^2.102.0",
+    "@supabase/supabase-js": "^2.102.1",
     "@t3-oss/env-nextjs": "^0.13.11",
     "@tailwindcss/postcss": "^4.2.2",
     "@tanstack/react-form": "^1.28.6",
