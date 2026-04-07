@@ -63,8 +63,10 @@ async function fetchEligibleUsers(
 // ---------------------------------------------------------------------------
 
 export const onboardingJ1Trigger = inngest.createFunction(
-  { id: "onboarding-j1-trigger" },
-  { cron: "TZ=UTC 30 * * * *" }, // run at :30 each hour (stagger vs newsletter)
+  {
+    id: "onboarding-j1-trigger",
+    triggers: [{ cron: "TZ=UTC 30 * * * *" }], // run at :30 each hour (stagger vs newsletter)
+  },
   async ({ step }) => {
     const users = await step.run("fetch-eligible-j1", async () =>
       fetchEligibleUsers("onboarding_j1", 24, 48),
@@ -85,8 +87,11 @@ export const onboardingJ1Trigger = inngest.createFunction(
 );
 
 export const sendOnboardingJ1 = inngest.createFunction(
-  { id: "onboarding-send-j1", retries: 2 },
-  { event: "onboarding/send-j1" },
+  {
+    id: "onboarding-send-j1",
+    retries: 2,
+    triggers: [{ event: "onboarding/send-j1" }],
+  },
   async ({ event, step }) => {
     const { userId, email } = event.data as { userId: string; email: string };
 
@@ -120,8 +125,10 @@ export const sendOnboardingJ1 = inngest.createFunction(
 // ---------------------------------------------------------------------------
 
 export const onboardingJ3Trigger = inngest.createFunction(
-  { id: "onboarding-j3-trigger" },
-  { cron: "TZ=UTC 45 * * * *" }, // run at :45 each hour
+  {
+    id: "onboarding-j3-trigger",
+    triggers: [{ cron: "TZ=UTC 45 * * * *" }], // run at :45 each hour
+  },
   async ({ step }) => {
     const users = await step.run("fetch-eligible-j3", async () =>
       fetchEligibleUsers("onboarding_j3", 72, 96),
@@ -142,8 +149,11 @@ export const onboardingJ3Trigger = inngest.createFunction(
 );
 
 export const sendOnboardingJ3 = inngest.createFunction(
-  { id: "onboarding-send-j3", retries: 2 },
-  { event: "onboarding/send-j3" },
+  {
+    id: "onboarding-send-j3",
+    retries: 2,
+    triggers: [{ event: "onboarding/send-j3" }],
+  },
   async ({ event, step }) => {
     const { userId, email } = event.data as { userId: string; email: string };
 
