@@ -88,9 +88,12 @@ export const FormAutoSaveWatch = (props: {
   }, props.autoSaveMs ?? 300);
 
   useEffect(() => {
-    return props.form.store.subscribe(() => {
+    const subscription = props.form.store.subscribe(() => {
       debounce();
     });
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [props.form.store, debounce]);
 
   return null;

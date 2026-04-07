@@ -33,7 +33,7 @@ type ChartContextProps = {
   config: ChartConfig;
 };
 
-export type CustomTooltipProps = TooltipContentProps<ValueType, NameType> & {
+export type CustomTooltipProps = TooltipContentProps & {
   className?: string;
   hideLabel?: boolean;
   hideIndicator?: boolean;
@@ -224,7 +224,7 @@ function ChartTooltipContent({
 
           return (
             <div
-              key={item.dataKey}
+              key={String(item.dataKey)}
               className={cn(
                 "[&>svg]:text-muted-foreground flex w-full flex-wrap items-stretch gap-2 [&>svg]:h-2.5 [&>svg]:w-2.5",
                 indicator === "dot" && "items-center",

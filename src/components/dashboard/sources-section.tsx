@@ -189,8 +189,8 @@ export function SourcesSection({
   isPro,
 }: Props) {
   const router = useRouter();
-  const [sources, setSources] = useState<Subscription[]>(initialSources);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [sources, setSources] = useState(initialSources);
+  const [selectedIds, setSelectedIds] = useState(new Set<string>());
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
   const [filterStatus, setFilterStatus] = useState<"all" | "active" | "paused">(
     "all",
@@ -369,7 +369,7 @@ export function SourcesSection({
     });
   };
 
-  const clearSelection = () => setSelectedIds(new Set());
+  const clearSelection = () => setSelectedIds(new Set<string>());
 
   const toggleActive = async (source: Subscription) => {
     const newActive = !source.active;
@@ -400,7 +400,7 @@ export function SourcesSection({
   };
 
   const handleBulkToggleSelected = async (targetActive: boolean) => {
-    const ids = [...selectedIds];
+    const ids: string[] = Array.from(selectedIds);
     const affected = sources.filter(
       (s) => ids.includes(s.id) && s.active !== targetActive,
     );
@@ -431,7 +431,7 @@ export function SourcesSection({
 
   const handleBulkDelete = () => {
     const count = selectedIds.size;
-    const ids = [...selectedIds];
+    const ids: string[] = Array.from(selectedIds);
     dialogManager.confirm({
       title: "Remove channels",
       description: `Remove ${count} channel${count > 1 ? "s" : ""} from your list?`,
@@ -448,7 +448,7 @@ export function SourcesSection({
             return;
           }
           setSources((prev) => prev.filter((s) => !selectedIds.has(s.id)));
-          setSelectedIds(new Set());
+          setSelectedIds(new Set<string>());
           toast.success(`${count} channel${count > 1 ? "s" : ""} removed`);
         },
       },
