@@ -112,6 +112,20 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Prevent Turbopack from bundling Sentry's OpenTelemetry instrumentation
+  // packages — they use dynamic require() patterns that don't survive
+  // bundling and were causing standalone runtime crashes:
+  //   "Cannot find module 'require-in-the-middle-<hash>'"
+  // Each was renamed with a Turbopack content hash but unavailable at runtime.
+  // Listing them here tells Next.js to keep them as runtime requires from
+  // node_modules instead. This is the fix recommended by Sentry's setup wizard
+  // for Next.js 15+: https://docs.sentry.io/platforms/javascript/guides/nextjs/
+  serverExternalPackages: [
+    "require-in-the-middle",
+    "import-in-the-middle",
+    "@opentelemetry/instrumentation",
+    "@opentelemetry/api",
+  ],
   trailingSlash: false,
   skipTrailingSlashRedirect: true,
   experimental: {

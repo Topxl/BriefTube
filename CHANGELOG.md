@@ -2,6 +2,7 @@
 
 ## 2026-04-07
 
+FIX: next.config — add serverExternalPackages for require-in-the-middle, import-in-the-middle, @opentelemetry/instrumentation, @opentelemetry/api to stop Turbopack from bundling them with hashed names that fail to resolve at runtime; resolves "Cannot find module 'require-in-the-middle-<hash>'" crashes that caused 7 web service restarts on 2026-04-07 morning when Sentry's instrumentation hook tried to load OpenTelemetry packages from the standalone build
 FIX: worker/whisper_transcriber — circuit breaker counter was incrementing once per retry, so a single failed video with N=7 retries blew past the threshold=5 and locked the whole worker in `proxy_circuit_open` until a success reset it (never happened, since the open breaker blocked all attempts); now counts ONE whole-video failure after the full pool iteration, adds a 5-minute cooldown auto-reset safeguard, and reports success/failure at the pool-iteration level instead of inside _proxy_download
 
 ## 2026-04-06
