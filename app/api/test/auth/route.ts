@@ -1,31 +1,26 @@
 /**
  * Test-only authentication endpoint.
- * Generates a Supabase magic link for the e2e test user.
- * ONLY available in non-production environments.
+ * Creates/finds the e2e test user, sets a known password, signs in via
+ * signInWithPassword (which sets the auth cookies on the response), and
+ * returns the user ID.
+ *
+ * ONLY available in non-production environments OR when ENABLE_TEST_AUTH=true.
  */
 import { NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/server";
+import { createAdminClient, createClient } from "@/lib/supabase/server";
 
 const TEST_EMAIL = "e2e-test@brieftube.local";
+// Test-only password for the throwaway e2e user. Override via env in CI if needed.
+const TEST_PASSWORD =
+  process.env.E2E_TEST_PASSWORD ?? "e2e-only-not-secret-do-not-reuse";
 
-export async function GET(request: Request) {
-  // Available in dev and when explicitly enabled (e.g. E2E CI)
+export async function GET() {
   const enabled =
     process.env.NODE_ENV !== "production" ||
     process.env.ENABLE_TEST_AUTH === "true";
   if (!enabled) {
     return NextResponse.json({ error: "Not available" }, { status: 404 });
   }
-
-  const { searchParams } = new URL(request.url);
-  const origin =
-    process.env.NEXT_PUBLIC_SITE_URL ?? new URL(request.url).origin;
-  const rawNext = searchParams.get("next") ?? "/dashboard";
-  const next =
-    rawNext.startsWith("/") && !rawNext.startsWith("//")
-      ? rawNext
-      : "/dashboard";
-  const redirectTo = `${origin}/auth/callback?next=${encodeURIComponent(next)}`;
 
   const admin = createAdminClient();
 
@@ -36,6 +31,7 @@ export async function GET(request: Request) {
   if (!testUser) {
     const { data: created, error } = await admin.auth.admin.createUser({
       email: TEST_EMAIL,
+      password: TEST_PASSWORD,
       email_confirm: true,
     });
     if (error) {
@@ -45,24 +41,29 @@ export async function GET(request: Request) {
       );
     }
     testUser = created.user;
+  } else {
+    // Ensure the password is up to date (in case it was changed)
+    await admin.auth.admin.updateUserById(testUser.id, {
+      password: TEST_PASSWORD,
+    });
   }
 
-  // Generate a magic link that redirects back to the app's auth callback
-  const { data: link, error: linkError } = await admin.auth.admin.generateLink({
-    type: "magiclink",
+  // Sign in via the route handler client — this sets the auth cookies
+  // on the NextResponse via the @supabase/ssr cookie handlers.
+  const supabase = await createClient();
+  const { error: signInError } = await supabase.auth.signInWithPassword({
     email: TEST_EMAIL,
-    options: { redirectTo },
+    password: TEST_PASSWORD,
   });
 
-  if (linkError || !link.properties.action_link) {
+  if (signInError) {
     return NextResponse.json(
-      { error: `Failed to generate magic link: ${linkError?.message}` },
+      { error: `Failed to sign in test user: ${signInError.message}` },
       { status: 500 },
     );
   }
 
   return NextResponse.json({
-    actionLink: link.properties.action_link,
     userId: testUser.id,
     email: TEST_EMAIL,
   });
