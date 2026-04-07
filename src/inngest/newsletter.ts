@@ -25,8 +25,10 @@ type NewsletterVideo = {
 // ---------------------------------------------------------------------------
 
 export const dailyNewsletterTrigger = inngest.createFunction(
-  { id: "newsletter-daily-trigger" },
-  { cron: "TZ=UTC 0 * * * *" },
+  {
+    id: "newsletter-daily-trigger",
+    triggers: [{ cron: "TZ=UTC 0 * * * *" }],
+  },
   async ({ step }) => {
     const currentHour = new Date().getUTCHours();
 
@@ -65,8 +67,11 @@ export const dailyNewsletterTrigger = inngest.createFunction(
 // ---------------------------------------------------------------------------
 
 export const sendUserNewsletter = inngest.createFunction(
-  { id: "newsletter-send-user", retries: 2 },
-  { event: "newsletter/send-user" },
+  {
+    id: "newsletter-send-user",
+    retries: 2,
+    triggers: [{ event: "newsletter/send-user" }],
+  },
   async ({ event, step }) => {
     const { userId, email, language, fullSummary } = event.data as {
       userId: string;
