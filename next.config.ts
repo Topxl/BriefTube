@@ -9,12 +9,17 @@ const withBundleAnalyzer = bundleAnalyzer({
 // ---------------------------------------------------------------------------
 // Content Security Policy
 // ---------------------------------------------------------------------------
+// Dev mode needs 'unsafe-eval' because React 19 uses eval() to reconstruct
+// callstacks for debug features. This is NEVER allowed in production.
+const isDev = process.env.NODE_ENV === "development";
+const evalDirective = isDev ? " 'unsafe-eval'" : "";
+
 const cspDirectives = [
   // Default: only allow same-origin
   "default-src 'self'",
 
   // Scripts: self + GTM/Google Ads + Rewardful + inline scripts for gtag init
-  "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://r.wdfl.co https://us-assets.i.posthog.com",
+  `script-src 'self' 'unsafe-inline'${evalDirective} https://www.googletagmanager.com https://r.wdfl.co https://us-assets.i.posthog.com`,
 
   // Styles: unsafe-inline required for Tailwind / CSS-in-JS
   "style-src 'self' 'unsafe-inline'",
