@@ -1,6 +1,5 @@
 "use client";
 
-import * as Sentry from "@sentry/nextjs";
 import { Component, Suspense } from "react";
 import type { ErrorInfo, ReactNode } from "react";
 import { Button } from "@/components/ui/button";
@@ -36,8 +35,12 @@ export class SectionErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
+    // NOTE: Sentry.captureException intentionally removed — see
+    // instrumentation.ts comment block for the Turbopack hash bug context.
+    // Errors are still logged via logger.error and bubble to global window
+    // unhandled error handlers (instrumentation-client.ts attaches Sentry
+    // there if it loaded), so reporting still works on the client.
     logger.error("[SectionErrorBoundary]", error, info.componentStack);
-    Sentry.captureException(error, { extra: { componentStack: info.componentStack } });
   }
 
   handleReset = () => {
