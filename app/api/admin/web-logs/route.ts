@@ -7,6 +7,15 @@ import { getUser } from "@/lib/auth/auth-user";
 
 const execAsync = promisify(exec);
 
+// In dev, prefix commands with `ssh brieftube-vps` so they run on the VPS
+// where the actual web service is. In prod, run locally on the VPS.
+const isDev = process.env.NODE_ENV === "development";
+function vpsCmd(cmd: string): string {
+  return isDev
+    ? `ssh -o ConnectTimeout=5 brieftube-vps ${JSON.stringify(cmd)}`
+    : cmd;
+}
+
 async function requireAdminOrNull() {
   const user = await getUser();
   if (!env.ADMIN_USER_ID || user?.id !== env.ADMIN_USER_ID) return null;
@@ -41,7 +50,7 @@ export async function GET() {
 
   try {
     const result = await execAsync(
-      "systemctl status brieftube-web --no-pager 2>&1",
+      vpsCmd("systemctl status brieftube-web --no-pager 2>&1"),
     ).catch((e: { stdout?: string }) => ({ stdout: e.stdout ?? "" }));
 
     const stdout = (result as { stdout: string }).stdout;
@@ -66,7 +75,9 @@ export async function GET() {
 
   try {
     const { stdout: logOut } = await execAsync(
-      "journalctl -u brieftube-web -n 200 --no-pager -o cat 2>&1 || echo 'No logs available'",
+      vpsCmd(
+        "journalctl -u brieftube-web -n 200 --no-pager -o cat 2>&1 || echo 'No logs available'",
+      ),
     );
 
     const allLines = logOut.split("\n").filter(Boolean);
@@ -115,7 +126,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    await execAsync(`sudo systemctl ${action} brieftube-web`);
+    await execAsync(vpsCmd(`sudo systemctl ${action} brieftube-web`));
     return NextResponse.json({ success: true, action });
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
