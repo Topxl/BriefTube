@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-04-08
+
+FIX: Google Ads conversions silently not firing — diagnosed via Google Ads MCP (0 conversions on 2,757 clicks / ฿4,477 spend over 30 days). Root cause: NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_LABEL was never set in Vercel, so trackAdConversion() hit the empty-label guard and returned without sending the event. Upgraded the empty-label and missing-gtag console.warn to console.error with actionable instructions, added a dev-mode success log, and documented the exact Vercel env var value + redeploy requirement in src/lib/gtag.ts JSDoc and .env.example. Action required: set NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_LABEL=tfEHCM2EqP4bEKb7-PlC in Vercel (Production) and redeploy.
+
 ## 2026-03-28
 
 FEATURE: Add comprehensive PostHog tracking — 16 new events for user behavior analytics across summary playback, feed filtering, upsells, settings changes, onboarding completion, YouTube sync, channel subscriptions, list follows, and platform disconnections
