@@ -189,7 +189,7 @@ type Props = {
 
 export function ProfileContent({
   avatarUrl: _avatarUrl,
-  email: _email,
+  email,
   isTrial,
   isActivePro,
   trialDaysLeft,
@@ -229,7 +229,7 @@ export function ProfileContent({
   const [upgradeInterval, setUpgradeInterval] = useState<Interval>(
     defaultInterval ?? "month",
   );
-  const [prices] = useState<PricesData>(initialPrices);
+  const [prices] = useState(initialPrices);
   const [referral, setReferral] = useState("");
 
   const isActivating = !!paymentSuccess && !isActivePro && retryCount < 10;
@@ -247,7 +247,7 @@ export function ProfileContent({
   useEffect(() => {
     if (!paymentSuccess) return;
     if (isActivePro) {
-      trackAdConversion();
+      trackAdConversion({ email });
       toast.success("You're now Pro!", {
         description: "Enjoy unlimited channels and priority processing.",
         duration: 6000,
@@ -262,7 +262,7 @@ export function ProfileContent({
       setRetryCount((c) => c + 1);
     }, 3000);
     return () => clearTimeout(timer);
-  }, [paymentSuccess, isActivePro, router, retryCount]);
+  }, [paymentSuccess, isActivePro, router, retryCount, email]);
 
   const hasPlus = !!prices.plus;
 

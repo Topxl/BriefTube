@@ -163,7 +163,7 @@ export default async function ListDetailPage({ params }: Props) {
             {user && (
               <ShareListButton listId={id} referralCode={referralCode} />
             )}
-            {user && list.created_by === user.id && (
+            {list.created_by === user?.id && (
               <Link
                 href={`/lists/${id}/edit`}
                 className="text-muted-foreground hover:text-foreground text-xs transition-colors"

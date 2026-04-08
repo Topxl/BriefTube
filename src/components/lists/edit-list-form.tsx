@@ -50,7 +50,7 @@ export function EditListForm({
   const [name, setName] = useState(initialName);
   const [description, setDescription] = useState(initialDescription);
   const [category, setCategory] = useState(initialCategory);
-  const [channels, setChannels] = useState<ChannelEntry[]>(initialChannels);
+  const [channels, setChannels] = useState(initialChannels);
   const [removedIds, setRemovedIds] = useState<string[]>([]);
   const [channelUrl, setChannelUrl] = useState("");
   const [addingChannel, setAddingChannel] = useState(false);
