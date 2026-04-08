@@ -79,7 +79,7 @@ type FormFieldContextValue<
   name: TName;
 };
 
-const FormFieldContext = React.createContext<FormFieldContextValue>(
+const FormFieldContext = React.createContext(
   {} as FormFieldContextValue,
 );
 
@@ -123,7 +123,7 @@ type FormItemContextValue = {
   id: string;
 };
 
-const FormItemContext = React.createContext<FormItemContextValue>(
+const FormItemContext = React.createContext(
   {} as FormItemContextValue,
 );
 

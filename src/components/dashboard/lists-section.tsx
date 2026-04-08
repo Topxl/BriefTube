@@ -24,7 +24,7 @@ type Props = {
 
 export function ListsSection({ initialFollowedLists, isPro }: Props) {
   const [followedLists, setFollowedLists] =
-    useState<FollowedList[]>(initialFollowedLists);
+    useState(initialFollowedLists);
   const [unfollowing, setUnfollowing] = useState<string | null>(null);
 
   const handleUnfollow = async (listId: string, listName: string) => {
