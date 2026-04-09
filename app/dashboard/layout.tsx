@@ -21,7 +21,7 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="bg-background min-h-screen">
+    <div className="bg-background min-h-screen" suppressHydrationWarning>
       <Suspense fallback={null}>
         <PostHogIdentify />
       </Suspense>
