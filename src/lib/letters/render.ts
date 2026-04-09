@@ -17,7 +17,7 @@ function escapeHtml(s: string): string {
 
 function renderInline(text: string): string {
   let out = escapeHtml(text);
-  // Links: [label](url) — escape url protocol-wise but allow http(s) and mailto and relative
+  // Links: [label](url). Escape url protocol-wise but allow http(s), mailto, and relative paths.
   out = out.replace(
     /\[([^\]]+)\]\(([^)]+)\)/g,
     (_match, label: string, url: string) => {
