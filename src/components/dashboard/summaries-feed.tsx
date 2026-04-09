@@ -324,9 +324,17 @@ export function SummariesFeed({
         // Only show deliveries with a completed video (audio available)
         .filter((d) => d.video?.audio_url);
 
-      setDeliveries((prev) =>
-        pageNum === 0 ? enriched : [...prev, ...enriched],
-      );
+      setDeliveries((prev) => {
+        const merged = pageNum === 0 ? enriched : [...prev, ...enriched];
+        // Dedupe by video_id (RPC uses DISTINCT ON video_id, but race conditions
+        // between pages can create duplicates across pagination).
+        const seen = new Set<string>();
+        return merged.filter((d) => {
+          if (seen.has(d.video_id)) return false;
+          seen.add(d.video_id);
+          return true;
+        });
+      });
       setSummariesPage(pageNum);
       setSummariesLoading(false);
     },
@@ -797,7 +805,7 @@ export function SummariesFeed({
                 .filter((d) => d.video?.audio_url)
                 .map((delivery) => (
                   <SummaryRow
-                    key={delivery.id}
+                    key={delivery.video_id}
                     delivery={delivery}
                     resolvedTitle={titles[delivery.video_id]}
                     favoriteLanguages={favLangs}
