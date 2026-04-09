@@ -6,13 +6,20 @@ import { logger } from "@/lib/logger";
 import { sendEmail } from "@/lib/mail/send-email";
 import { WelcomeEmail } from "@/components/emails/welcome-email";
 import { getBaseUrl } from "@/lib/server-url";
-import { checkRateLimit, getRequestIp, publicRateLimit } from "@/lib/rate-limit";
+import {
+  checkRateLimit,
+  getRequestIp,
+  publicRateLimit,
+} from "@/lib/rate-limit";
 
 const STATE_COOKIE = "google_oauth_state";
 const REFERRAL_COOKIE = SiteConfig.referral.cookieName;
 
 export async function GET(request: Request) {
-  const rateLimitResponse = await checkRateLimit(publicRateLimit, `google-callback:${getRequestIp(request)}`);
+  const rateLimitResponse = await checkRateLimit(
+    publicRateLimit,
+    `google-callback:${getRequestIp(request)}`,
+  );
   if (rateLimitResponse) return rateLimitResponse;
 
   const { searchParams } = new URL(request.url);
@@ -85,9 +92,12 @@ export async function GET(request: Request) {
   try {
     let avatarUrl: string | undefined;
     if (tokens.access_token) {
-      const userInfoRes = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
-        headers: { Authorization: `Bearer ${tokens.access_token}` },
-      });
+      const userInfoRes = await fetch(
+        "https://www.googleapis.com/oauth2/v2/userinfo",
+        {
+          headers: { Authorization: `Bearer ${tokens.access_token}` },
+        },
+      );
       if (userInfoRes.ok) {
         const userInfo = (await userInfoRes.json()) as { picture?: string };
         avatarUrl = userInfo.picture;
@@ -221,9 +231,12 @@ export async function GET(request: Request) {
     }
   }
 
-  // Redirect new users to profile page to connect delivery channel
-  const redirectPath = isNewUser ? "/dashboard/profile" : "/dashboard";
-  const response = NextResponse.redirect(`${baseUrl}${redirectPath}`);
+  // Always land on /dashboard after login. Users who paste a video URL on
+  // the landing page and then sign in expect to see it being processed on
+  // the dashboard, not on their profile page. New users can connect their
+  // delivery channel from the dashboard nav whenever they want.
+  void isNewUser;
+  const response = NextResponse.redirect(`${baseUrl}/dashboard`);
   response.cookies.delete(STATE_COOKIE);
   response.cookies.delete(REFERRAL_COOKIE);
   return response;
