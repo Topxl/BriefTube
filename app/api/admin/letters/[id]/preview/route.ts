@@ -18,7 +18,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
 
   const { data: letter } = await admin
     .from("weekly_letters")
-    .select("episode_number, title, intro_narrative")
+    .select("episode_number, title, intro_narrative, new_cliffhanger, sent_at")
     .eq("id", id)
     .maybeSingle();
 
@@ -36,6 +36,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
     episodeNumber: letter.episode_number,
     title: letter.title,
     introNarrativeMarkdown: letter.intro_narrative,
+    cliffhanger: letter.new_cliffhanger,
     unsubscribeUrl: "https://www.brief-tube.com/dashboard/profile",
   });
 

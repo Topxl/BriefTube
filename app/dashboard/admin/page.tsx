@@ -132,6 +132,15 @@ export default async function AdminPage() {
                 </ItemActions>
               </Link>
             </Item>
+          </ItemGroup>
+        </div>
+
+        {/* Communications */}
+        <div className="flex flex-col gap-2">
+          <p className="text-muted-foreground/50 px-1 text-xs font-medium tracking-wide uppercase">
+            Communications
+          </p>
+          <ItemGroup>
             <Item asChild variant="outline" size="sm">
               <Link href="/dashboard/admin/letters">
                 <ItemMedia variant="icon">
@@ -148,15 +157,6 @@ export default async function AdminPage() {
                 </ItemActions>
               </Link>
             </Item>
-          </ItemGroup>
-        </div>
-
-        {/* Communications */}
-        <div className="flex flex-col gap-2">
-          <p className="text-muted-foreground/50 px-1 text-xs font-medium tracking-wide uppercase">
-            Communications
-          </p>
-          <ItemGroup>
             <Item asChild variant="outline" size="sm">
               <Link href="/dashboard/admin/emails">
                 <ItemMedia variant="icon">
