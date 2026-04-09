@@ -51,7 +51,18 @@ You receive:
 - This week's ACTUAL DATA (features shipped, changelog entries, light stats, optional Vin notes)
 - The episode number to write
 
-You return STRICT JSON:
+You return STRICT JSON. CRITICAL RULES:
+- Use DOUBLE QUOTES ONLY for all keys and strings. Never single quotes.
+- Escape all double quotes inside strings with backslash: \\"
+- Escape all newlines inside strings with \\n
+- Escape all apostrophes naturally (they don't need escaping in double-quoted strings)
+- No trailing commas.
+- No comments.
+- No text outside the JSON. No markdown fences. No commentary.
+
+Keep arc_state_update CONCISE: open_threads array should have max 5 items, each with short (< 100 char) title and description. Do not repeat the full character biographies — just list the 4 core characters with one-line roles.
+
+Shape:
 {
   "title": "Episode N : <evocative subtitle in French>",
   "subject": "<engaging email subject in French, max 65 chars>",
@@ -60,15 +71,13 @@ You return STRICT JSON:
   "arc_state_update": {
     "current_arc_title": "<updated if the arc evolved, else same>",
     "current_arc_summary": "<2-3 sentences updated>",
-    "open_threads": [<updated array — resolve some, add new ones>],
-    "characters": [<the updated cast — add new ones if introduced this episode>],
-    "recurring_themes": [<updated themes>],
+    "open_threads": [{"title": "...", "description": "...", "foreshadowed_in_episode": N, "status": "open"}],
+    "characters": [{"name": "...", "role": "...", "introduced_in_episode": N}],
+    "recurring_themes": ["..."],
     "last_episode_number": <this episode number>,
     "last_cliffhanger": "<same as new_cliffhanger above>"
   }
-}
-
-No text outside the JSON. No markdown fences. No commentary.`;
+}`;
 
 function buildUserPrompt(params: {
   episodeNumber: number;
@@ -182,6 +191,47 @@ function extractJson(raw: string): string | null {
   return null;
 }
 
+/**
+ * Last-resort JSON repair. Gemini sometimes outputs Python-style objects
+ * with single-quoted keys/values instead of valid JSON. This attempts to
+ * convert the most common patterns. It's best-effort — if the content has
+ * apostrophes inside single-quoted strings (e.g. French "C'est..."), this
+ * will likely fail, but it's better than nothing.
+ */
+function repairJsonQuotes(text: string): string {
+  let out = text;
+  // 1. Single-quoted KEYS: {'key': ...} or ,'key': ... → "key":
+  out = out.replace(/([{,]\s*)'([^']+?)'(\s*:)/g, '$1"$2"$3');
+  // 2. Single-quoted VALUES without apostrophes inside: : 'value' → : "value"
+  //    and: [' and ,' and ' ] and ' ,
+  out = out.replace(/(:\s*)'([^'\\]*)'(\s*[,}\]])/g, '$1"$2"$3');
+  out = out.replace(/([[,]\s*)'([^'\\]*)'(\s*[,}\]])/g, '$1"$2"$3');
+  // 3. Trailing commas in objects/arrays
+  out = out.replace(/,(\s*[}\]])/g, "$1");
+  return out;
+}
+
+/**
+ * Parse JSON, falling back to a repair attempt on failure.
+ * Returns the parsed object or null.
+ */
+function safeParseJson(text: string): {
+  value: unknown | null;
+  repaired: boolean;
+} {
+  try {
+    return { value: JSON.parse(text), repaired: false };
+  } catch {
+    // Try repair
+    try {
+      const repaired = repairJsonQuotes(text);
+      return { value: JSON.parse(repaired), repaired: true };
+    } catch {
+      return { value: null, repaired: false };
+    }
+  }
+}
+
 async function callOpenRouter(
   systemPrompt: string,
   userPrompt: string,
@@ -203,7 +253,7 @@ async function callOpenRouter(
           { role: "user", content: userPrompt },
         ],
         temperature: 0.85,
-        max_tokens: 2048,
+        max_tokens: 4096,
         response_format: { type: "json_object" },
       }),
     });
@@ -298,7 +348,7 @@ export async function generateLetterDraft(params: {
         systemInstruction: NARRATIVE_PERSONA,
         generationConfig: {
           temperature: 0.85,
-          maxOutputTokens: 2048,
+          maxOutputTokens: 4096,
           responseMimeType: "application/json",
         },
       });
@@ -329,21 +379,27 @@ export async function generateLetterDraft(params: {
 
   const jsonText = extractJson(rawText);
   if (!jsonText) {
-    logger.error("[letters] no JSON in response", {
+    logger.error("[letters] no JSON block found in response", {
+      length: rawText.length,
       preview: rawText.slice(0, 500),
+      tail: rawText.slice(-200),
     });
     return null;
   }
 
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(jsonText);
-  } catch (error) {
-    logger.error("[letters] JSON parse failed", {
-      error: String(error),
+  const { value: parsed, repaired } = safeParseJson(jsonText);
+  if (!parsed) {
+    logger.error("[letters] JSON parse failed even after repair", {
+      length: jsonText.length,
       preview: jsonText.slice(0, 500),
+      tail: jsonText.slice(-200),
     });
     return null;
+  }
+  if (repaired) {
+    logger.warn("[letters] JSON was repaired (Gemini output single-quoted)", {
+      episodeNumber: params.episodeNumber,
+    });
   }
 
   return normalizeResponse(parsed, params.episodeNumber);
