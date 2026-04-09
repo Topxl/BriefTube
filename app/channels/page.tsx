@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     canonical: `${SiteConfig.prodUrl}/channels`,
   },
   openGraph: {
-    title: "YouTube Channels with AI Audio Summaries — BriefTube",
+    title: "YouTube Channels with AI Audio Summaries | BriefTube",
     description:
       "Discover the most popular YouTube channels on BriefTube. Get AI-powered audio summaries delivered automatically to Telegram, Discord, Slack, or your podcast app.",
     type: "website",
@@ -83,7 +83,7 @@ export default async function ChannelsIndexPage() {
             YouTube Channels with AI Summaries
           </Typography>
           <Typography variant="muted" className="mt-2">
-            The most followed YouTube channels on BriefTube — get AI-powered
+            The most followed YouTube channels on BriefTube. Get AI-powered
             audio summaries delivered automatically wherever you listen.
           </Typography>
         </div>
@@ -149,7 +149,7 @@ export default async function ChannelsIndexPage() {
             className="mt-5 rounded-full bg-red-600 hover:bg-red-500"
           >
             <Link href="/login">
-              Start free — {SiteConfig.freeChannelsLimit} channels
+              Start free for {SiteConfig.freeChannelsLimit} channels
             </Link>
           </Button>
         </div>

@@ -32,7 +32,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const description =
     list.description ??
-    `A curated collection of YouTube channels${list.category ? ` for ${list.category}` : ""} — follow them all and get AI audio summaries on BriefTube.`;
+    `A curated collection of YouTube channels${list.category ? ` for ${list.category}` : ""}. Follow them all and get AI audio summaries on BriefTube.`;
 
   return {
     title: list.name,
@@ -140,7 +140,7 @@ export default async function ListDetailPage({ params }: Props) {
                 .eq("id", ch.id);
             }
           } catch {
-            // silent — will retry next page load
+            // silent, will retry next page load
           }
         }),
       );

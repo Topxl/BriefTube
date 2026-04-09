@@ -1,6 +1,7 @@
 import Script from "next/script";
 import { NextTopLoader } from "@/features/page/next-top-loader";
 import { ServerToaster } from "@/features/server-sonner/server-toaster";
+import { LeaChatWidget } from "@/features/lea-chat/lea-chat-widget";
 import { cn } from "@/lib/utils";
 import { SiteConfig } from "@/site-config";
 import type { Metadata } from "next";
@@ -13,7 +14,7 @@ import { Providers } from "./providers";
 export const metadata: Metadata = {
   title: {
     default: SiteConfig.title,
-    template: `%s — ${SiteConfig.title}`,
+    template: `%s | ${SiteConfig.title}`,
   },
   description: SiteConfig.description,
   metadataBase: new URL(SiteConfig.prodUrl),
@@ -68,7 +69,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
       <head>
-        {/* GTM est chargé en lazyOnload — dns-prefetch suffit, preconnect serait gaspillé */}
+        {/* GTM est chargé en lazyOnload, dns-prefetch suffit, preconnect serait gaspillé */}
         <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
         <link rel="dns-prefetch" href="https://noembed.com" />
         <link rel="dns-prefetch" href="https://r.wdfl.co" />
@@ -101,6 +102,7 @@ export default function RootLayout({
             <Suspense>
               <ServerToaster />
             </Suspense>
+            <LeaChatWidget />
           </Providers>
         </NuqsAdapter>
         <Script id="rewardful-queue" strategy="afterInteractive">

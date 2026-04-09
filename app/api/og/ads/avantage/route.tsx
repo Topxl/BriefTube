@@ -109,7 +109,7 @@ export async function GET(req: Request) {
         </div>
       </div>
 
-      {/* Split panels — row for landscape, column for square/portrait */}
+      {/* Split panels: row for landscape, column for square/portrait */}
       <div
         style={{
           display: "flex",
@@ -122,7 +122,7 @@ export async function GET(req: Request) {
           gap: isLandscape ? "24px" : "20px",
         }}
       >
-        {/* EUX panel — muted */}
+        {/* EUX panel: muted */}
         <div
           style={{
             flexGrow: 1,
@@ -195,7 +195,7 @@ export async function GET(req: Request) {
             </div>
           </div>
 
-          {/* Large number — right side for vertical */}
+          {/* Large number: right side for vertical */}
           {isVertical && (
             <div
               style={{
@@ -260,7 +260,7 @@ export async function GET(req: Request) {
           </div>
         </div>
 
-        {/* TOI panel — vivid */}
+        {/* TOI panel: vivid */}
         <div
           style={{
             flexGrow: 1,
@@ -334,7 +334,7 @@ export async function GET(req: Request) {
             </div>
           </div>
 
-          {/* Large number — right side for vertical */}
+          {/* Large number: right side for vertical */}
           {isVertical && (
             <div
               style={{

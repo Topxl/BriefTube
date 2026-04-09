@@ -81,7 +81,7 @@ export async function GET(req: Request) {
         </span>
       </div>
 
-      {/* Main content — split layout */}
+      {/* Main content: split layout */}
       <div
         style={{
           display: "flex",
@@ -212,7 +212,7 @@ export async function GET(req: Request) {
           </div>
         </div>
 
-        {/* Right/Bottom: Mock player card — WITHOUT progress bar for now */}
+        {/* Right/Bottom: Mock player card, WITHOUT progress bar for now */}
         <div
           style={{
             display: "flex",
@@ -251,7 +251,7 @@ export async function GET(req: Request) {
             </div>
           </div>
 
-          {/* Progress bar — flex-based, no position:relative/absolute */}
+          {/* Progress bar: flex-based, no position:relative/absolute */}
           <div
             style={{
               display: "flex",

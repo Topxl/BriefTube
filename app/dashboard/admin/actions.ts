@@ -60,7 +60,7 @@ export async function grantProTrial(
     return { ok: false, error: updateError.message };
   }
 
-  // Restore only system-paused channels — preserve manual user pauses
+  // Restore only system-paused channels, preserve manual user pauses
   await restoreSystemPausedChannels(profile.id, admin);
 
   const formattedDate = base.toLocaleDateString("fr-FR", {

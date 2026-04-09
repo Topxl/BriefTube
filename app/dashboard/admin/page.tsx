@@ -2,7 +2,15 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { env } from "@/lib/env";
 import Link from "next/link";
-import { Shield, Activity, Mail, ChevronRight } from "@/lib/icons";
+import {
+  Shield,
+  Activity,
+  Mail,
+  ChevronRight,
+  MessageCircle,
+  ListChecks,
+  FileText,
+} from "@/lib/icons";
 import {
   Item,
   ItemMedia,
@@ -59,6 +67,63 @@ export default async function AdminPage() {
                   <ItemDescription>
                     Worker, analytics, funnel d&apos;acquisition, conversion,
                     revenus
+                  </ItemDescription>
+                </ItemContent>
+                <ItemActions>
+                  <ChevronRight className="text-muted-foreground/40 size-4" />
+                </ItemActions>
+              </Link>
+            </Item>
+          </ItemGroup>
+        </div>
+
+        {/* Support: Léa */}
+        <div className="flex flex-col gap-2">
+          <p className="text-muted-foreground/50 px-1 text-xs font-medium tracking-wide uppercase">
+            Support
+          </p>
+          <ItemGroup>
+            <Item asChild variant="outline" size="sm">
+              <Link href="/dashboard/admin/support">
+                <ItemMedia variant="icon">
+                  <MessageCircle className="size-4" />
+                </ItemMedia>
+                <ItemContent>
+                  <ItemTitle>Léa conversations</ItemTitle>
+                  <ItemDescription>
+                    User chat inbox, escalations to handle, replies
+                  </ItemDescription>
+                </ItemContent>
+                <ItemActions>
+                  <ChevronRight className="text-muted-foreground/40 size-4" />
+                </ItemActions>
+              </Link>
+            </Item>
+            <Item asChild variant="outline" size="sm">
+              <Link href="/dashboard/admin/features">
+                <ItemMedia variant="icon">
+                  <ListChecks className="size-4" />
+                </ItemMedia>
+                <ItemContent>
+                  <ItemTitle>Feature requests</ItemTitle>
+                  <ItemDescription>
+                    Public roadmap, manage suggestions and priorities
+                  </ItemDescription>
+                </ItemContent>
+                <ItemActions>
+                  <ChevronRight className="text-muted-foreground/40 size-4" />
+                </ItemActions>
+              </Link>
+            </Item>
+            <Item asChild variant="outline" size="sm">
+              <Link href="/dashboard/admin/knowledge-base">
+                <ItemMedia variant="icon">
+                  <FileText className="size-4" />
+                </ItemMedia>
+                <ItemContent>
+                  <ItemTitle>Knowledge base</ItemTitle>
+                  <ItemDescription>
+                    Articles Léa uses to answer users
                   </ItemDescription>
                 </ItemContent>
                 <ItemActions>

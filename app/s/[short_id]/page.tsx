@@ -94,7 +94,7 @@ export default async function SharedSummaryPage({
     return <ExpiredSummaryView loginUrl="/login" />;
   }
 
-  // 3. Increment view count (non-blocking — fire and forget)
+  // 3. Increment view count (non-blocking, fire and forget)
   void supabase
     .from("shared_summaries")
     .update({ view_count: (share.view_count ?? 0) + 1 })

@@ -9,7 +9,7 @@ import { OnboardingJ3Email } from "@/components/emails/onboarding-j3-email";
 import { getUnsubscribeHeaders } from "@/lib/mail/unsubscribe";
 
 // ---------------------------------------------------------------------------
-// Helper — fetch users eligible for an onboarding email
+// Helper: fetch users eligible for an onboarding email
 // Created between [minHoursAgo, maxHoursAgo], have ≥1 delivery, not yet sent
 // ---------------------------------------------------------------------------
 
@@ -44,7 +44,7 @@ async function fetchEligibleUsers(
 
   const alreadySent = new Set((logs ?? []).map((l) => l.user_id));
 
-  // Have at least 1 delivery (any status — they activated)
+  // Have at least 1 delivery (any status, they activated)
   const { data: deliveries } = await supabase
     .from("deliveries")
     .select("user_id")
@@ -59,7 +59,7 @@ async function fetchEligibleUsers(
 }
 
 // ---------------------------------------------------------------------------
-// J+1 — "Add more channels" (cron every hour)
+// J+1: "Add more channels" (cron every hour)
 // ---------------------------------------------------------------------------
 
 export const onboardingJ1Trigger = inngest.createFunction(
@@ -121,7 +121,7 @@ export const sendOnboardingJ1 = inngest.createFunction(
 );
 
 // ---------------------------------------------------------------------------
-// J+3 — "Did you know about languages?" (cron every hour)
+// J+3: "Did you know about languages?" (cron every hour)
 // ---------------------------------------------------------------------------
 
 export const onboardingJ3Trigger = inngest.createFunction(

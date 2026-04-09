@@ -72,7 +72,7 @@ export default function OGImage() {
         }}
       />
 
-      {/* Left column — content */}
+      {/* Left column: content */}
       <div
         style={{
           display: "flex",
@@ -175,7 +175,7 @@ export default function OGImage() {
         </div>
       </div>
 
-      {/* Right column — audio card visual */}
+      {/* Right column: audio card visual */}
       <div
         style={{
           display: "flex",

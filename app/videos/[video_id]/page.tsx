@@ -33,17 +33,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return { title: SiteConfig.title };
   }
 
-  const description = `YouTube summary of "${video.video_title}". Get the key insights without watching the full video — AI-generated audio summary by BriefTube.`;
+  const description = `YouTube summary of "${video.video_title}". Get the key insights without watching the full video, with an AI-generated audio summary by BriefTube.`;
 
   return {
-    title: `${video.video_title} — YouTube Summary`,
+    title: `${video.video_title} | YouTube Summary`,
     description,
     alternates: {
       canonical: `${SiteConfig.prodUrl}/videos/${video_id}`,
     },
     openGraph: {
       type: "article",
-      title: `${video.video_title} — YouTube Summary`,
+      title: `${video.video_title} | YouTube Summary`,
       description,
       url: `${SiteConfig.prodUrl}/videos/${video_id}`,
       images: [
@@ -57,7 +57,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
     twitter: {
       card: "summary_large_image",
-      title: `${video.video_title} — YouTube Summary`,
+      title: `${video.video_title} | YouTube Summary`,
       description,
       images: [`https://img.youtube.com/vi/${video_id}/hqdefault.jpg`],
     },
@@ -69,7 +69,7 @@ export default async function VideoPage({ params }: Props) {
 
   const supabase = createAdminClient();
 
-  // Fetch video — pick the earliest language version (original) when multiple exist
+  // Fetch video: pick the earliest language version (original) when multiple exist
   const { data: video } = await supabase
     .from("processed_videos")
     .select(

@@ -101,7 +101,7 @@ export async function GET(req: Request) {
           </span>
         </div>
 
-        {/* Main headline — 4 lines */}
+        {/* Main headline: 4 lines */}
         <div style={{ display: "flex", flexDirection: "column", gap: "0px" }}>
           {/* Line 1: "Stop watching" */}
           <div

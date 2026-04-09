@@ -39,7 +39,7 @@ export async function GET(req: Request) {
         overflow: "hidden",
       }}
     >
-      {/* Large red background circle — decorative glow */}
+      {/* Large red background circle: decorative glow */}
       <div
         style={{
           position: "absolute",

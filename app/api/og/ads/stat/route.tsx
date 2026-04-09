@@ -43,7 +43,7 @@ export async function GET(req: Request) {
         position: "relative",
       }}
     >
-      {/* Large red background circle — decorative */}
+      {/* Large red background circle: decorative */}
       <div
         style={{
           position: "absolute",

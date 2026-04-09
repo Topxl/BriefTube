@@ -6,13 +6,13 @@ import { Button } from "@/components/ui/button";
 import { SiteConfig } from "@/site-config";
 
 export const metadata: Metadata = {
-  title: "YouTube Summary App — AI-Powered, Automatic | BriefTube",
+  title: "YouTube Summary App: AI-Powered, Automatic | BriefTube",
   description: `Get an AI-generated YouTube summary for every new video from the channels you follow. BriefTube creates automatic audio summaries and delivers them to Telegram, Discord, Slack, or your podcast app. Free for ${SiteConfig.freeChannelsLimit} channels.`,
   alternates: {
     canonical: `${SiteConfig.prodUrl}/youtube-summary`,
   },
   openGraph: {
-    title: "YouTube Summary App — AI-Powered, Automatic | BriefTube",
+    title: "YouTube Summary App: AI-Powered, Automatic | BriefTube",
     description:
       "Get an AI-generated YouTube summary for every new video from the channels you follow. Automatic, instant, delivered wherever you listen.",
     url: `${SiteConfig.prodUrl}/youtube-summary`,
@@ -21,13 +21,13 @@ export const metadata: Metadata = {
         url: "/opengraph-image",
         width: 1200,
         height: 630,
-        alt: "BriefTube — YouTube Summary App",
+        alt: "BriefTube: YouTube Summary App",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "YouTube Summary App — AI-Powered, Automatic | BriefTube",
+    title: "YouTube Summary App: AI-Powered, Automatic | BriefTube",
     description:
       "Get an AI-generated YouTube summary for every new video from the channels you follow.",
   },
@@ -37,7 +37,7 @@ const jsonLd = [
   {
     "@context": "https://schema.org",
     "@type": "WebPage",
-    name: "YouTube Summary App — BriefTube",
+    name: "YouTube Summary App | BriefTube",
     url: `${SiteConfig.prodUrl}/youtube-summary`,
     description:
       "AI-powered automatic YouTube summary tool. BriefTube monitors your YouTube channels and delivers a short audio summary for every new video.",
@@ -102,7 +102,7 @@ const jsonLd = [
         name: "What is a YouTube summary?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "A YouTube summary is a condensed version of a YouTube video's content — the key points, insights, and conclusions extracted from the transcript. A good YouTube summary lets you understand what a video covers in 3–5 minutes instead of watching the full video, which can be 30 minutes to 2 hours long.",
+          text: "A YouTube summary is a condensed version of a YouTube video's content: the key points, insights, and conclusions extracted from the transcript. A good YouTube summary lets you understand what a video covers in 3–5 minutes instead of watching the full video, which can be 30 minutes to 2 hours long.",
         },
       },
       {
@@ -110,7 +110,7 @@ const jsonLd = [
         name: "How do I get an automatic YouTube summary?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "BriefTube automatically generates a YouTube summary for every new video from the channels you follow. You add channels to your BriefTube dashboard once, and from that point on, every new upload gets summarized automatically — no manual triggering needed. The summary is delivered as audio to Telegram, Discord, Slack, or your podcast app within 30 minutes of the video going live.",
+          text: "BriefTube automatically generates a YouTube summary for every new video from the channels you follow. You add channels to your BriefTube dashboard once, and from that point on, every new upload gets summarized automatically, with no manual triggering needed. The summary is delivered as audio to Telegram, Discord, Slack, or your podcast app within 30 minutes of the video going live.",
         },
       },
       {
@@ -158,7 +158,7 @@ const jsonLd = [
         name: "How accurate are AI YouTube summaries?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "BriefTube's summaries are built directly from the video's official transcript, not from the video title or thumbnail. This means the summary only reflects what was actually said. Google Gemini is used to extract and condense the key points. Accuracy depends on transcript quality — if the transcript is clear and complete, the summary will be reliable.",
+          text: "BriefTube's summaries are built directly from the video's official transcript, not from the video title or thumbnail. This means the summary only reflects what was actually said. Google Gemini is used to extract and condense the key points. Accuracy depends on transcript quality. If the transcript is clear and complete, the summary will be reliable.",
         },
       },
     ],
@@ -187,7 +187,7 @@ const steps = [
     number: "04",
     title: "Summary converted to audio",
     description:
-      "Microsoft's neural text-to-speech converts the summary to natural-sounding audio in the video's original language — or any language you choose.",
+      "Microsoft's neural text-to-speech converts the summary to natural-sounding audio in the video's original language, or any language you choose.",
   },
   {
     number: "05",
@@ -239,11 +239,11 @@ const comparisons = [
 const faqs = [
   {
     q: "What is a YouTube summary?",
-    a: "A YouTube summary is a condensed version of a video's content — the key points, insights, and conclusions distilled from the transcript. A good summary lets you understand what a video covers in 3–5 minutes instead of watching the full video.",
+    a: "A YouTube summary is a condensed version of a video's content: the key points, insights, and conclusions distilled from the transcript. A good summary lets you understand what a video covers in 3–5 minutes instead of watching the full video.",
   },
   {
     q: "How do I get an automatic YouTube summary?",
-    a: "Add channels to your BriefTube dashboard once. Every new video from those channels gets summarized automatically and delivered as audio to Telegram, Discord, Slack, or your podcast app — no manual action required.",
+    a: "Add channels to your BriefTube dashboard once. Every new video from those channels gets summarized automatically and delivered as audio to Telegram, Discord, Slack, or your podcast app. No manual action required.",
   },
   {
     q: "What is the best YouTube summary app?",
@@ -255,7 +255,7 @@ const faqs = [
   },
   {
     q: "How long does a YouTube summary take?",
-    a: "BriefTube typically completes the full process — detect, transcribe, summarize, convert to audio, deliver — within 15 to 30 minutes of the video going live.",
+    a: "BriefTube typically completes the full process (detect, transcribe, summarize, convert to audio, deliver) within 15 to 30 minutes of the video going live.",
   },
   {
     q: "Does YouTube have a built-in summary feature?",
@@ -267,7 +267,7 @@ const faqs = [
   },
   {
     q: "Are YouTube summaries accurate?",
-    a: "BriefTube builds summaries from the official video transcript — only what was actually said. Google Gemini extracts the key points. Accuracy depends on transcript quality, which is typically high for well-produced videos.",
+    a: "BriefTube builds summaries from the official video transcript, using only what was actually said. Google Gemini extracts the key points. Accuracy depends on transcript quality, which is typically high for well-produced videos.",
   },
 ];
 
@@ -320,7 +320,7 @@ export default function YouTubeSummaryPage() {
               </Button>
             </div>
             <p className="text-muted-foreground mt-4 text-sm">
-              {`Free for ${SiteConfig.freeChannelsLimit} channels — no credit card required`}
+              {`Free for ${SiteConfig.freeChannelsLimit} channels, no credit card required`}
             </p>
           </div>
         </section>
@@ -334,7 +334,7 @@ export default function YouTubeSummaryPage() {
               </h2>
               <p className="text-muted-foreground leading-relaxed">
                 A YouTube summary is a condensed version of a video&apos;s
-                content — the key points, insights, and conclusions extracted
+                content: the key points, insights, and conclusions extracted
                 from the transcript. Instead of watching a 90-minute video, you
                 get the essence in 5 minutes.
               </p>
@@ -574,7 +574,7 @@ export default function YouTubeSummaryPage() {
         {/* FAQ */}
         <section className="mx-auto max-w-4xl px-6 py-16 md:py-24">
           <h2 className="font-display mb-10 text-3xl font-bold tracking-tight md:text-4xl">
-            YouTube summary — FAQ
+            YouTube summary FAQ
           </h2>
           <div className="flex flex-col gap-6">
             {faqs.map((faq) => (

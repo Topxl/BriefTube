@@ -31,7 +31,7 @@ export async function GET(req: Request) {
   const sidePad = isLandscape ? 56 : 72;
   const sectionGap = isLandscape ? 32 : 24;
 
-  // Waveform bar heights — alternating pattern
+  // Waveform bar heights: alternating pattern
   const bars = [18, 32, 48, 60, 42, 54, 36, 50, 28, 40, 56, 34, 46, 30, 52];
 
   return new ImageResponse(
@@ -201,7 +201,7 @@ export async function GET(req: Request) {
           ))}
         </div>
 
-        {/* Domain — landscape only */}
+        {/* Domain: landscape only */}
         {isLandscape && (
           <div
             style={{
@@ -301,7 +301,7 @@ export async function GET(req: Request) {
                 lineHeight: 1.3,
               }}
             >
-              #467 — Sam Altman on AI
+              #467 · Sam Altman on AI
             </span>
           </div>
 

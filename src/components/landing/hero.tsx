@@ -50,7 +50,7 @@ export function Hero() {
           {tl.postTrialNote}
         </p>
 
-        {/* Audio player — client component, loads after h1/CTA render */}
+        {/* Audio player: client component, loads after h1/CTA render */}
         <HeroPlayer />
       </div>
     </section>

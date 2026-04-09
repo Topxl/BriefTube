@@ -1,6 +1,6 @@
 /**
  * Generates a plain-text-style HTML email from the founder.
- * No design, no buttons, no colors — looks like a real personal email.
+ * No design, no buttons, no colors. Looks like a real personal email.
  */
 export function founderEmail(content: string): string {
   return `<!DOCTYPE html>
