@@ -123,7 +123,7 @@ export default function PrivacyPage() {
               <code className="rounded bg-white/[0.06] px-1 py-0.5 text-xs">
                 youtube.readonly
               </code>{" "}
-              — read-only access to your subscriptions list only.
+              , read-only access to your subscriptions list only.
             </li>
             <li>
               <strong className="text-foreground">What we access:</strong> Only
@@ -162,19 +162,19 @@ export default function PrivacyPage() {
           </p>
           <ul className="text-muted-foreground flex flex-col gap-2 text-sm leading-relaxed">
             <li>
-              <strong className="text-foreground">Supabase</strong> — database
+              <strong className="text-foreground">Supabase</strong>: database
               and authentication hosting
             </li>
             <li>
-              <strong className="text-foreground">Stripe</strong> — payment
+              <strong className="text-foreground">Stripe</strong>: payment
               processing
             </li>
             <li>
-              <strong className="text-foreground">Telegram</strong> — delivery
+              <strong className="text-foreground">Telegram</strong>: delivery
               of audio summaries
             </li>
             <li>
-              <strong className="text-foreground">Google</strong> — OAuth
+              <strong className="text-foreground">Google</strong>: OAuth
               authentication and YouTube API
             </li>
           </ul>

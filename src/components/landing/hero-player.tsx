@@ -56,7 +56,7 @@ export function HeroPlayer() {
     },
   ]);
 
-  // Single stable ref holding both audio elements — never goes in hook deps
+  // Single stable ref holding both audio elements, never goes in hook deps
   const audiosRef = useRef<(HTMLAudioElement | null)[]>([null, null]);
 
   const patchCard = useCallback((index: number, patch: Partial<CardState>) => {
@@ -145,7 +145,7 @@ export function HeroPlayer() {
                 key={i}
                 className="nm-inset relative overflow-hidden rounded-xl p-3"
               >
-                {/* Thumbnail background — plain img so preload hint matches exactly */}
+                {/* Thumbnail background: plain img so preload hint matches exactly */}
                 <img
                   src={demo.thumb}
                   alt=""
@@ -156,7 +156,7 @@ export function HeroPlayer() {
                   className="absolute inset-0 h-full w-full object-cover opacity-[0.15]"
                 />
 
-                {/* Hidden audio element — preload metadata for duration */}
+                {/* Hidden audio element: preload metadata for duration */}
                 <audio
                   ref={(el) => {
                     audiosRef.current[i] = el;
@@ -211,7 +211,7 @@ export function HeroPlayer() {
                     {/* Clickable progress bar */}
                     <div
                       role="progressbar"
-                      aria-label={`${demo.title} — playback progress`}
+                      aria-label={`${demo.title}: playback progress`}
                       aria-valuemin={0}
                       aria-valuemax={100}
                       aria-valuenow={Math.round(progress * 100)}

@@ -28,7 +28,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const allChannelIds = new Set((channelRows ?? []).map((r) => r.channel_id));
 
-  // Deduplicate videos by video_id — processed_videos has one row per (video_id, language)
+  // Deduplicate videos by video_id: processed_videos has one row per (video_id, language)
   const seenVideoIds = new Set<string>();
   const uniqueVideos = (lastVideos ?? []).filter((v) => {
     if (!v.video_id || seenVideoIds.has(v.video_id)) return false;
@@ -115,7 +115,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       url: `${SiteConfig.prodUrl}/channels`,
       lastModified: new Date("2026-03-22"),
     },
-    // Programmatic channel pages — only channels with at least one completed summary
+    // Programmatic channel pages: only channels with at least one completed summary
     ...Object.keys(lastSummaryByChannel)
       .filter((channelId) => allChannelIds.has(channelId))
       .map((channelId) => ({

@@ -34,17 +34,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const ogDescription = `AI-generated summaries of every ${channelName} video, delivered as audio. Never miss a key insight from ${channelName} again.`;
 
   return {
-    title: `${channelName} — AI Audio Summaries`,
+    title: `${channelName}: AI Audio Summaries`,
     description: ogDescription,
     openGraph: {
-      title: `${channelName} — AI Audio Summaries`,
+      title: `${channelName}: AI Audio Summaries`,
       description: ogDescription,
       images: [{ url: ogImage }],
       type: "website",
     },
     twitter: {
       card: "summary_large_image",
-      title: `${channelName} — AI Audio Summaries`,
+      title: `${channelName}: AI Audio Summaries`,
       description: ogDescription,
       images: [ogImage],
     },
@@ -135,7 +135,7 @@ export default async function ChannelPage({ params }: Props) {
   const itemListLd = {
     "@context": "https://schema.org",
     "@type": "ItemList",
-    name: `${channelName} — AI Audio Summaries`,
+    name: `${channelName}: AI Audio Summaries`,
     description: `AI-generated summaries of ${channelName} videos, delivered as audio.`,
     itemListOrder: "https://schema.org/ItemListOrderDescending",
     itemListElement: videos.map((v, i) => ({

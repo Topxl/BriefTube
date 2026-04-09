@@ -8,7 +8,7 @@ import { Footer } from "@/components/landing/footer";
 export const metadata: Metadata = {
   title: "Blog",
   description:
-    "Guides and thoughts on consuming YouTube smarter — productivity, AI tools, and learning efficiently.",
+    "Guides and thoughts on consuming YouTube smarter: productivity, AI tools, and learning efficiently.",
   alternates: { canonical: `${SiteConfig.prodUrl}/blog` },
 };
 

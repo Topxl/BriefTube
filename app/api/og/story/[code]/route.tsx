@@ -65,7 +65,7 @@ export async function GET(
         }}
       />
 
-      {/* Red accent bar — top */}
+      {/* Red accent bar: top */}
       <div
         style={{
           position: "absolute",
@@ -77,7 +77,7 @@ export async function GET(
         }}
       />
 
-      {/* Header — logo + brand */}
+      {/* Header: logo + brand */}
       <div
         style={{
           display: "flex",
@@ -213,7 +213,7 @@ export async function GET(
       {/* Spacer */}
       <div style={{ flex: 1 }} />
 
-      {/* Bottom card — trial + QR */}
+      {/* Bottom card: trial + QR */}
       <div
         style={{
           display: "flex",

@@ -363,7 +363,7 @@ export async function GET(req: Request) {
             >
               <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                 <span style={{ fontSize: 14, color: "#71717a" }}>
-                  Lex Fridman — Sam Altman
+                  Lex Fridman · Sam Altman
                 </span>
               </div>
               <span style={{ fontSize: 16, color: "#71717a", fontWeight: 600 }}>

@@ -18,7 +18,7 @@ export const dashboard = {
     step3Heading: "Connect Telegram",
     step3Subtitle: "Your audio summaries will be delivered automatically.",
     step3Instruction1: "Open the BriefTube bot in Telegram",
-    step3Instruction2: "Tap Start — that's it",
+    step3Instruction2: "Tap Start, that's it",
     step3OpenBot: "Open BriefTube Bot",
     step3GeneratingLink: "Generating link...",
     step3WaitingConnection: "Waiting for connection...",
@@ -90,7 +90,7 @@ export const dashboard = {
       token_failed: "Failed to authenticate with Google",
       import_failed: "Import failed, please try again",
       limit_reached:
-        "Channel limit reached — upgrade to Pro for unlimited channels",
+        "Channel limit reached. Upgrade to Pro for unlimited channels",
     } as Record<string, string>,
     importErrorGeneric: "YouTube import failed",
   },

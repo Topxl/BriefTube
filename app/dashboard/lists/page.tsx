@@ -74,7 +74,7 @@ function ListCard({
     <div
       className={`nm-raised flex flex-col overflow-hidden rounded-2xl transition-all hover:shadow-lg ${isFollowing ? "ring-1 ring-red-500/30" : ""}`}
     >
-      {/* Visual header — avatar mosaic */}
+      {/* Visual header: avatar mosaic */}
       <Link href={`/lists/${list.id}`} className="block">
         <div className={`relative h-24 bg-gradient-to-br ${gradient} p-0.5`}>
           {previews.length >= 4 ? (
@@ -232,7 +232,7 @@ export default async function DashboardListsPage({
     }),
   );
 
-  // Followed lists with channel previews — excluding ones user created
+  // Followed lists with channel previews, excluding ones user created
   const followedLists: ListData[] = (followedRaw ?? [])
     .map((r: Record<string, unknown>) => {
       const list = r.channel_lists as Record<string, unknown> | null;
@@ -353,7 +353,7 @@ export default async function DashboardListsPage({
             ))}
           </div>
 
-          {/* Category chips — horizontal scroll, single row */}
+          {/* Category chips: horizontal scroll, single row */}
           <div className="scrollbar-fade-x flex gap-2 overflow-x-auto py-1">
             <Link
               href={categoryHref()}

@@ -46,7 +46,7 @@ export default function TermsPage() {
             </li>
             <li>You must be at least 13 years old to use the Service</li>
             <li>
-              One account per person — multiple accounts are not permitted
+              One account per person. Multiple accounts are not permitted
             </li>
           </ul>
         </section>

@@ -1,5 +1,5 @@
 /**
- * Email workflow registry — single source of truth.
+ * Email workflow registry: single source of truth.
  * Update this file when you change triggers/conditions in code.
  * The admin /emails dashboard reads this to render workflow cards.
  */
@@ -52,7 +52,7 @@ export const EMAIL_WORKFLOWS: WorkflowDef[] = [
     subject: "your {count} summaries are ready",
     trigger: {
       type: "inngest",
-      label: "Inngest cron — every hour",
+      label: "Inngest cron, every hour",
       schedule: "0 * * * *",
     },
     audience: "All users with digest enabled",
@@ -68,7 +68,7 @@ export const EMAIL_WORKFLOWS: WorkflowDef[] = [
   },
   {
     id: "trial_reminder_j3",
-    name: "Trial Reminder — J−3",
+    name: "Trial Reminder J−3",
     description: "Sent 3 days before trial expires",
     subject: "3 days left to upgrade",
     trigger: { type: "cron", label: "Daily cron" },
@@ -89,7 +89,7 @@ export const EMAIL_WORKFLOWS: WorkflowDef[] = [
   },
   {
     id: "trial_reminder_j1",
-    name: "Trial Reminder — J−1",
+    name: "Trial Reminder J−1",
     description: "Sent 1 day before trial expires",
     subject: "last day, don't lose your summaries",
     trigger: { type: "cron", label: "Daily cron" },
@@ -131,7 +131,7 @@ export const EMAIL_WORKFLOWS: WorkflowDef[] = [
   },
   {
     id: "activation_telegram",
-    name: "Activation — No platform",
+    name: "Activation: No platform",
     description:
       "Personal email to users who haven't connected any delivery platform",
     subject: "your channels are waiting",
@@ -149,7 +149,7 @@ export const EMAIL_WORKFLOWS: WorkflowDef[] = [
   },
   {
     id: "reengagement_7d",
-    name: "Re-engagement — 7 days",
+    name: "Re-engagement: 7 days",
     description: "Sent when a Pro user received no summaries in 7 days",
     subject: "add more channels to stay updated",
     trigger: { type: "cron", label: "Daily cron" },
@@ -167,7 +167,7 @@ export const EMAIL_WORKFLOWS: WorkflowDef[] = [
   },
   {
     id: "referral_trial_j3",
-    name: "Referral Trial — J−3",
+    name: "Referral Trial J−3",
     description: "Sent to referred users 3 days before trial ends",
     subject: "3 days left to upgrade",
     trigger: { type: "cron", label: "Daily cron" },
@@ -189,7 +189,7 @@ export const EMAIL_WORKFLOWS: WorkflowDef[] = [
   },
   {
     id: "referral_trial_j1",
-    name: "Referral Trial — J−1",
+    name: "Referral Trial J−1",
     description: "Sent to referred users 1 day before trial ends",
     subject: "last day, don't lose your summaries",
     trigger: { type: "cron", label: "Daily cron" },
@@ -215,7 +215,7 @@ export const EMAIL_WORKFLOWS: WorkflowDef[] = [
     description:
       "Triggered when a user receives their very first audio delivery",
     subject: "Your first BriefTube summary is ready",
-    trigger: { type: "manual", label: "Worker HTTP POST — per delivery" },
+    trigger: { type: "manual", label: "Worker HTTP POST, per delivery" },
     audience: "All new users",
     conditions: [
       "User just received their first delivery",
@@ -228,12 +228,12 @@ export const EMAIL_WORKFLOWS: WorkflowDef[] = [
   },
   {
     id: "onboarding_j1",
-    name: "Onboarding J+1 — Add more channels",
+    name: "Onboarding J+1: Add more channels",
     description: "Encourages users to add more channels after their first day",
     subject: "add more channels to your dashboard",
     trigger: {
       type: "inngest",
-      label: "Inngest cron — every hour",
+      label: "Inngest cron, every hour",
       schedule: "30 * * * *",
     },
     audience: "Users 24–48h after signup with ≥1 delivery",
@@ -249,12 +249,12 @@ export const EMAIL_WORKFLOWS: WorkflowDef[] = [
   },
   {
     id: "onboarding_j3",
-    name: "Onboarding J+3 — Languages",
+    name: "Onboarding J+3: Languages",
     description: "Highlights multilingual support 3 days after signup",
     subject: "we support 190+ languages",
     trigger: {
       type: "inngest",
-      label: "Inngest cron — every hour",
+      label: "Inngest cron, every hour",
       schedule: "45 * * * *",
     },
     audience: "Users 72–96h after signup with ≥1 delivery",
@@ -270,7 +270,7 @@ export const EMAIL_WORKFLOWS: WorkflowDef[] = [
   },
   {
     id: "early_users_thank_you",
-    name: "Early Users — Thank You",
+    name: "Early Users: Thank You",
     description: "One-time blast sent to first users at launch",
     subject: "you're one of BriefTube's first users, thank you",
     trigger: { type: "manual", label: "Manual blast" },

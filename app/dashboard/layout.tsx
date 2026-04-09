@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { DashboardNav } from "@/components/dashboard/nav";
-// Only identify users in the dashboard — avoids loading Supabase client on the landing page
+// Only identify users in the dashboard, avoids loading Supabase client on the landing page
 import { PostHogIdentify } from "@/components/posthog/posthog-identify";
 import { YouTubeSyncDialog } from "@/components/dashboard/youtube-sync-dialog";
 

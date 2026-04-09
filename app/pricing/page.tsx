@@ -86,14 +86,14 @@ export default async function PricingPage() {
             What does the free plan include?
           </h2>
           <p className="text-muted-foreground text-sm leading-relaxed">
-            {`The free plan lets you monitor up to ${SiteConfig.freeChannelsLimit} YouTube channels with no credit card and no time limit. Every new video from those channels gets summarized automatically by AI, converted to audio, and delivered to your dashboard, private podcast RSS feed, Telegram, Discord, or Slack. There is no catch and no feature artificially locked — the free plan is genuinely usable.`}
+            {`The free plan lets you monitor up to ${SiteConfig.freeChannelsLimit} YouTube channels with no credit card and no time limit. Every new video from those channels gets summarized automatically by AI, converted to audio, and delivered to your dashboard, private podcast RSS feed, Telegram, Discord, or Slack. There is no catch and no feature artificially locked. The free plan is genuinely usable.`}
           </p>
         </section>
 
         <section className="flex flex-col gap-3">
           <h2 className="text-lg font-semibold">What does Plus add?</h2>
           <p className="text-muted-foreground text-sm leading-relaxed">
-            {`Plus increases your channel limit from ${SiteConfig.freeChannelsLimit} to ${SiteConfig.plusChannelsLimit} YouTube channels. It also gives you priority processing — your summaries are generated before free-plan requests, so they arrive faster. Plus is perfect if you follow dozens of channels but don't need unlimited.`}
+            {`Plus increases your channel limit from ${SiteConfig.freeChannelsLimit} to ${SiteConfig.plusChannelsLimit} YouTube channels. It also gives you priority processing: your summaries are generated before free-plan requests, so they arrive faster. Plus is perfect if you follow dozens of channels but don't need unlimited.`}
           </p>
         </section>
 

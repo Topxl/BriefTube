@@ -201,7 +201,7 @@ function ActiveSurveyForm({ token }: { token: string }) {
             {(field) => (
               <field.Field>
                 <field.Textarea
-                  placeholder="Optional — but we read every response"
+                  placeholder="Optional, but we read every response"
                   className="min-h-[80px] border-white/[0.06] bg-zinc-800"
                 />
                 <field.Message />
@@ -396,7 +396,7 @@ function InactiveSurveyForm({ token }: { token: string }) {
             {(field) => (
               <field.Field>
                 <field.Textarea
-                  placeholder="Optional — but we read every response"
+                  placeholder="Optional, but we read every response"
                   className="min-h-[80px] border-white/[0.06] bg-zinc-800"
                 />
                 <field.Message />

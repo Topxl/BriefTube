@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { SurveyForm } from "./survey-form";
 
 export const metadata: Metadata = {
-  title: "BriefTube — Quick Feedback Survey",
+  title: "BriefTube | Quick Feedback Survey",
   robots: "noindex",
 };
 

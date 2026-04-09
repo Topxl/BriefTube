@@ -24,7 +24,7 @@ type ActivePlan = {
  * Resolve the user's active plan by matching their Stripe subscription's
  * price_id against the configured STRIPE_*_PRICE_ID env vars.
  *
- * Returns null if anything is missing or the subscription can't be fetched —
+ * Returns null if anything is missing or the subscription can't be fetched,
  * this is a best-effort enrichment used for the conversion event and toast.
  */
 async function resolveActivePlan(

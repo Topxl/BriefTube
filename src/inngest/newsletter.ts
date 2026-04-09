@@ -20,7 +20,7 @@ type NewsletterVideo = {
 };
 
 // ---------------------------------------------------------------------------
-// Function 1 — Cron trigger (every hour, UTC)
+// Function 1: Cron trigger (every hour, UTC)
 // Finds users whose newsletter_hour matches current UTC hour and fans out.
 // ---------------------------------------------------------------------------
 
@@ -62,7 +62,7 @@ export const dailyNewsletterTrigger = inngest.createFunction(
 );
 
 // ---------------------------------------------------------------------------
-// Function 2 — Per-user send (triggered by fan-out event)
+// Function 2: Per-user send (triggered by fan-out event)
 // Fetches last 24h deliveries, renders email, sends via Resend.
 // ---------------------------------------------------------------------------
 
@@ -93,7 +93,7 @@ export const sendUserNewsletter = inngest.createFunction(
 
       if (!deliveries || deliveries.length === 0) return [];
 
-      // Deduplicate by video_id — one delivery per video regardless of platform count
+      // Deduplicate by video_id: one delivery per video regardless of platform count
       const uniqueDeliveries = deliveries.filter(
         (d, idx, arr) =>
           arr.findIndex((x) => x.video_id === d.video_id) === idx,

@@ -126,7 +126,7 @@ function MiniRate({
       <p
         className={`text-sm font-bold tabular-nums ${value !== null && value > 0 ? "text-foreground" : "text-muted-foreground/30"}`}
       >
-        {value === null ? "—" : `${value}%`}
+        {value === null ? "-" : `${value}%`}
       </p>
       {value !== null && (
         <div className="h-0.5 w-full rounded-full bg-white/[0.06]">
@@ -177,7 +177,7 @@ function WorkflowCard({
         </div>
         <div
           className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${isActive ? "bg-emerald-400" : "bg-white/10"}`}
-          title={isActive ? "Active — sent in last 30d" : "No recent sends"}
+          title={isActive ? "Active, sent in last 30d" : "No recent sends"}
         />
       </div>
 
@@ -333,13 +333,13 @@ export default async function AdminEmailsPage() {
       .from("profiles")
       .select("*", { count: "exact", head: true })
       .eq("newsletter_enabled", true),
-    // Onboarding J+1 — created 24-48h ago
+    // Onboarding J+1: created 24-48h ago
     admin
       .from("profiles")
       .select("*", { count: "exact", head: true })
       .gte("created_at", new Date(now - 48 * h).toISOString())
       .lte("created_at", new Date(now - 24 * h).toISOString()),
-    // Onboarding J+3 — created 72-96h ago
+    // Onboarding J+3: created 72-96h ago
     admin
       .from("profiles")
       .select("*", { count: "exact", head: true })
@@ -494,7 +494,7 @@ export default async function AdminEmailsPage() {
                 Platform delivery announcement
               </p>
               <p className="text-muted-foreground mt-0.5 text-[11px] leading-snug">
-                Discord, Slack & RSS — 61 users opted in
+                Discord, Slack & RSS: 61 users opted in
               </p>
             </div>
           </div>

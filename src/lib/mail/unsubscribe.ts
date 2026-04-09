@@ -5,7 +5,7 @@ function getSecret(): string {
   const secret = process.env.RESEND_WEBHOOK_SECRET;
   if (!secret) {
     throw new Error(
-      "RESEND_WEBHOOK_SECRET is not set — cannot generate or verify unsubscribe tokens",
+      "RESEND_WEBHOOK_SECRET is not set. Cannot generate or verify unsubscribe tokens",
     );
   }
   return secret;

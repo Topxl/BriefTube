@@ -10,7 +10,7 @@ export default function GlobalError({
   error: Error & { digest?: string };
 }) {
   useEffect(() => {
-    // NOTE: Sentry.captureException intentionally removed — see
+    // NOTE: Sentry.captureException intentionally removed, see
     // instrumentation.ts comment block for the Turbopack hash bug context.
     // Sentry's auto-instrumented browser handlers (loaded by
     // instrumentation-client.ts) still capture global errors via

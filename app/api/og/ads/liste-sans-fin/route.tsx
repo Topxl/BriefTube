@@ -163,7 +163,7 @@ export async function GET(req: Request) {
         </div>
       </div>
 
-      {/* Main content — landscape: row, vertical: column */}
+      {/* Main content: landscape row, vertical column */}
       <div
         style={{
           display: "flex",

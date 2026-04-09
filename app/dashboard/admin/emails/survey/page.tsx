@@ -130,7 +130,7 @@ export default async function SurveyResultsPage() {
       <div>
         <h1 className="text-lg font-semibold">Survey Results</h1>
         <p className="text-muted-foreground text-xs">
-          {surveyCount ?? 0} responses — {activeR.length} active ·{" "}
+          {surveyCount ?? 0} responses · {activeR.length} active ·{" "}
           {inactiveR.length} inactive
         </p>
       </div>
@@ -158,7 +158,7 @@ export default async function SurveyResultsPage() {
               return (
                 <div className="rounded-xl border border-white/[0.06] bg-zinc-900 p-5">
                   <p className="text-muted-foreground text-sm">
-                    PMF Score (Sean Ellis) — active users
+                    PMF Score (Sean Ellis): active users
                   </p>
                   <p className={`text-3xl font-bold ${color}`}>{pmfScore}%</p>
                   <p className="text-muted-foreground mt-1 text-xs">

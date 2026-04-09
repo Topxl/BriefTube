@@ -38,7 +38,7 @@ export async function GET(req: Request) {
         position: "relative",
       }}
     >
-      {/* Large red background circle — decorative glow */}
+      {/* Large red background circle: decorative glow */}
       <div
         style={{
           position: "absolute",
@@ -65,7 +65,7 @@ export async function GET(req: Request) {
       />
 
       {isLandscape ? (
-        /* ── LANDSCAPE: centered layout ── */
+        /* LANDSCAPE: centered layout */
         <div
           style={{
             display: "flex",
@@ -79,7 +79,7 @@ export async function GET(req: Request) {
             paddingRight: pad,
           }}
         >
-          {/* Logo & branding row — top */}
+          {/* Logo and branding row, top */}
           <div
             style={{
               display: "flex",
@@ -223,7 +223,7 @@ export async function GET(req: Request) {
             }}
           />
 
-          {/* Tagline — flex+center instead of textAlign:center */}
+          {/* Tagline: flex+center instead of textAlign:center */}
           <div
             style={{
               display: "flex",
@@ -293,7 +293,7 @@ export async function GET(req: Request) {
           </div>
         </div>
       ) : (
-        /* ── SQUARE / PORTRAIT: top + center + bottom layout ── */
+        /* SQUARE / PORTRAIT: top + center + bottom layout */
         <div
           style={{
             display: "flex",
@@ -467,7 +467,7 @@ export async function GET(req: Request) {
               }}
             />
 
-            {/* Tagline — flex+center instead of textAlign:center */}
+            {/* Tagline: flex+center instead of textAlign:center */}
             <div
               style={{
                 display: "flex",
