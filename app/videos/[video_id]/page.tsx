@@ -136,7 +136,16 @@ export default async function VideoPage({ params }: Props) {
     about: {
       "@type": "VideoObject",
       name: video.video_title,
-      thumbnailUrl: `https://img.youtube.com/vi/${video_id}/hqdefault.jpg`,
+      description:
+        summaryText.slice(0, 200) ||
+        `Audio summary of ${video.video_title} by ${channelName}`,
+      thumbnailUrl: [
+        `https://img.youtube.com/vi/${video_id}/maxresdefault.jpg`,
+        `https://img.youtube.com/vi/${video_id}/hqdefault.jpg`,
+      ],
+      uploadDate: video.created_at
+        ? new Date(video.created_at).toISOString()
+        : new Date().toISOString(),
       embedUrl: `https://www.youtube.com/embed/${video_id}`,
       contentUrl: `https://youtu.be/${video_id}`,
     },
