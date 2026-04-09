@@ -2,6 +2,7 @@
 
 ## 2026-04-09
 
+FEATURE: Weekly narrative letter system — table `weekly_letters` (episode-numbered serial story), Léa narrative engine that writes from Vin's first-person voice with cliffhangers + recurring cast (Léa, the worker, the community), arc state that persists across episodes, Inngest cron every Friday 18h Europe/Paris, admin editor at /dashboard/admin/letters with split markdown/preview view, "Test to me" + "Send to all" + auto-paginated recipient batch send via Resend, never auto-sent. Sources: features shipped this week + curated CHANGELOG entries (FEATURE/FIX only) + light stats. Reuses the Léa Gemini → OpenRouter fallback strategy.
 FIX(worker): augmente la limite Whisper de 2h47 à 8h — _MAX_AUDIO_MB passe de 80 MB à 250 MB (64kbps opus), _MAX_PROXY_DURATION_SECONDS passe de 3600s (1h) à 7200s (2h). Les documentaires/podcasts longs sans sous-titres peuvent désormais être transcrits via Invidious/Piped.
 CHORE(db): correction de 116 channel_id invalides (handles YouTube comme 'veritasium', 'mkbhd') en vrais IDs UC... dans subscriptions et list_channels. 4 chaînes supprimées (page YouTube inexistante).
 FIX(types): régénération des types TypeScript Supabase — ajout des colonnes summary_length_pref, summary_style, summary_custom_instructions sur subscriptions + profiles, et de la RPC get_list_follow_feed.

@@ -21,6 +21,7 @@ export const env = createEnv({
     EMAIL_FROM: z.string().optional(),
     YOUTUBE_API_KEY: z.string().optional(),
     GEMINI_API_KEY: z.string().optional(),
+    OPENROUTER_API_KEY: z.string().optional(),
     WEBSUB_SECRET: z.string().optional(),
     CRON_SECRET: z.string().optional(),
     // Inngest — workflow orchestration (daily newsletter digest)

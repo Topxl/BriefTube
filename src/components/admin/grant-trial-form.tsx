@@ -41,8 +41,9 @@ export function GrantTrialForm() {
     <form
       onSubmit={(e) => void handleSubmit(e)}
       className="flex flex-col gap-3"
+      suppressHydrationWarning
     >
-      <div className="flex gap-2">
+      <div className="flex gap-2" suppressHydrationWarning>
         <input
           type="email"
           value={email}
@@ -50,6 +51,7 @@ export function GrantTrialForm() {
           placeholder="email@exemple.com"
           required
           className="bg-muted/50 border-border placeholder:text-muted-foreground/50 h-8 flex-1 rounded-lg border px-3 text-xs focus:ring-1 focus:ring-white/20 focus:outline-none"
+          suppressHydrationWarning
         />
         <select
           value={months}
@@ -57,6 +59,7 @@ export function GrantTrialForm() {
             setMonths(Number(e.target.value) as (typeof DURATIONS)[number])
           }
           className="bg-muted/50 border-border h-8 rounded-lg border px-2 text-xs focus:ring-1 focus:ring-white/20 focus:outline-none"
+          suppressHydrationWarning
         >
           {DURATIONS.map((d) => (
             <option key={d} value={d}>
@@ -68,6 +71,7 @@ export function GrantTrialForm() {
           type="submit"
           disabled={status === "loading" || !email.trim()}
           className="nm-raised-sm h-8 rounded-lg px-3 text-xs font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
+          suppressHydrationWarning
         >
           {status === "loading" ? "…" : "Offrir"}
         </button>
