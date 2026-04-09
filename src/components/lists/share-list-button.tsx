@@ -25,6 +25,7 @@ export function ShareListButton({ listId, referralCode }: Props) {
     <button
       onClick={() => void handleShare()}
       className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-xs transition-colors"
+      suppressHydrationWarning
     >
       {copied ? (
         <>
