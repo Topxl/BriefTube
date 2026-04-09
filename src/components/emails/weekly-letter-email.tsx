@@ -84,7 +84,6 @@ export function WeeklyLetterEmail({
           </Section>
 
           <Section
-             
             dangerouslySetInnerHTML={{ __html: bodyHtml }}
             style={{
               color: "#d4d4d8",
@@ -110,8 +109,8 @@ export function WeeklyLetterEmail({
                 '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
             }}
           >
-            Vous recevez cette lettre hebdomadaire car vous suivez
-            l&apos;histoire de BriefTube.
+            You&apos;re receiving this weekly letter because you follow the
+            BriefTube story.
           </Text>
           <Text
             style={{
@@ -127,7 +126,7 @@ export function WeeklyLetterEmail({
               href={unsubscribeUrl}
               style={{ color: "#71717a", textDecoration: "underline" }}
             >
-              Se désinscrire
+              Unsubscribe
             </Link>{" "}
             ·{" "}
             <Link

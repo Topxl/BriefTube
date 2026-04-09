@@ -447,7 +447,7 @@ export function LetterEditor({ initialLetter }: { initialLetter: LetterFull }) {
               </p>
               {letter.sent_at && (
                 <p className="text-muted-foreground text-xs">
-                  {new Date(letter.sent_at).toLocaleString("fr-FR")}
+                  {new Date(letter.sent_at).toLocaleString("en-US")}
                 </p>
               )}
             </div>

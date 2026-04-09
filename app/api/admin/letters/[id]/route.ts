@@ -81,7 +81,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
 /**
  * DELETE /api/admin/letters/[id]
- * Permanently remove a letter (use with care — prefer status=cancelled).
+ * Permanently remove a letter (use with care; prefer status=cancelled).
  */
 export async function DELETE(_req: NextRequest, { params }: Params) {
   const auth = await requireAdminApi();
