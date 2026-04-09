@@ -433,9 +433,9 @@ class WhisperTranscriber:
     # Max video duration (seconds) for proxy audio downloads.
     # Videos longer than this threshold are refused from the paid proxy —
     # they can still be downloaded via Invidious/Piped (free).
-    # 3600s = 60 min. Nollywood movies are 1-3h; legit long content
-    # (Lex Fridman 3h+) always has a YouTube transcript and never reaches Whisper.
-    _MAX_PROXY_DURATION_SECONDS = 3600
+    # 7200s = 2h. Long documentaries/podcasts without subtitles can reach Whisper
+    # via free paths (Invidious/Piped) up to 8h.
+    _MAX_PROXY_DURATION_SECONDS = 7200
 
     def _download_audio_via_invidious(self, video_id: str, output_path: Path):
         """Download audio via Invidious public API — free, no proxy bandwidth cost.
@@ -705,9 +705,9 @@ class WhisperTranscriber:
             file_size_mb = audio_file.stat().st_size / (1024 * 1024)
             logger.info(f"Audio downloaded: {file_size_mb:.2f} MB")
 
-            # Reject files that are too large — likely music/ambient (8h+)
-            # Opus at ~48kbps: 80 MB ≈ ~3.7h, beyond that it's almost certainly not speech
-            _MAX_AUDIO_MB = 80
+            # Reject files that are too large — likely music/ambient (>8h)
+            # Opus at 64kbps: 250 MB ≈ ~8.7h, beyond that it's almost certainly not speech
+            _MAX_AUDIO_MB = 250
             if file_size_mb > _MAX_AUDIO_MB:
                 logger.warning(
                     f"Audio too large ({file_size_mb:.1f} MB > {_MAX_AUDIO_MB} MB) — "
