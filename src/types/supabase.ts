@@ -114,6 +114,88 @@ export type Database = {
         };
         Relationships: [];
       };
+      chat_conversations: {
+        Row: {
+          created_at: string;
+          escalated_at: string | null;
+          escalation_reason: string | null;
+          id: string;
+          last_message_at: string;
+          resolved_at: string | null;
+          status: string;
+          subject: string | null;
+          unread_by_admin: boolean;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          escalated_at?: string | null;
+          escalation_reason?: string | null;
+          id?: string;
+          last_message_at?: string;
+          resolved_at?: string | null;
+          status?: string;
+          subject?: string | null;
+          unread_by_admin?: boolean;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          escalated_at?: string | null;
+          escalation_reason?: string | null;
+          id?: string;
+          last_message_at?: string;
+          resolved_at?: string | null;
+          status?: string;
+          subject?: string | null;
+          unread_by_admin?: boolean;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "chat_conversations_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      chat_messages: {
+        Row: {
+          content: string;
+          conversation_id: string;
+          created_at: string;
+          id: string;
+          metadata: Json;
+          role: string;
+        };
+        Insert: {
+          content: string;
+          conversation_id: string;
+          created_at?: string;
+          id?: string;
+          metadata?: Json;
+          role: string;
+        };
+        Update: {
+          content?: string;
+          conversation_id?: string;
+          created_at?: string;
+          id?: string;
+          metadata?: Json;
+          role?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_conversation_id_fkey";
+            columns: ["conversation_id"];
+            isOneToOne: false;
+            referencedRelation: "chat_conversations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       deleted_accounts: {
         Row: {
           deleted_at: string;
@@ -201,6 +283,101 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "email_logs_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      feature_requests: {
+        Row: {
+          admin_notes: string | null;
+          category: string;
+          created_at: string;
+          description: string;
+          id: string;
+          needs_admin_review: boolean;
+          priority: number;
+          shipped_notification_sent: boolean;
+          source: string;
+          status: string;
+          title: string;
+          updated_at: string;
+          user_id: string | null;
+          votes_count: number;
+        };
+        Insert: {
+          admin_notes?: string | null;
+          category?: string;
+          created_at?: string;
+          description: string;
+          id?: string;
+          needs_admin_review?: boolean;
+          priority?: number;
+          shipped_notification_sent?: boolean;
+          source?: string;
+          status?: string;
+          title: string;
+          updated_at?: string;
+          user_id?: string | null;
+          votes_count?: number;
+        };
+        Update: {
+          admin_notes?: string | null;
+          category?: string;
+          created_at?: string;
+          description?: string;
+          id?: string;
+          needs_admin_review?: boolean;
+          priority?: number;
+          shipped_notification_sent?: boolean;
+          source?: string;
+          status?: string;
+          title?: string;
+          updated_at?: string;
+          user_id?: string | null;
+          votes_count?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "feature_requests_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      feature_votes: {
+        Row: {
+          created_at: string;
+          feature_request_id: string;
+          id: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          feature_request_id: string;
+          id?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          feature_request_id?: string;
+          id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "feature_votes_feature_request_id_fkey";
+            columns: ["feature_request_id"];
+            isOneToOne: false;
+            referencedRelation: "feature_requests";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "feature_votes_user_id_fkey";
             columns: ["user_id"];
             isOneToOne: false;
             referencedRelation: "profiles";
@@ -773,17 +950,43 @@ export type Database = {
             foreignKeyName: "subscriptions_list_id_fkey";
             columns: ["list_id"];
             isOneToOne: false;
-            referencedRelation: "channel_lists";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "subscriptions_user_id_fkey";
-            columns: ["user_id"];
-            isOneToOne: false;
             referencedRelation: "profiles";
             referencedColumns: ["id"];
           },
         ];
+      };
+      support_kb_articles: {
+        Row: {
+          category: string;
+          content: string;
+          created_at: string;
+          enabled: boolean;
+          id: string;
+          position: number;
+          title: string;
+          updated_at: string;
+        };
+        Insert: {
+          category?: string;
+          content: string;
+          created_at?: string;
+          enabled?: boolean;
+          id?: string;
+          position?: number;
+          title: string;
+          updated_at?: string;
+        };
+        Update: {
+          category?: string;
+          content?: string;
+          created_at?: string;
+          enabled?: boolean;
+          id?: string;
+          position?: number;
+          title?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
       };
       survey_responses: {
         Row: {
@@ -856,6 +1059,63 @@ export type Database = {
           expires_at?: string | null;
           status?: string | null;
           subscribed_at?: string | null;
+        };
+        Relationships: [];
+      };
+      weekly_letters: {
+        Row: {
+          arc_state_snapshot: Json;
+          created_at: string;
+          episode_number: number;
+          generated_data: Json;
+          id: string;
+          intro_narrative: string | null;
+          new_cliffhanger: string | null;
+          recipient_count: number;
+          scheduled_at: string | null;
+          sent_at: string | null;
+          status: string;
+          subject: string | null;
+          title: string | null;
+          updated_at: string;
+          week_end: string;
+          week_start: string;
+        };
+        Insert: {
+          arc_state_snapshot?: Json;
+          created_at?: string;
+          episode_number: number;
+          generated_data?: Json;
+          id?: string;
+          intro_narrative?: string | null;
+          new_cliffhanger?: string | null;
+          recipient_count?: number;
+          scheduled_at?: string | null;
+          sent_at?: string | null;
+          status?: string;
+          subject?: string | null;
+          title?: string | null;
+          updated_at?: string;
+          week_end: string;
+          week_start: string;
+        };
+        Update: {
+          arc_state_snapshot?: Json;
+          created_at?: string;
+          episode_number?: number;
+          generated_data?: Json;
+          id?: string;
+          intro_narrative?: string | null;
+          new_cliffhanger?: string | null;
+          recipient_count?: number;
+          scheduled_at?: string | null;
+          sent_at?: string | null;
+          status?: string;
+          subject?: string | null;
+          title?: string | null;
+          updated_at?: string;
+          week_end?: string;
+          week_start?: string;
         };
         Relationships: [];
       };

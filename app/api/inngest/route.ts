@@ -10,6 +10,7 @@ import {
   onboardingJ3Trigger,
   sendOnboardingJ3,
 } from "@/inngest/onboarding";
+import { weeklyLetterDraftTrigger } from "@/inngest/weekly-letter";
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
@@ -20,5 +21,6 @@ export const { GET, POST, PUT } = serve({
     sendOnboardingJ1,
     onboardingJ3Trigger,
     sendOnboardingJ3,
+    weeklyLetterDraftTrigger,
   ],
 });

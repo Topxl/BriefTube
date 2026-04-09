@@ -61,6 +61,12 @@ export async function Footer() {
                   YouTube Summary
                 </Link>
                 <Link
+                  href="/features"
+                  className="hover:text-foreground transition-colors"
+                >
+                  Roadmap
+                </Link>
+                <Link
                   href="/support"
                   className="hover:text-foreground transition-colors"
                 >
