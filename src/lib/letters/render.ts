@@ -2,7 +2,7 @@ import { render } from "@react-email/render";
 import { WeeklyLetterEmail } from "@/components/emails/weekly-letter-email";
 
 /**
- * Minimal server-friendly markdown → HTML converter for the weekly letter.
+ * Minimal server-friendly markdown to HTML converter for the weekly letter.
  * Léa is constrained to write paragraphs + **bold** + *italics* + [links]
  * (no headings, no lists) so this tiny implementation is enough and avoids
  * pulling react-dom/server into our API route bundle.
@@ -31,7 +31,7 @@ function renderInline(text: string): string {
   // Bold: **text**
   out = out.replace(
     /\*\*([^*]+)\*\*/g,
-    '<strong style="color:#ffffff;">$1</strong>',
+    '<strong style="color:#fafafa;">$1</strong>',
   );
   // Italics: *text* (single star, but not the bold leftovers)
   out = out.replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, "<em>$1</em>");
@@ -50,9 +50,19 @@ function markdownToEmailHtml(markdown: string): string {
     .map((p) => {
       // Replace single newlines inside a paragraph with <br/>
       const inline = renderInline(p).replace(/\n/g, "<br/>");
-      return `<p style="margin:0 0 18px;color:#d4d4d8;font-size:16px;line-height:1.75;">${inline}</p>`;
+      return `<p style="margin:0 0 22px;color:#d4d4d8;font-size:17px;line-height:1.75;font-family:Georgia,'Iowan Old Style','Palatino Linotype',serif;">${inline}</p>`;
     })
     .join("\n");
+}
+
+function formatDateLabel(date: Date = new Date()): string {
+  return date
+    .toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    })
+    .toUpperCase();
 }
 
 /**
@@ -62,7 +72,9 @@ export async function renderWeeklyLetterHtml(params: {
   episodeNumber: number;
   title: string;
   introNarrativeMarkdown: string;
+  cliffhanger: string | null;
   unsubscribeUrl: string;
+  dateLabel?: string;
 }): Promise<string> {
   const bodyHtml = markdownToEmailHtml(params.introNarrativeMarkdown);
   const preview = params.introNarrativeMarkdown
@@ -77,6 +89,8 @@ export async function renderWeeklyLetterHtml(params: {
       title: params.title,
       preview,
       bodyHtml,
+      cliffhanger: params.cliffhanger,
+      dateLabel: params.dateLabel ?? formatDateLabel(),
       unsubscribeUrl: params.unsubscribeUrl,
     }),
   );
