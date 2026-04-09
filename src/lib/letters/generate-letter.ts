@@ -28,18 +28,27 @@ export async function generateAndStoreWeeklyLetter(params: {
   const { reference, vinNotes = null, force = false } = params;
   const { weekStart, weekEnd } = getWeekWindow(reference);
   const admin = createAdminClient();
+  const weekStartIso = weekStart.toISOString().slice(0, 10);
 
-  // Idempotency check
-  if (!force) {
-    const { data: existing } = await admin
-      .from("weekly_letters")
-      .select("id, episode_number")
-      .eq("week_start", weekStart.toISOString().slice(0, 10))
-      .maybeSingle();
-    if (existing) {
-      logger.info("[letters] draft already exists for this week", {
-        week_start: weekStart.toISOString().slice(0, 10),
+  // Idempotency + cleanup of dead drafts:
+  //   - If a non-dead letter exists for this week (draft/scheduled/sent),
+  //     return it as "existing" (unless force=true).
+  //   - If a cancelled/skipped letter exists for this week, delete it first
+  //     so we can regenerate cleanly with the correct episode number.
+  const { data: existing } = await admin
+    .from("weekly_letters")
+    .select("id, episode_number, status")
+    .eq("week_start", weekStartIso)
+    .maybeSingle();
+
+  if (existing) {
+    const isDead =
+      existing.status === "cancelled" || existing.status === "skipped";
+    if (!isDead && !force) {
+      logger.info("[letters] active letter already exists for this week", {
+        week_start: weekStartIso,
         existing_id: existing.id,
+        existing_status: existing.status,
       });
       return {
         id: existing.id,
@@ -47,6 +56,14 @@ export async function generateAndStoreWeeklyLetter(params: {
         was_existing: true,
       };
     }
+    // Dead or forced: clean it up before regenerating
+    logger.info("[letters] removing dead letter before regeneration", {
+      week_start: weekStartIso,
+      existing_id: existing.id,
+      existing_status: existing.status,
+      forced: force,
+    });
+    await admin.from("weekly_letters").delete().eq("id", existing.id);
   }
 
   // Collect data
