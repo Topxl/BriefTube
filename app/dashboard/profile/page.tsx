@@ -11,6 +11,65 @@ type PriceInfo = {
   interval: "month" | "year";
 };
 
+type ActivePlan = {
+  tier: "plus" | "pro";
+  interval: "month" | "year";
+  /** Amount in major currency units (e.g. 5.00 for $5.00). */
+  amount: number;
+  currency: string;
+  subscriptionId: string;
+};
+
+/**
+ * Resolve the user's active plan by matching their Stripe subscription's
+ * price_id against the configured STRIPE_*_PRICE_ID env vars.
+ *
+ * Returns null if anything is missing or the subscription can't be fetched —
+ * this is a best-effort enrichment used for the conversion event and toast.
+ */
+async function resolveActivePlan(
+  subscriptionId: string | null | undefined,
+): Promise<ActivePlan | null> {
+  if (!subscriptionId) return null;
+  try {
+    const stripe = getStripe();
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
+      expand: ["items.data.price"],
+    });
+    const item = subscription.items.data[0];
+    const price = item.price;
+    const priceId = price.id;
+
+    let tier: "plus" | "pro";
+    let interval: "month" | "year";
+    if (priceId === env.STRIPE_PLUS_PRICE_ID) {
+      tier = "plus";
+      interval = "month";
+    } else if (priceId === env.STRIPE_PLUS_ANNUAL_PRICE_ID) {
+      tier = "plus";
+      interval = "year";
+    } else if (priceId === env.STRIPE_PRO_PRICE_ID) {
+      tier = "pro";
+      interval = "month";
+    } else if (priceId === env.STRIPE_PRO_ANNUAL_PRICE_ID) {
+      tier = "pro";
+      interval = "year";
+    } else {
+      return null;
+    }
+
+    return {
+      tier,
+      interval,
+      amount: (price.unit_amount ?? 0) / 100,
+      currency: price.currency.toUpperCase(),
+      subscriptionId: subscription.id,
+    };
+  } catch {
+    return null;
+  }
+}
+
 type PricesResponse = {
   monthly: PriceInfo;
   annual: PriceInfo;
@@ -105,7 +164,7 @@ export default async function ProfilePage(props: {
     supabase
       .from("profiles")
       .select(
-        "subscription_status, trial_ends_at, stripe_customer_id, tts_voice, preferred_language, favorite_languages, max_channels, referral_code, notify_new_summaries_push, email_newsletter, email_announcements, newsletter_enabled, newsletter_hour, newsletter_full_summary, rss_token, summary_length_pref, summary_style, summary_custom_instructions",
+        "subscription_status, trial_ends_at, stripe_customer_id, stripe_subscription_id, tts_voice, preferred_language, favorite_languages, max_channels, referral_code, notify_new_summaries_push, email_newsletter, email_announcements, newsletter_enabled, newsletter_hour, newsletter_full_summary, rss_token, summary_length_pref, summary_style, summary_custom_instructions",
       )
       .eq("id", user.id)
       .single(),
@@ -144,7 +203,10 @@ export default async function ProfilePage(props: {
   );
 
   const rssToken = profile?.rss_token ?? "";
-  const isActivePro = profile?.subscription_status === "active";
+  const hasActiveSubscription = profile?.subscription_status === "active";
+  const activePlan = hasActiveSubscription
+    ? await resolveActivePlan(profile.stripe_subscription_id)
+    : null;
 
   const isTrial =
     profile?.trial_ends_at != null &&
@@ -194,7 +256,8 @@ export default async function ProfilePage(props: {
       }
       email={user.email ?? ""}
       isTrial={isTrial}
-      isActivePro={isActivePro}
+      hasActiveSubscription={hasActiveSubscription}
+      activePlan={activePlan}
       trialDaysLeft={trialDaysLeft}
       hasStripeCustomer={!!profile?.stripe_customer_id}
       initialTelegramConnected={telegramConnected}

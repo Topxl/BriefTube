@@ -151,11 +151,20 @@ type ReferralStats = {
   rewarded: number;
 };
 
+type ActivePlan = {
+  tier: "plus" | "pro";
+  interval: "month" | "year";
+  amount: number;
+  currency: string;
+  subscriptionId: string;
+};
+
 type Props = {
   avatarUrl: string;
   email: string;
   isTrial: boolean;
-  isActivePro: boolean;
+  hasActiveSubscription: boolean;
+  activePlan: ActivePlan | null;
   trialDaysLeft: number;
   hasStripeCustomer: boolean;
   initialTelegramConnected: boolean;
@@ -191,7 +200,8 @@ export function ProfileContent({
   avatarUrl: _avatarUrl,
   email,
   isTrial,
-  isActivePro,
+  hasActiveSubscription,
+  activePlan,
   trialDaysLeft,
   hasStripeCustomer,
   initialTelegramConnected,
@@ -232,7 +242,8 @@ export function ProfileContent({
   const [prices] = useState(initialPrices);
   const [referral, setReferral] = useState("");
 
-  const isActivating = !!paymentSuccess && !isActivePro && retryCount < 10;
+  const isActivating =
+    !!paymentSuccess && !hasActiveSubscription && retryCount < 10;
 
   useEffect(() => {
     const w = window as Window & {
@@ -246,10 +257,19 @@ export function ProfileContent({
 
   useEffect(() => {
     if (!paymentSuccess) return;
-    if (isActivePro) {
-      trackAdConversion({ email });
-      toast.success("You're now Pro!", {
-        description: "Enjoy unlimited channels and priority processing.",
+    if (hasActiveSubscription) {
+      const planName = activePlan?.tier === "plus" ? "Plus" : "Pro";
+      trackAdConversion({
+        email,
+        value: activePlan?.amount,
+        currency: activePlan?.currency,
+        transactionId: activePlan?.subscriptionId,
+      });
+      toast.success(`You're now on ${planName}!`, {
+        description:
+          activePlan?.tier === "plus"
+            ? `Enjoy up to ${SiteConfig.plusChannelsLimit} channels.`
+            : "Enjoy unlimited channels and priority processing.",
         duration: 6000,
       });
       router.replace("/dashboard/profile");
@@ -262,7 +282,14 @@ export function ProfileContent({
       setRetryCount((c) => c + 1);
     }, 3000);
     return () => clearTimeout(timer);
-  }, [paymentSuccess, isActivePro, router, retryCount, email]);
+  }, [
+    paymentSuccess,
+    hasActiveSubscription,
+    activePlan,
+    router,
+    retryCount,
+    email,
+  ]);
 
   const hasPlus = !!prices.plus;
 
@@ -316,13 +343,17 @@ export function ProfileContent({
               </p>
             </div>
           )}
-          {isActivePro ? (
+          {hasActiveSubscription ? (
             <>
               <div className="flex items-center justify-between px-4 py-3">
                 <div>
-                  <p className="text-sm font-medium">Pro Plan</p>
+                  <p className="text-sm font-medium">
+                    {activePlan?.tier === "plus" ? "Plus" : "Pro"} Plan
+                  </p>
                   <p className="text-muted-foreground text-[11px]">
-                    Unlimited channels and lists
+                    {activePlan?.tier === "plus"
+                      ? `Up to ${SiteConfig.plusChannelsLimit} channels`
+                      : "Unlimited channels and lists"}
                   </p>
                 </div>
                 <span className="rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-semibold text-white uppercase">
@@ -442,7 +473,7 @@ export function ProfileContent({
               </div>
             </div>
           )}
-          {(hasStripeCustomer || isActivePro) && (
+          {(hasStripeCustomer || hasActiveSubscription) && (
             <div className="border-t border-white/[0.04] px-4 py-2.5">
               <form
                 action="/api/stripe/portal"
