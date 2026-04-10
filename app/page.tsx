@@ -333,7 +333,10 @@ async function fetchPrices(): Promise<PricesData | null> {
 }
 
 export default async function Home() {
-  const [prices, stats] = await Promise.all([getCachedPrices(), getCachedStats()]);
+  const [prices, stats] = await Promise.all([
+    getCachedPrices(),
+    getCachedStats(),
+  ]);
   return (
     <main className="bg-background min-h-screen">
       {jsonLd.map((schema, i) => (
@@ -361,10 +364,6 @@ export default async function Home() {
       </Suspense>
       <Suspense fallback={<div className="h-64" />}>
         <HowItWorks />
-      </Suspense>
-      <div className="section-divider" />
-      <Suspense fallback={<div className="h-64" />}>
-        <Demo />
       </Suspense>
       <div className="section-divider" />
       <Suspense fallback={<div className="h-64" />}>
