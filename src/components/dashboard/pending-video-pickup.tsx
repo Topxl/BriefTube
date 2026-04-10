@@ -41,6 +41,7 @@ export function PendingVideoPickup() {
       // It's a video URL: queue for processing
       toast.info("Processing your video...");
 
+      // Show the card immediately with videoId as placeholder title
       addProcessingVideo({
         videoId,
         title: videoId,
@@ -59,6 +60,18 @@ export function PendingVideoPickup() {
             };
             toast.error(data.error ?? "Could not process that video");
             return;
+          }
+          const data = (await res.json().catch(() => ({}))) as {
+            videoTitle?: string;
+            videoId?: string;
+          };
+          // Update the processing card with the real title
+          if (data.videoTitle && data.videoTitle !== videoId) {
+            addProcessingVideo({
+              videoId: data.videoId ?? videoId,
+              title: data.videoTitle,
+              startedAt: Date.now(),
+            });
           }
           toast.success("Video queued! The summary will appear shortly.");
         })
