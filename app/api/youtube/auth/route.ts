@@ -11,16 +11,18 @@ export async function GET(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Derive baseUrl from the incoming request so local dev stays on localhost
+  // instead of being redirected to production by Google OAuth.
+  const baseUrl = request.nextUrl.origin;
+
   if (!user) {
-    return NextResponse.redirect(
-      new URL(
-        "/login",
-        process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
-      ),
-    );
+    return NextResponse.redirect(new URL("/login", baseUrl));
   }
 
-  const rateLimitResponse = await checkRateLimit(authRateLimit, `youtube-auth:${user.id}`);
+  const rateLimitResponse = await checkRateLimit(
+    authRateLimit,
+    `youtube-auth:${user.id}`,
+  );
   if (rateLimitResponse) return rateLimitResponse;
 
   const clientId = process.env.GOOGLE_CLIENT_ID;
@@ -52,7 +54,6 @@ export async function GET(request: NextRequest) {
     sameSite: "lax",
   });
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: `${baseUrl}/api/youtube/callback`,

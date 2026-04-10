@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-04-10
+
+FIX(worker): reduce RSS scan thread pool from 50 to 20 workers — 50 concurrent feedparser threads caused CPU 99% + load 10-16 every 30 min, blocking all video processing via the resource throttle.
+
+FEATURE(youtube-import): review modal after bulk YouTube import. When the OAuth import completes, the user now lands on `/dashboard?imported=N` and a modal automatically opens listing all freshly imported channels (those with `paused_by_system: true`). The user can search, select-all-visible, clear, and activate a chosen subset in one click — none are pre-selected by design so the user makes an active choice. Unselected channels stay paused and can be activated later from the channels section. No plan-limit gating: trial users are on Pro anyway. New file: `src/components/dashboard/imported-channels-review.tsx`. The callback at `/api/youtube/callback` now redirects to `/dashboard?imported=X&skipped=Y` instead of the unused `/onboarding?youtube_imported=...` path, and `app/onboarding/page.tsx` (which only did `redirect("/dashboard")`) is now effectively bypassed for this flow.
+
+FIX(db): filter inactive/paused channels from "All videos" and "Lists" feed tabs. Both `get_unified_feed` and `get_list_follow_feed` RPCs now include `AND active = true` in their channel CTE, so channels imported via YouTube OAuth but not yet activated (`paused_by_system = true`) no longer leak videos into the feed.
+
+FIX(youtube-oauth): local dev was redirected to production during the YouTube subscriptions import flow because both `/api/youtube/auth` and `/api/youtube/callback` hardcoded `baseUrl` from `NEXT_PUBLIC_SITE_URL` (which points to brief-tube.com even in dev). Both routes now derive `baseUrl` from `request.nextUrl.origin`, so a user starting the OAuth flow from `http://localhost:3000` stays on localhost all the way through. Requires `http://localhost:3000/api/youtube/callback` to be whitelisted in the Google Cloud Console OAuth client's authorized redirect URIs.
+
+FIX(youtube-oauth): remove `publicRateLimit` (3 req / 10 min per IP) from `/api/youtube/callback` — it was tripping 429 errors during normal testing of the import flow. The callback is already protected by the single-use CSRF state cookie and one-time OAuth code, and the initiator route `/api/youtube/auth` is still rate-limited by `authRateLimit` (30/min/user).
+
+REFACTOR(dashboard): redesign GettingStarted onboarding card into a progressive one-CTA-at-a-time flow. Step 1 (no channel): full-width hero card with a single big "Import from YouTube" action, framing the bulk OAuth import as the primary value prop instead of burying it as a small chip. Step 2 (has channel, no delivery): card switches to the delivery platform picker (Telegram, Discord, Slack) only after channels exist. The "Choose your language" step was removed entirely since the language picker already lives in /dashboard/profile. Props `language` dropped, onboarding no longer fights for attention with three parallel checklist items.
+
+CHORE(dashboard): remove "Quick action needed" ActivationBanner — redundant with the GettingStarted card which already prompts delivery channel connection, and the action wasn't strictly required for a first-time user. Deleted `src/components/dashboard/activation-banner.tsx`.
+
 ## 2026-04-09
 
 FEATURE: Weekly narrative letter system — table `weekly_letters` (episode-numbered serial story), Léa narrative engine that writes from Vin's first-person voice with cliffhangers + recurring cast (Léa, the worker, the community), arc state that persists across episodes, Inngest cron every Friday 18h Europe/Paris, admin editor at /dashboard/admin/letters with split markdown/preview view, "Test to me" + "Send to all" + auto-paginated recipient batch send via Resend, never auto-sent. Sources: features shipped this week + curated CHANGELOG entries (FEATURE/FIX only) + light stats. Reuses the Léa Gemini → OpenRouter fallback strategy.

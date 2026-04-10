@@ -5,7 +5,6 @@ import { createClient } from "@/lib/supabase/server";
 import { SummariesFeed } from "@/components/dashboard/summaries-feed";
 import { SummariesFeedSkeleton } from "@/components/dashboard/summaries-feed-skeleton";
 import { TrialBanner } from "@/components/dashboard/trial-banner";
-import { ActivationBanner } from "@/components/dashboard/activation-banner";
 import { SectionErrorBoundary } from "@/components/nowts/section-error-boundary";
 import { PushNotificationBanner } from "@/components/dashboard/push-notification-banner";
 import { GettingStarted } from "@/components/dashboard/getting-started";
@@ -26,7 +25,7 @@ const getProfile = cache(async (userId: string) => {
   const { data } = await supabase
     .from("profiles")
     .select(
-      "subscription_status, trial_ends_at, max_channels, preferred_language, favorite_languages",
+      "subscription_status, trial_ends_at, max_channels, preferred_language, favorite_languages, onboarding_completed",
     )
     .eq("id", userId)
     .single();
@@ -53,6 +52,7 @@ async function DashboardBanners({ userId }: { userId: string }) {
 
   const hasChannel = (sources ?? []).length > 0;
   const hasConnection = (connections ?? []).length > 0;
+  const onboardingCompleted = profile.onboarding_completed ?? false;
 
   const trialEndsAt = profile.trial_ends_at ?? null;
   const nowMs = Date.now();
@@ -62,11 +62,10 @@ async function DashboardBanners({ userId }: { userId: string }) {
 
   return (
     <>
-      <ActivationBanner hasConnection={hasConnection} />
       <GettingStarted
         hasChannel={hasChannel}
         hasConnection={hasConnection}
-        language={profile.preferred_language ?? "en"}
+        onboardingCompleted={onboardingCompleted}
       />
       {trialDaysLeft > 0 && <TrialBanner daysLeft={trialDaysLeft} />}
     </>

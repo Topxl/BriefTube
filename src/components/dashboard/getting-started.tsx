@@ -3,11 +3,9 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { CircleIcon, Languages, Loader2, Check, Youtube } from "@/lib/icons";
+import { Check, Loader2, Youtube, ArrowRight } from "@/lib/icons";
 import { dialogManager } from "@/features/dialog-manager/dialog-manager";
 import { createClient } from "@/lib/supabase/client";
-import { languages } from "@/lib/languages";
-import type { Language } from "@/lib/languages";
 
 // -----------------------------------------------------------------
 // Telegram connect dialog content
@@ -120,89 +118,23 @@ function TelegramConnectContent({ onConnected }: { onConnected: () => void }) {
 }
 
 // -----------------------------------------------------------------
-// Language picker dialog content
-// -----------------------------------------------------------------
-
-function LanguagePickerContent({
-  currentCode,
-  onSelect,
-}: {
-  currentCode: string;
-  onSelect: (lang: Language) => void;
-}) {
-  const [search, setSearch] = useState("");
-  const filtered = search.trim()
-    ? languages.filter(
-        (l) =>
-          l.name.toLowerCase().includes(search.toLowerCase()) ||
-          l.nativeName.toLowerCase().includes(search.toLowerCase()),
-      )
-    : languages;
-
-  return (
-    <div className="space-y-3">
-      <input
-        type="text"
-        placeholder="Search language..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="nm-inset text-foreground placeholder:text-muted-foreground w-full rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-white/20"
-      />
-      <div className="max-h-64 overflow-y-auto">
-        <div className="grid grid-cols-2 gap-1.5">
-          {filtered.map((l) => (
-            <button
-              key={l.code}
-              onClick={() => onSelect(l)}
-              className={`flex items-center gap-2 rounded-xl px-3 py-2 text-left transition-all duration-200 ${
-                currentCode === l.code
-                  ? "nm-inset text-foreground"
-                  : "nm-raised-sm text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <div className="min-w-0">
-                <p className="text-[12px] leading-none font-medium">
-                  {l.nativeName}
-                </p>
-                <p className="text-muted-foreground mt-0.5 text-[10px]">
-                  {l.name}
-                </p>
-              </div>
-              {currentCode === l.code && (
-                <Check className="ml-auto h-3 w-3 shrink-0 text-red-400" />
-              )}
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// -----------------------------------------------------------------
 // Main component
 // -----------------------------------------------------------------
 
 type Props = {
   hasChannel: boolean;
   hasConnection: boolean;
-  language: string;
+  onboardingCompleted: boolean;
 };
 
-export function GettingStarted({ hasChannel, hasConnection, language }: Props) {
+export function GettingStarted({
+  hasChannel,
+  hasConnection,
+  onboardingCompleted,
+}: Props) {
   const router = useRouter();
-  const supabase = createClient();
-  const [languageChosen, setLanguageChosen] = useState(
-    () =>
-      typeof window !== "undefined" &&
-      localStorage.getItem("gs_language_chosen") === "1",
-  );
 
-  const showModule = !hasChannel || !hasConnection;
-  if (!showModule) return null;
-
-  const langMeta = languages.find((l) => l.code === language);
-  const langLabel = langMeta?.nativeName ?? language;
+  if (hasChannel && (hasConnection || onboardingCompleted)) return null;
 
   const openTelegramDialog = () => {
     dialogManager.custom({
@@ -212,130 +144,93 @@ export function GettingStarted({ hasChannel, hasConnection, language }: Props) {
     });
   };
 
-  const openLanguageDialog = () => {
-    dialogManager.custom({
-      title: "Summary language",
-      size: "sm",
-      children: (
-        <LanguagePickerContent
-          currentCode={language}
-          onSelect={async (lang) => {
-            dialogManager.closeAll();
-            setLanguageChosen(true);
-            localStorage.setItem("gs_language_chosen", "1");
-            const {
-              data: { user },
-            } = await supabase.auth.getUser();
-            if (!user) return;
-            await supabase
-              .from("profiles")
-              .update({ preferred_language: lang.code })
-              .eq("id", user.id);
-            toast.success("Language updated");
-            router.refresh();
-          }}
-        />
-      ),
-    });
-  };
-
-  return (
-    <div className="nm-raised overflow-hidden rounded-2xl">
-      <div className="border-b border-white/[0.06] px-4 py-3">
-        <p className="text-sm font-semibold">Get started with BriefTube</p>
-        <p className="text-muted-foreground mt-0.5 text-xs">
-          Complete these steps to receive your summaries
-        </p>
-      </div>
-
-      <div className="divide-y divide-white/[0.04]">
-        {/* Add a YouTube channel — masqué une fois fait */}
-        {!hasChannel && (
-          <div className="flex items-center justify-between px-4 py-3">
-            <div className="flex items-center gap-3">
-              <CircleIcon className="text-muted-foreground h-4 w-4 shrink-0" />
-              <div>
-                <p className="text-sm font-medium">Add a YouTube channel</p>
-                <p className="text-muted-foreground text-[11px]">
-                  Subscribe to a channel to get summaries
-                </p>
-              </div>
+  // Step 1: no channel yet — focus entirely on importing YouTube subscriptions.
+  if (!hasChannel) {
+    return (
+      <a
+        href="/api/youtube/auth"
+        className="nm-raised group relative block overflow-hidden rounded-2xl p-6 transition-all hover:brightness-110"
+      >
+        <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-4">
+            <div className="nm-inset flex h-12 w-12 shrink-0 items-center justify-center rounded-xl">
+              <Youtube className="h-6 w-6 text-red-500" />
             </div>
-            <a
-              href="/api/youtube/auth"
-              className="nm-raised-sm text-muted-foreground hover:text-foreground flex items-center gap-1.5 rounded-full px-3 py-1 text-xs transition-all"
-            >
-              <Youtube className="h-3 w-3" />
-              Import
-            </a>
-          </div>
-        )}
-
-        {/* Connect a delivery channel — masqué une fois fait */}
-        {!hasConnection && (
-          <div className="flex items-start justify-between gap-3 px-4 py-3">
-            <div className="flex items-center gap-3">
-              <CircleIcon className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
-              <div>
-                <p className="text-sm font-medium">
-                  Connect a delivery channel
-                </p>
-                <p className="text-muted-foreground text-[11px]">
-                  Choose where to receive your summaries
-                </p>
-              </div>
-            </div>
-            <div className="flex shrink-0 flex-col items-end gap-1.5">
-              <div className="flex items-center gap-1.5">
-                <a
-                  href="/api/connect/discord"
-                  className="nm-raised-sm text-muted-foreground hover:text-foreground rounded-full px-2.5 py-1 text-xs transition-all"
-                >
-                  Discord
-                </a>
-                <a
-                  href="/api/connect/slack"
-                  className="nm-raised-sm text-muted-foreground hover:text-foreground rounded-full px-2.5 py-1 text-xs transition-all"
-                >
-                  Slack
-                </a>
-                <button
-                  onClick={openTelegramDialog}
-                  className="nm-raised-sm text-muted-foreground hover:text-foreground rounded-full px-2.5 py-1 text-xs transition-all"
-                >
-                  Telegram
-                </button>
-              </div>
-              <p className="text-muted-foreground/50 text-[10px]">
-                Discord & Slack connect in one click
+            <div>
+              <p className="text-base font-semibold">
+                Import your YouTube subscriptions
+              </p>
+              <p className="text-muted-foreground mt-1 text-sm">
+                Bring in every channel you already follow in one click. No URLs
+                to paste, no manual setup.
               </p>
             </div>
           </div>
-        )}
-
-        {/* Choose your language — masqué une fois sélectionné */}
-        {!languageChosen && (
-          <div className="flex items-center justify-between px-4 py-3">
-            <div className="flex items-center gap-3">
-              <Languages className="text-muted-foreground h-4 w-4 shrink-0" />
-              <div>
-                <p className="text-sm font-medium">Choose your language</p>
-                <p className="text-muted-foreground text-[11px]">
-                  Language for AI summaries and TTS voice
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground text-xs">{langLabel}</span>
-              <button
-                onClick={openLanguageDialog}
-                className="nm-raised-sm text-muted-foreground hover:text-foreground rounded-full px-3 py-1 text-xs transition-all"
-              >
-                Edit
-              </button>
-            </div>
+          <div className="inline-flex shrink-0 items-center gap-2 rounded-full bg-red-500 px-5 py-2.5 text-sm font-semibold text-white transition-transform group-hover:translate-x-0.5">
+            Import from YouTube
+            <ArrowRight className="h-4 w-4" />
           </div>
-        )}
+        </div>
+        <p className="text-muted-foreground/70 mt-4 text-xs">
+          Or add channels one by one in the list below.
+        </p>
+      </a>
+    );
+  }
+
+  // Step 2: user has channels but no delivery connection.
+  return (
+    <div className="nm-raised overflow-hidden rounded-2xl p-6">
+      <div className="flex flex-col gap-4">
+        <div className="flex items-start gap-4">
+          <div className="nm-inset flex h-12 w-12 shrink-0 items-center justify-center rounded-xl">
+            <Check className="h-6 w-6 text-emerald-400" />
+          </div>
+          <div>
+            <p className="text-base font-semibold">
+              Channels added. Now choose where to get your summaries.
+            </p>
+            <p className="text-muted-foreground mt-1 text-sm">
+              Pick a platform to receive every new summary automatically.
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 pl-16">
+          <a
+            href="/api/connect/discord"
+            className="nm-raised-sm text-foreground rounded-full px-4 py-2 text-sm font-medium transition-all hover:brightness-110"
+          >
+            Discord
+          </a>
+          <a
+            href="/api/connect/slack"
+            className="nm-raised-sm text-foreground rounded-full px-4 py-2 text-sm font-medium transition-all hover:brightness-110"
+          >
+            Slack
+          </a>
+          <button
+            onClick={openTelegramDialog}
+            className="nm-raised-sm text-foreground rounded-full px-4 py-2 text-sm font-medium transition-all hover:brightness-110"
+          >
+            Telegram
+          </button>
+          <button
+            onClick={() => {
+              const supabase = createClient();
+              void supabase.auth.getUser().then(({ data: { user } }) => {
+                if (!user) return;
+                void supabase
+                  .from("profiles")
+                  .update({ onboarding_completed: true })
+                  .eq("id", user.id)
+                  .then(() => router.refresh());
+              });
+            }}
+            className="text-muted-foreground hover:text-foreground ml-1 rounded-full px-3 py-2 text-sm transition-colors"
+          >
+            Skip
+          </button>
+        </div>
       </div>
     </div>
   );
