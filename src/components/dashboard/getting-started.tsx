@@ -241,30 +241,44 @@ export function GettingStarted({
   if (showTip) {
     return (
       <div className="nm-raised overflow-hidden rounded-2xl p-6">
-        <div className="flex flex-col gap-3">
-          <p className="text-sm font-semibold">
-            You're all set! Summaries will appear here as new videos come out.
-          </p>
-          <p className="text-muted-foreground text-sm leading-relaxed">
-            You can customize the default summary style, length, and language
-            anytime in{" "}
+        <div className="flex flex-col gap-4">
+          <div>
+            <p className="text-sm font-semibold">
+              Customize how your summaries sound
+            </p>
+            <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+              Set your defaults below. You can also override these per channel
+              from the channel menu.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <a
+              href="/dashboard/profile?open=language"
+              className="nm-raised-sm text-foreground rounded-full px-4 py-2 text-sm font-medium transition-all hover:brightness-110"
+            >
+              Language
+            </a>
+            <a
+              href="/dashboard/profile?open=voice"
+              className="nm-raised-sm text-foreground rounded-full px-4 py-2 text-sm font-medium transition-all hover:brightness-110"
+            >
+              Voice
+            </a>
             <a
               href="/dashboard/profile"
-              className="text-foreground underline underline-offset-2"
+              className="nm-raised-sm text-foreground rounded-full px-4 py-2 text-sm font-medium transition-all hover:brightness-110"
             >
-              Profile settings
+              All settings
             </a>
-            . You can also set different preferences for each channel
-            individually from the channel menu.
-          </p>
+          </div>
           <button
             onClick={() => {
               setShowTip(false);
               router.refresh();
             }}
-            className="text-muted-foreground hover:text-foreground self-end text-xs transition-colors"
+            className="text-muted-foreground hover:text-foreground self-start text-xs transition-colors"
           >
-            Got it
+            Skip, use defaults
           </button>
         </div>
       </div>
