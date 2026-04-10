@@ -201,9 +201,11 @@ def scan_all_channels():
     recent_titles_by_channel = db.get_recent_titles_by_channel(hours=2)
     logger.info(f"Loaded recent titles for {len(recent_titles_by_channel)} channels (2h window)")
 
-    # Fetch all RSS feeds in parallel — 50x faster than sequential
+    # Fetch all RSS feeds in parallel — limit concurrency to avoid CPU saturation.
+    # 50 threads caused load 10-16 on the VPS (99% CPU, blocking all processing).
+    # 20 threads keeps load < 4 while still being 20x faster than sequential.
     channel_videos: dict[str, list[dict]] = {}
-    with ThreadPoolExecutor(max_workers=50) as executor:
+    with ThreadPoolExecutor(max_workers=20) as executor:
         futures = {executor.submit(fetch_channel_videos, ch): ch for ch in valid_channel_ids}
         for future in as_completed(futures):
             ch = futures[future]
