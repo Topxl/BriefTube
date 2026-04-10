@@ -36,17 +36,15 @@ const tl = t.dashboard.summaries;
 function formatSummaryDate(dateStr: string): string {
   const date = new Date(dateStr);
   const now = new Date();
-  const toDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const yesterday = new Date(toDay.getTime() - 86400000);
-  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  if (d.getTime() === toDay.getTime()) {
-    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  }
-  if (d.getTime() === yesterday.getTime()) return "Yesterday";
+  const diffMs = now.getTime() - date.getTime();
+  const diffH = Math.floor(diffMs / 3600000);
+  if (diffH < 1) return "now";
+  if (diffH < 24) return `${diffH}h`;
+  const diffD = Math.floor(diffH / 24);
+  if (diffD < 7) return `${diffD}d`;
   const dd = String(date.getDate()).padStart(2, "0");
   const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const yy = String(date.getFullYear()).slice(2);
-  return `${dd}/${mm}/${yy}`;
+  return `${dd}/${mm}`;
 }
 
 export type Delivery = {
