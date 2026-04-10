@@ -20,7 +20,11 @@ export const POST = authRoute
     if (rl) return rl;
     const supabase = await createClient();
     const adminSupabase = createAdminClient();
-    const { videoId: rawInput, videoTitle, language } = body as {
+    const {
+      videoId: rawInput,
+      videoTitle,
+      language,
+    } = body as {
       videoId: string;
       videoTitle?: string;
       language?: string;
@@ -55,5 +59,5 @@ export const POST = authRoute
       priority: 100,
     });
 
-    return { ok: true, queued };
+    return { ok: true, queued, videoId, videoTitle: videoTitle ?? videoId };
   });
