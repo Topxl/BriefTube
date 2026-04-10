@@ -2,6 +2,8 @@
 
 ## 2026-04-10
 
+FEATURE: Make audio summaries optional — text summaries now deliver immediately (phase 1), audio generates only for users who have it enabled (phase 2). New `audio_enabled` toggle in profile preferences. Worker pipeline splits into two phases: text-only deliveries created instantly for non-audio users + web feed, then TTS/R2 upload + audio deliveries for audio-enabled users. Telegram/WhatsApp support text-only delivery mode. RSS feed conditionally includes audio enclosures based on user preference with copy-link warning when audio is disabled. TTS failures no longer block text summary delivery.
+
 FIX(worker): reduce RSS scan thread pool from 50 to 20 workers — 50 concurrent feedparser threads caused CPU 99% + load 10-16 every 30 min, blocking all video processing via the resource throttle.
 
 FEATURE(youtube-import): review modal after bulk YouTube import. When the OAuth import completes, the user now lands on `/dashboard?imported=N` and a modal automatically opens listing all freshly imported channels (those with `paused_by_system: true`). The user can search, select-all-visible, clear, and activate a chosen subset in one click — none are pre-selected by design so the user makes an active choice. Unselected channels stay paused and can be activated later from the channels section. No plan-limit gating: trial users are on Pro anyway. New file: `src/components/dashboard/imported-channels-review.tsx`. The callback at `/api/youtube/callback` now redirects to `/dashboard?imported=X&skipped=Y` instead of the unused `/onboarding?youtube_imported=...` path, and `app/onboarding/page.tsx` (which only did `redirect("/dashboard")`) is now effectively bypassed for this flow.

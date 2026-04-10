@@ -203,6 +203,13 @@ export default async function ProfilePage(props: {
   );
 
   const rssToken = profile?.rss_token ?? "";
+
+  const { data: audioRow } = await admin
+    .from("profiles")
+    .select("audio_enabled")
+    .eq("id", user.id)
+    .single();
+  const audioEnabled = audioRow?.audio_enabled !== false;
   const hasActiveSubscription = profile?.subscription_status === "active";
   const activePlan = hasActiveSubscription
     ? await resolveActivePlan(profile.stripe_subscription_id)
@@ -289,6 +296,7 @@ export default async function ProfilePage(props: {
       initialSummaryLength={profile?.summary_length_pref ?? "standard"}
       initialSummaryStyle={profile?.summary_style ?? "narrative"}
       initialCustomInstructions={profile?.summary_custom_instructions ?? ""}
+      initialAudioEnabled={audioEnabled}
     />
   );
 }

@@ -1,5 +1,9 @@
 import { createAdminClient } from "@/lib/supabase/server";
-import { checkRateLimit, getRequestIp, publicRateLimit } from "@/lib/rate-limit";
+import {
+  checkRateLimit,
+  getRequestIp,
+  publicRateLimit,
+} from "@/lib/rate-limit";
 import { SiteConfig } from "@/site-config";
 import type { NextRequest } from "next/server";
 import { connection } from "next/server";
@@ -21,7 +25,10 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ token: string }> },
 ) {
-  const rateLimitResponse = await checkRateLimit(publicRateLimit, `feed:${getRequestIp(_req)}`);
+  const rateLimitResponse = await checkRateLimit(
+    publicRateLimit,
+    `feed:${getRequestIp(_req)}`,
+  );
   if (rateLimitResponse) return rateLimitResponse;
 
   await connection();
@@ -32,13 +39,15 @@ export async function GET(
   // Resolve user by rss_token
   const { data: profile } = await admin
     .from("profiles")
-    .select("id, email, preferred_language")
+    .select("id, email, preferred_language, audio_enabled")
     .eq("rss_token", token)
     .single();
 
   if (!profile) {
     return new Response("Not found", { status: 404 });
   }
+
+  const audioEnabled = profile.audio_enabled !== false;
 
   // Fetch active subscriptions for the user
   const { data: subscriptions } = await admin
@@ -55,7 +64,7 @@ export async function GET(
   const lang = profile.preferred_language ?? "en";
 
   // Fetch last 50 completed videos for those channels in the user's language
-  const { data: videos } = await admin
+  let query = admin
     .from("processed_videos")
     .select(
       "video_id, video_title, video_url, summary, audio_url, processed_at, language",
@@ -63,9 +72,15 @@ export async function GET(
     .in("channel_id", channelIds)
     .eq("status", "completed")
     .eq("language", lang)
-    .not("audio_url", "is", null)
     .order("processed_at", { ascending: false })
     .limit(50);
+
+  // If audio is enabled, only show videos with audio ready (podcast feed)
+  if (audioEnabled) {
+    query = query.not("audio_url", "is", null);
+  }
+
+  const { data: videos } = await query;
 
   if (!videos || videos.length === 0) {
     return buildFeed(profile.email, []);
@@ -74,7 +89,7 @@ export async function GET(
   const items = videos.map((v) => ({
     videoId: v.video_id,
     title: v.video_title ?? v.video_id,
-    audioUrl: v.audio_url as string,
+    audioUrl: v.audio_url as string | null,
     videoUrl: v.video_url ?? `https://www.youtube.com/watch?v=${v.video_id}`,
     summary: v.summary ?? "",
     sentAt: v.processed_at ?? new Date().toISOString(),
@@ -87,7 +102,7 @@ export async function GET(
 type FeedItem = {
   videoId: string;
   title: string;
-  audioUrl: string;
+  audioUrl: string | null;
   videoUrl: string;
   summary: string;
   sentAt: string;
@@ -113,9 +128,13 @@ function buildFeed(email: string, items: FeedItem[]): Response {
       <link>${escapeXml(item.videoUrl)}</link>
       <guid isPermaLink="false">${escapeXml(item.videoId)}-${item.language ?? "en"}</guid>
       <pubDate>${toRfc822(item.sentAt)}</pubDate>
-      <description>${escapeXml(summaryText)}</description>
+      <description>${escapeXml(summaryText)}</description>${
+        item.audioUrl
+          ? `
       <enclosure url="${escapeXml(item.audioUrl)}" type="audio/mpeg" length="0" />
-      <itunes:duration>0</itunes:duration>
+      <itunes:duration>0</itunes:duration>`
+          : ""
+      }
     </item>`;
     })
     .join("\n");

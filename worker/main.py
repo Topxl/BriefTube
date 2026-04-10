@@ -604,48 +604,80 @@ async def _process_video(
         logger.info(f"[{video_id}] Summary: {len(summary)} chars")
         _t_summary = time.monotonic() - _t0 - _t_transcript
 
-        # Step 3: Clean + TTS
+        # ── PHASE 1: Text summary ready — deliver immediately ──────────
         clean_summary = clean_for_tts(summary)
-        logger.info(f"[{video_id}] Generating audio...")
-        audio_path = await text_to_audio(
-            clean_summary,
-            voice=tts_voice,
-            output_filename=f"video_{video_id}"
-        )
-        _t_audio = time.monotonic() - _t0 - _t_transcript - _t_summary
-
-        # Step 4: Upload to Cloudflare R2 (zero egress cost)
-        storage_key = f"audio/{video_id}_{user_language}.mp3"
-        audio_url = ""
-        try:
-            audio_url = storage.upload_audio(audio_path, storage_key)
-            logger.info(f"[{video_id}] Uploaded to R2: {storage_key}")
-        except Exception as e:
-            logger.warning(f"[{video_id}] R2 upload failed (using local path): {e}")
-            audio_url = str(audio_path)
-        _t_upload = time.monotonic() - _t0 - _t_transcript - _t_summary - _t_audio
-
-        # Step 5: Mark done (per language)
         processing_time = (datetime.now() - start_time).total_seconds()
-        # Merge Invidious-fetched YouTube metadata (genre, keywords, duration, views, …)
-        # with processing stats. Stored as JSONB — useful for future recommendation
-        # algorithms, analytics, and content filtering.
         video_metadata = {
-            **transcript_extractor.last_video_metadata,  # genre, keywords, duration_seconds, …
+            **transcript_extractor.last_video_metadata,
             "transcript_cost": transcript_cost,
             "transcript_length": len(transcript),
             "source_language": source_lang,
             "summary_length": len(summary),
         }
         db.mark_video_completed(
-            video_id, summary, audio_url,
+            video_id, summary, audio_url=None,
             metadata=video_metadata,
             language=user_language,
             video_title=video_title or None,
             transcript_source=transcript_extractor.last_transcript_source or None,
             processing_time_s=processing_time,
+            audio_status="pending",
         )
         _video_completed = True  # Do not call mark_video_failed after this point
+
+        # Create text-only deliveries for non-audio users + web deliveries for all
+        await asyncio.to_thread(
+            db.create_deliveries_for_video, video_id, channel_id, user_language, audio_only=False
+        )
+        logger.info(f"[{video_id}] Text summary delivered (phase 1)")
+
+        # ── PHASE 2: Audio generation (optional) ──────────────────────
+        _t_audio = 0.0
+        _t_upload = 0.0
+        audio_url = ""
+        needs_audio = await asyncio.to_thread(db.has_audio_subscribers, channel_id, user_language)
+
+        if needs_audio:
+            try:
+                logger.info(f"[{video_id}] Generating audio...")
+                audio_path = await text_to_audio(
+                    clean_summary,
+                    voice=tts_voice,
+                    output_filename=f"video_{video_id}"
+                )
+                _t_audio = time.monotonic() - _t0 - _t_transcript - _t_summary
+
+                # Upload to Cloudflare R2 (zero egress cost)
+                storage_key = f"audio/{video_id}_{user_language}.mp3"
+                try:
+                    audio_url = storage.upload_audio(audio_path, storage_key)
+                    logger.info(f"[{video_id}] Uploaded to R2: {storage_key}")
+                except Exception as e:
+                    logger.warning(f"[{video_id}] R2 upload failed (using local path): {e}")
+                    audio_url = str(audio_path)
+                _t_upload = time.monotonic() - _t0 - _t_transcript - _t_summary - _t_audio
+
+                # Update video with audio
+                await asyncio.to_thread(
+                    db.update_video_audio, video_id, user_language, audio_url, "completed"
+                )
+
+                # Create audio deliveries for audio-enabled users
+                await asyncio.to_thread(
+                    db.create_deliveries_for_video, video_id, channel_id, user_language, audio_only=True
+                )
+                logger.info(f"[{video_id}] Audio ready, deliveries created (phase 2)")
+            except Exception as e:
+                logger.warning(f"[{video_id}] TTS/audio failed (non-fatal): {e}")
+                await asyncio.to_thread(
+                    db.update_video_audio, video_id, user_language, None, "failed"
+                )
+        else:
+            await asyncio.to_thread(
+                db.update_video_audio, video_id, user_language, None, "skipped"
+            )
+            logger.info(f"[{video_id}] Audio skipped: no audio subscribers")
+
         db.complete_job(job["id"])
 
         # Chain: re-queue for the next pending language (e.g. "en" after "fr").
@@ -669,7 +701,8 @@ async def _process_video(
             f"✅ [{video_id}] Done: {video_title} "
             f"(transcript: ${transcript_cost:.4f}, source: {source_lang}, "
             f"transcript_source: {transcript_extractor.last_transcript_source}, "
-            f"summary: {len(summary)} chars, time: {processing_time:.1f}s | "
+            f"summary: {len(summary)} chars, audio: {'yes' if audio_url else 'skipped'}, "
+            f"time: {processing_time:.1f}s | "
             f"steps: transcript={_t_transcript:.1f}s summary={_t_summary:.1f}s "
             f"tts={_t_audio:.1f}s upload={_t_upload:.1f}s)"
         )
@@ -856,7 +889,7 @@ async def processor_loop(alert_system: MonitoringAlert):
 
 # ── Loop 5: Telegram Deliverer ─────────────────────────────────
 
-async def _dispatch_delivery(d: dict, audio_path: Path) -> bool | None:
+async def _dispatch_delivery(d: dict, audio_path: Path | None) -> bool | None:
     """Dispatch a delivery to the appropriate platform handler."""
     platform = d.get("platform", "telegram")
     if platform == "telegram":
@@ -1028,27 +1061,36 @@ async def delivery_loop(alert_system: MonitoringAlert):
                     video_id = d["video_id"]
                     audio_url = d.get("audio_url") or ""
                     delivery_language = d.get("language", "fr")
+                    audio_required = d.get("audio_required", True)
+                    mode = "audio" if audio_required else "text-only"
+                    logger.info(
+                        f"[{video_id}] Delivering to {d.get('platform', '?')} "
+                        f"user={d['user_id'][:8]}… mode={mode}"
+                    )
 
-                    # Get or download audio file (one file per video+language)
-                    audio_path = Path(__file__).parent / "audio" / f"video_{video_id}_{delivery_language}.mp3"
+                    audio_path: Path | None = None
 
-                    if not audio_path.exists() and audio_url and audio_url.startswith("http"):
-                        async with _http_session.get(audio_url) as resp:
-                            if resp.status == 200:
-                                audio_path.parent.mkdir(exist_ok=True)
-                                with open(audio_path, "wb") as f:
-                                    f.write(await resp.read())
+                    if audio_required:
+                        # Get or download audio file (one file per video+language)
+                        audio_path = Path(__file__).parent / "audio" / f"video_{video_id}_{delivery_language}.mp3"
 
-                    if not audio_path.exists():
-                        if d.get("summary"):
-                            voice = d.get("tts_voice") or None
-                            audio_path = await text_to_audio(
-                                d["summary"], voice=voice, output_filename=f"video_{video_id}"
-                            )
-                        else:
-                            logger.warning(f"No audio for {video_id} — marking failed")
-                            await asyncio.to_thread(db.mark_delivery_failed, d["delivery_id"])
-                            continue
+                        if not audio_path.exists() and audio_url and audio_url.startswith("http"):
+                            async with _http_session.get(audio_url) as resp:
+                                if resp.status == 200:
+                                    audio_path.parent.mkdir(exist_ok=True)
+                                    with open(audio_path, "wb") as f:
+                                        f.write(await resp.read())
+
+                        if not audio_path.exists():
+                            if d.get("summary"):
+                                voice = d.get("tts_voice") or None
+                                audio_path = await text_to_audio(
+                                    d["summary"], voice=voice, output_filename=f"video_{video_id}"
+                                )
+                            else:
+                                logger.warning(f"No audio for {video_id} — marking failed")
+                                await asyncio.to_thread(db.mark_delivery_failed, d["delivery_id"])
+                                continue
 
                     result = await _dispatch_delivery(d, audio_path)
 

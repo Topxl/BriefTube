@@ -177,20 +177,23 @@ def get_recent_titles_by_channel(hours: int = 2) -> dict[str, set[str]]:
 def mark_video_completed(
     video_id: str,
     summary: str,
-    audio_url: str,
+    audio_url: str | None = None,
     metadata: dict = None,
-    language: str = "fr",
+    language: str = "en",
     video_title: str | None = None,
     transcript_source: str | None = None,
     processing_time_s: float | None = None,
+    audio_status: str = "completed",
 ):
     sb = get_client()
     update_data = {
         "summary": summary,
-        "audio_url": audio_url,
         "status": "completed",
         "processed_at": datetime.now(timezone.utc).isoformat(),
+        "audio_status": audio_status,
     }
+    if audio_url is not None:
+        update_data["audio_url"] = audio_url
     if metadata:
         # Save to proper columns (not only to the metadata JSON blob)
         update_data["transcript_cost"] = metadata.get("transcript_cost", 0)
@@ -206,6 +209,50 @@ def mark_video_completed(
     if video_title:
         update_data["video_title"] = video_title
     sb.table("processed_videos").update(update_data).eq("video_id", video_id).eq("language", language).execute()
+
+
+def update_video_audio(video_id: str, language: str, audio_url: str | None, audio_status: str) -> None:
+    """Update audio fields on a processed video after TTS generation."""
+    sb = get_client()
+    update_data: dict = {"audio_status": audio_status}
+    if audio_url is not None:
+        update_data["audio_url"] = audio_url
+    sb.table("processed_videos").update(update_data).eq("video_id", video_id).eq("language", language).execute()
+    logger.info(f"[{video_id}] audio_status → {audio_status} (url={'set' if audio_url else 'none'})")
+
+
+def has_audio_subscribers(channel_id: str, language: str) -> bool:
+    """Check if any active subscriber for this channel has audio enabled and matching language."""
+    sb = get_client()
+    subs = (
+        sb.table("subscriptions")
+        .select("user_id")
+        .eq("channel_id", channel_id)
+        .eq("active", True)
+        .execute()
+    )
+    if not subs.data:
+        return False
+    user_ids = list({s["user_id"] for s in subs.data})
+    # Fetch audio-enabled profiles — check language in Python because
+    # preferred_language=null defaults to "fr" (same as create_deliveries_for_video)
+    profiles = (
+        sb.table("profiles")
+        .select("id, preferred_language")
+        .in_("id", user_ids)
+        .eq("audio_enabled", True)
+        .execute()
+    )
+    result = any(
+        (p.get("preferred_language") or "en") == language
+        for p in (profiles.data or [])
+    )
+    logger.info(
+        f"has_audio_subscribers({channel_id}, {language}): "
+        f"{len(subs.data)} subscribers, {len(profiles.data or [])} audio_enabled profiles, "
+        f"result={result}"
+    )
+    return result
 
 
 def mark_video_failed(video_id: str, language: str = "fr", immediate: bool = False, all_languages: bool = False, error_reason: str | None = None):
@@ -494,8 +541,11 @@ def get_subscriber_languages(channel_id: str) -> list[dict]:
     return list(seen.values())
 
 
-def create_deliveries_for_video(video_id: str, channel_id: str, language: str = "fr"):
-    """Create delivery entries for all users subscribed to this channel with the given language.
+def create_deliveries_for_video(video_id: str, channel_id: str, language: str = "en", audio_only: bool = False):
+    """Create delivery entries for users subscribed to this channel.
+
+    When audio_only=False (phase 1): creates deliveries for non-audio users + web deliveries for all.
+    When audio_only=True  (phase 2): creates deliveries for audio-enabled users only.
 
     Creates one delivery per user per active platform connection (Telegram, Notion, WhatsApp…).
     For users with no connected platform, creates a 'web' delivery (status=sent immediately)
@@ -517,10 +567,10 @@ def create_deliveries_for_video(video_id: str, channel_id: str, language: str = 
     # Deduplicate user_ids
     user_ids = list({s["user_id"] for s in subs.data})
 
-    # Fetch profiles with language + entitlement info
+    # Fetch profiles with language + entitlement info + audio preference
     profiles = (
         sb.table("profiles")
-        .select("id, preferred_language, subscription_status, trial_ends_at, max_channels")
+        .select("id, preferred_language, subscription_status, trial_ends_at, max_channels, audio_enabled")
         .in_("id", user_ids)
         .execute()
     )
@@ -530,7 +580,7 @@ def create_deliveries_for_video(video_id: str, channel_id: str, language: str = 
     trial_expired_users: list[dict] = []
 
     for p in (profiles.data or []):
-        if (p.get("preferred_language") or "fr") != language:
+        if (p.get("preferred_language") or "en") != language:
             continue
         status = p.get("subscription_status") or "free"
         trial_str = p.get("trial_ends_at")
@@ -575,53 +625,95 @@ def create_deliveries_for_video(video_id: str, channel_id: str, language: str = 
     if not matching_ids:
         return
 
+    # Build audio preference map for matched users
+    matching_set = set(matching_ids)
+    audio_pref_map: dict[str, bool] = {}
+    for p in (profiles.data or []):
+        if p["id"] in matching_set:
+            audio_pref_map[p["id"]] = p.get("audio_enabled", True)
+
+    audio_on_count = sum(1 for v in audio_pref_map.values() if v)
+    audio_off_count = sum(1 for v in audio_pref_map.values() if not v)
+    phase = "phase2-audio" if audio_only else "phase1-text"
+    logger.info(
+        f"[{video_id}] create_deliveries ({phase}): "
+        f"{len(matching_ids)} entitled users, "
+        f"{audio_on_count} audio_enabled=true, {audio_off_count} audio_enabled=false"
+    )
+
+    # Filter users by audio preference depending on phase
+    if audio_only:
+        # Phase 2: only audio-enabled users get platform deliveries
+        matching_ids = [uid for uid in matching_ids if audio_pref_map.get(uid, True)]
+        if not matching_ids:
+            return
+    else:
+        # Phase 1: non-audio users get platform deliveries, ALL get web deliveries
+        all_matching_ids = list(matching_ids)  # save for web deliveries
+        matching_ids_for_platform = [uid for uid in matching_ids if not audio_pref_map.get(uid, True)]
+
     # Get all active platform connections for matching users
-    connections = get_platform_connections_for_users(matching_ids)
+    ids_for_connections = matching_ids if audio_only else (matching_ids_for_platform + all_matching_ids)
+    connections = get_platform_connections_for_users(list(set(ids_for_connections)))
     connected_user_ids = {conn["user_id"] for conn in connections}
 
-    # Users with no platform connection get a 'web' delivery so their dashboard
-    # and daily digest work even without Telegram/Discord/Slack.
-    unconnected_ids = [uid for uid in matching_ids if uid not in connected_user_ids]
-
     # Fetch all existing deliveries for this video+language (check by user+platform pair)
+    all_user_ids_to_check = matching_ids if audio_only else list(set(matching_ids_for_platform + all_matching_ids))
     existing = (
         sb.table("deliveries")
         .select("user_id, platform")
         .eq("video_id", video_id)
         .eq("language", language)
-        .in_("user_id", matching_ids)
+        .in_("user_id", all_user_ids_to_check)
         .execute()
     )
     existing_pairs = {(d["user_id"], d.get("platform", "telegram")) for d in (existing.data or [])}
 
     to_insert = []
 
-    # Platform deliveries (Telegram, Discord, Slack…)
-    for conn in connections:
-        if (conn["user_id"], conn["platform"]) not in existing_pairs:
-            to_insert.append({
-                "user_id": conn["user_id"],
-                "video_id": video_id,
-                "status": "pending",
-                "language": language,
-                "platform": conn["platform"],
-            })
+    if audio_only:
+        # Phase 2: audio deliveries for audio-enabled users
+        matching_set = set(matching_ids)
+        for conn in connections:
+            if conn["user_id"] in matching_set and (conn["user_id"], conn["platform"]) not in existing_pairs:
+                to_insert.append({
+                    "user_id": conn["user_id"],
+                    "video_id": video_id,
+                    "status": "pending",
+                    "language": language,
+                    "platform": conn["platform"],
+                    "audio_required": True,
+                })
+    else:
+        # Phase 1: text-only platform deliveries for non-audio users
+        platform_set = set(matching_ids_for_platform)
+        for conn in connections:
+            if conn["user_id"] in platform_set and (conn["user_id"], conn["platform"]) not in existing_pairs:
+                to_insert.append({
+                    "user_id": conn["user_id"],
+                    "video_id": video_id,
+                    "status": "pending",
+                    "language": language,
+                    "platform": conn["platform"],
+                    "audio_required": False,
+                })
 
-    # Web deliveries for users with no connected platform
-    # Check against ALL platforms — don't create web delivery if telegram (or any
-    # other platform) delivery already exists for this user+video.
-    existing_user_ids = {d_uid for d_uid, _ in existing_pairs}
-    now_iso = datetime.now(timezone.utc).isoformat()
-    for uid in unconnected_ids:
-        if uid not in existing_user_ids:
-            to_insert.append({
-                "user_id": uid,
-                "video_id": video_id,
-                "status": "sent",
-                "sent_at": now_iso,
-                "language": language,
-                "platform": "web",
-            })
+        # Web deliveries for ALL users — ensures the dashboard "Summaries" tab
+        # shows the text summary immediately for everyone, even audio-enabled users
+        # whose platform delivery will only be created in phase 2.
+        existing_user_ids = {d_uid for d_uid, _ in existing_pairs}
+        now_iso = datetime.now(timezone.utc).isoformat()
+        for uid in all_matching_ids:
+            if uid not in existing_user_ids:
+                to_insert.append({
+                    "user_id": uid,
+                    "video_id": video_id,
+                    "status": "sent",
+                    "sent_at": now_iso,
+                    "language": language,
+                    "platform": "web",
+                    "audio_required": False,
+                })
 
     if to_insert:
         sb.table("deliveries").insert(to_insert).execute()
@@ -659,7 +751,7 @@ def get_pending_deliveries(limit: int = 20) -> list[dict]:
     # 2. Fetch pending deliveries for those completed videos (oldest first)
     raw_deliveries = (
         sb.table("deliveries")
-        .select("id, user_id, video_id, language, platform")
+        .select("id, user_id, video_id, language, platform, audio_required")
         .eq("status", "pending")
         .in_("video_id", completed_ids_list)
         .order("created_at")
@@ -744,6 +836,7 @@ def get_pending_deliveries(limit: int = 20) -> list[dict]:
             "channel_id": v["channel_id"],
             "summary": v["summary"],
             "audio_url": v["audio_url"],
+            "audio_required": d.get("audio_required", True),
         })
         if len(results) >= limit:
             break

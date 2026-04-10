@@ -68,7 +68,7 @@ async def _convert_to_ogg(mp3_path: Path) -> Path:
 
 async def send_audio_to_user(
     chat_id: str,
-    audio_path: Path,
+    audio_path: Path | None,
     video_title: str,
     video_id: str,
     channel_id: str,
@@ -102,6 +102,33 @@ async def send_audio_to_user(
     keyboard = InlineKeyboardMarkup([[
         InlineKeyboardButton("⚙️ Options", callback_data=f"options_{video_id}_{language}")
     ]])
+
+    # ── Text-only delivery path (no audio) ──────────────────────────────────
+    if audio_path is None:
+        title_escaped = _html.escape(video_title or "")
+        video_url = f"https://youtu.be/{video_id}"
+        try:
+            await bot.send_message(
+                chat_id=chat_id_int,
+                text=f"<b>{title_escaped}</b>\n{video_url}",
+                parse_mode="HTML",
+                link_preview_options=LinkPreviewOptions(prefer_large_media=True),
+                reply_markup=keyboard,
+            )
+            logger.info(f"Delivered to chat {chat_id}: {(video_title or '')[:60]} (text-only)")
+            return True
+        except (Forbidden, ChatMigrated) as e:
+            logger.warning(f"Text message permanently failed for chat {chat_id}: {e}")
+            return None
+        except BadRequest as e:
+            if "chat not found" in str(e).lower() or "user not found" in str(e).lower():
+                logger.warning(f"Text message — chat not found for {chat_id}: {e}")
+                return None
+            logger.warning(f"Text message failed for chat {chat_id}: {e}")
+            return False
+        except Exception as e:
+            logger.warning(f"Text message failed for chat {chat_id}: {e}")
+            return False
 
     # ── Step 1: Convert MP3 → OGG/OPUS ─────────────────────────────────────
     ogg_path: Path | None = None
