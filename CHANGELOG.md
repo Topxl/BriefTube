@@ -2,6 +2,8 @@
 
 ## 2026-04-10
 
+FEATURE: Add transcript cache (memory + disk LRU) to skip re-extraction on language-chained videos — saves ~80-110s per additional language.
+
 FEATURE: Make audio summaries optional — text summaries now deliver immediately (phase 1), audio generates only for users who have it enabled (phase 2). New `audio_enabled` toggle in profile preferences. Worker pipeline splits into two phases: text-only deliveries created instantly for non-audio users + web feed, then TTS/R2 upload + audio deliveries for audio-enabled users. Telegram/WhatsApp support text-only delivery mode. RSS feed conditionally includes audio enclosures based on user preference with copy-link warning when audio is disabled. TTS failures no longer block text summary delivery.
 
 FIX(worker): reduce RSS scan thread pool from 50 to 20 workers — 50 concurrent feedparser threads caused CPU 99% + load 10-16 every 30 min, blocking all video processing via the resource throttle.
