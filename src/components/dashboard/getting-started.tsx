@@ -197,7 +197,7 @@ export function GettingStarted({
             </p>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2 pl-16">
+        <div className="flex items-center gap-2">
           <a
             href="/api/connect/discord"
             className="nm-raised-sm text-foreground rounded-full px-4 py-2 text-sm font-medium transition-all hover:brightness-110"
