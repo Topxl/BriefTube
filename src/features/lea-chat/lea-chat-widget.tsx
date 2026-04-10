@@ -258,7 +258,7 @@ export function LeaChatWidget() {
           type="button"
           onClick={() => setOpen(true)}
           aria-label="Open BriefTube support"
-          className="fixed right-4 bottom-20 z-50 flex h-10 w-10 items-center justify-center rounded-full bg-red-600 text-white shadow-lg shadow-red-600/30 transition hover:scale-105 hover:bg-red-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400 sm:right-5 sm:bottom-5 sm:h-12 sm:w-12"
+          className="fixed right-4 bottom-20 z-50 flex h-10 w-10 items-center justify-center rounded-full border border-white/[0.08] bg-[#1a1a1a] text-red-500 shadow-lg shadow-black/40 transition hover:scale-105 hover:bg-[#222] focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/40 sm:right-5 sm:bottom-5 sm:h-12 sm:w-12"
         >
           <MessageCircle className="h-4 w-4 sm:h-5 sm:w-5" />
         </button>
