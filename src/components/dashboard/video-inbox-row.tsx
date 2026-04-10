@@ -296,8 +296,8 @@ export function VideoInboxRow({
           </div>
         </div>
 
-        {/* Title + date + actions */}
-        <div className="min-w-0 flex-1">
+        {/* Title + date + actions (pr-8 clears the absolute MoreHorizontal menu) */}
+        <div className="min-w-0 flex-1 pr-8">
           <p className="line-clamp-2 text-sm leading-snug font-medium">
             {title}
           </p>
