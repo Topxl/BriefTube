@@ -120,12 +120,6 @@ function UserAvatar() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link href="/dashboard/profile">
-            <User className="h-4 w-4" />
-            Profile settings
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
           <Link href="/dashboard/profile?open=voice">Voice & delivery</Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
