@@ -2,11 +2,6 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import {
-  checkRateLimit,
-  getRequestIp,
-  publicRateLimit,
-} from "@/lib/rate-limit";
 import { cookies } from "next/headers";
 import { logger } from "@/lib/logger";
 import { captureServerEvent } from "@/lib/posthog/server";
@@ -81,13 +76,13 @@ async function fetchAllSubscriptions(
 }
 
 export async function GET(request: NextRequest) {
-  const rateLimitResponse = await checkRateLimit(
-    publicRateLimit,
-    `yt-cb:${getRequestIp(request)}`,
-  );
-  if (rateLimitResponse) return rateLimitResponse;
+  // No rate limit here: the flow is already gated by /api/youtube/auth
+  // (authRateLimit 30/min/user), and the callback is single-use via the
+  // CSRF state cookie + one-time OAuth code.
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  // Derive baseUrl from the incoming request so local dev stays on localhost
+  // (matches the redirect_uri sent in /api/youtube/auth).
+  const baseUrl = request.nextUrl.origin;
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
   const state = searchParams.get("state");
@@ -320,9 +315,6 @@ export async function GET(request: NextRequest) {
   }
 
   return NextResponse.redirect(
-    new URL(
-      `/onboarding?youtube_imported=${imported}&youtube_skipped=${skipped}`,
-      baseUrl,
-    ),
+    new URL(`/dashboard?imported=${imported}&skipped=${skipped}`, baseUrl),
   );
 }
