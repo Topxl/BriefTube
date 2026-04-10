@@ -19,8 +19,6 @@ const STAGES = [
   { until: Infinity, label: "Delivering…", step: 3 },
 ] as const;
 
-const STEP_LABELS = ["Transcript", "Summary", "Audio", "Delivery"] as const;
-
 function getStage(elapsedSeconds: number) {
   return (
     STAGES.find((s) => elapsedSeconds < s.until) ?? STAGES[STAGES.length - 1]
