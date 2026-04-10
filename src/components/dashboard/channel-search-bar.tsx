@@ -206,66 +206,68 @@ export function ChannelSearchBar() {
       {isYT && (loadingPreview || preview) && (
         <div className="nm-inset-sm absolute top-full right-0 left-0 z-50 mt-1 rounded-xl bg-[oklch(0.18_0_0)] p-3">
           {preview ? (
-            <div className="flex items-start gap-3">
-              {preview.thumbnail ? (
-                <img
-                  src={preview.thumbnail}
-                  alt={preview.title ?? preview.channelName}
-                  className="h-14 w-24 shrink-0 rounded-lg object-cover"
-                />
-              ) : (
-                <div className="nm-raised-sm flex h-14 w-14 shrink-0 items-center justify-center rounded-lg">
-                  <Youtube className="text-muted-foreground h-5 w-5" />
-                </div>
-              )}
-              <div className="min-w-0 flex-1">
-                {preview.title ? (
-                  <p className="line-clamp-2 text-xs font-medium">
-                    {preview.title}
-                  </p>
+            <div className="flex flex-col gap-2">
+              <div className="flex items-start gap-3">
+                {preview.thumbnail ? (
+                  <img
+                    src={preview.thumbnail}
+                    alt={preview.title ?? preview.channelName}
+                    className="h-14 w-24 shrink-0 rounded-lg object-cover"
+                  />
                 ) : (
-                  <div className="bg-muted/50 mb-1 h-3 w-3/4 animate-pulse rounded" />
+                  <div className="nm-raised-sm flex h-14 w-14 shrink-0 items-center justify-center rounded-lg">
+                    <Youtube className="text-muted-foreground h-5 w-5" />
+                  </div>
                 )}
-                {preview.channelName ? (
-                  <p className="text-muted-foreground text-[11px]">
-                    {preview.channelName}
-                  </p>
-                ) : (
-                  <div className="bg-muted/50 h-2.5 w-1/2 animate-pulse rounded" />
-                )}
-                <div className="mt-2 flex gap-2">
-                  {!preview.isSubscribed && (
-                    <button
-                      onClick={() => void handleSubscribe()}
-                      disabled={subscribing || summarizing}
-                      className="nm-raised-sm text-muted-foreground hover:text-foreground flex items-center gap-1 rounded-full px-3 py-1 text-xs transition-all disabled:opacity-50"
-                    >
-                      {subscribing ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : null}
-                      Subscribe
-                    </button>
+                <div className="min-w-0 flex-1">
+                  {preview.title ? (
+                    <p className="line-clamp-2 text-xs font-medium">
+                      {preview.title}
+                    </p>
+                  ) : (
+                    <div className="bg-muted/50 mb-1 h-3 w-3/4 animate-pulse rounded" />
                   )}
-                  {preview.isSubscribed && (
-                    <span className="flex items-center gap-1 text-[11px] text-emerald-400">
-                      <Check className="h-3 w-3" /> Subscribed
-                    </span>
-                  )}
-                  {preview.type === "video" && (
-                    <button
-                      onClick={() => void handleSummarize()}
-                      disabled={subscribing || summarizing}
-                      className="nm-raised-sm flex items-center gap-1 rounded-full bg-red-600/10 px-3 py-1 text-xs text-red-400 transition-all hover:bg-red-600/20 disabled:opacity-50"
-                    >
-                      {summarizing ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
-                        <Play className="h-3 w-3" />
-                      )}
-                      Summarize
-                    </button>
+                  {preview.channelName ? (
+                    <p className="text-muted-foreground text-[11px]">
+                      {preview.channelName}
+                    </p>
+                  ) : (
+                    <div className="bg-muted/50 h-2.5 w-1/2 animate-pulse rounded" />
                   )}
                 </div>
+              </div>
+              <div className="flex gap-2">
+                {!preview.isSubscribed && (
+                  <button
+                    onClick={() => void handleSubscribe()}
+                    disabled={subscribing || summarizing}
+                    className="nm-raised-sm text-muted-foreground hover:text-foreground flex items-center gap-1 rounded-full px-3 py-1 text-xs transition-all disabled:opacity-50"
+                  >
+                    {subscribing ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : null}
+                    Subscribe
+                  </button>
+                )}
+                {preview.isSubscribed && (
+                  <span className="flex items-center gap-1 text-[11px] text-emerald-400">
+                    <Check className="h-3 w-3" /> Subscribed
+                  </span>
+                )}
+                {preview.type === "video" && (
+                  <button
+                    onClick={() => void handleSummarize()}
+                    disabled={subscribing || summarizing}
+                    className="nm-raised-sm flex items-center gap-1 rounded-full bg-red-600/10 px-3 py-1 text-xs text-red-400 transition-all hover:bg-red-600/20 disabled:opacity-50"
+                  >
+                    {summarizing ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Play className="h-3 w-3" />
+                    )}
+                    Summarize
+                  </button>
+                )}
               </div>
             </div>
           ) : null}
