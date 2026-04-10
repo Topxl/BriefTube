@@ -118,7 +118,10 @@ function TelegramConnectContent({ onConnected }: { onConnected: () => void }) {
 }
 
 // -----------------------------------------------------------------
-// Main component
+// Main component: 3-step onboarding
+//   Step 1: Import YouTube channels (no channels yet)
+//   Step 2: Connect a delivery platform (has channels, no connection)
+//   Step 3: Customize summary preferences (after skipping step 2)
 // -----------------------------------------------------------------
 
 type Props = {
@@ -133,20 +136,19 @@ export function GettingStarted({
   onboardingCompleted,
 }: Props) {
   const router = useRouter();
-  const [showTip, setShowTip] = useState(false);
+  const [step, setStep] = useState<"platform" | "customize" | "done">(() => {
+    if (!hasChannel) return "platform";
+    if (hasConnection) return "customize";
+    if (onboardingCompleted) return "done";
+    return "platform";
+  });
 
-  if (hasChannel && (hasConnection || onboardingCompleted) && !showTip)
-    return null;
+  // If user already completed onboarding and isn't in a tip flow, hide
+  if (step === "done") return null;
+  // If channels + connection exist and we're not showing the customize tip
+  if (hasChannel && hasConnection && step === "platform") return null;
 
-  const openTelegramDialog = () => {
-    dialogManager.custom({
-      title: "Connect Telegram",
-      size: "sm",
-      children: <TelegramConnectContent onConnected={() => router.refresh()} />,
-    });
-  };
-
-  // Step 1: no channel yet — focus entirely on importing YouTube subscriptions.
+  // ---- Step 1: No channels yet ----
   if (!hasChannel) {
     return (
       <a
@@ -180,7 +182,50 @@ export function GettingStarted({
     );
   }
 
-  // Step 2: user has channels but no delivery connection.
+  // ---- Step 3: Customize summary preferences ----
+  if (step === "customize") {
+    return (
+      <div className="nm-raised overflow-hidden rounded-2xl p-6">
+        <div className="flex flex-col gap-4">
+          <div>
+            <p className="text-sm font-semibold">
+              Customize how your summaries sound
+            </p>
+            <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+              Set your defaults in the profile page. You can also override these
+              per channel from the channel menu.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <a
+              href="/dashboard/profile"
+              className="nm-raised-sm text-foreground rounded-full px-4 py-2 text-sm font-medium transition-all hover:brightness-110"
+            >
+              Open settings
+            </a>
+            <button
+              onClick={() => {
+                setStep("done");
+                const supabase = createClient();
+                void supabase.auth.getUser().then(({ data: { user } }) => {
+                  if (!user) return;
+                  void supabase
+                    .from("profiles")
+                    .update({ onboarding_completed: true })
+                    .eq("id", user.id);
+                });
+              }}
+              className="text-muted-foreground hover:text-foreground rounded-full px-3 py-2 text-sm transition-colors"
+            >
+              Skip, use defaults
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ---- Step 2: Connect a delivery platform ----
   return (
     <div className="nm-raised overflow-hidden rounded-2xl p-6">
       <div className="flex flex-col gap-4">
@@ -190,45 +235,23 @@ export function GettingStarted({
           </div>
           <div>
             <p className="text-base font-semibold">
-              Channels added. Now choose where to get your summaries.
+              Channels added. Get your summaries delivered.
             </p>
             <p className="text-muted-foreground mt-1 text-sm">
-              Pick a platform to receive every new summary automatically.
+              Connect a platform to receive every new summary automatically.
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <a
-            href="/api/connect/discord"
+            href="/dashboard/profile"
             className="nm-raised-sm text-foreground rounded-full px-4 py-2 text-sm font-medium transition-all hover:brightness-110"
           >
-            Discord
-          </a>
-          <a
-            href="/api/connect/slack"
-            className="nm-raised-sm text-foreground rounded-full px-4 py-2 text-sm font-medium transition-all hover:brightness-110"
-          >
-            Slack
+            Connect a platform
           </a>
           <button
-            onClick={openTelegramDialog}
-            className="nm-raised-sm text-foreground rounded-full px-4 py-2 text-sm font-medium transition-all hover:brightness-110"
-          >
-            Telegram
-          </button>
-          <button
-            onClick={() => {
-              const supabase = createClient();
-              void supabase.auth.getUser().then(({ data: { user } }) => {
-                if (!user) return;
-                void supabase
-                  .from("profiles")
-                  .update({ onboarding_completed: true })
-                  .eq("id", user.id)
-                  .then(() => setShowTip(true));
-              });
-            }}
-            className="text-muted-foreground hover:text-foreground ml-1 rounded-full px-3 py-2 text-sm transition-colors"
+            onClick={() => setStep("customize")}
+            className="text-muted-foreground hover:text-foreground rounded-full px-3 py-2 text-sm transition-colors"
           >
             Skip
           </button>
@@ -236,52 +259,4 @@ export function GettingStarted({
       </div>
     </div>
   );
-
-  // Tip shown after clicking Skip
-  if (showTip) {
-    return (
-      <div className="nm-raised overflow-hidden rounded-2xl p-6">
-        <div className="flex flex-col gap-4">
-          <div>
-            <p className="text-sm font-semibold">
-              Customize how your summaries sound
-            </p>
-            <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-              Set your defaults below. You can also override these per channel
-              from the channel menu.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <a
-              href="/dashboard/profile?open=language"
-              className="nm-raised-sm text-foreground rounded-full px-4 py-2 text-sm font-medium transition-all hover:brightness-110"
-            >
-              Language
-            </a>
-            <a
-              href="/dashboard/profile?open=voice"
-              className="nm-raised-sm text-foreground rounded-full px-4 py-2 text-sm font-medium transition-all hover:brightness-110"
-            >
-              Voice
-            </a>
-            <a
-              href="/dashboard/profile"
-              className="nm-raised-sm text-foreground rounded-full px-4 py-2 text-sm font-medium transition-all hover:brightness-110"
-            >
-              All settings
-            </a>
-          </div>
-          <button
-            onClick={() => {
-              setShowTip(false);
-              router.refresh();
-            }}
-            className="text-muted-foreground hover:text-foreground self-start text-xs transition-colors"
-          >
-            Skip, use defaults
-          </button>
-        </div>
-      </div>
-    );
-  }
 }
