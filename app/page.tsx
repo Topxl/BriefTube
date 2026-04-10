@@ -31,9 +31,6 @@ const HowItWorks = dynamic(async () =>
     default: m.HowItWorks,
   })),
 );
-const Demo = dynamic(async () =>
-  import("@/components/landing/demo").then((m) => ({ default: m.Demo })),
-);
 const Features = dynamic(async () =>
   import("@/components/landing/features").then((m) => ({
     default: m.Features,
@@ -44,11 +41,6 @@ const Pricing = dynamic(async () =>
 );
 const FAQ = dynamic(async () =>
   import("@/components/landing/faq").then((m) => ({ default: m.FAQ })),
-);
-const FinalCTA = dynamic(async () =>
-  import("@/components/landing/final-cta").then((m) => ({
-    default: m.FinalCTA,
-  })),
 );
 const Footer = dynamic(async () =>
   import("@/components/landing/footer").then((m) => ({ default: m.Footer })),
@@ -376,9 +368,7 @@ export default async function Home() {
       <Suspense fallback={<div className="h-64" />}>
         <FAQ />
       </Suspense>
-      <Suspense fallback={<div className="h-32" />}>
-        <FinalCTA />
-      </Suspense>
+      {/* FinalCTA removed: hero URL input is the primary CTA now */}
       <Suspense fallback={<div className="h-32" />}>
         <Footer />
       </Suspense>
