@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Check, Youtube, ArrowRight } from "@/lib/icons";
 import { createClient } from "@/lib/supabase/client";
+import { dialogManager } from "@/features/dialog-manager/dialog-manager";
+import { toast } from "sonner";
 
 // -----------------------------------------------------------------
 // Main component: 3-step onboarding
@@ -28,6 +30,46 @@ export function GettingStarted({
     if (onboardingCompleted) return "done";
     return "platform";
   });
+
+  const showFeedbackDialog = () => {
+    dialogManager.input({
+      title: "One quick question before you go",
+      input: {
+        label:
+          "What's the one thing you'd need BriefTube to do for it to become essential to you?",
+        defaultValue: "",
+      },
+      action: {
+        label: "Send",
+        onClick: async (value: string | undefined) => {
+          if (!value?.trim()) return;
+          try {
+            // Create a chat conversation + message via existing Léa API
+            const convRes = await fetch("/api/chat/conversations", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: "{}",
+            });
+            if (!convRes.ok) throw new Error("conv failed");
+            const convData = (await convRes.json()) as {
+              conversation: { id: string };
+            };
+            await fetch("/api/chat/ask", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                conversationId: convData.conversation.id,
+                message: `[Onboarding feedback] ${value?.trim()}`,
+              }),
+            });
+            toast.success("Thanks for your feedback!");
+          } catch {
+            toast.error("Could not send feedback");
+          }
+        },
+      },
+    });
+  };
 
   // If user already completed onboarding and isn't in a tip flow, hide
   if (step === "done") return null;
@@ -100,6 +142,7 @@ export function GettingStarted({
                     .update({ onboarding_completed: true })
                     .eq("id", user.id);
                 });
+                showFeedbackDialog();
               }}
               className="text-muted-foreground hover:text-foreground rounded-full px-3 py-2 text-sm transition-colors"
             >
