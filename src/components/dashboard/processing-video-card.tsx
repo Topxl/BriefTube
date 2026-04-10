@@ -165,12 +165,23 @@ function ProcessingCard({ video }: { video: ProcessingVideo }) {
             {stage.label}
           </p>
 
-          {/* Progress bar */}
-          <div className="bg-muted mt-2 h-1 overflow-hidden rounded-full">
+          {/* Progress bar with energy shimmer */}
+          <div className="bg-muted relative mt-2 h-1 overflow-hidden rounded-full">
             <div
               className="h-full rounded-full bg-red-500 transition-all duration-1000 ease-out"
               style={{ width: `${progress}%` }}
             />
+            <div
+              className="absolute inset-0 rounded-full"
+              style={{
+                width: `${progress}%`,
+                background:
+                  "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.35) 50%, transparent 100%)",
+                backgroundSize: "200% 100%",
+                animation: "shimmer 1.5s ease-in-out infinite",
+              }}
+            />
+            <style>{`@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}`}</style>
           </div>
         </div>
 
