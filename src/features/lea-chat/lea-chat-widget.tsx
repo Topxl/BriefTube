@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { MessageCircle, Send, RotateCcw, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -248,7 +249,10 @@ export function LeaChatWidget() {
     }
   }, []);
 
-  if (!session.data?.user) return null;
+  const pathname = usePathname();
+  const hiddenRoutes =
+    pathname === "/" || pathname === "/login" || pathname === "/signup";
+  if (!session.data?.user || hiddenRoutes) return null;
 
   return (
     <>
