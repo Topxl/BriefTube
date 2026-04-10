@@ -174,24 +174,6 @@ function ProcessingCard({ video }: { video: ProcessingVideo }) {
               style={{ width: `${progress}%` }}
             />
           </div>
-
-          {/* Step labels (no dots) */}
-          <div className="mt-1.5 flex w-full items-center gap-2">
-            {STEP_LABELS.map((label, i) => (
-              <span
-                key={label}
-                className={`text-[9px] transition-colors duration-700 ${
-                  i === stage.step
-                    ? "font-medium text-white/60"
-                    : i < stage.step
-                      ? "text-white/30"
-                      : "text-white/15"
-                }`}
-              >
-                {label}
-              </span>
-            ))}
-          </div>
         </div>
 
         <button
