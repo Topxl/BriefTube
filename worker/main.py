@@ -23,6 +23,7 @@ import psutil
 
 from config import RSS_CHECK_INTERVAL, TELEGRAM_BOT_TOKEN, LOG_BOT_TOKEN, SUPABASE_URL, ADMIN_TELEGRAM_CHAT_ID, MAX_CONCURRENT_VIDEOS, MAX_CPU_PERCENT, MAX_LOAD_PER_CPU, MIN_FREE_RAM_MB, CPU_CHECK_INTERVAL, HEALTH_PORT, WORKER_INSTANCE, APP_URL, WORKER_API_SECRET, PUSH_NOTIFY_SECRET
 from transcript_extractor import TranscriptExtractor, validate_cookies
+from transcript_cache import transcript_cache
 from gemini_api import GeminiSummarizer
 from openrouter_api import OpenRouterSummarizer
 from text_cleaner import clean_for_tts
@@ -394,14 +395,30 @@ async def _process_video(
 
     try:
 
-        # Step 1: Extract transcript
-        logger.info(f"[{video_id}] Extracting transcript...")
-        transcript, source_lang, error, transcript_cost = await asyncio.to_thread(
-            transcript_extractor.get_transcript,
-            youtube_url,
-            preferred_languages=[user_language, 'fr', 'en'],
-            video_title=video_title,
-        )
+        # Step 1: Extract transcript (check cache first — saves ~80-110s on language chaining)
+        cached = transcript_cache.get(video_id)
+        if cached:
+            transcript = cached["text"]
+            source_lang = cached["language"]
+            transcript_cost = cached["cost"]
+            error = None
+            transcript_extractor.last_transcript_source = cached["source"]
+            transcript_extractor.last_ip_blocked = False
+            logger.info(f"[{video_id}] Using cached transcript ({len(transcript)} chars, source={source_lang})")
+        else:
+            logger.info(f"[{video_id}] Extracting transcript...")
+            transcript, source_lang, error, transcript_cost = await asyncio.to_thread(
+                transcript_extractor.get_transcript,
+                youtube_url,
+                preferred_languages=[user_language, 'fr', 'en'],
+                video_title=video_title,
+            )
+            # Cache successful extraction for language chaining
+            if transcript:
+                transcript_cache.put(
+                    video_id, transcript, source_lang, transcript_cost,
+                    transcript_extractor.last_transcript_source or "unknown",
+                )
 
         # ── Post-transcript alerts ──────────────────────────────────────
 
