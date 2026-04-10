@@ -223,6 +223,34 @@ export function ProcessingVideoCard() {
     () => _EMPTY,
   );
 
+  // On mount: hydrate from processing_queue DB rows so cards survive page refresh
+  useEffect(() => {
+    const supabase = createClient();
+    void supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return;
+      void supabase
+        .from("processing_queue")
+        .select("video_id, video_title, created_at")
+        .in("status", ["queued", "processing"])
+        .order("created_at", { ascending: false })
+        .limit(10)
+        .then(({ data }) => {
+          if (!data || data.length === 0) return;
+          const existing = getProcessingVideos();
+          const existingIds = new Set(existing.map((v) => v.videoId));
+          for (const row of data) {
+            if (!existingIds.has(row.video_id)) {
+              addProcessingVideo({
+                videoId: row.video_id,
+                title: row.video_title ?? row.video_id,
+                startedAt: new Date(row.created_at ?? Date.now()).getTime(),
+              });
+            }
+          }
+        });
+    });
+  }, []);
+
   if (videos.length === 0) return null;
 
   return (
