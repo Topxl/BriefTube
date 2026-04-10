@@ -2,6 +2,8 @@
 
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
+import { addProcessingVideo } from "@/lib/processing-videos";
+import { extractVideoId } from "@/lib/youtube-id";
 
 const COOKIE_NAME = "bt_pending_url";
 
@@ -16,8 +18,10 @@ function deleteCookie(name: string) {
 
 /**
  * On mount, checks for a bt_pending_url cookie left by the landing page
- * hero input. If found, auto-triggers video processing and clears the cookie.
- * Renders nothing visible.
+ * hero input. If found:
+ *   - If it contains a video ID: auto-queues processing + shows card
+ *   - If it's a channel URL/handle: subscribes to the channel
+ * Then clears the cookie. Renders nothing visible.
  */
 export function PendingVideoPickup() {
   const triggered = useRef(false);
@@ -30,26 +34,77 @@ export function PendingVideoPickup() {
     triggered.current = true;
     deleteCookie(COOKIE_NAME);
 
-    toast.info("Processing your video...");
+    // Try to extract a video ID first
+    const videoId = extractVideoId(url);
 
-    void fetch("/api/process-video", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ videoId: url }),
-    })
-      .then(async (res) => {
-        if (!res.ok) {
+    if (videoId) {
+      // It's a video URL: queue for processing
+      toast.info("Processing your video...");
+
+      addProcessingVideo({
+        videoId,
+        title: videoId,
+        startedAt: Date.now(),
+      });
+
+      void fetch("/api/process-video", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ videoId: url }),
+      })
+        .then(async (res) => {
+          if (!res.ok) {
+            const data = (await res.json().catch(() => ({}))) as {
+              error?: string;
+            };
+            toast.error(data.error ?? "Could not process that video");
+            return;
+          }
+          toast.success("Video queued! The summary will appear shortly.");
+        })
+        .catch(() => {
+          toast.error("Could not process that video.");
+        });
+    } else {
+      // It's likely a channel URL or @handle: subscribe to the channel
+      toast.info("Adding channel...");
+
+      void fetch("/api/channels", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      })
+        .then(async (res) => {
           const data = (await res.json().catch(() => ({}))) as {
             error?: string;
+            channelName?: string;
+            videoId?: string;
+            videoTitle?: string;
           };
-          toast.error(data.error ?? "Could not process that video");
-          return;
-        }
-        toast.success("Video queued! You'll see the summary shortly.");
-      })
-      .catch(() => {
-        toast.error("Could not process that video. Try pasting it above.");
-      });
+          if (!res.ok) {
+            toast.error(data.error ?? "Could not add that channel");
+            return;
+          }
+          toast.success(
+            data.channelName
+              ? `${data.channelName} added! New videos will be summarized automatically.`
+              : "Channel added!",
+          );
+          // If the API returned a latest video to process, track it
+          if (data.videoId) {
+            addProcessingVideo({
+              videoId: data.videoId,
+              title: data.videoTitle ?? data.videoId,
+              startedAt: Date.now(),
+            });
+          }
+          // Refresh to show the new channel
+          window.location.reload();
+        })
+        .catch(() => {
+          toast.error("Could not add that channel.");
+        });
+    }
   }, []);
 
   return null;
