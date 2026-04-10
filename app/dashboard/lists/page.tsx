@@ -52,6 +52,15 @@ type ListData = {
 };
 
 function extractCount(val: unknown): number {
+  // Supabase aggregate count can return either {count: N} (object) or [{count: N}] (array)
+  if (
+    typeof val === "object" &&
+    val !== null &&
+    !Array.isArray(val) &&
+    "count" in val
+  ) {
+    return (val as { count: number }).count;
+  }
   if (Array.isArray(val) && val.length > 0 && "count" in val[0]) {
     return (val as { count: number }[])[0].count;
   }
