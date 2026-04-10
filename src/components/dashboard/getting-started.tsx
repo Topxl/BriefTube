@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Check, Youtube, ArrowRight } from "@/lib/icons";
 import { createClient } from "@/lib/supabase/client";
 
@@ -23,7 +22,6 @@ export function GettingStarted({
   hasConnection,
   onboardingCompleted,
 }: Props) {
-  const router = useRouter();
   const [step, setStep] = useState<"platform" | "customize" | "done">(() => {
     if (!hasChannel) return "platform";
     if (hasConnection) return "customize";
