@@ -101,7 +101,7 @@ class MonitoringAlert:
         video_id: str,
         video_title: str,
         channel_id: str,
-        audio_path: Path,
+        audio_path: Path | None,
     ) -> None:
         """Send a copy of a delivery to the admin log bot — once per video per session.
 
@@ -134,7 +134,7 @@ class MonitoringAlert:
 
         # Audio voice message (MP3 sent directly — no OGG conversion needed for admin)
         try:
-            if audio_path.exists():
+            if audio_path and audio_path.exists():
                 with open(audio_path, "rb") as f:
                     await self._log_bot.send_voice(
                         chat_id=self._log_chat_id,

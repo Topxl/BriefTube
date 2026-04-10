@@ -216,6 +216,7 @@ export type Database = {
       };
       deliveries: {
         Row: {
+          audio_required: boolean;
           created_at: string | null;
           id: string;
           language: string;
@@ -227,6 +228,7 @@ export type Database = {
           video_id: string;
         };
         Insert: {
+          audio_required?: boolean;
           created_at?: string | null;
           id?: string;
           language?: string;
@@ -238,6 +240,7 @@ export type Database = {
           video_id: string;
         };
         Update: {
+          audio_required?: boolean;
           created_at?: string | null;
           id?: string;
           language?: string;
@@ -526,6 +529,7 @@ export type Database = {
       };
       processed_videos: {
         Row: {
+          audio_status: string | null;
           audio_url: string | null;
           channel_id: string;
           created_at: string | null;
@@ -549,6 +553,7 @@ export type Database = {
           video_url: string | null;
         };
         Insert: {
+          audio_status?: string | null;
           audio_url?: string | null;
           channel_id: string;
           created_at?: string | null;
@@ -572,6 +577,7 @@ export type Database = {
           video_url?: string | null;
         };
         Update: {
+          audio_status?: string | null;
           audio_url?: string | null;
           channel_id?: string;
           created_at?: string | null;
@@ -670,6 +676,7 @@ export type Database = {
       };
       profiles: {
         Row: {
+          audio_enabled: boolean;
           created_at: string | null;
           email: string;
           email_announcements: boolean | null;
@@ -701,6 +708,7 @@ export type Database = {
           youtube_sync_diff: Json | null;
         };
         Insert: {
+          audio_enabled?: boolean;
           created_at?: string | null;
           email: string;
           email_announcements?: boolean | null;
@@ -732,6 +740,7 @@ export type Database = {
           youtube_sync_diff?: Json | null;
         };
         Update: {
+          audio_enabled?: boolean;
           created_at?: string | null;
           email?: string;
           email_announcements?: boolean | null;
@@ -949,6 +958,13 @@ export type Database = {
           {
             foreignKeyName: "subscriptions_list_id_fkey";
             columns: ["list_id"];
+            isOneToOne: false;
+            referencedRelation: "channel_lists";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "subscriptions_user_id_fkey";
+            columns: ["user_id"];
             isOneToOne: false;
             referencedRelation: "profiles";
             referencedColumns: ["id"];
@@ -1213,6 +1229,7 @@ export type Database = {
       get_feed_deliveries: {
         Args: { p_limit: number; p_offset: number; p_user_id: string };
         Returns: {
+          audio_required: boolean;
           created_at: string | null;
           id: string;
           language: string;
@@ -1231,7 +1248,7 @@ export type Database = {
         };
       };
       get_list_follow_feed: {
-        Args: { p_limit: number; p_offset: number; p_user_id: string };
+        Args: { p_limit?: number; p_offset?: number; p_user_id: string };
         Returns: {
           channel_id: string;
           delivery_id: string;
@@ -1243,7 +1260,7 @@ export type Database = {
         }[];
       };
       get_unified_feed: {
-        Args: { p_limit: number; p_offset: number; p_user_id: string };
+        Args: { p_limit?: number; p_offset?: number; p_user_id: string };
         Returns: {
           channel_id: string;
           delivery_id: string;

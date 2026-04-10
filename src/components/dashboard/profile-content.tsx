@@ -63,13 +63,24 @@ const PODCAST_APPS = [
   },
 ] as const;
 
-function PodcastFeedSection({ rssToken }: { rssToken: string }) {
+function PodcastFeedSection({
+  rssToken,
+  audioEnabled,
+}: {
+  rssToken: string;
+  audioEnabled: boolean;
+}) {
   const feedUrl = `${SiteConfig.prodUrl}/api/feed/${rssToken}`;
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(feedUrl);
     setCopied(true);
+    if (!audioEnabled) {
+      toast.info(
+        "Audio is not enabled. Your RSS feed will only contain text summaries, without audio for podcast apps.",
+      );
+    }
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -194,6 +205,7 @@ type Props = {
   initialSummaryLength: string;
   initialSummaryStyle: string;
   initialCustomInstructions: string;
+  initialAudioEnabled: boolean;
 };
 
 export function ProfileContent({
@@ -231,6 +243,7 @@ export function ProfileContent({
   initialSummaryLength,
   initialSummaryStyle,
   initialCustomInstructions,
+  initialAudioEnabled,
 }: Props) {
   const router = useRouter();
 
@@ -524,8 +537,14 @@ export function ProfileContent({
             initialLength={initialSummaryLength}
             initialStyle={initialSummaryStyle}
             initialCustomInstructions={initialCustomInstructions}
+            initialAudioEnabled={initialAudioEnabled}
           />
-          {rssToken && <PodcastFeedSection rssToken={rssToken} />}
+          {rssToken && (
+            <PodcastFeedSection
+              rssToken={rssToken}
+              audioEnabled={initialAudioEnabled}
+            />
+          )}
         </div>
       </section>
 

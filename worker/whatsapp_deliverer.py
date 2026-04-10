@@ -24,15 +24,19 @@ async def send_to_whatsapp(
         return False
 
     if not audio_url:
-        logger.warning(f"WhatsApp delivery skipped: no audio_url for {video_id}")
-        return False
-
-    payload = {
-        "From": f"whatsapp:{from_number}",
-        "To": f"whatsapp:{phone}",
-        "Body": f"BriefTube — {video_title}",
-        "MediaUrl": audio_url,
-    }
+        # Text-only delivery (no audio)
+        payload = {
+            "From": f"whatsapp:{from_number}",
+            "To": f"whatsapp:{phone}",
+            "Body": f"BriefTube — {video_title}\n\nhttps://youtu.be/{video_id}",
+        }
+    else:
+        payload = {
+            "From": f"whatsapp:{from_number}",
+            "To": f"whatsapp:{phone}",
+            "Body": f"BriefTube — {video_title}",
+            "MediaUrl": audio_url,
+        }
 
     try:
         async with httpx.AsyncClient(timeout=15) as client:
@@ -46,7 +50,8 @@ async def send_to_whatsapp(
             logger.warning(f"WhatsApp permanent error for {phone}: {resp.text[:200]}")
             return False  # Triggers mark_user_platform_disconnected
         resp.raise_for_status()
-        logger.info(f"WhatsApp delivered to {phone}: {video_title[:50]}")
+        mode = "text-only" if not audio_url else "audio"
+        logger.info(f"WhatsApp delivered to {phone} ({mode}): {video_title[:50]}")
         return True
     except Exception as e:
         logger.error(f"WhatsApp delivery failed for {video_id} → {phone}: {e}")
