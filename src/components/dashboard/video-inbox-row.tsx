@@ -55,12 +55,13 @@ function formatDate(dateStr: string) {
   const now = new Date();
   const diffMs = now.getTime() - d.getTime();
   const diffH = Math.floor(diffMs / 3600000);
-  if (diffH < 1) return "Just now";
-  if (diffH < 24) return `${diffH}h ago`;
+  if (diffH < 1) return "now";
+  if (diffH < 24) return `${diffH}h`;
   const diffD = Math.floor(diffH / 24);
-  if (diffD === 1) return "Yesterday";
-  if (diffD < 7) return `${diffD}d ago`;
-  return d.toLocaleDateString();
+  if (diffD < 7) return `${diffD}d`;
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  return `${dd}/${mm}`;
 }
 
 export function VideoInboxRow({
