@@ -2,12 +2,15 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import crypto from "crypto";
 import { getBaseUrl } from "@/lib/server-url";
-import { checkRateLimit, getRequestIp, publicRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit, getRequestIp, loginRateLimit } from "@/lib/rate-limit";
 
 const STATE_COOKIE = "google_oauth_state";
 
 export async function GET(request: Request) {
-  const rateLimitResponse = await checkRateLimit(publicRateLimit, `google-auth:${getRequestIp(request)}`);
+  const rateLimitResponse = await checkRateLimit(
+    loginRateLimit,
+    `google-auth:${getRequestIp(request)}`,
+  );
   if (rateLimitResponse) return rateLimitResponse;
 
   const clientId = process.env.GOOGLE_CLIENT_ID;

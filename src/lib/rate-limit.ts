@@ -30,6 +30,15 @@ export const publicRateLimit = redis
     })
   : null;
 
+/** OAuth / login flow: 10 requests per 10 minutes per IP — generous enough for normal login retries */
+export const loginRateLimit = redis
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(10, "10 m"),
+      prefix: "rl:login",
+    })
+  : null;
+
 /** Authenticated endpoints: 30 requests per minute per user */
 export const authRateLimit = redis
   ? new Ratelimit({
