@@ -797,6 +797,14 @@ export function SummariesFeed({
                 ? "Videos from your imported channels will appear here after the next scan."
                 : "Follow a list to see videos from its channels here."}
           </p>
+          {feedMode === "lists" && (
+            <a
+              href="/lists"
+              className="nm-raised-sm text-foreground mt-4 inline-block rounded-full px-4 py-2 text-sm font-medium transition-all hover:brightness-110"
+            >
+              Browse lists
+            </a>
+          )}
         </div>
       ) : (
         <div className="space-y-2.5">
