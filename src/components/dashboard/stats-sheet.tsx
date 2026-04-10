@@ -2,25 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Button } from "@/components/ui/button";
 import {
   Sheet,
   SheetClose,
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
 } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
-import {
-  BarChart2,
-  Flame,
-  Clock,
-  TrendingUp,
-  Inbox,
-  Loader2,
-  X,
-} from "@/lib/icons";
+import { Flame, Clock, TrendingUp, Inbox, Loader2, X } from "@/lib/icons";
 import { useSession } from "@/lib/auth-client";
 
 type Stats = {
@@ -176,22 +166,19 @@ export function StatsSheet() {
     void fetchStats();
   }, [open, userId]);
 
+  // Listen for a global "open-stats" event so the nav dropdown can trigger this
+  useEffect(() => {
+    const handler = () => setOpen(true);
+    window.addEventListener("open-stats", handler);
+    return () => window.removeEventListener("open-stats", handler);
+  }, []);
+
   if (!session.data?.user) {
     return null;
   }
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-2">
-          <BarChart2 className="h-4 w-4" />
-          {stats?.streak && stats.streak > 0 ? (
-            <span className="text-xs font-medium text-orange-400">
-              {stats.streak}
-            </span>
-          ) : null}
-        </Button>
-      </SheetTrigger>
       <SheetContent
         side={isMobile ? "bottom" : "right"}
         showCloseButton={false}

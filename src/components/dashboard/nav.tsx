@@ -131,6 +131,11 @@ function UserAvatar() {
         <DropdownMenuItem asChild>
           <Link href="/dashboard/profile?open=language">Language</Link>
         </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => window.dispatchEvent(new Event("open-stats"))}
+        >
+          Your stats
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
           variant="destructive"
