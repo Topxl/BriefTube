@@ -133,8 +133,10 @@ export function GettingStarted({
   onboardingCompleted,
 }: Props) {
   const router = useRouter();
+  const [showTip, setShowTip] = useState(false);
 
-  if (hasChannel && (hasConnection || onboardingCompleted)) return null;
+  if (hasChannel && (hasConnection || onboardingCompleted) && !showTip)
+    return null;
 
   const openTelegramDialog = () => {
     dialogManager.custom({
@@ -223,7 +225,7 @@ export function GettingStarted({
                   .from("profiles")
                   .update({ onboarding_completed: true })
                   .eq("id", user.id)
-                  .then(() => router.refresh());
+                  .then(() => setShowTip(true));
               });
             }}
             className="text-muted-foreground hover:text-foreground ml-1 rounded-full px-3 py-2 text-sm transition-colors"
@@ -234,4 +236,38 @@ export function GettingStarted({
       </div>
     </div>
   );
+
+  // Tip shown after clicking Skip
+  if (showTip) {
+    return (
+      <div className="nm-raised overflow-hidden rounded-2xl p-6">
+        <div className="flex flex-col gap-3">
+          <p className="text-sm font-semibold">
+            You're all set! Summaries will appear here as new videos come out.
+          </p>
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            You can customize the default summary style, length, and language
+            anytime in{" "}
+            <a
+              href="/dashboard/profile"
+              className="text-foreground underline underline-offset-2"
+            >
+              Profile settings
+            </a>
+            . You can also set different preferences for each channel
+            individually from the channel menu.
+          </p>
+          <button
+            onClick={() => {
+              setShowTip(false);
+              router.refresh();
+            }}
+            className="text-muted-foreground hover:text-foreground self-end text-xs transition-colors"
+          >
+            Got it
+          </button>
+        </div>
+      </div>
+    );
+  }
 }
