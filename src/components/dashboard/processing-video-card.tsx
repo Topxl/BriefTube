@@ -143,7 +143,7 @@ function ProcessingCard({ video }: { video: ProcessingVideo }) {
           <div className="min-w-0">
             <p className="line-clamp-1 text-xs font-medium">{video.title}</p>
             <p className="mt-0.5 text-[11px] text-emerald-400">
-              Summary sent to Telegram!
+              Summary ready!
             </p>
           </div>
         </div>
