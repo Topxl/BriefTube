@@ -9,6 +9,7 @@ import { SectionErrorBoundary } from "@/components/nowts/section-error-boundary"
 import { PushNotificationBanner } from "@/components/dashboard/push-notification-banner";
 import { GettingStarted } from "@/components/dashboard/getting-started";
 import { ProcessingVideoCard } from "@/components/dashboard/processing-video-card";
+import { PendingVideoPickup } from "@/components/dashboard/pending-video-pickup";
 import { PendingVideoProcessor } from "@/components/dashboard/pending-video-processor";
 import { StatsSheet } from "@/components/dashboard/stats-sheet";
 import { ChannelsSheet } from "@/components/dashboard/channels-sheet";
@@ -208,7 +209,12 @@ async function FeedSection({ userId }: { userId: string }) {
           <StatsSheet />
         </>
       }
-      banners={<ProcessingVideoCard />}
+      banners={
+        <>
+          <PendingVideoPickup />
+          <ProcessingVideoCard />
+        </>
+      }
     />
   );
 }
