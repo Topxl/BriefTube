@@ -5,6 +5,7 @@ import { X, CheckCircle } from "@/lib/icons";
 import { createClient } from "@/lib/supabase/client";
 import {
   type ProcessingVideo,
+  addProcessingVideo,
   getProcessingVideos,
   removeProcessingVideo,
 } from "@/lib/processing-videos";
