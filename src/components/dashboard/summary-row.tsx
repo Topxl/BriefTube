@@ -415,7 +415,7 @@ export function SummaryRow({
               expanded: !showSummary,
             });
           }}
-          className="min-w-0 flex-1 text-left"
+          className="min-w-0 flex-1 pr-8 text-left"
         >
           <p
             className={`line-clamp-2 text-sm leading-snug font-medium ${isRead && !playing ? "text-muted-foreground" : ""}`}
