@@ -378,6 +378,7 @@ async def _process_video(
     # Resolve language/voice early (before the try block) so the exception
     # handlers can reference user_language when calling mark_video_failed.
     user_language = job.get("user_language") or "fr"
+    channel_id = job.get("channel_id", "")
     tts_voice = _resolve_tts_voice(job.get("tts_voice"), user_language)
     summary_length_pref = job.get("summary_length_pref") or "standard"
     summary_style = job.get("summary_style") or "narrative"
@@ -689,7 +690,7 @@ async def _process_video(
             re_queued = await asyncio.to_thread(
                 db.enqueue_video_for_language,
                 video_id, youtube_url, video_title,
-                job.get("channel_id", ""), next_lang,
+                channel_id, next_lang,
                 None,  # tts_voice resolved at processing time by _resolve_tts_voice
             )
             if re_queued:
