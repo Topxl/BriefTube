@@ -144,23 +144,14 @@ export function ChannelSearchBar() {
     await summarize(
       { videoId: videoIdOrUrl, videoTitle: previewTitle },
       {
-        // The hook would track with videoIdOrUrl which could be a raw URL —
-        // we only want to track the real videoId, so handle tracking manually.
-        trackProcessing: false,
+        // The hook now uses videoId + videoTitle from the API response,
+        // so it correctly tracks even when clientVideoId was null (raw URL).
+        trackProcessing: true,
         onSuccess: ({ queued }) => {
-          if (!clientVideoId) return;
-          if (queued) {
-            // New processing job — show processing card
-            addProcessingVideo({
-              videoId: clientVideoId,
-              title: previewTitle ?? clientVideoId,
-              startedAt: Date.now(),
-            });
-          } else {
-            // Video already summarized — promote it to the top of the feed
+          if (!queued) {
             window.dispatchEvent(
               new CustomEvent("summariesHighlight", {
-                detail: { videoId: clientVideoId },
+                detail: { videoId: clientVideoId ?? videoIdOrUrl },
               }),
             );
           }

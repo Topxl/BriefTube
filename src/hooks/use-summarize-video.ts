@@ -15,6 +15,8 @@ type SummarizeParams = {
 type SummarizeResponse = {
   ok?: boolean;
   queued?: boolean;
+  videoId?: string;
+  videoTitle?: string;
   error?: string;
 };
 
@@ -107,8 +109,8 @@ export function useSummarizeVideo() {
 
         if (data.queued && trackProcessing) {
           addProcessingVideo({
-            videoId,
-            title: videoTitle ?? videoId,
+            videoId: data.videoId ?? videoId,
+            title: data.videoTitle ?? videoTitle ?? videoId,
             startedAt: Date.now(),
           });
         }
