@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Inbox } from "@/lib/icons";
 import { SummaryRow } from "@/components/dashboard/summary-row";
@@ -798,12 +799,12 @@ export function SummariesFeed({
                 : "Follow a list to see videos from its channels here."}
           </p>
           {feedMode === "lists" && (
-            <a
-              href="/lists"
+            <Link
+              href="/dashboard/lists"
               className="nm-raised-sm text-foreground mt-4 inline-block rounded-full px-4 py-2 text-sm font-medium transition-all hover:brightness-110"
             >
               Browse lists
-            </a>
+            </Link>
           )}
         </div>
       ) : (
