@@ -102,7 +102,9 @@ export default function RootLayout({
             <Suspense>
               <ServerToaster />
             </Suspense>
-            <LeaChatWidget />
+            <Suspense fallback={null}>
+              <LeaChatWidget />
+            </Suspense>
           </Providers>
         </NuqsAdapter>
         <Script id="rewardful-queue" strategy="afterInteractive">
