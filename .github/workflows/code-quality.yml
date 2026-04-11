@@ -1,15 +1,7 @@
 name: Frontend CI
 
 on:
-  pull_request:
-  push:
-    branches: [main]
-    paths:
-      - "src/**"
-      - "app/**"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - ".github/workflows/code-quality.yml"
+  workflow_dispatch: # Manual only — pre-commit hook runs TS + ESLint locally
 
 concurrency:
   group: ${{ github.ref }}
