@@ -165,16 +165,16 @@ export function ChannelSearchBar() {
     <div className="relative">
       <div className="relative w-full" suppressHydrationWarning>
         {isYT ? (
-          <Youtube className="text-muted-foreground absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2" />
+          <Youtube className="text-muted-foreground absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2" />
         ) : (
-          <Search className="text-muted-foreground absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2" />
+          <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2" />
         )}
         <Input
           type="text"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Paste a YouTube URL or @handle..."
-          className="scrollbar-fade-x placeholder:text-muted-foreground/60 h-9 rounded-full border-white/[0.07] bg-[oklch(0.18_0_0)]/50 pr-8 pl-8 text-sm shadow-[0_4px_16px_rgba(0,0,0,0.3)] backdrop-blur-xl focus-visible:border-white/[0.12] focus-visible:ring-0"
+          className="scrollbar-fade-x placeholder:text-muted-foreground/60 h-9 rounded-full border-white/[0.07] bg-[oklch(0.18_0_0)]/50 pr-8 pl-7 text-sm shadow-[0_4px_16px_rgba(0,0,0,0.3)] backdrop-blur-xl focus-visible:border-white/[0.12] focus-visible:ring-0"
           autoComplete="off"
           data-1p-ignore
           data-lpignore="true"

@@ -199,7 +199,7 @@ export function DashboardNav() {
           </div>
 
           {/* Center: search bar */}
-          <div className="mx-3 w-full flex-1 md:mx-6 md:max-w-sm">
+          <div className="mx-1.5 w-full flex-1 md:mx-6 md:max-w-sm">
             <Suspense fallback={null}>
               <ChannelSearchBar />
             </Suspense>
