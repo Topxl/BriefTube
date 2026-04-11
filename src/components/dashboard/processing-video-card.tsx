@@ -59,9 +59,9 @@ function ProcessingCard({ video }: { video: ProcessingVideo }) {
     const check = async () => {
       const { data } = await supabase
         .from("processed_videos")
-        .select("status, audio_url")
+        .select("status")
         .eq("video_id", video.videoId)
-        .not("audio_url", "is", null)
+        .eq("status", "completed")
         .limit(1)
         .maybeSingle();
       if (cancelled) return;
