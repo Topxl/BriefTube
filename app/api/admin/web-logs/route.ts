@@ -11,9 +11,13 @@ const execAsync = promisify(exec);
 // where the actual web service is. In prod, run locally on the VPS.
 const isDev = process.env.NODE_ENV === "development";
 function vpsCmd(cmd: string): string {
-  return isDev
-    ? `ssh -o ConnectTimeout=5 brieftube-vps ${JSON.stringify(cmd)}`
-    : cmd;
+  if (isDev) {
+    return `ssh -o ConnectTimeout=5 brieftube-vps ${JSON.stringify(cmd)}`;
+  }
+  // In production: use absolute paths so the Next.js child process can find them
+  return cmd
+    .replace(/\bjournalctl\b/g, "/usr/bin/journalctl")
+    .replace(/\bsystemctl\b/g, "/usr/bin/systemctl");
 }
 
 async function requireAdminOrNull() {

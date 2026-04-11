@@ -1,10 +1,16 @@
 # Changelog
 
+## 2026-04-11
+
+FIX(admin): fix worker and web-logs routes unreachable in production — use absolute paths for journalctl/systemctl, add VPS_WORKER_URL to Infisical /web secrets so worker route uses HTTP instead of systemctl fallback
+
 ## 2026-04-10
 
 FEATURE: Add transcript cache (memory + disk LRU) to skip re-extraction on language-chained videos — saves ~80-110s per additional language.
 
 FEATURE: Make audio summaries optional — text summaries now deliver immediately (phase 1), audio generates only for users who have it enabled (phase 2). New `audio_enabled` toggle in profile preferences. Worker pipeline splits into two phases: text-only deliveries created instantly for non-audio users + web feed, then TTS/R2 upload + audio deliveries for audio-enabled users. Telegram/WhatsApp support text-only delivery mode. RSS feed conditionally includes audio enclosures based on user preference with copy-link warning when audio is disabled. TTS failures no longer block text summary delivery.
+
+FIX(auth): raise Google OAuth rate limit 3→10 req/10min — users were blocked after 3 login attempts. Wrap LeaChatWidget in Suspense to fix build error on /dashboard/admin/support/[id].
 
 FIX(worker): reduce RSS scan thread pool from 50 to 20 workers — 50 concurrent feedparser threads caused CPU 99% + load 10-16 every 30 min, blocking all video processing via the resource throttle.
 
