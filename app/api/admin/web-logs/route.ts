@@ -54,7 +54,7 @@ export async function GET() {
 
   try {
     const result = await execAsync(
-      vpsCmd("systemctl status brieftube-web --no-pager 2>&1"),
+      vpsCmd("sudo systemctl status brieftube-web --no-pager 2>&1"),
     ).catch((e: { stdout?: string }) => ({ stdout: e.stdout ?? "" }));
 
     const stdout = (result as { stdout: string }).stdout;
@@ -80,7 +80,7 @@ export async function GET() {
   try {
     const { stdout: logOut } = await execAsync(
       vpsCmd(
-        "journalctl -u brieftube-web -n 200 --no-pager -o cat 2>&1 || echo 'No logs available'",
+        "sudo journalctl -u brieftube-web -n 200 --no-pager -o cat 2>&1 || echo 'No logs available'",
       ),
     );
 
@@ -130,7 +130,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    await execAsync(vpsCmd(`sudo systemctl ${action} brieftube-web`));
+    await execAsync(vpsCmd(`sudo /usr/bin/systemctl ${action} brieftube-web`));
     return NextResponse.json({ success: true, action });
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
