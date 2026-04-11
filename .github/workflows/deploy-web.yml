@@ -38,6 +38,7 @@ jobs:
 
             echo "→ Pulling latest code..."
             git clean -f -- worker/worker.pid worker/log_bot.lock 2>/dev/null || true
+            git checkout -- . 2>/dev/null || true
             git pull origin main
 
             echo "→ Installing dependencies..."

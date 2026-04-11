@@ -2,6 +2,7 @@
 
 ## 2026-04-12
 
+CHORE(ci): add git checkout before pull in deploy-web to prevent local-changes conflicts
 REFACTOR(admin): delegate web-logs to worker HTTP endpoints (/web-logs, /web-action) — eliminates child_process exec issues in Next.js production context
 
 ## 2026-04-11
