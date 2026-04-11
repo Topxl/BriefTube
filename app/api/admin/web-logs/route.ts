@@ -16,6 +16,7 @@ function vpsCmd(cmd: string): string {
   }
   // In production: use absolute paths so the Next.js child process can find them
   return cmd
+    .replace(/\bsudo\b/g, "/usr/bin/sudo")
     .replace(/\bjournalctl\b/g, "/usr/bin/journalctl")
     .replace(/\bsystemctl\b/g, "/usr/bin/systemctl");
 }
