@@ -44,24 +44,15 @@ export function GettingStarted({
         onClick: async (value: string | undefined) => {
           if (!value?.trim()) return;
           try {
-            // Create a chat conversation + message via existing Léa API
-            const convRes = await fetch("/api/chat/conversations", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: "{}",
-            });
-            if (!convRes.ok) throw new Error("conv failed");
-            const convData = (await convRes.json()) as {
-              conversation: { id: string };
-            };
-            await fetch("/api/chat/ask", {
+            const res = await fetch("/api/feedback", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                conversationId: convData.conversation.id,
-                message: `[Onboarding feedback] ${value.trim()}`,
+                message: value.trim(),
+                source: "onboarding",
               }),
             });
+            if (!res.ok) throw new Error("feedback failed");
             toast.success("Thanks for your feedback!");
           } catch {
             toast.error("Could not send feedback");
