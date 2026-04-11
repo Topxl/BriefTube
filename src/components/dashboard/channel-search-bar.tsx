@@ -149,11 +149,16 @@ export function ChannelSearchBar() {
         trackProcessing: true,
         onSuccess: ({ queued }) => {
           if (!queued) {
-            window.dispatchEvent(
-              new CustomEvent("summariesHighlight", {
-                detail: { videoId: clientVideoId ?? videoIdOrUrl },
-              }),
-            );
+            // Video already summarized but may not be in the SSR-cached feed.
+            // Refresh the page to reload the feed from DB, then highlight.
+            router.refresh();
+            setTimeout(() => {
+              window.dispatchEvent(
+                new CustomEvent("summariesHighlight", {
+                  detail: { videoId: clientVideoId ?? videoIdOrUrl },
+                }),
+              );
+            }, 500);
           }
           setQ("");
         },
