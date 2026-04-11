@@ -61,7 +61,7 @@ function ProcessingCard({ video }: { video: ProcessingVideo }) {
         .from("processed_videos")
         .select("status")
         .eq("video_id", video.videoId)
-        .eq("status", "completed")
+        .in("status", ["completed", "failed"])
         .limit(1)
         .maybeSingle();
       if (cancelled) return;
