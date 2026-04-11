@@ -6,6 +6,7 @@ import { readFile } from "fs/promises";
 import path from "path";
 import { env } from "@/lib/env";
 import { getUser } from "@/lib/auth/auth-user";
+import { logger } from "@/lib/logger";
 
 const execAsync = promisify(exec);
 const LOG_PATH = path.join(process.cwd(), "worker", "worker.log");
@@ -62,6 +63,7 @@ export async function GET() {
       const data = await res.json();
       return NextResponse.json(data);
     } catch (e) {
+      logger.error("[admin/worker] fetch failed:", String(e), "url:", url);
       return NextResponse.json(
         { error: `Cannot reach VPS worker: ${String(e)}` },
         { status: 502 },
