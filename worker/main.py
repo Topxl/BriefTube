@@ -1684,6 +1684,107 @@ async def health_loop():
         _services_cache_at = time.monotonic()
         return web.json_response(result)
 
+    async def handle_web_logs(request):
+        """Get brieftube-web service status and journal logs.
+
+        Auth: Authorization: Bearer <WORKER_API_SECRET>
+        Returns: { webStatus, logLines, recentErrors, errorCount, timestamp }
+        """
+        auth_header = request.headers.get("Authorization", "")
+        token = auth_header.removeprefix("Bearer ").strip()
+        if WORKER_API_SECRET and token != WORKER_API_SECRET:
+            return web.json_response({"error": "Unauthorized"}, status=401)
+
+        web_status: dict = {
+            "active": False, "status": "unknown",
+            "pid": None, "memory": None, "since": None,
+        }
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                "systemctl", "status", "brieftube-web", "--no-pager",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
+            )
+            stdout_bytes, _ = await asyncio.wait_for(proc.communicate(), timeout=5)
+            stdout = stdout_bytes.decode(errors="replace")
+            active_match = re.search(r"Active: (.+)", stdout)
+            pid_match = re.search(r"Main PID: (\d+)", stdout)
+            mem_match = re.search(r"Memory: ([^\n(]+)", stdout)
+            since_match = re.search(r"since [A-Za-z]+ (.+?);", stdout)
+            active_str = active_match.group(1) if active_match else ""
+            web_status["active"] = "active (running)" in active_str
+            web_status["status"] = active_str.strip().split(";")[0].strip() or "unknown"
+            web_status["pid"] = pid_match.group(1) if pid_match else None
+            web_status["memory"] = mem_match.group(1).strip() if mem_match else None
+            web_status["since"] = since_match.group(1).strip() if since_match else None
+        except Exception:
+            web_status["status"] = "error reading status"
+
+        log_lines: list = []
+        recent_errors: list = []
+        error_count = 0
+        try:
+            env = os.environ.copy()
+            env["LD_LIBRARY_PATH"] = "/usr/lib/x86_64-linux-gnu/systemd"
+            proc = await asyncio.create_subprocess_exec(
+                "/usr/bin/journalctl", "-u", "brieftube-web",
+                "-n", "200", "--no-pager", "-o", "cat",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
+                env=env,
+            )
+            stdout_bytes, _ = await asyncio.wait_for(proc.communicate(), timeout=10)
+            all_lines = [l for l in stdout_bytes.decode(errors="replace").split("\n") if l]
+            deduped = [l for i, l in enumerate(all_lines) if i == 0 or l != all_lines[i - 1]]
+            log_lines = deduped[-60:]
+            last_200 = deduped[-200:]
+            error_count = sum(1 for l in last_200 if "ERROR" in l or "error" in l)
+            recent_errors = [
+                l for l in last_200
+                if "ERROR" in l or "error" in l or "failed" in l or "Failed" in l
+            ][-10:]
+        except Exception:
+            log_lines = ["Log retrieval unavailable"]
+
+        return web.json_response({
+            "webStatus": web_status,
+            "logLines": log_lines,
+            "recentErrors": recent_errors,
+            "errorCount": error_count,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        })
+
+    async def handle_web_action(request):
+        """Start/stop/restart the brieftube-web service.
+
+        Auth: Authorization: Bearer <WORKER_API_SECRET>
+        Body: { "action": "start" | "stop" | "restart" }
+        """
+        auth_header = request.headers.get("Authorization", "")
+        token = auth_header.removeprefix("Bearer ").strip()
+        if WORKER_API_SECRET and token != WORKER_API_SECRET:
+            return web.json_response({"error": "Unauthorized"}, status=401)
+
+        try:
+            body = await request.json()
+            action = body.get("action", "")
+        except Exception:
+            return web.json_response({"error": "Invalid JSON"}, status=400)
+
+        if action not in ("start", "stop", "restart"):
+            return web.json_response({"error": "Invalid action"}, status=400)
+
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                "systemctl", action, "brieftube-web",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
+            )
+            await asyncio.wait_for(proc.communicate(), timeout=15)
+            return web.json_response({"success": True, "action": action})
+        except Exception as e:
+            return web.json_response({"error": str(e)}, status=500)
+
     async def handle_get_whatsapp_link(request):
         """Get WhatsApp magic link (GET /get-whatsapp-link?token=<token>).
 
@@ -1714,6 +1815,8 @@ async def health_loop():
     app.router.add_get("/health", handle_health)
     app.router.add_get("/logs", handle_logs)
     app.router.add_get("/services", handle_services)
+    app.router.add_get("/web-logs", handle_web_logs)
+    app.router.add_post("/web-action", handle_web_action)
     app.router.add_get("/get-whatsapp-link", handle_get_whatsapp_link)
     # Disable HTTP access logging — every /logs poll would otherwise write
     # a line into worker.log, creating a feedback loop that drowns real logs.
