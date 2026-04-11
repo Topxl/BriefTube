@@ -2,6 +2,8 @@
 
 ## 2026-04-11
 
+FIX(admin): inline LD_LIBRARY_PATH in JOURNAL_CMD to remove dependency on external web-logs.sh script
+FIX(admin): add logger.error in worker route catch block for production diagnostics
 CHORE(admin): remove unused SYSTEMCTL_CMD variable from web-logs route (ESLint warning)
 
 FIX(admin): add /usr/bin/sudo to vpsCmd path replacements (sudo not in PATH of Next.js child process)

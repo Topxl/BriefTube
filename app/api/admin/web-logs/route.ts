@@ -11,11 +11,11 @@ const execAsync = promisify(exec);
 // where the actual web service is. In prod, run locally on the VPS.
 const isDev = process.env.NODE_ENV === "development";
 
-// Helper script on VPS that sets LD_LIBRARY_PATH for journalctl
-// (libsystemd-shared-255.so is in a non-standard path not in ldconfig)
+// Set LD_LIBRARY_PATH inline so journalctl can find libsystemd-shared-255.so
+// (not in ldconfig on the VPS, so we pass it explicitly)
 const JOURNAL_CMD = isDev
-  ? `ssh -o ConnectTimeout=5 brieftube-vps "/home/brieftube/web-logs.sh"`
-  : "/home/brieftube/web-logs.sh";
+  ? `ssh -o ConnectTimeout=5 brieftube-vps "LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu/systemd /usr/bin/journalctl"`
+  : "LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu/systemd /usr/bin/journalctl";
 
 async function requireAdminOrNull() {
   const user = await getUser();
