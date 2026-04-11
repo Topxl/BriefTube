@@ -229,8 +229,8 @@ export function SummariesFeed({
   );
 
   const loadDeliveries = useCallback(
-    async (pageNum: number) => {
-      setSummariesLoading(true);
+    async (pageNum: number, silent = false) => {
+      if (!silent) setSummariesLoading(true);
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -322,8 +322,8 @@ export function SummariesFeed({
                 videoMap[`${d.video_id}:${d.language}`] ?? videoMap[d.video_id],
             }) as EnrichedDelivery,
         )
-        // Only show deliveries with a completed video (audio available)
-        .filter((d) => d.video?.audio_url);
+        // Only show deliveries that have a video record
+        .filter((d) => d.video);
 
       setDeliveries((prev) => {
         const merged = pageNum === 0 ? enriched : [...prev, ...enriched];
@@ -483,8 +483,11 @@ export function SummariesFeed({
           const item = prev[idx];
           return [item, ...prev.slice(0, idx), ...prev.slice(idx + 1)];
         }
-        // Not in current page — trigger a full re-fetch
-        void loadDeliveries(0);
+        // Not in current page: silently re-fetch (no skeleton flash).
+        // Retry after 3s because the delivery row may not exist yet when
+        // processed_videos flips to completed (worker creates it slightly later).
+        void loadDeliveries(0, true);
+        setTimeout(() => void loadDeliveries(0, true), 3000);
         return prev;
       });
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -810,90 +813,88 @@ export function SummariesFeed({
       ) : (
         <div className="space-y-2.5">
           {feedMode === "summaries"
-            ? deliveries
-                .filter((d) => d.video?.audio_url)
-                .map((delivery) => (
-                  <SummaryRow
-                    key={delivery.video_id}
-                    delivery={delivery}
-                    resolvedTitle={titles[delivery.video_id]}
-                    favoriteLanguages={favLangs}
-                    onManageFavorites={openLangPicker}
-                    onToggleFavorite={toggleFavorite}
-                    channelActive={
-                      delivery.video?.channel_id
-                        ? (
-                            channelStates[delivery.video.channel_id] as
-                              | { active: boolean }
-                              | undefined
-                          )?.active
-                        : undefined
-                    }
-                    onToggleChannel={
-                      delivery.video?.channel_id
-                        ? () =>
-                            void toggleChannel(delivery.video?.channel_id ?? "")
-                        : undefined
-                    }
-                    onSubscribeChannel={
-                      // Show Subscribe if no channel state (not subscribed) AND we have some way to identify the video
-                      !delivery.video?.channel_id ||
-                      !(delivery.video.channel_id in channelStates)
-                        ? () =>
-                            void subscribeChannel(
-                              delivery.video?.channel_id ?? "",
-                              delivery.video?.video_title ?? undefined,
-                              delivery.video?.video_url ?? undefined,
-                            )
-                        : undefined
-                    }
-                    channelAvatarUrl={
-                      delivery.video?.channel_id
-                        ? (
-                            channelStates[delivery.video.channel_id] as
-                              | ChannelState
-                              | undefined
-                          )?.avatarUrl
-                        : undefined
-                    }
-                    summaryLengthPref={
-                      delivery.video?.channel_id
-                        ? (
-                            channelStates[delivery.video.channel_id] as
-                              | ChannelState
-                              | undefined
-                          )?.summaryLengthPref
-                        : undefined
-                    }
-                    onSummaryLengthChange={
-                      delivery.video?.channel_id
-                        ? (length) =>
-                            void updateSummaryLength(
-                              delivery.video?.channel_id ?? "",
-                              length,
-                            )
-                        : undefined
-                    }
-                    summaryStylePref={
-                      delivery.video?.channel_id
-                        ? (
-                            channelStates[delivery.video.channel_id] as
-                              | ChannelState
-                              | undefined
-                          )?.summaryStylePref
-                        : undefined
-                    }
-                    onSummaryStyleChange={
-                      delivery.video?.channel_id
-                        ? (style) =>
-                            void updateSummaryStyle(
-                              delivery.video?.channel_id ?? "",
-                              style,
-                            )
-                        : undefined
-                    }
-                  />
-                ))
+            ? deliveries.map((delivery) => (
+                <SummaryRow
+                  key={delivery.video_id}
+                  delivery={delivery}
+                  resolvedTitle={titles[delivery.video_id]}
+                  favoriteLanguages={favLangs}
+                  onManageFavorites={openLangPicker}
+                  onToggleFavorite={toggleFavorite}
+                  channelActive={
+                    delivery.video?.channel_id
+                      ? (
+                          channelStates[delivery.video.channel_id] as
+                            | { active: boolean }
+                            | undefined
+                        )?.active
+                      : undefined
+                  }
+                  onToggleChannel={
+                    delivery.video?.channel_id
+                      ? () =>
+                          void toggleChannel(delivery.video?.channel_id ?? "")
+                      : undefined
+                  }
+                  onSubscribeChannel={
+                    // Show Subscribe if no channel state (not subscribed) AND we have some way to identify the video
+                    !delivery.video?.channel_id ||
+                    !(delivery.video.channel_id in channelStates)
+                      ? () =>
+                          void subscribeChannel(
+                            delivery.video?.channel_id ?? "",
+                            delivery.video?.video_title ?? undefined,
+                            delivery.video?.video_url ?? undefined,
+                          )
+                      : undefined
+                  }
+                  channelAvatarUrl={
+                    delivery.video?.channel_id
+                      ? (
+                          channelStates[delivery.video.channel_id] as
+                            | ChannelState
+                            | undefined
+                        )?.avatarUrl
+                      : undefined
+                  }
+                  summaryLengthPref={
+                    delivery.video?.channel_id
+                      ? (
+                          channelStates[delivery.video.channel_id] as
+                            | ChannelState
+                            | undefined
+                        )?.summaryLengthPref
+                      : undefined
+                  }
+                  onSummaryLengthChange={
+                    delivery.video?.channel_id
+                      ? (length) =>
+                          void updateSummaryLength(
+                            delivery.video?.channel_id ?? "",
+                            length,
+                          )
+                      : undefined
+                  }
+                  summaryStylePref={
+                    delivery.video?.channel_id
+                      ? (
+                          channelStates[delivery.video.channel_id] as
+                            | ChannelState
+                            | undefined
+                        )?.summaryStylePref
+                      : undefined
+                  }
+                  onSummaryStyleChange={
+                    delivery.video?.channel_id
+                      ? (style) =>
+                          void updateSummaryStyle(
+                            delivery.video?.channel_id ?? "",
+                            style,
+                          )
+                      : undefined
+                  }
+                />
+              ))
             : (feedMode === "all" ? inboxVideos : listVideos).map((v) =>
                 v.is_summarized && v.video ? (
                   <SummaryRow
