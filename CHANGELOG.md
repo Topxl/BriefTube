@@ -2,6 +2,8 @@
 
 ## 2026-04-11
 
+CHORE(admin): remove unused SYSTEMCTL_CMD variable from web-logs route (ESLint warning)
+
 FIX(admin): add /usr/bin/sudo to vpsCmd path replacements (sudo not in PATH of Next.js child process)
 
 FIX(admin): use 127.0.0.1 for VPS_WORKER_URL (localhost resolves to ::1 in Node.js, worker only listens on IPv4) + sudo journalctl/systemctl in web-logs route (libsystemd-shared not in ldconfig path for child process)

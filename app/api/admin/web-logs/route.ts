@@ -10,16 +10,12 @@ const execAsync = promisify(exec);
 // In dev, prefix commands with `ssh brieftube-vps` so they run on the VPS
 // where the actual web service is. In prod, run locally on the VPS.
 const isDev = process.env.NODE_ENV === "development";
-function vpsCmd(cmd: string): string {
-  if (isDev) {
-    return `ssh -o ConnectTimeout=5 brieftube-vps ${JSON.stringify(cmd)}`;
-  }
-  // In production: use absolute paths so the Next.js child process can find them
-  return cmd
-    .replace(/\bsudo\b/g, "/usr/bin/sudo")
-    .replace(/\bjournalctl\b/g, "/usr/bin/journalctl")
-    .replace(/\bsystemctl\b/g, "/usr/bin/systemctl");
-}
+
+// Helper script on VPS that sets LD_LIBRARY_PATH for journalctl
+// (libsystemd-shared-255.so is in a non-standard path not in ldconfig)
+const JOURNAL_CMD = isDev
+  ? `ssh -o ConnectTimeout=5 brieftube-vps "/home/brieftube/web-logs.sh"`
+  : "/home/brieftube/web-logs.sh";
 
 async function requireAdminOrNull() {
   const user = await getUser();
@@ -53,10 +49,14 @@ export async function GET() {
     since: null,
   };
 
+  const statusCmd = isDev
+    ? `ssh -o ConnectTimeout=5 brieftube-vps "/usr/bin/systemctl status brieftube-web --no-pager 2>&1"`
+    : "/usr/bin/systemctl status brieftube-web --no-pager 2>&1";
+
   try {
-    const result = await execAsync(
-      vpsCmd("sudo systemctl status brieftube-web --no-pager 2>&1"),
-    ).catch((e: { stdout?: string }) => ({ stdout: e.stdout ?? "" }));
+    const result = await execAsync(statusCmd).catch(
+      (e: { stdout?: string }) => ({ stdout: e.stdout ?? "" }),
+    );
 
     const stdout = (result as { stdout: string }).stdout;
     const activeMatch = stdout.match(/Active: (.+)/);
@@ -80,9 +80,7 @@ export async function GET() {
 
   try {
     const { stdout: logOut } = await execAsync(
-      vpsCmd(
-        "sudo journalctl -u brieftube-web -n 200 --no-pager -o cat 2>&1 || echo 'No logs available'",
-      ),
+      `${JOURNAL_CMD} -u brieftube-web -n 200 --no-pager -o cat 2>&1 || echo 'No logs available'`,
     );
 
     const allLines = logOut.split("\n").filter(Boolean);
@@ -130,8 +128,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   }
 
+  const cmd = isDev
+    ? `ssh -o ConnectTimeout=5 brieftube-vps "/usr/bin/systemctl ${action} brieftube-web"`
+    : `/usr/bin/systemctl ${action} brieftube-web`;
+
   try {
-    await execAsync(vpsCmd(`sudo /usr/bin/systemctl ${action} brieftube-web`));
+    await execAsync(cmd);
     return NextResponse.json({ success: true, action });
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
