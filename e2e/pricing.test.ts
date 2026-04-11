@@ -53,7 +53,7 @@ test.describe("Pricing Page", () => {
 
     // Monthly/yearly toggle should be present
     const monthlyOption = page.getByText(/monthly/i);
-    const yearlyOption = page.getByText(/year/i);
+    const yearlyOption = page.getByText(/annual/i);
 
     await expect(monthlyOption.first()).toBeVisible();
     await expect(yearlyOption.first()).toBeVisible();
