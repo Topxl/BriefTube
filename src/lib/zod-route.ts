@@ -36,11 +36,15 @@ class RouteBuilder<TBody = unknown, TParams = unknown> {
       let parsedBody: TBody | undefined;
       if (req.method !== "GET" && this.bodySchema) {
         try {
-          const rawBody = await req.json();
+          const text = await req.text();
+          const rawBody = JSON.parse(text) as unknown;
           parsedBody = this.bodySchema.parse(rawBody) as TBody;
         } catch (err) {
-          const details =
-            err instanceof Error ? err.message : "Invalid body";
+          const details = err instanceof Error ? err.message : "Invalid body";
+          console.error(
+            `[authRoute] ${req.method} ${req.nextUrl.pathname} body parse failed:`,
+            details,
+          );
           return NextResponse.json(
             { error: "Invalid request body", details },
             { status: 400 },
