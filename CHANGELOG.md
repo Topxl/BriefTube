@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-04-12
+
+REFACTOR(admin): delegate web-logs to worker HTTP endpoints (/web-logs, /web-action) — eliminates child_process exec issues in Next.js production context
+
 ## 2026-04-11
 
 FIX(admin): inline LD_LIBRARY_PATH in JOURNAL_CMD to remove dependency on external web-logs.sh script
