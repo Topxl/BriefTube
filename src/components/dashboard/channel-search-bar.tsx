@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
-import { Search, Youtube, X, Loader2, Play, Check } from "@/lib/icons";
+import { Youtube, X, Loader2, Play, Check } from "@/lib/icons";
 import { toast } from "sonner";
 import { openUpsellModal } from "@/components/dashboard/upsell-modal";
 import { addProcessingVideo } from "@/lib/processing-videos";
