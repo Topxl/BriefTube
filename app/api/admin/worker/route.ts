@@ -92,7 +92,7 @@ export async function GET() {
   try {
     // systemctl exits with code 3 when inactive — catch and still parse stdout
     const result = await execAsync(
-      "systemctl status brieftube-worker --no-pager 2>&1",
+      "/usr/bin/systemctl status brieftube-worker --no-pager 2>&1",
     ).catch((e: { stdout?: string }) => ({ stdout: e.stdout ?? "" }));
 
     const stdout = (result as { stdout: string }).stdout;
@@ -165,7 +165,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    await execAsync(`sudo systemctl ${action} brieftube-worker`);
+    await execAsync(`sudo /usr/bin/systemctl ${action} brieftube-worker`);
     return NextResponse.json({ success: true, action });
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
