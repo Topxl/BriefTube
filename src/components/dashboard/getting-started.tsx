@@ -59,7 +59,7 @@ export function GettingStarted({
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 conversationId: convData.conversation.id,
-                message: `[Onboarding feedback] ${value?.trim()}`,
+                message: `[Onboarding feedback] ${value.trim()}`,
               }),
             });
             toast.success("Thanks for your feedback!");
