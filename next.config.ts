@@ -48,6 +48,7 @@ const cspDirectives = [
     "https://images.unsplash.com",
     "https://www.googletagmanager.com", // GTM tracking pixel
     "https://www.google.com", // Google Ads conversion tracking pixel
+    "https://*.google.com", // Regional Google domains (google.co.th, google.fr, etc.)
     "https://googleads.g.doubleclick.net", // Google Ads remarketing pixel
     "https://www.googleadservices.com", // Google Ads conversion
   ].join(" "),
