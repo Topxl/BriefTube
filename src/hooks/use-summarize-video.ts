@@ -2,7 +2,10 @@
 
 import { useState, useCallback } from "react";
 import { toast } from "sonner";
-import { addProcessingVideo } from "@/lib/processing-videos";
+import {
+  addProcessingVideo,
+  removeProcessingVideo,
+} from "@/lib/processing-videos";
 
 type SummarizeParams = {
   /** Raw video ID or any YouTube URL — normalized server-side */
@@ -84,6 +87,16 @@ export function useSummarizeVideo() {
           : { ...DEFAULT_TOASTS, ...(toasts as Record<string, string>) };
 
       setLoading(true);
+
+      // Optimistic: show processing card immediately with best available title
+      if (trackProcessing) {
+        addProcessingVideo({
+          videoId,
+          title: videoTitle ?? videoId,
+          startedAt: Date.now(),
+        });
+      }
+
       try {
         const res = await fetch("/api/process-video", {
           method: "POST",
@@ -108,11 +121,21 @@ export function useSummarizeVideo() {
         const data = (await res.json()) as SummarizeResponse;
 
         if (data.queued && trackProcessing) {
+          // Update the optimistic card with the resolved title from the API
+          const resolvedTitle =
+            (data.videoTitle && data.videoTitle !== (data.videoId ?? videoId)
+              ? data.videoTitle
+              : null) ??
+            (videoTitle && videoTitle !== videoId ? videoTitle : null) ??
+            videoId;
           addProcessingVideo({
             videoId: data.videoId ?? videoId,
-            title: data.videoTitle ?? videoTitle ?? videoId,
+            title: resolvedTitle,
             startedAt: Date.now(),
           });
+        } else if (!data.queued && trackProcessing) {
+          // Not queued (already processed): remove the optimistic card
+          removeProcessingVideo(videoId);
         }
 
         if (toastText) {
