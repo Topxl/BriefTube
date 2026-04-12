@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import { logger } from "@/lib/logger";
 import { captureServerEvent } from "@/lib/posthog/server";
+import { getBaseUrl } from "@/lib/server-url";
 
 type YouTubeSubscriptionItem = {
   snippet: {
@@ -80,9 +81,7 @@ export async function GET(request: NextRequest) {
   // (authRateLimit 30/min/user), and the callback is single-use via the
   // CSRF state cookie + one-time OAuth code.
 
-  // Derive baseUrl from the incoming request so local dev stays on localhost
-  // (matches the redirect_uri sent in /api/youtube/auth).
-  const baseUrl = request.nextUrl.origin;
+  const baseUrl = getBaseUrl(request);
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
   const state = searchParams.get("state");

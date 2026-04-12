@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-04-13
+
+FIX: YouTube import OAuth broken on VPS — request.nextUrl.origin returned localhost behind Caddy reverse proxy, use getBaseUrl() instead
+FIX(admin): fix mobile overflow on monitoring page error sections (worker errors, actions panel)
+
 ## 2026-04-12
 
 FIX: CSP blocking Google Ads conversion pings and scripts. Added Google ccTLD domains (google.co.th, google.co.uk, google.ca, google.com.au) to connect-src, img-src for country-specific conversion tracking. Added googleads.g.doubleclick.net to script-src (viewthrough conversion script). Added static.cloudflareinsights.com to script-src (Cloudflare analytics). Added worker-src blob: for PostHog workers.
