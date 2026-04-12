@@ -1,4 +1,4 @@
-import http from "node:http";
+import * as http from "node:http";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 
