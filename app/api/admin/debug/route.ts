@@ -88,20 +88,5 @@ export async function GET() {
     pid: proc.pid,
   };
 
-  // Test 4: spawnSync node (child process doing http)
-  const proc2 = spawnSync(
-    "node",
-    [
-      "-e",
-      `const h=require("http");h.get("http://127.0.0.1:8080/health",r=>{let d="";r.on("data",c=>d+=c);r.on("end",()=>console.log(r.statusCode,d.slice(0,50)))}).on("error",e=>console.log("ERR",e.message))`,
-    ],
-    { timeout: 5000, encoding: "utf-8" },
-  );
-  debug.test4_node_child = {
-    status: proc2.status,
-    stdout: proc2.stdout.trim(),
-    pid: proc2.pid,
-  };
-
   return NextResponse.json(debug);
 }
