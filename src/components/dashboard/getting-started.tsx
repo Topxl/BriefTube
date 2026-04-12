@@ -26,8 +26,8 @@ export function GettingStarted({
 }: Props) {
   const [step, setStep] = useState<"platform" | "customize" | "done">(() => {
     if (!hasChannel) return "platform";
-    if (hasConnection) return "customize";
     if (onboardingCompleted) return "done";
+    if (hasConnection) return "customize";
     return "platform";
   });
 

@@ -12,8 +12,9 @@ class RouteBuilder<TBody = unknown, TParams = unknown> {
   private bodySchema?: ZodSchema;
 
   body(schema: ZodSchema) {
-    this.bodySchema = schema;
-    return this;
+    const clone = new RouteBuilder<TBody, TParams>();
+    clone.bodySchema = schema;
+    return clone;
   }
 
   handler(

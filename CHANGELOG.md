@@ -2,6 +2,8 @@
 
 ## 2026-04-13
 
+FIX: authRoute singleton shared Zod schema between routes causing feedback POST 400 — .body() now clones the RouteBuilder
+FIX: onboarding modal reappearing after completion — check onboardingCompleted before hasConnection
 FIX: YouTube import OAuth broken on VPS — request.nextUrl.origin returned localhost behind Caddy reverse proxy, use getBaseUrl() instead
 FIX(admin): fix mobile overflow on monitoring page error sections (worker errors, actions panel)
 
