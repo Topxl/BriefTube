@@ -42,7 +42,11 @@ function LogLine({ line }: { line: string }) {
   return <p className={`font-mono text-[10px] leading-5 ${color}`}>{line}</p>;
 }
 
-export function WebLogsCard() {
+export function WebLogsCard({
+  initialData,
+}: {
+  initialData?: WebLogsApiResponse | null;
+}) {
   const queryClient = useQueryClient();
   const [copied, setCopied] = useState(false);
   const [copiedErrors, setCopiedErrors] = useState(false);
@@ -74,7 +78,8 @@ export function WebLogsCard() {
         }
         return res.json() as Promise<WebLogsApiResponse>;
       },
-      refetchInterval: 10_000,
+      initialData: initialData ?? undefined,
+      refetchInterval: 30_000,
     });
 
   const actionMutation = useMutation({

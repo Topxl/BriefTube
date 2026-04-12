@@ -11,6 +11,8 @@ import {
   getPostHogDailyVisitors,
   type DailyVisitorCount,
 } from "@/lib/posthog-server";
+import { workerFetch } from "@/lib/worker-fetch";
+import { logger } from "@/lib/logger";
 
 // Helpers
 function buildDailyArray(data: { created_at?: string | null }[], days: number) {
@@ -190,6 +192,20 @@ export default async function AdminPage() {
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const thirtyDaysAgoStr = thirtyDaysAgo.toISOString();
 
+  // Fetch worker data server-side (runs in main Node.js process with localhost access)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const fetchWorkerData = async (path: string): Promise<any | null> => {
+    try {
+      const raw = await workerFetch(path);
+      return JSON.parse(raw);
+    } catch (e) {
+      logger.error(`[monitoring] Failed to fetch ${path}`, {
+        error: String(e),
+      });
+      return null;
+    }
+  };
+
   // Fetch all data in parallel
   const [
     totalUsersResult,
@@ -201,6 +217,9 @@ export default async function AdminPage() {
     visitorsTotal30d,
     visitorDailyRaw,
     signupsResult,
+    workerData,
+    servicesData,
+    webLogsData,
   ] = await Promise.all([
     admin.from("profiles").select("*", { count: "exact", head: true }),
     admin
@@ -232,6 +251,9 @@ export default async function AdminPage() {
       .from("profiles")
       .select("created_at")
       .gte("created_at", thirtyDaysAgoStr),
+    fetchWorkerData("/logs"),
+    fetchWorkerData("/services"),
+    fetchWorkerData("/web-logs"),
   ]);
 
   const totalUsers = totalUsersResult.count;
@@ -356,13 +378,13 @@ export default async function AdminPage() {
       )}
 
       {/* Worker Status */}
-      <WorkerCard />
+      <WorkerCard initialData={workerData} />
 
       {/* Services */}
-      <ServicesHealth />
+      <ServicesHealth initialData={servicesData} />
 
       {/* Web Logs */}
-      <WebLogsCard />
+      <WebLogsCard initialData={webLogsData} />
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">

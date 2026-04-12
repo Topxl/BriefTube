@@ -61,7 +61,11 @@ function LogLine({ line }: { line: string }) {
   );
 }
 
-export function WorkerCard() {
+export function WorkerCard({
+  initialData,
+}: {
+  initialData?: WorkerApiResponse | null;
+}) {
   const queryClient = useQueryClient();
   const [copied, setCopied] = useState(false);
   const [copiedErrors, setCopiedErrors] = useState(false);
@@ -93,7 +97,8 @@ export function WorkerCard() {
         }
         return res.json() as Promise<WorkerApiResponse>;
       },
-      refetchInterval: 10_000,
+      initialData: initialData ?? undefined,
+      refetchInterval: 30_000,
     },
   );
 
