@@ -78,8 +78,7 @@ export async function POST(req: Request) {
       await ensureRetentionCoupon();
       try {
         await stripe.subscriptions.update(profile.stripe_subscription_id, {
-          // @ts-expect-error — coupon still works at runtime in Stripe API
-          coupon: COUPON_ID,
+          discounts: [{ coupon: COUPON_ID }],
         });
         logger.info(`Retention offer accepted for user: ${userId}`);
       } catch (err) {
