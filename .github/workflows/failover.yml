@@ -1,8 +1,11 @@
 name: Health Check & Failover
 
 on:
-  schedule:
-    - cron: "0 * * * *" # Every hour
+  # Automatic hourly health check DISABLED — was causing false failovers to Vercel
+  # during VPS deploy restarts, then Vercel served stale builds with wrong CSP/config.
+  # Use manual workflow_dispatch with force_action: "vps" or "vercel" if needed.
+  # schedule:
+  #   - cron: "0 * * * *"
   workflow_dispatch:
     inputs:
       force_action:
