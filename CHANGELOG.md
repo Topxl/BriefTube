@@ -2,6 +2,7 @@
 
 ## 2026-04-12
 
+FIX: CSP form-action was blocking Stripe Checkout redirect. Added https://checkout.stripe.com to form-action directive in next.config.ts. The form at /api/stripe/checkout submits to same origin but then redirects to checkout.stripe.com, which was rejected by the browser since only 'self' was allowed.
 FIX(admin): fetch worker/services/web-logs data server-side in monitoring page to bypass Next.js isolated worker network restriction
 FIX(admin): add error state rendering to monitoring cards (worker, services, web-logs) for debugging
 FIX(admin): replace undici fetch with Node.js http module for worker API calls -- fixes "TypeError: fetch failed" in Next.js standalone
