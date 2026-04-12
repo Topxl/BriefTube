@@ -1,12 +1,13 @@
-import * as http from "node:http";
+import { execSync } from "child_process";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 
 /**
- * Fetch data from the local worker HTTP server using Node.js `http` module.
- * Next.js standalone's global `fetch` (undici) has known issues with local
- * connections (IPv6 resolution, connection reuse). The native `http` module
- * is more reliable for same-machine server-to-server calls.
+ * Fetch data from the local worker HTTP server using curl via child_process.
+ *
+ * Neither global fetch (undici) nor node:http work reliably inside
+ * Next.js Turbopack standalone builds for localhost connections.
+ * curl is guaranteed to work -- tested and confirmed on the VPS.
  */
 export async function workerFetch(path: string): Promise<string> {
   const baseUrl = env.VPS_WORKER_URL;
@@ -14,54 +15,20 @@ export async function workerFetch(path: string): Promise<string> {
   if (!env.WORKER_API_SECRET)
     return Promise.reject(new Error("WORKER_API_SECRET not set"));
 
-  const url = new URL(path, baseUrl);
+  const url = `${baseUrl}${path}`;
 
-  return new Promise((resolve, reject) => {
-    const req = http.request(
-      {
-        hostname: url.hostname,
-        port: url.port || 8080,
-        path: url.pathname,
-        method: "GET",
-        timeout: 10_000,
-        headers: {
-          Authorization: `Bearer ${env.WORKER_API_SECRET}`,
-        },
-      },
-      (res) => {
-        let data = "";
-        res.on("data", (chunk: Buffer) => {
-          data += chunk.toString();
-        });
-        res.on("end", () => {
-          if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
-            resolve(data);
-          } else {
-            reject(
-              new Error(
-                `Worker returned ${res.statusCode}: ${data.slice(0, 200)}`,
-              ),
-            );
-          }
-        });
-      },
+  try {
+    const result = execSync(
+      `curl -sf --max-time 10 -H 'Authorization: Bearer ${env.WORKER_API_SECRET}' '${url}'`,
+      { timeout: 12_000, encoding: "utf-8" },
     );
-
-    req.on("error", (err) => {
-      logger.error("[workerFetch] Connection error", {
-        path,
-        error: String(err),
-      });
-      reject(err);
-    });
-
-    req.on("timeout", () => {
-      req.destroy();
-      reject(new Error("Worker request timed out"));
-    });
-
-    req.end();
-  });
+    return Promise.resolve(result);
+  } catch (err) {
+    logger.error("[workerFetch] curl failed", { path, error: String(err) });
+    return Promise.reject(
+      new Error(`Worker unreachable at ${url}: ${String(err)}`),
+    );
+  }
 }
 
 export async function workerPost(
@@ -73,55 +40,19 @@ export async function workerPost(
   if (!env.WORKER_API_SECRET)
     return Promise.reject(new Error("WORKER_API_SECRET not set"));
 
-  const url = new URL(path, baseUrl);
+  const url = `${baseUrl}${path}`;
   const payload = JSON.stringify(body);
 
-  return new Promise((resolve, reject) => {
-    const req = http.request(
-      {
-        hostname: url.hostname,
-        port: url.port || 8080,
-        path: url.pathname,
-        method: "POST",
-        timeout: 10_000,
-        headers: {
-          Authorization: `Bearer ${env.WORKER_API_SECRET}`,
-          "Content-Type": "application/json",
-          "Content-Length": Buffer.byteLength(payload),
-        },
-      },
-      (res) => {
-        let data = "";
-        res.on("data", (chunk: Buffer) => {
-          data += chunk.toString();
-        });
-        res.on("end", () => {
-          if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
-            resolve(data);
-          } else {
-            reject(
-              new Error(
-                `Worker returned ${res.statusCode}: ${data.slice(0, 200)}`,
-              ),
-            );
-          }
-        });
-      },
+  try {
+    const result = execSync(
+      `curl -sf --max-time 10 -X POST -H 'Authorization: Bearer ${env.WORKER_API_SECRET}' -H 'Content-Type: application/json' -d '${payload}' '${url}'`,
+      { timeout: 12_000, encoding: "utf-8" },
     );
-
-    req.on("error", (err) => {
-      logger.error("[workerPost] Connection error", {
-        path,
-        error: String(err),
-      });
-      reject(err);
-    });
-
-    req.on("timeout", () => {
-      req.destroy();
-      reject(new Error("Worker request timed out"));
-    });
-
-    req.end(payload);
-  });
+    return Promise.resolve(result);
+  } catch (err) {
+    logger.error("[workerPost] curl failed", { path, error: String(err) });
+    return Promise.reject(
+      new Error(`Worker unreachable at ${url}: ${String(err)}`),
+    );
+  }
 }
