@@ -179,12 +179,15 @@ function PipelineStage({
 }
 
 export function ServicesHealth() {
-  const { data, isLoading, dataUpdatedAt, refetch, isFetching } =
+  const { data, isLoading, error, dataUpdatedAt, refetch, isFetching } =
     useQuery<ServicesResponse>({
       queryKey: ["admin-services"],
       queryFn: async () => {
         const res = await fetch("/api/admin/services");
-        if (!res.ok) throw new Error("Failed to fetch");
+        if (!res.ok) {
+          const body = await res.text();
+          throw new Error(`${res.status}: ${body}`);
+        }
         return res.json() as Promise<ServicesResponse>;
       },
       refetchInterval: 60_000,
@@ -216,6 +219,13 @@ export function ServicesHealth() {
         <div className="flex items-center gap-2 px-4 py-4">
           <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
           <p className="text-muted-foreground text-sm">Checking…</p>
+        </div>
+      ) : error ? (
+        <div className="flex flex-col gap-1 px-4 py-4">
+          <p className="text-xs font-medium text-red-400">Services API error</p>
+          <p className="font-mono text-[10px] text-red-400/70">
+            {error.message}
+          </p>
         </div>
       ) : !data?.groups ? (
         <div className="flex items-center gap-2 px-4 py-4">
