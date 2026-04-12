@@ -7,6 +7,7 @@ import path from "path";
 import { env } from "@/lib/env";
 import { getUser } from "@/lib/auth/auth-user";
 import { logger } from "@/lib/logger";
+import { workerFetch } from "@/lib/worker-fetch";
 
 const execAsync = promisify(exec);
 const LOG_PATH = path.join(process.cwd(), "worker", "worker.log");
@@ -50,20 +51,11 @@ export async function GET() {
         { status: 500 },
       );
     }
-    const url = `${env.VPS_WORKER_URL}/logs`;
     try {
-      const res = await fetch(url, {
-        signal: AbortSignal.timeout(8000),
-        cache: "no-store",
-        headers: {
-          Authorization: `Bearer ${env.WORKER_API_SECRET}`,
-        },
-      });
-      if (!res.ok) throw new Error(`VPS returned ${res.status}`);
-      const data = await res.json();
-      return NextResponse.json(data);
+      const raw = await workerFetch("/logs");
+      return NextResponse.json(JSON.parse(raw));
     } catch (e) {
-      logger.error("[admin/worker] fetch failed:", String(e), "url:", url);
+      logger.error("[admin/worker] fetch failed:", String(e));
       return NextResponse.json(
         { error: `Cannot reach VPS worker: ${String(e)}` },
         { status: 502 },

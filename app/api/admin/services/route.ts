@@ -3,6 +3,7 @@ import { exec } from "child_process";
 import { promisify } from "util";
 import { env } from "@/lib/env";
 import { getUser } from "@/lib/auth/auth-user";
+import { workerFetch } from "@/lib/worker-fetch";
 
 const execAsync = promisify(exec);
 
@@ -44,17 +45,9 @@ export async function GET() {
     );
   }
 
-  const url = `${env.VPS_WORKER_URL}/services`;
   try {
-    const res = await fetch(url, {
-      signal: AbortSignal.timeout(15_000),
-      cache: "no-store",
-      headers: {
-        Authorization: `Bearer ${env.WORKER_API_SECRET}`,
-      },
-    });
-    if (!res.ok) throw new Error(`Worker returned ${res.status}`);
-    return NextResponse.json(await res.json());
+    const raw = await workerFetch("/services");
+    return NextResponse.json(JSON.parse(raw));
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 502 });
   }
