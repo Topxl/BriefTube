@@ -2,6 +2,7 @@
 
 ## 2026-04-12
 
+FIX(admin): fetch worker/services/web-logs data server-side in monitoring page to bypass Next.js isolated worker network restriction
 FIX(admin): add error state rendering to monitoring cards (worker, services, web-logs) for debugging
 FIX(admin): replace undici fetch with Node.js http module for worker API calls -- fixes "TypeError: fetch failed" in Next.js standalone
 CHORE: remove tracked __pycache__ files from git (already in .gitignore)

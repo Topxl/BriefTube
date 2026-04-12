@@ -178,7 +178,11 @@ function PipelineStage({
   );
 }
 
-export function ServicesHealth() {
+export function ServicesHealth({
+  initialData,
+}: {
+  initialData?: ServicesResponse | null;
+}) {
   const { data, isLoading, error, dataUpdatedAt, refetch, isFetching } =
     useQuery<ServicesResponse>({
       queryKey: ["admin-services"],
@@ -190,6 +194,7 @@ export function ServicesHealth() {
         }
         return res.json() as Promise<ServicesResponse>;
       },
+      initialData: initialData ?? undefined,
       refetchInterval: 60_000,
       retry: 1,
     });
