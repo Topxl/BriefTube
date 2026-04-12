@@ -1,4 +1,4 @@
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 
@@ -7,7 +7,8 @@ import { logger } from "@/lib/logger";
  *
  * Neither global fetch (undici) nor node:http work reliably inside
  * Next.js Turbopack standalone builds for localhost connections.
- * curl is guaranteed to work -- tested and confirmed on the VPS.
+ * curl is guaranteed to work -- using execFileSync with an args array
+ * avoids all shell escaping issues.
  */
 export async function workerFetch(path: string): Promise<string> {
   const baseUrl = env.VPS_WORKER_URL;
@@ -18,8 +19,16 @@ export async function workerFetch(path: string): Promise<string> {
   const url = `${baseUrl}${path}`;
 
   try {
-    const result = execSync(
-      `curl -sf --max-time 10 -H 'Authorization: Bearer ${env.WORKER_API_SECRET}' '${url}'`,
+    const result = execFileSync(
+      "curl",
+      [
+        "-sf",
+        "--max-time",
+        "10",
+        "-H",
+        `Authorization: Bearer ${env.WORKER_API_SECRET}`,
+        url,
+      ],
       { timeout: 12_000, encoding: "utf-8" },
     );
     return Promise.resolve(result);
@@ -44,8 +53,22 @@ export async function workerPost(
   const payload = JSON.stringify(body);
 
   try {
-    const result = execSync(
-      `curl -sf --max-time 10 -X POST -H 'Authorization: Bearer ${env.WORKER_API_SECRET}' -H 'Content-Type: application/json' -d '${payload}' '${url}'`,
+    const result = execFileSync(
+      "curl",
+      [
+        "-sf",
+        "--max-time",
+        "10",
+        "-X",
+        "POST",
+        "-H",
+        `Authorization: Bearer ${env.WORKER_API_SECRET}`,
+        "-H",
+        "Content-Type: application/json",
+        "-d",
+        payload,
+        url,
+      ],
       { timeout: 12_000, encoding: "utf-8" },
     );
     return Promise.resolve(result);
