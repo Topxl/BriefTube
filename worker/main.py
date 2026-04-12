@@ -35,6 +35,7 @@ from discord_deliverer import send_to_discord
 from slack_deliverer import send_to_slack
 from bot_handler import create_bot_application, create_log_bot_application, setup_bot_commands, MonitoringAlert, send_kpi_report
 from monitoring import stats
+import content_filter
 import rss_scanner
 import storage
 import db
@@ -323,57 +324,10 @@ async def _process_video(
 
     # Pre-filter: content types that have no speech transcript and would waste
     # Webshare bandwidth retrying audio downloads endlessly.
-    _MUSIC_TITLE_PHRASES = (
-        "worship songs", "worship music", "worship anthems",
-        "praise and worship", "praise songs", "praise collection",
-        "gospel songs", "gospel music", "christian praise",
-        "christian songs", "hillsong worship", "praise music",
-        # Hindu / South Asian devotional music
-        "bhajan", "aarti", "chalisa",
-        "nonstop bhajan", "nonstop mantra", "nonstop kirtan",
-        "jukebox",
-        # Tamil / South Indian music
-        "tamil song", "tamil mass song", "mass songs",
-        "vijay songs",
-        # Ambient / healing / frequency music
-        "chakra", "solfeggio", "soundscape", "binaural",
-        "healing frequencies", "meditation frequencies", "sleep frequencies",
-    )
-    # Nollywood / African drama movies: no YouTube transcripts, 1-3h long,
-    # each Whisper retry downloads 50-65 MB via proxy then fails → bandwidth explosion.
-    _NOLLYWOOD_TITLE_PHRASES = (
-        "interesting movie",
-        "funny movie",
-        "nollywood",
-        "will make you laugh",
-        "teach you never to trust",
-        "disguised prince",
-        "will make you cry",
-        "african movie",
-        "nigerian movie",
-        "nigerian movies",
-        "latest 2026 movie",
-        "latest 2025 movie",
-        "nollywood movie",
-        "nollywood film",
-        "2026 nigerian",
-        "2025 nigerian",
-        # Long free courses — no transcript, massive audio download
-        "full course 2026",
-        "full course 2025",
-        "full course [free]",
-        "full course for beginners",
-        "tutorial for beginners | simplilearn",
-        "tutorial for beginners | edureka",
-    )
-    _title_lower = (video_title or "").lower()
-    if any(phrase in _title_lower for phrase in _MUSIC_TITLE_PHRASES):
-        logger.info(f"[{video_id}] Skipping permanently (music_content): {video_title[:80]}")
-        db.fail_job(job["id"], immediate=True, error_reason="music_content")
-        return
-    if any(phrase in _title_lower for phrase in _NOLLYWOOD_TITLE_PHRASES):
-        logger.info(f"[{video_id}] Skipping permanently (drama_movie): {video_title[:80]}")
-        db.fail_job(job["id"], immediate=True, error_reason="drama_movie")
+    _skip_reason = content_filter.should_skip_title(video_title or "")
+    if _skip_reason:
+        logger.info(f"[{video_id}] Skipping permanently ({_skip_reason}): {video_title[:80]}")
+        db.fail_job(job["id"], immediate=True, error_reason=_skip_reason)
         return
 
     # Resolve language/voice early (before the try block) so the exception
@@ -2030,6 +1984,100 @@ async def critical_monitor_loop(alert_system: MonitoringAlert):
                     _clear("high_memory")
             except Exception as e:
                 logger.warning(f"Critical monitor (system): {e}")
+
+            # 7. Stripe webhooks stopped — no webhook received in 12h
+            try:
+                twelve_h_ago = (now - timedelta(hours=12)).isoformat()
+                wh_res = supabase.table("webhook_events").select("created_at").order("created_at", desc=True).limit(1).execute()
+                if wh_res.data:
+                    last_wh = wh_res.data[0]["created_at"]
+                    if last_wh < twelve_h_ago:
+                        await _send_critical(
+                            "stripe_webhooks_stopped",
+                            "Webhooks Stripe arrêtés",
+                            f"Dernier webhook reçu : {last_wh[:16]}Z\nAucun webhook depuis plus de 12 heures.",
+                            "Vérifier l'endpoint webhook Stripe et les logs Next.js.",
+                        )
+                    else:
+                        _clear("stripe_webhooks_stopped")
+                elif not _first_run:
+                    await _send_critical(
+                        "stripe_webhooks_stopped",
+                        "Webhooks Stripe — aucun événement",
+                        "La table webhook_events est vide. Aucun webhook n'a jamais été reçu.",
+                        "Vérifier la configuration webhook dans le dashboard Stripe.",
+                    )
+            except Exception as e:
+                logger.warning(f"Critical monitor (stripe webhooks): {e}")
+
+            # 8. Web app health — check homepage and login page
+            try:
+                web_errors = []
+                async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session:
+                    for url_path, label in [("/", "Homepage"), ("/login", "Login")]:
+                        try:
+                            url = f"https://www.brief-tube.com{url_path}"
+                            async with session.get(url) as resp:
+                                if resp.status >= 500:
+                                    web_errors.append(f"{label}: HTTP {resp.status}")
+                        except Exception as e:
+                            web_errors.append(f"{label}: {type(e).__name__}")
+                if web_errors:
+                    await _send_critical(
+                        "web_app_down",
+                        "Site web inaccessible",
+                        "\n".join(web_errors),
+                        "sudo journalctl -u brieftube-web -n 50 --no-pager",
+                    )
+                else:
+                    _clear("web_app_down")
+            except Exception as e:
+                logger.warning(f"Critical monitor (web health): {e}")
+
+            # 9. No payments in 7 days
+            try:
+                seven_d_ago = (now - timedelta(days=7)).isoformat()
+                checkouts_7d = supabase.table("webhook_events").select("id", count="exact").eq("event_type", "checkout.session.completed").gte("created_at", seven_d_ago).execute()
+                n_checkouts = checkouts_7d.count or 0
+                if n_checkouts == 0 and not _first_run:
+                    paying = supabase.table("profiles").select("id", count="exact").eq("subscription_status", "active").execute()
+                    if (paying.count or 0) > 0:
+                        await _send_critical(
+                            "no_payments_7d",
+                            "Aucun paiement depuis 7 jours",
+                            f"0 checkout complété dans les 7 derniers jours.\n{paying.count} utilisateurs payants actifs.",
+                            "Vérifier le checkout Stripe et la page pricing.",
+                        )
+                    else:
+                        _clear("no_payments_7d")
+                else:
+                    _clear("no_payments_7d")
+            except Exception as e:
+                logger.warning(f"Critical monitor (payments): {e}")
+
+            # 10. Web server errors — check systemd logs for 5xx
+            try:
+                import subprocess
+                result = await asyncio.to_thread(
+                    subprocess.run,
+                    ["journalctl", "-u", "brieftube-web", "--since", "5 minutes ago", "--no-pager", "-q"],
+                    capture_output=True, text=True, timeout=5,
+                )
+                error_count = sum(
+                    1 for line in result.stdout.splitlines()
+                    if any(code in line for code in [" 500 ", " 502 ", " 503 ", " 504 ", "FATAL", "Error: "])
+                )
+                if error_count > 10:
+                    await _send_critical(
+                        "web_errors_high",
+                        f"{error_count} erreurs serveur web",
+                        f"{error_count} erreurs 5xx/FATAL dans les 5 dernières minutes.",
+                        "sudo journalctl -u brieftube-web --since '10 minutes ago' --no-pager",
+                    )
+                else:
+                    _clear("web_errors_high")
+            except Exception as e:
+                logger.warning(f"Critical monitor (web errors): {e}")
 
             _first_run = False
 

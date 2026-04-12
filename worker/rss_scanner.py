@@ -9,98 +9,12 @@ import feedparser
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import db
+from content_filter import is_music_title as is_likely_music
+from content_filter import is_drama_movie_title as is_likely_drama_movie
+from content_filter import is_youtube_short
 from youtube_utils import extract_video_id as _yt_extract_video_id
 
 logger = logging.getLogger(__name__)
-
-# High-confidence music/ambient title patterns — only match clear-cut cases
-# to avoid false positives (podcasts with "music" in channel name, etc.).
-# English-only: language-agnostic detection is handled later via Invidious genre check.
-_MUSIC_TITLE_RE = re.compile(
-    r'\blofi\b'
-    r'|\bchill beats?\b'
-    r'|\b(?:study|sleep|relax(?:ing)?|focus)\s+music\b'
-    r'|\b\d+\s*h(?:ours?)?\s+(?:of\s+)?(?:music|beats?|jazz|classical|lofi|ambient)\b'
-    r'|\bbeats?\s+to\s+(?:study|relax|sleep|chill)\b'
-    r'|\b(?:no[- ]copyright|background|bgm)\s+music\b'
-    r'|\b(?:instrumental|ambient)\s+(?:music|mix|playlist)\b'
-    r'|\b24/?7\s+(?:music|stream|radio|lofi|chill)\b'
-    r'|\bmusic\s+(?:mix|playlist|24/?7|radio|live)\b'
-    r'|\(official\s+audio\)'           # "Kendrick Lamar - luther (Official Audio)"
-    r'|\s-\s+Topic$'                   # YouTube Music auto-channels: "Artist - Topic"
-    # Worship / gospel / Christian praise music — no speech transcript worth processing
-    r'|\bworship\s+(?:songs?|music|anthems?)\b'
-    r'|\bpraise\s+(?:&\s*)?worship\b'
-    r'|\bchristian\s+(?:praise|songs?|music)\b'
-    r'|\bgospel\s+(?:songs?|music)\b'
-    r'|\bhillsong\b'
-    r'|\bnonstop\s+(?:worship|praise|christian|gospel)\b'
-    r'|\bpraise\s+(?:songs?|collection|music)\b'
-    # Hindu / South Asian devotional music — bhajan, aarti, chalisa, jayanti songs
-    r'|\bbhajan\b'                          # "Nonstop Hanuman Bhajan", "Bhajan 2026"
-    r'|\baarti\b'                           # "Aarti Kije Hanuman Lala Ki"
-    r'|\bchalisa\b'                         # "Shree Hanuman Chalisa"
-    r'|\bnonstop\s+(?:bhajan|mantra|kirtan)\b'
-    r'|\b(?:jayanti|janmotsav)\s+(?:special|song|bhajan)\b'
-    r'|\bjukebox\b'                         # "Hanuman Jayanti Jukebox" — audio compilations
-    # Tamil / South Indian music songs
-    r'|\btamil\s+(?:mass\s+)?songs?\b'      # "Tamil Mass Song", "Tamil Song"
-    r'|\bmass\s+songs?\b'                   # "Mass Songs" (Tamil film music slang)
-    r'|\bvijay\s+songs?\b'                  # "Vijay Songs", "Thalapathy Vijay Songs"
-    r'|\bgana\s+\w+\b'                      # "Gana praba" — Tamil street music genre
-    # Ambient / healing / frequency music
-    r'|\bchakra\b'                          # "Heart Chakra", "Solar Plexus Chakra"
-    r'|\bsolfeggio\b'                       # Solfeggio frequencies
-    r'|\b(?:healing|meditation|sleep|relaxing)\s+frequencies?\b'
-    r'|\bsoundscape\b'                      # "Ancient penetrating tuning activating balancing soundscape"
-    r'|\b\d+\s*hz\b'                        # "528 Hz", "432 Hz" healing tones
-    r'|\bbinaural\b',                       # binaural beats
-    re.IGNORECASE,
-)
-
-
-def is_likely_music(title: str) -> bool:
-    """Detect music/ambient videos by title. Returns True only for high-confidence matches."""
-    return bool(_MUSIC_TITLE_RE.search(title))
-
-
-# Nollywood / African drama movies: no YouTube transcripts, 1-3h long,
-# each Whisper retry downloads 50-65 MB via proxy then fails → bandwidth explosion.
-_DRAMA_MOVIE_PHRASES = (
-    "interesting movie",
-    "funny movie",
-    "nollywood",
-    "will make you laugh",
-    "teach you never to trust",
-    "disguised prince",
-    "will make you cry",
-    "african movie",
-    "nigerian movie",     # catches "Nigerian Movie" and "Nigerian Movies" (superset of "latest nigerian movie")
-    "nigerian movies",
-    "latest 2026 movie",
-    "latest 2025 movie",
-    "nollywood movie",
-    "nollywood film",
-    "2026 nigerian",
-    "2025 nigerian",
-    # Ethiopian / Amharic drama series — daily soap operas, no useful transcript
-    "ስኩል ላይፍ",           # Amharic "school life" — @liyucinema drama series
-    "አፍላ ፍቅር",           # Amharic "young love" — same series
-    "liyu cinema",        # the channel name itself appears in some titles
-    # Long free courses — no transcript, massive audio download, never summarizable
-    "full course 2026",
-    "full course 2025",
-    "full course [free]",
-    "full course for beginners",
-    "tutorial for beginners | simplilearn",
-    "tutorial for beginners | edureka",
-)
-
-
-def is_likely_drama_movie(title: str) -> bool:
-    """Detect Nollywood/drama movies that will never yield a transcript."""
-    title_lower = title.lower()
-    return any(phrase in title_lower for phrase in _DRAMA_MOVIE_PHRASES)
 
 
 _VALID_CHANNEL_ID_RE = re.compile(r"^UC[a-zA-Z0-9_\-]{22}$")
@@ -122,10 +36,6 @@ def get_rss_url(channel_id: str) -> str:
 def extract_video_id(url: str) -> str | None:
     """Delegate to the shared youtube_utils implementation."""
     return _yt_extract_video_id(url)
-
-
-def is_youtube_short(url: str) -> bool:
-    return "/shorts/" in url
 
 
 MAX_VIDEO_AGE_DAYS = 15  # Ignore videos published more than this many days ago

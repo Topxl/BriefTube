@@ -43,29 +43,9 @@ from youtube_utils import (
     run_geo_bypass as _run_geo_bypass,
 )
 
+import content_filter
+
 logger = logging.getLogger(__name__)
-
-# Patterns that strongly suggest a video contains only music / ambient sounds
-# with no meaningful speech to transcribe.  Checked against the video title
-# before attempting the (expensive) Whisper fallback.
-_MUSIC_TITLE_RE = re.compile(
-    r'\b\d+\s*hz\b'           # 432Hz, 528 Hz, 888hz …
-    r'|binaural\s+beats?'
-    r'|solfeggio'
-    r'|white\s+noise'
-    r'|rain\s+sounds?'
-    r'|ambient\s+music'
-    r'|sleep\s+music'
-    r'|relaxing\s+music'
-    r'|study\s+music'
-    r'|focus\s+music'
-    r'|healing\s+(music|sounds?|frequency|frequencies)'
-    r'|meditation\s+(music|sounds?|frequency|frequencies)'
-    r'|\(official\s+audio\)'           # "Kendrick Lamar - luther (Official Audio)"
-    r'|\s-\s+Topic$',                  # YouTube Music auto-channels: "Artist - Topic"
-    re.IGNORECASE,
-)
-
 
 # Path to YouTube cookies file (Netscape format).
 # Set YOUTUBE_COOKIES_FILE in .env, or place cookies at worker/cookies/youtube.txt.
@@ -265,7 +245,7 @@ class TranscriptExtractor:
     @staticmethod
     def _is_music_video(title: str) -> bool:
         """Return True if the title strongly suggests a music/ambient video."""
-        return bool(_MUSIC_TITLE_RE.search(title))
+        return content_filter.is_music_title(title)
 
     @staticmethod
     def _fetch_invidious_metadata(video_id: str) -> dict:
@@ -351,53 +331,15 @@ class TranscriptExtractor:
                 f"[{video_id}] Invidious metadata: genre={genre!r}"
                 + (f" duration={dur}s" if dur else "")
             )
-            if genre.lower() == "music":
-                logger.info(f"[{video_id}] YouTube category is Music — skipping")
-                return None, None, "music_content", 0.0
-
-            # Category + duration gates — language-agnostic, uses YouTube's own metadata.
-            # Each category has its own duration threshold calibrated to allow short
-            # legitimate clips (trailers, highlights, sermons < threshold) while blocking
-            # long content that never has a speech transcript worth processing.
             dur = self.last_video_metadata.get("duration_seconds", 0)
-            genre_lower = genre.lower()
-
-            _CATEGORY_DURATION_GATES = {
-                # Movies, Nollywood dramas, anime episodes → trailers/reviews OK (< 30 min)
-                "film & animation": 1800,   # 30 min
-                # Live sports events, full-match recordings → highlights OK (< 60 min)
-                "sports":           3600,   # 60 min
-                # Reality TV, talent shows, full episodes → clips OK (< 60 min)
-                "entertainment":    3600,   # 60 min
-                # Church services, sermons, religious gatherings → short talks OK (< 45 min)
-                "nonprofits & activism": 2700,  # 45 min
-            }
-
-            # Keywords check: creator-set tags indicating raw movie/episode content —
-            # catches cases where genre is mislabelled or missing.
-            _MOVIE_KEYWORDS = {
-                "full movie", "full film", "full episode", "complete movie",
-                "full movie 2025", "full movie 2026",
-                "nollywood movie", "nollywood film",
-                "latest movie", "latest film",
-            }
-            keywords = {kw.lower() for kw in self.last_video_metadata.get("keywords", [])}
-
-            if dur and genre_lower in _CATEGORY_DURATION_GATES:
-                threshold = _CATEGORY_DURATION_GATES[genre_lower]
-                if dur > threshold:
-                    logger.info(
-                        f"[{video_id}] YouTube category={genre!r}, duration={dur//60}min "
-                        f"> {threshold//60}min — skipping (no speech transcript expected)"
-                    )
-                    return None, None, "drama_movie", 0.0
-
-            if dur and dur > 1800 and keywords & _MOVIE_KEYWORDS:
-                matched = keywords & _MOVIE_KEYWORDS
+            keywords = set(self.last_video_metadata.get("keywords", []))
+            metadata_skip = content_filter.check_metadata_skip(genre, dur, keywords)
+            if metadata_skip:
                 logger.info(
-                    f"[{video_id}] Movie keywords detected: {matched} (duration={dur//60}min) — skipping"
+                    f"[{video_id}] Content filter ({metadata_skip}): "
+                    f"genre={genre!r}, duration={dur // 60 if dur else '?'}min — skipping"
                 )
-                return None, None, "drama_movie", 0.0
+                return None, None, metadata_skip, 0.0
 
         try:
             # Try to get transcript in preferred language order
