@@ -2,6 +2,7 @@
 
 ## 2026-04-12
 
+FIX: gtag loading strategy changed from lazyOnload to afterInteractive in app/layout.tsx. lazyOnload caused gtag to load AFTER useEffects, meaning trackAdConversion() fired before gtag existed and the Google Ads conversion was silently lost. afterInteractive loads gtag during hydration, before useEffects run. Also upgraded dns-prefetch to preconnect for googletagmanager.com since the script now loads earlier.
 FIX: disable automatic DNS failover cron in failover.yml. The hourly health check was flipping DNS to Vercel during normal VPS deploy restarts, then Vercel served stale builds with wrong CSP. Manual workflow_dispatch (force_action: vps/vercel) is preserved for emergencies.
 FIX: CSP form-action was blocking Stripe Checkout redirect. Added https://checkout.stripe.com to form-action directive in next.config.ts. The form at /api/stripe/checkout submits to same origin but then redirects to checkout.stripe.com, which was rejected by the browser since only 'self' was allowed.
 FIX(admin): fetch worker/services/web-logs data server-side in monitoring page to bypass Next.js isolated worker network restriction
