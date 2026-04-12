@@ -111,7 +111,7 @@ const cspDirectives = [
   "frame-ancestors 'none'",
 
   // Forms can submit to same origin + Stripe Checkout (redirect after /api/stripe/checkout)
-  "form-action 'self' https://checkout.stripe.com",
+  "form-action 'self' https://checkout.stripe.com https://billing.stripe.com",
 
   // Base URI restriction
   "base-uri 'self'",
