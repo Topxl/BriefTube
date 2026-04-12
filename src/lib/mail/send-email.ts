@@ -1,6 +1,6 @@
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
-import { pretty, render } from "@react-email/render";
+import { render } from "@react-email/render";
 import { nanoid } from "nanoid";
 import { resendMailAdapter } from "./resend";
 import { consoleMailAdapter } from "./console-adapter";
@@ -90,7 +90,7 @@ export const sendEmail = async (params: SendEmailParams) => {
   if (typeof params.html === "string") {
     html = params.html;
   } else {
-    html = await pretty(await render(params.html));
+    html = await render(params.html);
   }
 
   const result = await mailAdapter.send({
