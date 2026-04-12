@@ -37,9 +37,9 @@ jobs:
             cd /home/brieftube/app
 
             echo "→ Pulling latest code..."
-            git clean -f -- worker/worker.pid worker/log_bot.lock 2>/dev/null || true
-            git checkout -- . 2>/dev/null || true
-            git pull origin main
+            git fetch origin main
+            git reset --hard origin/main
+            git clean -fd -e worker/cache -e worker/*.log -e worker/*.log.* 2>/dev/null || true
 
             echo "→ Installing dependencies..."
             pnpm install --frozen-lockfile
