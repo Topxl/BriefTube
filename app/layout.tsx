@@ -69,16 +69,16 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
       <head>
-        {/* GTM est chargé en lazyOnload, dns-prefetch suffit, preconnect serait gaspillé */}
-        <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
+        {/* gtag must load before useEffects fire (conversion tracking) — use afterInteractive, not lazyOnload */}
+        <link rel="preconnect" href="https://www.googletagmanager.com" />
         <link rel="dns-prefetch" href="https://noembed.com" />
         <link rel="dns-prefetch" href="https://r.wdfl.co" />
         <Script
           async
           src="https://www.googletagmanager.com/gtag/js?id=G-NSS12KB41V"
-          strategy="lazyOnload"
+          strategy="afterInteractive"
         />
-        <Script id="gtag-config" strategy="lazyOnload">
+        <Script id="gtag-config" strategy="afterInteractive">
           {`
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
