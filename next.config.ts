@@ -85,8 +85,8 @@ const cspDirectives = [
   // Prevent this site from being embedded (clickjacking protection)
   "frame-ancestors 'none'",
 
-  // Forms can only submit to same origin
-  "form-action 'self'",
+  // Forms can submit to same origin + Stripe Checkout (redirect after /api/stripe/checkout)
+  "form-action 'self' https://checkout.stripe.com",
 
   // Base URI restriction
   "base-uri 'self'",
