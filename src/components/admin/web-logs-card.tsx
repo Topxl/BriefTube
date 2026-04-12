@@ -63,15 +63,19 @@ export function WebLogsCard() {
     });
   };
 
-  const { data, isLoading, dataUpdatedAt } = useQuery<WebLogsApiResponse>({
-    queryKey: ["admin-web-logs"],
-    queryFn: async () => {
-      const res = await fetch("/api/admin/web-logs");
-      if (!res.ok) throw new Error("Failed to fetch web logs");
-      return res.json() as Promise<WebLogsApiResponse>;
-    },
-    refetchInterval: 10_000,
-  });
+  const { data, isLoading, error, dataUpdatedAt } =
+    useQuery<WebLogsApiResponse>({
+      queryKey: ["admin-web-logs"],
+      queryFn: async () => {
+        const res = await fetch("/api/admin/web-logs");
+        if (!res.ok) {
+          const body = await res.text();
+          throw new Error(`${res.status}: ${body}`);
+        }
+        return res.json() as Promise<WebLogsApiResponse>;
+      },
+      refetchInterval: 10_000,
+    });
 
   const actionMutation = useMutation({
     mutationFn: async (action: "start" | "stop" | "restart") => {
@@ -104,6 +108,16 @@ export function WebLogsCard() {
 
   return (
     <div className="flex flex-col gap-3">
+      {/* Error banner */}
+      {error && (
+        <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3">
+          <p className="text-xs font-medium text-red-400">Web Logs API error</p>
+          <p className="mt-1 font-mono text-[10px] text-red-400/70">
+            {error.message}
+          </p>
+        </div>
+      )}
+
       {/* Status header */}
       <div className="nm-raised flex items-center justify-between rounded-2xl px-4 py-3">
         <div className="flex items-center gap-3">

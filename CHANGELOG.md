@@ -2,6 +2,7 @@
 
 ## 2026-04-12
 
+FIX(admin): add error state rendering to monitoring cards (worker, services, web-logs) for debugging
 FIX(admin): replace undici fetch with Node.js http module for worker API calls -- fixes "TypeError: fetch failed" in Next.js standalone
 CHORE: remove tracked __pycache__ files from git (already in .gitignore)
 CHORE(ci): add git checkout before pull in deploy-web to prevent local-changes conflicts

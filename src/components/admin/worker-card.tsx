@@ -82,15 +82,20 @@ export function WorkerCard() {
     });
   };
 
-  const { data, isLoading, dataUpdatedAt } = useQuery<WorkerApiResponse>({
-    queryKey: ["admin-worker"],
-    queryFn: async () => {
-      const res = await fetch("/api/admin/worker");
-      if (!res.ok) throw new Error("Failed to fetch worker status");
-      return res.json() as Promise<WorkerApiResponse>;
+  const { data, isLoading, error, dataUpdatedAt } = useQuery<WorkerApiResponse>(
+    {
+      queryKey: ["admin-worker"],
+      queryFn: async () => {
+        const res = await fetch("/api/admin/worker");
+        if (!res.ok) {
+          const body = await res.text();
+          throw new Error(`${res.status}: ${body}`);
+        }
+        return res.json() as Promise<WorkerApiResponse>;
+      },
+      refetchInterval: 10_000,
     },
-    refetchInterval: 10_000,
-  });
+  );
 
   const actionMutation = useMutation({
     mutationFn: async (action: "start" | "stop" | "restart") => {
@@ -123,6 +128,16 @@ export function WorkerCard() {
 
   return (
     <div className="flex flex-col gap-3">
+      {/* Error banner */}
+      {error && (
+        <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3">
+          <p className="text-xs font-medium text-red-400">Worker API error</p>
+          <p className="mt-1 font-mono text-[10px] text-red-400/70">
+            {error.message}
+          </p>
+        </div>
+      )}
+
       {/* Status header */}
       <div className="nm-raised flex items-center justify-between rounded-2xl px-4 py-3">
         <div className="flex items-center gap-3">
