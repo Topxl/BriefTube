@@ -26,15 +26,37 @@ const withBundleAnalyzer = bundleAnalyzer({
 const isDev = process.env.NODE_ENV === "development";
 const evalDirective = isDev ? " 'unsafe-eval'" : "";
 
+// Google Ads sends conversion pings and loads remarketing pixels from
+// country-specific domains (google.co.th, google.co.uk, google.com.au, etc.)
+// based on the user's location. CSP *.google.com does NOT match these ccTLDs.
+// We add the target ad markets (USA is google.com, already covered by *.google.com)
+// plus the admin's location (Thailand). Add more if ads expand to other regions.
+const googleCcTLDs = [
+  "https://*.google.co.th", // Thailand (admin)
+  "https://*.google.co.uk", // UK (ad target)
+  "https://*.google.ca", // Canada (ad target)
+  "https://*.google.com.au", // Australia (ad target)
+].join(" ");
+
 const cspDirectives = [
   // Default: only allow same-origin
   "default-src 'self'",
 
-  // Scripts: self + GTM/Google Ads + Rewardful + inline scripts for gtag init
-  `script-src 'self' 'unsafe-inline'${evalDirective} https://www.googletagmanager.com https://r.wdfl.co https://us-assets.i.posthog.com`,
+  // Scripts: self + GTM/Google Ads + Rewardful + Cloudflare analytics + inline
+  [
+    `script-src 'self' 'unsafe-inline'${evalDirective}`,
+    "https://www.googletagmanager.com",
+    "https://googleads.g.doubleclick.net", // Google Ads viewthrough conversion script
+    "https://r.wdfl.co",
+    "https://us-assets.i.posthog.com",
+    "https://static.cloudflareinsights.com", // Cloudflare Web Analytics beacon
+  ].join(" "),
 
   // Styles: unsafe-inline required for Tailwind / CSS-in-JS
   "style-src 'self' 'unsafe-inline'",
+
+  // Workers: PostHog uses blob: workers
+  "worker-src 'self' blob:",
 
   // Images: all remote patterns from next.config + data:/blob: for Next.js Image
   [
@@ -46,11 +68,12 @@ const cspDirectives = [
     "https://lh3.googleusercontent.com",
     "https://ui-avatars.com",
     "https://images.unsplash.com",
-    "https://www.googletagmanager.com", // GTM tracking pixel
-    "https://www.google.com", // Google Ads conversion tracking pixel
-    "https://*.google.com", // Regional Google domains (google.co.th, google.fr, etc.)
-    "https://googleads.g.doubleclick.net", // Google Ads remarketing pixel
-    "https://www.googleadservices.com", // Google Ads conversion
+    "https://www.googletagmanager.com",
+    "https://www.google.com",
+    "https://*.google.com",
+    googleCcTLDs, // Google Ads country-specific remarketing pixels
+    "https://googleads.g.doubleclick.net",
+    "https://www.googleadservices.com",
   ].join(" "),
 
   // Media: audio summaries from Cloudflare R2
@@ -62,21 +85,23 @@ const cspDirectives = [
   // Connect: APIs the browser calls directly
   [
     "connect-src 'self'",
-    "https://*.supabase.co", // Supabase auth + DB
-    "wss://*.supabase.co", // Supabase Realtime WebSocket
-    "https://noembed.com", // Video title resolution
-    "https://www.youtube.com", // oembed API
-    "https://www.googletagmanager.com", // GTM beacons
-    "https://www.google-analytics.com", // GA4 events
-    "https://r.wdfl.co", // Rewardful
-    "https://*.google-analytics.com", // GA4 measurement
-    "https://*.analytics.google.com", // GA4
-    "https://*.ingest.de.sentry.io", // Sentry error tracking
-    "https://www.google.com", // Google Ads conversion
-    "https://googleads.g.doubleclick.net", // Google Ads remarketing
-    "https://www.googleadservices.com", // Google Ads
-    "https://us.i.posthog.com", // PostHog analytics (fallback when proxy fails)
-    "https://us-assets.i.posthog.com", // PostHog static assets (surveys, toolbar)
+    "https://*.supabase.co",
+    "wss://*.supabase.co",
+    "https://noembed.com",
+    "https://www.youtube.com",
+    "https://www.googletagmanager.com",
+    "https://www.google-analytics.com",
+    "https://r.wdfl.co",
+    "https://*.google-analytics.com",
+    "https://*.analytics.google.com",
+    "https://*.ingest.de.sentry.io",
+    "https://www.google.com",
+    "https://*.google.com",
+    googleCcTLDs, // Google Ads conversion pings to country-specific domains
+    "https://googleads.g.doubleclick.net",
+    "https://www.googleadservices.com",
+    "https://us.i.posthog.com",
+    "https://us-assets.i.posthog.com",
   ].join(" "),
 
   // Frames: YouTube embeds (not used today, but safe to allow)
