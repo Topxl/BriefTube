@@ -18,6 +18,10 @@ type ActivePlan = {
   amount: number;
   currency: string;
   subscriptionId: string;
+  /** True when the user cancelled but still has access until period end. */
+  cancelAtPeriodEnd: boolean;
+  /** ISO date string of when the current billing period ends (for cancelling subs). */
+  periodEndDate: string | null;
 };
 
 /**
@@ -64,6 +68,10 @@ async function resolveActivePlan(
       amount: (price.unit_amount ?? 0) / 100,
       currency: price.currency.toUpperCase(),
       subscriptionId: subscription.id,
+      cancelAtPeriodEnd: subscription.cancel_at_period_end,
+      periodEndDate: subscription.cancel_at
+        ? new Date(subscription.cancel_at * 1000).toISOString()
+        : null,
     };
   } catch {
     return null;

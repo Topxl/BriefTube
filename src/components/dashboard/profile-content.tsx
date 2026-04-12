@@ -168,6 +168,8 @@ type ActivePlan = {
   amount: number;
   currency: string;
   subscriptionId: string;
+  cancelAtPeriodEnd: boolean;
+  periodEndDate: string | null;
 };
 
 type Props = {
@@ -364,13 +366,21 @@ export function ProfileContent({
                     {activePlan?.tier === "plus" ? "Plus" : "Pro"} Plan
                   </p>
                   <p className="text-muted-foreground text-[11px]">
-                    {activePlan?.tier === "plus"
-                      ? `Up to ${SiteConfig.plusChannelsLimit} channels`
-                      : "Unlimited channels and lists"}
+                    {activePlan?.cancelAtPeriodEnd && activePlan.periodEndDate
+                      ? `Ends ${new Date(activePlan.periodEndDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
+                      : activePlan?.tier === "plus"
+                        ? `Up to ${SiteConfig.plusChannelsLimit} channels`
+                        : "Unlimited channels and lists"}
                   </p>
                 </div>
-                <span className="rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-semibold text-white uppercase">
-                  Active
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${
+                    activePlan?.cancelAtPeriodEnd
+                      ? "bg-amber-600 text-white"
+                      : "bg-red-600 text-white"
+                  }`}
+                >
+                  {activePlan?.cancelAtPeriodEnd ? "Ending" : "Active"}
                 </span>
               </div>
               <div className="border-t border-white/[0.04] px-4 py-2.5">
@@ -378,7 +388,9 @@ export function ProfileContent({
                   onClick={openCancelSubscriptionModal}
                   className="text-muted-foreground hover:text-destructive text-xs transition-colors"
                 >
-                  Cancel subscription →
+                  {activePlan?.cancelAtPeriodEnd
+                    ? "Manage subscription →"
+                    : "Cancel subscription →"}
                 </button>
               </div>
             </>
