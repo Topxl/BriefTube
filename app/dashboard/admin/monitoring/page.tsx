@@ -360,14 +360,14 @@ export default async function AdminPage() {
 
       {/* Actions panel */}
       {actions.length > 0 && (
-        <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-4">
+        <div className="overflow-hidden rounded-xl border border-red-500/20 bg-red-500/5 p-4">
           <div className="flex gap-2">
             <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-400" />
-            <div className="flex flex-col gap-2">
+            <div className="flex min-w-0 flex-col gap-2">
               {actions.map((action, i) => (
                 <div key={i}>
                   <p className="text-sm font-semibold">{action.title}</p>
-                  <p className="text-muted-foreground mt-0.5 text-xs">
+                  <p className="text-muted-foreground mt-0.5 text-xs break-words">
                     {action.description}
                   </p>
                 </div>

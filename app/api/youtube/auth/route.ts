@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import crypto from "crypto";
 import { checkRateLimit, authRateLimit } from "@/lib/rate-limit";
+import { getBaseUrl } from "@/lib/server-url";
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
@@ -11,9 +12,7 @@ export async function GET(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Derive baseUrl from the incoming request so local dev stays on localhost
-  // instead of being redirected to production by Google OAuth.
-  const baseUrl = request.nextUrl.origin;
+  const baseUrl = getBaseUrl(request);
 
   if (!user) {
     return NextResponse.redirect(new URL("/login", baseUrl));

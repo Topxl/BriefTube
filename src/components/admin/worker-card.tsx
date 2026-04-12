@@ -49,7 +49,9 @@ function LogLine({ line }: { line: string }) {
   const parts = line.match(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d+) (.*)$/);
   if (parts) {
     return (
-      <div className={`font-mono text-[10px] leading-5 ${color}`}>
+      <div
+        className={`min-w-0 font-mono text-[10px] leading-5 break-all ${color}`}
+      >
         <span className="text-white/20">{parts[1]} </span>
         <span>{parts[2]}</span>
       </div>
@@ -57,7 +59,11 @@ function LogLine({ line }: { line: string }) {
   }
 
   return (
-    <div className={`font-mono text-[10px] leading-5 ${color}`}>{line}</div>
+    <div
+      className={`min-w-0 font-mono text-[10px] leading-5 break-all ${color}`}
+    >
+      {line}
+    </div>
   );
 }
 
@@ -240,7 +246,7 @@ export function WorkerCard({
 
       {/* Recent errors */}
       {(data?.recentErrors.length ?? 0) > 0 && (
-        <div className="nm-raised rounded-2xl border border-red-500/[0.12] bg-red-500/[0.04] px-4 py-3">
+        <div className="nm-raised overflow-hidden rounded-2xl border border-red-500/[0.12] bg-red-500/[0.04] px-4 py-3">
           <div className="mb-2 flex items-center gap-1.5">
             <AlertCircle className="h-3.5 w-3.5 text-red-400" />
             <p className="text-xs font-medium text-red-400">
