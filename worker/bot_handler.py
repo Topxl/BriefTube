@@ -416,12 +416,71 @@ async def send_kpi_report(alert_system: MonitoringAlert, period: str = "daily"):
             logger.warning(f"KPI msg3 build failed: {e}")
             msg3 = None
 
+        # ── Message 4: Business Health (Stripe + Web) ────────────
+        msg4 = None
+        try:
+            # Last Stripe webhook
+            wh_last = supabase.table("webhook_events").select("created_at, event_type").order("created_at", desc=True).limit(1).execute()
+            if wh_last.data:
+                last_wh_time = datetime.fromisoformat(wh_last.data[0]["created_at"].replace("Z", "+00:00"))
+                wh_ago = now - last_wh_time
+                if wh_ago.total_seconds() < 3600:
+                    wh_label = f"il y a {int(wh_ago.total_seconds() // 60)}min"
+                elif wh_ago.total_seconds() < 86400:
+                    wh_label = f"il y a {int(wh_ago.total_seconds() // 3600)}h{int((wh_ago.total_seconds() % 3600) // 60):02d}"
+                else:
+                    wh_label = f"il y a {wh_ago.days}j"
+                wh_type = wh_last.data[0]["event_type"]
+                wh_ok = "\u2705" if wh_ago.total_seconds() < 43200 else "\u26a0\ufe0f"  # 12h
+                wh_str = f"{wh_ok} {wh_label} ({wh_type})"
+            else:
+                wh_str = "\u26a0\ufe0f aucun webhook reçu"
+
+            # Checkouts this week
+            checkouts_7d = supabase.table("webhook_events").select("id", count="exact").eq("event_type", "checkout.session.completed").gte("created_at", week_ago).execute()
+            n_checkouts_7d = checkouts_7d.count or 0
+
+            # Failed payments this week
+            failed_payments_7d = supabase.table("webhook_events").select("id", count="exact").eq("event_type", "invoice.payment_failed").gte("created_at", week_ago).execute()
+            n_failed_payments = failed_payments_7d.count or 0
+            pay_ok = "\u2705" if n_failed_payments == 0 else "\u26a0\ufe0f"
+
+            # Web errors (24h) from systemd logs
+            web_err_count = 0
+            try:
+                import subprocess
+                log_result = subprocess.run(
+                    ["journalctl", "-u", "brieftube-web", "--since", "24 hours ago", "--no-pager", "-q"],
+                    capture_output=True, text=True, timeout=10,
+                )
+                web_err_count = sum(
+                    1 for line in log_result.stdout.splitlines()
+                    if any(code in line for code in [" 500 ", " 502 ", " 503 ", " 504 "])
+                )
+            except Exception:
+                web_err_count = -1  # unknown
+
+            web_err_ok = "\u2705" if web_err_count == 0 else ("\u26a0\ufe0f" if web_err_count > 0 else "\u2753")
+            web_err_str = str(web_err_count) if web_err_count >= 0 else "N/A"
+
+            msg4 = (
+                f"\U0001f4b3 <b>Santé Business</b>\n"
+                f"  Dernier webhook Stripe : {wh_str}\n"
+                f"  Checkouts (7j) : <b>{n_checkouts_7d}</b>\n"
+                f"  Paiements échoués (7j) : {pay_ok} {n_failed_payments}\n"
+                f"  Erreurs web (24h) : {web_err_ok} {web_err_str}"
+            )
+        except Exception as e:
+            logger.warning(f"KPI msg4 (business health) build failed: {e}")
+
         bot = alert_system._log_bot
         chat = alert_system._log_chat_id
         await bot.send_message(chat_id=chat, text=msg1, parse_mode="HTML")
         await bot.send_message(chat_id=chat, text=msg2, parse_mode="HTML")
         if msg3:
             await bot.send_message(chat_id=chat, text=msg3, parse_mode="HTML")
+        if msg4:
+            await bot.send_message(chat_id=chat, text=msg4, parse_mode="HTML")
 
     except Exception as e:
         logger.error(f"KPI report failed: {e}")

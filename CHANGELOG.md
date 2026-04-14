@@ -2,14 +2,13 @@
 
 ## 2026-04-14
 
-FIX(seo): extract VideoObject into its own top-level JSON-LD script on /videos/[video_id] (was nested inside Article.about, causing Google Search Console to flag missing "uploadDate" and "description" fields). Guarantee non-empty description (fallback: "AI-generated audio summary of...") and valid ISO uploadDate (fallback: current time if created_at is null/malformed).
-
-## 2026-04-13
-
 FEATURE(monitoring): add business-critical monitoring system — Stripe webhook tracking, web health checks, payment anomaly detection
 FEATURE(monitoring): create webhook_events table to log all Stripe webhook receipts with event type, status, and error tracking
 FEATURE(monitoring): extend critical_monitor_loop with 4 new checks: Stripe webhook freshness (12h), web app health (homepage+login), no payments in 7 days, web server 5xx error cascade
 FEATURE(monitoring): enrich KPI report with "Santé Business" section — last webhook time, weekly checkouts, failed payments, web error count
+FIX(seo): extract VideoObject into its own top-level JSON-LD script on /videos/[video_id] (was nested inside Article.about, causing Google Search Console to flag missing "uploadDate" and "description" fields). Guarantee non-empty description (fallback: "AI-generated audio summary of...") and valid ISO uploadDate (fallback: current time if created_at is null/malformed).
+
+## 2026-04-13
 REFACTOR(worker): centralize all content filtering into worker/content_filter.py — music regex, drama phrases, category+duration gates, movie keywords, YouTube Shorts detection. Eliminates 3 divergent copies across rss_scanner.py, main.py, and transcript_extractor.py. Single source of truth for adding new filters.
 FIX: authRoute singleton shared Zod schema between routes causing feedback POST 400 — .body() now clones the RouteBuilder
 FIX: onboarding modal reappearing after completion — check onboardingCompleted before hasConnection

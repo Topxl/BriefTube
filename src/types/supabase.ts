@@ -1057,6 +1057,33 @@ export type Database = {
           },
         ];
       };
+      webhook_events: {
+        Row: {
+          created_at: string | null;
+          error_message: string | null;
+          event_id: string;
+          event_type: string;
+          id: string;
+          status: string;
+        };
+        Insert: {
+          created_at?: string | null;
+          error_message?: string | null;
+          event_id: string;
+          event_type: string;
+          id?: string;
+          status?: string;
+        };
+        Update: {
+          created_at?: string | null;
+          error_message?: string | null;
+          event_id?: string;
+          event_type?: string;
+          id?: string;
+          status?: string;
+        };
+        Relationships: [];
+      };
       websub_subscriptions: {
         Row: {
           channel_id: string;
