@@ -1,6 +1,10 @@
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
-import { checkRateLimit, getRequestIp, publicRateLimit } from "@/lib/rate-limit";
+import {
+  checkRateLimit,
+  getRequestIp,
+  publicRateLimit,
+} from "@/lib/rate-limit";
 import { createAdminClient } from "@/lib/supabase/server";
 import { stripe } from "@/lib/stripe";
 import { updateSubscriptionStatus } from "@/lib/stripe/helpers";
@@ -18,7 +22,10 @@ import { restoreSystemPausedChannels } from "@/lib/subscriptions";
 export const maxDuration = 300;
 
 export const POST = async (req: NextRequest) => {
-  const rateLimitResponse = await checkRateLimit(publicRateLimit, `wh-stripe:${getRequestIp(req)}`);
+  const rateLimitResponse = await checkRateLimit(
+    publicRateLimit,
+    `wh-stripe:${getRequestIp(req)}`,
+  );
   if (rateLimitResponse) return rateLimitResponse;
   const headerList = await headers();
   const body = await req.text();
@@ -73,8 +80,36 @@ export const POST = async (req: NextRequest) => {
         logger.info(`Unhandled event type: ${event.type}`);
         break;
     }
+
+    // Log successful webhook processing
+    try {
+      const supabase = createAdminClient();
+      await supabase.from("webhook_events").insert({
+        event_id: event.id,
+        event_type: event.type,
+        status: "processed",
+      });
+    } catch (logError) {
+      logger.error("Failed to log webhook event to database:", logError);
+      // Non-fatal: don't let logging failure affect webhook response
+    }
   } catch (error) {
     logger.error(`Error handling webhook event ${event.type}:`, error);
+
+    // Log failed webhook processing
+    try {
+      const supabase = createAdminClient();
+      await supabase.from("webhook_events").insert({
+        event_id: event.id,
+        event_type: event.type,
+        status: "failed",
+        error_message: error instanceof Error ? error.message : String(error),
+      });
+    } catch (logError) {
+      logger.error("Failed to log webhook error to database:", logError);
+      // Non-fatal: don't let logging failure affect webhook response
+    }
+
     return NextResponse.json(
       { error: "Webhook handler failed", eventType: event.type },
       { status: 500 },
