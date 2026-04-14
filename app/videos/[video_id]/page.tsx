@@ -106,15 +106,53 @@ export default async function VideoPage({ params }: Props) {
   const summaryText = video.summary ?? "";
   const wordCount = summaryText.split(/\s+/).filter(Boolean).length;
 
+  // Guaranteed non-empty description (Google requires description on VideoObject).
+  const videoTitle = video.video_title ?? "YouTube Video";
+  const videoDescription =
+    summaryText.trim().slice(0, 200) ||
+    `AI-generated audio summary of "${videoTitle}" from ${channelName}, by BriefTube.`;
+
+  // Guaranteed valid ISO uploadDate (Google requires uploadDate on VideoObject).
+  // If created_at is null or malformed, fall back to current time so the field
+  // is always a valid ISO-8601 string instead of missing/invalid.
+  const parsedDate = video.created_at ? new Date(video.created_at) : null;
+  const uploadDateIso =
+    parsedDate && !Number.isNaN(parsedDate.getTime())
+      ? parsedDate.toISOString()
+      : new Date().toISOString();
+
+  const videoObjectLd = {
+    "@context": "https://schema.org",
+    "@type": "VideoObject",
+    name: videoTitle,
+    description: videoDescription,
+    thumbnailUrl: [
+      `https://img.youtube.com/vi/${video_id}/maxresdefault.jpg`,
+      `https://img.youtube.com/vi/${video_id}/hqdefault.jpg`,
+    ],
+    uploadDate: uploadDateIso,
+    embedUrl: `https://www.youtube.com/embed/${video_id}`,
+    contentUrl: `https://youtu.be/${video_id}`,
+    inLanguage: video.language || "en",
+    ...(video.audio_url
+      ? {
+          hasPart: {
+            "@type": "AudioObject",
+            contentUrl: video.audio_url,
+            encodingFormat: "audio/mpeg",
+            name: `Audio summary of ${videoTitle}`,
+          },
+        }
+      : {}),
+  };
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Article",
-    headline: video.video_title,
-    description: summaryText.slice(0, 200),
+    headline: videoTitle,
+    description: videoDescription,
     image: `https://img.youtube.com/vi/${video_id}/hqdefault.jpg`,
-    datePublished: video.created_at
-      ? new Date(video.created_at).toISOString()
-      : new Date().toISOString(),
+    datePublished: uploadDateIso,
     author: {
       "@type": "Organization",
       name: "BriefTube",
@@ -133,22 +171,6 @@ export default async function VideoPage({ params }: Props) {
       "@type": "WebPage",
       "@id": `${SiteConfig.prodUrl}/videos/${video_id}`,
     },
-    about: {
-      "@type": "VideoObject",
-      name: video.video_title,
-      description:
-        summaryText.slice(0, 200) ||
-        `Audio summary of ${video.video_title} by ${channelName}`,
-      thumbnailUrl: [
-        `https://img.youtube.com/vi/${video_id}/maxresdefault.jpg`,
-        `https://img.youtube.com/vi/${video_id}/hqdefault.jpg`,
-      ],
-      uploadDate: video.created_at
-        ? new Date(video.created_at).toISOString()
-        : new Date().toISOString(),
-      embedUrl: `https://www.youtube.com/embed/${video_id}`,
-      contentUrl: `https://youtu.be/${video_id}`,
-    },
     wordCount,
     articleSection: "YouTube Summary",
     inLanguage: video.language || "en",
@@ -158,7 +180,7 @@ export default async function VideoPage({ params }: Props) {
             "@type": "AudioObject",
             contentUrl: video.audio_url,
             encodingFormat: "audio/mpeg",
-            name: `Audio summary of ${video.video_title}`,
+            name: `Audio summary of ${videoTitle}`,
           },
         }
       : {}),
@@ -197,6 +219,10 @@ export default async function VideoPage({ params }: Props) {
 
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(videoObjectLd) }}
+      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

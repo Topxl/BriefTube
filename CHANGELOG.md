@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-04-14
+
+FIX(seo): extract VideoObject into its own top-level JSON-LD script on /videos/[video_id] (was nested inside Article.about, causing Google Search Console to flag missing "uploadDate" and "description" fields). Guarantee non-empty description (fallback: "AI-generated audio summary of...") and valid ISO uploadDate (fallback: current time if created_at is null/malformed).
+
 ## 2026-04-13
 
 FEATURE(monitoring): add business-critical monitoring system — Stripe webhook tracking, web health checks, payment anomaly detection
