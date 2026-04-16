@@ -1622,12 +1622,18 @@ def load_worker_stats(date: str) -> dict | None:
     return res.data[0] if res.data else None
 
 
+
+# Video IDs used as demos on the landing page — never delete their audio.
+PROTECTED_VIDEO_IDS = {"qp0HIF3SfI4", "nm1TxQj9IsQ"}
+
+
 def get_stale_r2_urls(days: int = 7, limit: int = 100) -> list[dict]:
     """Return R2 audio files that are old enough and safe to delete.
 
     A file is safe to delete when:
     - processed_at is older than `days` days
     - every delivery for this video_id has status='sent'
+    - video_id is not in PROTECTED_VIDEO_IDS (landing page demos)
     """
     sb = get_client()
     cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
@@ -1642,12 +1648,13 @@ def get_stale_r2_urls(days: int = 7, limit: int = 100) -> list[dict]:
         .limit(limit * 3)
         .execute()
     )
-    # Keep only R2 URLs (discard legacy Supabase Storage URLs)
+    # Keep only R2 URLs (discard legacy Supabase Storage URLs),
+    # and exclude landing page demo videos.
     candidates = [
         r for r in (res.data or [])
-        if r.get("audio_url") and (
-            "r2.dev" in r["audio_url"] or "brief-tube.com" in r["audio_url"]
-        )
+        if r.get("audio_url")
+        and r["video_id"] not in PROTECTED_VIDEO_IDS
+        and ("r2.dev" in r["audio_url"] or "brief-tube.com" in r["audio_url"])
     ]
     if not candidates:
         return []

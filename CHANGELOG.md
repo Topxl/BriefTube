@@ -2,6 +2,8 @@
 
 ## 2026-04-16
 
+FEATURE(worker): permanent transcript archive on VPS — store full transcripts as JSON files in /home/brieftube/transcripts/, reuse on re-processing to skip extraction and save Whisper costs
+REFACTOR: extract language/voice/playback-speed rows into new `AudioSettingsSection` component for reusability and cleaner DeliverySection
 FEATURE: show "Free Plan" badge with channel limit in profile subscription section so free users see their current plan clearly
 FEATURE: reorder profile page sections — "Audio & summaries" and "Notifications" now appear before "Platforms" to prioritize more-used settings
 FEATURE: show demo summaries (TED + Huberman Lab) in empty dashboard feed so new users see real content immediately instead of an empty state
