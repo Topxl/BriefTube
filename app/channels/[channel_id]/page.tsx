@@ -8,6 +8,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { SiteConfig } from "@/site-config";
 import { Typography } from "@/components/nowts/typography";
 import { Button } from "@/components/ui/button";
+import { ExternalVideoLink } from "./external-video-link";
 
 type Props = {
   params: Promise<{ channel_id: string }>;
@@ -292,16 +293,7 @@ export default async function ChannelPage({ params }: Props) {
                       <Typography variant="muted" className="text-xs">
                         Read AI summary
                       </Typography>
-                      <a
-                        href={youtubeUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className="text-muted-foreground/50 hover:text-muted-foreground inline-flex items-center gap-1 text-xs transition-colors"
-                      >
-                        <ExternalLink className="h-3 w-3" />
-                        YouTube
-                      </a>
+                      <ExternalVideoLink href={youtubeUrl} />
                     </div>
                   </div>
                 </div>

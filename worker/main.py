@@ -2083,7 +2083,7 @@ async def critical_monitor_loop(alert_system: MonitoringAlert):
                 )
                 error_count = sum(
                     1 for line in result.stdout.splitlines()
-                    if any(code in line for code in [" 500 ", " 502 ", " 503 ", " 504 ", "FATAL", "Error: "])
+                    if any(code in line for code in [" 500 ", " 502 ", " 503 ", " 504 ", "FATAL"])
                 )
                 if error_count > 10:
                     await _send_critical(
