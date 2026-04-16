@@ -159,7 +159,6 @@ type PricesData = {
 };
 
 import { dialogManager } from "@/features/dialog-manager/dialog-manager";
-import { openCancelSubscriptionModal } from "@/components/dashboard/cancel-subscription-modal";
 import { toast } from "sonner";
 import { trackAdConversion } from "@/lib/gtag";
 
@@ -356,7 +355,7 @@ export function ProfileContent({
   // Consecutive rows with the same section are grouped into one card.
   // ---------------------------------------------------------------------------
   const subscriptionCard = (
-    <div className="nm-raised overflow-hidden rounded-2xl">
+    <div key="subscription" className="nm-raised overflow-hidden rounded-2xl">
       {isActivating && (
         <div className="flex items-center gap-2 border-b border-white/[0.04] px-4 py-2.5">
           <Loader2 className="h-3.5 w-3.5 animate-spin text-amber-400" />
@@ -392,7 +391,11 @@ export function ProfileContent({
           </div>
           <div className="border-t border-white/[0.04] px-4 py-2.5">
             <button
-              onClick={openCancelSubscriptionModal}
+              onClick={() => {
+                void import("@/components/dashboard/cancel-subscription-modal").then(
+                  (m) => m.openCancelSubscriptionModal(),
+                );
+              }}
               className="text-muted-foreground hover:text-destructive text-xs transition-colors"
             >
               {activePlan?.cancelAtPeriodEnd

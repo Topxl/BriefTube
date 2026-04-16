@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { Inbox } from "@/lib/icons";
+import { Inbox, Play, Users } from "@/lib/icons";
 import { SummaryRow } from "@/components/dashboard/summary-row";
 import { VideoInboxRow } from "@/components/dashboard/video-inbox-row";
 import { LanguagePicker } from "@/components/dashboard/language-picker";
@@ -36,6 +36,105 @@ type Props = {
   headerRight?: React.ReactNode;
   banners?: React.ReactNode;
 };
+
+/** Skeleton + explanation shown when the "All videos" tab is empty */
+function AllVideosEmptyState() {
+  return (
+    <div className="flex flex-col gap-3">
+      {/* Explanation */}
+      <div className="px-1 py-2 text-center">
+        <p className="text-sm font-medium">Pick which videos to summarize</p>
+        <p className="text-muted-foreground mt-1 text-xs">
+          New videos from your channels appear here. Hit{" "}
+          <span className="inline-flex items-center gap-1 rounded-full border border-red-500/20 px-1.5 py-px text-[10px] font-medium text-red-400">
+            <Play className="h-2.5 w-2.5" />
+            Summarize
+          </span>{" "}
+          on the ones you want.
+        </p>
+      </div>
+
+      {/* Skeleton cards */}
+      {[1, 2, 3].map((i) => (
+        <div
+          key={i}
+          className="nm-raised overflow-hidden rounded-2xl opacity-40"
+          style={{ animationDelay: `${i * 150}ms` }}
+        >
+          <div className="flex items-start gap-3 p-3">
+            <div className="relative h-[64px] w-[114px] shrink-0 overflow-hidden rounded-lg bg-white/[0.06] sm:h-[72px] sm:w-[128px]">
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full border border-white/[0.06] bg-black/30">
+                  <Play className="ml-px h-4 w-4 text-white/20" />
+                </div>
+              </div>
+            </div>
+            <div className="min-w-0 flex-1 space-y-2 pt-1">
+              <div className="h-3 w-4/5 rounded-full bg-white/[0.06]" />
+              <div className="h-3 w-3/5 rounded-full bg-white/[0.06]" />
+              <div className="flex items-center gap-2 pt-0.5">
+                <div className="h-2.5 w-8 rounded-full bg-white/[0.06]" />
+                <span className="flex items-center gap-1 rounded-full border border-red-500/15 px-1.5 py-px text-[10px] font-medium text-red-400/50">
+                  <Play className="h-2.5 w-2.5" />
+                  Summarize
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Skeleton + explanation shown when the "Lists" tab is empty */
+function ListsEmptyState() {
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="px-1 py-2 text-center">
+        <p className="text-sm font-medium">Curated channel collections</p>
+        <p className="text-muted-foreground mt-1 text-xs">
+          Lists group channels by topic. Follow a list to get summaries from all
+          its channels at once.
+        </p>
+      </div>
+
+      {/* Skeleton list cards */}
+      {[
+        { name: "Tech & AI", channels: 12 },
+        { name: "Science & Health", channels: 8 },
+        { name: "Business & Finance", channels: 15 },
+      ].map((list, i) => (
+        <div
+          key={i}
+          className="nm-raised overflow-hidden rounded-2xl opacity-40"
+        >
+          <div className="flex items-center gap-3 px-4 py-3.5">
+            <div className="nm-inset-sm flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+              <Users className="h-4 w-4 text-white/20" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="h-3 w-2/5 rounded-full bg-white/[0.06]" />
+              <div className="mt-1.5 h-2.5 w-1/4 rounded-full bg-white/[0.06]" />
+            </div>
+            <span className="nm-raised-sm rounded-full px-3 py-1 text-[10px] font-medium text-white/20">
+              Follow
+            </span>
+          </div>
+        </div>
+      ))}
+
+      <div className="flex items-center justify-center gap-3 pt-1">
+        <Link
+          href="/dashboard/lists"
+          className="nm-raised-sm text-foreground inline-block rounded-full px-4 py-2 text-sm font-medium transition-all hover:brightness-110"
+        >
+          Browse lists
+        </Link>
+      </div>
+    </div>
+  );
+}
 
 function SummaryRowSkeleton() {
   return (
@@ -581,6 +680,7 @@ export function SummariesFeed({
         .update({ active: newActive, paused_by_system: false })
         .eq("id", state.subId);
       toast.success(newActive ? "Channel activated" : "Channel paused");
+      window.dispatchEvent(new Event("channel-updated"));
     },
     [channelStates, supabase],
   );
@@ -635,6 +735,7 @@ export function SummariesFeed({
           );
           // Refresh the page to update video rows with the new channel_id
           // (the feed's initialChannelStates may still be stale)
+          sessionStorage.setItem("channels-pulse", "1");
           window.location.reload();
         }
       } catch {
@@ -783,33 +884,21 @@ export function SummariesFeed({
       {banners}
 
       {showEmpty ? (
-        <div className="py-12 text-center">
-          <div className="nm-inset mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl">
-            <Inbox className="text-muted-foreground/50 h-4 w-4" />
+        feedMode === "all" ? (
+          <AllVideosEmptyState />
+        ) : feedMode === "lists" ? (
+          <ListsEmptyState />
+        ) : (
+          <div className="py-12 text-center">
+            <div className="nm-inset mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl">
+              <Inbox className="text-muted-foreground/50 h-4 w-4" />
+            </div>
+            <p className="text-sm font-medium">No summaries yet</p>
+            <p className="text-muted-foreground mt-1 text-xs">
+              Add YouTube channels to receive your first audio summaries.
+            </p>
           </div>
-          <p className="text-sm font-medium">
-            {feedMode === "summaries"
-              ? "No summaries yet"
-              : feedMode === "all"
-                ? "No videos found"
-                : "No list videos"}
-          </p>
-          <p className="text-muted-foreground mt-1 text-xs">
-            {feedMode === "summaries"
-              ? "Add YouTube channels to receive your first audio summaries."
-              : feedMode === "all"
-                ? "Videos from your imported channels will appear here after the next scan."
-                : "Follow a list to see videos from its channels here."}
-          </p>
-          {feedMode === "lists" && (
-            <Link
-              href="/dashboard/lists"
-              className="nm-raised-sm text-foreground mt-4 inline-block rounded-full px-4 py-2 text-sm font-medium transition-all hover:brightness-110"
-            >
-              Browse lists
-            </Link>
-          )}
-        </div>
+        )
       ) : (
         <div className="space-y-2.5">
           {feedMode === "summaries"

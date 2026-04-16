@@ -2,9 +2,16 @@
 
 ## 2026-04-16
 
+FEATURE: channels icon flashes red when a channel is subscribed, activated or toggled — visual feedback via custom event + sessionStorage for post-reload
+FIX: demo videos missing text summary — RLS blocked access for new users, use admin client for demo video lookup
+FEATURE: landing hero player shows summary text — teaser appears 2s after play with breathing animation, click to expand full summary
+FIX: remove broken "See a live example" button from landing hero
+REFACTOR: optimize profile page load — cache Stripe prices (24h), merge audio_enabled into main query, lazy-load cancel modal
+FIX: change platform "Connected" status text color from red to green for better visual feedback
 FEATURE(worker): permanent transcript archive on VPS — store full transcripts as JSON files in /home/brieftube/transcripts/, reuse on re-processing to skip extraction and save Whisper costs
 FIX: extract onClick handler from Server Component into Client ExternalVideoLink — was causing "Event handlers cannot be passed to Client Component props" (680 errors/day in prod)
 FIX(worker): narrow web error monitoring filter to actual HTTP 5xx codes only — remove "Error: " pattern that falsely counted React SSR warnings as server errors
+FEATURE: "All videos" empty state with skeleton cards and explanation — teaches users they can selectively summarize videos from their channels
 REFACTOR: declarative profile layout — sections defined as a flat `layout` array, reordering or moving rows between sections is now a one-line change
 REFACTOR: extract language/voice/playback-speed rows into new `AudioSettingsSection` component, move audio toggle from SummaryPreferencesSection to AudioSettingsSection
 REFACTOR: move PodcastFeedSection into Platforms section, group audio settings under "Audio & summaries"
