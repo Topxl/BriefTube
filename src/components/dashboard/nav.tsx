@@ -188,9 +188,7 @@ export function DashboardNav() {
                   >
                     {item.label}
                     {showBadge && (
-                      <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 animate-pulse items-center justify-center rounded-full bg-red-500 px-0.5 text-[9px] font-bold text-white">
-                        {recentCount > 9 ? "9+" : recentCount}
-                      </span>
+                      <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-red-500" />
                     )}
                   </Link>
                 );
@@ -236,9 +234,7 @@ export function DashboardNav() {
                     strokeWidth={active ? 2.5 : 1.5}
                   />
                   {showBadge && (
-                    <span className="absolute -top-0.5 -right-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white ring-2 ring-[oklch(0.13_0_0)]">
-                      {recentCount > 9 ? "9+" : recentCount}
-                    </span>
+                    <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-red-500 ring-2 ring-[oklch(0.13_0_0)]" />
                   )}
                 </div>
                 {/* Label */}
