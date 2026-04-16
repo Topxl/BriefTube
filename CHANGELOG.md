@@ -3,9 +3,12 @@
 ## 2026-04-16
 
 FEATURE(worker): permanent transcript archive on VPS — store full transcripts as JSON files in /home/brieftube/transcripts/, reuse on re-processing to skip extraction and save Whisper costs
-REFACTOR: extract language/voice/playback-speed rows into new `AudioSettingsSection` component for reusability and cleaner DeliverySection
+FIX: extract onClick handler from Server Component into Client ExternalVideoLink — was causing "Event handlers cannot be passed to Client Component props" (680 errors/day in prod)
+FIX(worker): narrow web error monitoring filter to actual HTTP 5xx codes only — remove "Error: " pattern that falsely counted React SSR warnings as server errors
+REFACTOR: declarative profile layout — sections defined as a flat `layout` array, reordering or moving rows between sections is now a one-line change
+REFACTOR: extract language/voice/playback-speed rows into new `AudioSettingsSection` component, move audio toggle from SummaryPreferencesSection to AudioSettingsSection
+REFACTOR: move PodcastFeedSection into Platforms section, group audio settings under "Audio & summaries"
 FEATURE: show "Free Plan" badge with channel limit in profile subscription section so free users see their current plan clearly
-FEATURE: reorder profile page sections — "Audio & summaries" and "Notifications" now appear before "Platforms" to prioritize more-used settings
 FEATURE: show demo summaries (TED + Huberman Lab) in empty dashboard feed so new users see real content immediately instead of an empty state
 FEATURE: add "Copy summary" button in summary card dropdown menu — copies full summary text to clipboard with PostHog tracking
 
