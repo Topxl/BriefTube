@@ -73,14 +73,6 @@ export function Hero() {
             >
               <Link href="/login">{tl.ctaPrimary}</Link>
             </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="h-12 px-8 text-base"
-              asChild
-            >
-              <a href="#demo">{tl.ctaSecondary}</a>
-            </Button>
           </div>
 
           <p className="text-muted-foreground mt-4 text-sm">{tl.socialProof}</p>

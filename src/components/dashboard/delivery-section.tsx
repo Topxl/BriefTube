@@ -23,7 +23,7 @@ import type { Language } from "@/lib/languages";
 // -----------------------------------------------------------------
 // Platform brand colors — update here to change all platform rows
 // -----------------------------------------------------------------
-const CONNECTED_TEXT = "text-red-400/70";
+const CONNECTED_TEXT = "text-emerald-400/70";
 
 const PLATFORM_COLORS = {
   telegram: {
