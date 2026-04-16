@@ -5,14 +5,12 @@ import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import {
   FileText,
-  Headphones,
   ListChecks,
   Loader2,
   MessageSquareText,
   Pencil,
   Zap,
 } from "@/lib/icons";
-import { Switch } from "@/components/ui/switch";
 
 type LengthPref = "brief" | "standard" | "detailed";
 type StylePref = "key_points" | "narrative" | "actionable";
@@ -67,17 +65,14 @@ type Props = {
   initialLength: string;
   initialStyle: string;
   initialCustomInstructions: string;
-  initialAudioEnabled: boolean;
 };
 
 export function SummaryPreferencesSection({
   initialLength,
   initialStyle,
   initialCustomInstructions,
-  initialAudioEnabled,
 }: Props) {
   const supabase = createClient();
-  const [audioEnabled, setAudioEnabled] = useState(initialAudioEnabled);
   const [length, setLength] = useState<LengthPref>(initialLength as LengthPref);
   const [style, setStyle] = useState<StylePref>(initialStyle as StylePref);
   const [instructions, setInstructions] = useState(initialCustomInstructions);
@@ -88,26 +83,6 @@ export function SummaryPreferencesSection({
   const [expanded, setExpanded] = useState<
     "length" | "style" | "instructions" | null
   >(null);
-
-  const saveAudioEnabled = async (enabled: boolean) => {
-    setSaving(true);
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
-      const { error } = await supabase
-        .from("profiles")
-        .update({ audio_enabled: enabled })
-        .eq("id", user.id);
-      if (error) throw error;
-      toast.success("Preference updated");
-    } catch {
-      toast.error("Failed to save preference");
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const save = async (
     field:
@@ -143,28 +118,6 @@ export function SummaryPreferencesSection({
 
   return (
     <>
-      {/* Audio toggle */}
-      <div className="flex items-center justify-between px-4 py-3.5">
-        <div className="flex items-center gap-2.5">
-          <div className="nm-inset-sm flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
-            <Headphones className="text-muted-foreground h-4 w-4" />
-          </div>
-          <div className="flex flex-col gap-0.5">
-            <p className="text-sm font-medium">Audio summaries</p>
-            <p className="text-muted-foreground text-[11px]">
-              Required for podcast feeds and Telegram voice messages
-            </p>
-          </div>
-        </div>
-        <Switch
-          checked={audioEnabled}
-          onCheckedChange={(checked) => {
-            setAudioEnabled(checked);
-            void saveAudioEnabled(checked);
-          }}
-        />
-      </div>
-
       {/* Length preference — clickable row */}
       <div>
         <button

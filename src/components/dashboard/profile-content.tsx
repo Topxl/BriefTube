@@ -15,6 +15,14 @@ const DeliverySection = dynamic(
   { ssr: false },
 );
 
+const AudioSettingsSection = dynamic(
+  async () =>
+    import("@/components/dashboard/delivery-section").then((m) => ({
+      default: m.AudioSettingsSection,
+    })),
+  { ssr: false },
+);
+
 const NotificationsSection = dynamic(
   async () =>
     import("@/components/dashboard/notifications-section").then((m) => ({
@@ -342,296 +350,337 @@ export function ProfileContent({
     });
   };
 
-  return (
-    <div className="flex flex-col gap-8">
-      {/* Subscription */}
-      <section className="flex flex-col gap-2">
-        <h2 className="text-muted-foreground/50 px-1 text-xs font-medium tracking-wide uppercase">
-          Subscription
-        </h2>
-        <div className="nm-raised overflow-hidden rounded-2xl">
-          {isActivating && (
-            <div className="flex items-center gap-2 border-b border-white/[0.04] px-4 py-2.5">
-              <Loader2 className="h-3.5 w-3.5 animate-spin text-amber-400" />
-              <p className="text-xs text-amber-400">
-                Activating your subscription…
-              </p>
-            </div>
-          )}
-          {hasActiveSubscription ? (
-            <>
-              <div className="flex items-center justify-between px-4 py-3">
-                <div>
-                  <p className="text-sm font-medium">
-                    {activePlan?.tier === "plus" ? "Plus" : "Pro"} Plan
-                  </p>
-                  <p className="text-muted-foreground text-[11px]">
-                    {activePlan?.cancelAtPeriodEnd && activePlan.periodEndDate
-                      ? `Ends ${new Date(activePlan.periodEndDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
-                      : activePlan?.tier === "plus"
-                        ? `Up to ${SiteConfig.plusChannelsLimit} channels`
-                        : "Unlimited channels and lists"}
-                  </p>
-                </div>
-                <span
-                  className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${
-                    activePlan?.cancelAtPeriodEnd
-                      ? "bg-amber-600 text-white"
-                      : "bg-red-600 text-white"
-                  }`}
-                >
-                  {activePlan?.cancelAtPeriodEnd ? "Ending" : "Active"}
-                </span>
-              </div>
-              <div className="border-t border-white/[0.04] px-4 py-2.5">
-                <button
-                  onClick={openCancelSubscriptionModal}
-                  className="text-muted-foreground hover:text-destructive text-xs transition-colors"
-                >
-                  {activePlan?.cancelAtPeriodEnd
-                    ? "Manage subscription →"
-                    : "Cancel subscription →"}
-                </button>
-              </div>
-            </>
-          ) : (
-            <div className="px-4 py-3.5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">
-                    {isTrial ? "Trial" : "Free Plan"}
-                  </p>
-                  <p className="text-muted-foreground mt-0.5 text-[11px]">
-                    {isTrial
-                      ? `${trialDaysLeft} day${trialDaysLeft !== 1 ? "s" : ""} left — up to ${SiteConfig.plusChannelsLimit} channels`
-                      : `Up to ${SiteConfig.freeChannelsLimit} channels`}
-                  </p>
-                </div>
-                <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] font-semibold text-white/60 uppercase">
-                  {isTrial ? "Trial" : "Free"}
-                </span>
-              </div>
-              <div className="mt-3 border-t border-white/[0.04] pt-3">
-                <p className="text-muted-foreground mb-2 text-[11px]">
-                  {upgradePlan === "plus"
-                    ? `${SiteConfig.plusChannelsLimit} channels and priority processing.`
-                    : "Unlimited channels and priority processing."}
-                </p>
-              </div>
-
-              {/* Plan selector */}
-              {hasPlus && (
-                <div className="mt-3 flex items-center gap-2">
-                  <div className="nm-raised flex rounded-full p-0.5">
-                    <button
-                      onClick={() => setUpgradePlan("plus")}
-                      className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                        upgradePlan === "plus"
-                          ? "bg-red-600 text-white"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      Plus
-                    </button>
-                    <button
-                      onClick={() => setUpgradePlan("pro")}
-                      className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                        upgradePlan === "pro"
-                          ? "bg-red-600 text-white"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      Pro
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Interval selector */}
-              <div className="mt-3 flex items-center gap-2">
-                <div className="nm-raised flex rounded-full p-0.5">
-                  <button
-                    onClick={() => setUpgradeInterval("month")}
-                    className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                      upgradeInterval === "month"
-                        ? "bg-red-600 text-white"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    Monthly
-                  </button>
-                  <button
-                    onClick={() => setUpgradeInterval("year")}
-                    className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                      upgradeInterval === "year"
-                        ? "bg-red-600 text-white"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    Annual
-                  </button>
-                </div>
-                {upgradeInterval === "month" ? (
-                  <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-400">
-                    Save 27%
-                  </span>
-                ) : (
-                  <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
-                    You save 27%
-                  </span>
-                )}
-              </div>
-
-              <div className="mt-3 flex items-center justify-between">
-                <p className="text-sm font-semibold">
-                  {`${displayUpgradePrice.symbol}${displayUpgradePrice.formatted}/${upgradeInterval === "year" ? "yr" : "mo"}`}
-                </p>
-                <form
-                  action="/api/stripe/checkout"
-                  method="POST"
-                  data-form-type="other"
-                  suppressHydrationWarning
-                >
-                  <input type="hidden" name="plan" value={upgradePlan} />
-                  <input
-                    type="hidden"
-                    name="interval"
-                    value={upgradeInterval}
-                  />
-                  <input type="hidden" name="referral" value={referral} />
-                  <Button
-                    type="submit"
-                    size="sm"
-                    className="rounded-full bg-red-600 hover:bg-red-500"
-                  >
-                    Upgrade
-                  </Button>
-                </form>
-              </div>
-            </div>
-          )}
-          {(hasStripeCustomer || hasActiveSubscription) && (
-            <div className="border-t border-white/[0.04] px-4 py-2.5">
-              <form
-                action="/api/stripe/portal"
-                method="POST"
-                data-form-type="other"
-                suppressHydrationWarning
-              >
-                <button
-                  type="submit"
-                  className="text-muted-foreground hover:text-foreground text-xs transition-colors"
-                >
-                  Manage billing & invoices →
-                </button>
-              </form>
-            </div>
-          )}
+  // ---------------------------------------------------------------------------
+  // PROFILE LAYOUT — reorder rows or move between sections in one line.
+  // To reorder: move the line. To change section: edit the section string.
+  // Consecutive rows with the same section are grouped into one card.
+  // ---------------------------------------------------------------------------
+  const subscriptionCard = (
+    <div className="nm-raised overflow-hidden rounded-2xl">
+      {isActivating && (
+        <div className="flex items-center gap-2 border-b border-white/[0.04] px-4 py-2.5">
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-amber-400" />
+          <p className="text-xs text-amber-400">
+            Activating your subscription…
+          </p>
         </div>
-      </section>
-
-      {/* Audio & summaries */}
-      <section className="flex flex-col gap-2">
-        <h2 className="text-muted-foreground/50 px-1 text-xs font-medium tracking-wide uppercase">
-          Audio & summaries
-        </h2>
-        <div className="nm-raised divide-y divide-white/[0.06] overflow-hidden rounded-2xl">
-          <SummaryPreferencesSection
-            initialLength={initialSummaryLength}
-            initialStyle={initialSummaryStyle}
-            initialCustomInstructions={initialCustomInstructions}
-            initialAudioEnabled={initialAudioEnabled}
-          />
-          {rssToken && (
-            <PodcastFeedSection
-              rssToken={rssToken}
-              audioEnabled={initialAudioEnabled}
-            />
-          )}
-        </div>
-      </section>
-
-      {/* Platforms */}
-      <section className="flex flex-col gap-2">
-        <h2 className="text-muted-foreground/50 px-1 text-xs font-medium tracking-wide uppercase">
-          Platforms
-        </h2>
-        <div className="nm-raised divide-y divide-white/[0.06] overflow-hidden rounded-2xl">
-          <DeliverySection
-            initialTelegramConnected={initialTelegramConnected}
-            initialNotionConnected={initialNotionConnected}
-            initialNotionDatabaseName={initialNotionDatabaseName}
-            initialWhatsappConnected={initialWhatsappConnected}
-            initialWhatsappPhone={initialWhatsappPhone}
-            initialDiscordConnected={initialDiscordConnected}
-            initialSlackConnected={initialSlackConnected}
-            initialVoice={initialVoice}
-            initialLanguage={initialLanguage}
-            initialFavorites={initialFavorites}
-          />
-        </div>
-      </section>
-
-      {/* Notifications */}
-      <NotificationsSection
-        initialPushEnabled={initialPushEnabled}
-        initialNewsletter={initialNewsletter}
-        initialAnnouncements={initialAnnouncements}
-        initialDailyDigest={initialDailyDigest}
-        initialDigestHour={initialDigestHour}
-        initialFullSummary={initialFullSummary}
-      />
-
-      {/* Referral */}
-      <ReferralSection
-        referralCode={referralCode ?? ""}
-        stats={
-          referralStats ?? { total: 0, onTrial: 0, activePro: 0, rewarded: 0 }
-        }
-      />
-
-      {/* Danger zone */}
-      <section className="flex flex-col gap-2">
-        <h2 className="text-muted-foreground/50 px-1 text-xs font-medium tracking-wide uppercase">
-          Danger zone
-        </h2>
-        <div className="nm-raised overflow-hidden rounded-2xl">
+      )}
+      {hasActiveSubscription ? (
+        <>
           <div className="flex items-center justify-between px-4 py-3">
             <div>
-              <p className="text-sm font-medium">Delete account</p>
+              <p className="text-sm font-medium">
+                {activePlan?.tier === "plus" ? "Plus" : "Pro"} Plan
+              </p>
               <p className="text-muted-foreground text-[11px]">
-                Permanently delete all your data
+                {activePlan?.cancelAtPeriodEnd && activePlan.periodEndDate
+                  ? `Ends ${new Date(activePlan.periodEndDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
+                  : activePlan?.tier === "plus"
+                    ? `Up to ${SiteConfig.plusChannelsLimit} channels`
+                    : "Unlimited channels and lists"}
               </p>
             </div>
-            <button
-              onClick={handleDeleteAccount}
-              className="nm-raised-sm text-muted-foreground hover:text-destructive flex items-center gap-1.5 rounded-full px-3 py-1 text-xs transition-all"
+            <span
+              className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${
+                activePlan?.cancelAtPeriodEnd
+                  ? "bg-amber-600 text-white"
+                  : "bg-red-600 text-white"
+              }`}
             >
-              <Trash2 className="h-3.5 w-3.5" />
-              Delete
+              {activePlan?.cancelAtPeriodEnd ? "Ending" : "Active"}
+            </span>
+          </div>
+          <div className="border-t border-white/[0.04] px-4 py-2.5">
+            <button
+              onClick={openCancelSubscriptionModal}
+              className="text-muted-foreground hover:text-destructive text-xs transition-colors"
+            >
+              {activePlan?.cancelAtPeriodEnd
+                ? "Manage subscription →"
+                : "Cancel subscription →"}
             </button>
           </div>
-        </div>
-      </section>
-
-      {/* Admin */}
-      {isAdmin && (
-        <section className="flex flex-col gap-2">
-          <h2 className="text-muted-foreground/50 px-1 text-xs font-medium tracking-wide uppercase">
-            Admin
-          </h2>
-          <div className="nm-raised overflow-hidden rounded-2xl">
-            <Link
-              href="/dashboard/admin"
-              className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-white/[0.02]"
+        </>
+      ) : (
+        <div className="px-4 py-3.5">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">
+                {isTrial ? "Trial" : "Free Plan"}
+              </p>
+              <p className="text-muted-foreground mt-0.5 text-[11px]">
+                {isTrial
+                  ? `${trialDaysLeft} day${trialDaysLeft !== 1 ? "s" : ""} left — up to ${SiteConfig.plusChannelsLimit} channels`
+                  : `Up to ${SiteConfig.freeChannelsLimit} channels`}
+              </p>
+            </div>
+            <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] font-semibold text-white/60 uppercase">
+              {isTrial ? "Trial" : "Free"}
+            </span>
+          </div>
+          <div className="mt-3 border-t border-white/[0.04] pt-3">
+            <p className="text-muted-foreground mb-2 text-[11px]">
+              {upgradePlan === "plus"
+                ? `${SiteConfig.plusChannelsLimit} channels and priority processing.`
+                : "Unlimited channels and priority processing."}
+            </p>
+          </div>
+          {hasPlus && (
+            <div className="mt-3 flex items-center gap-2">
+              <div className="nm-raised flex rounded-full p-0.5">
+                <button
+                  onClick={() => setUpgradePlan("plus")}
+                  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                    upgradePlan === "plus"
+                      ? "bg-red-600 text-white"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Plus
+                </button>
+                <button
+                  onClick={() => setUpgradePlan("pro")}
+                  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                    upgradePlan === "pro"
+                      ? "bg-red-600 text-white"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Pro
+                </button>
+              </div>
+            </div>
+          )}
+          <div className="mt-3 flex items-center gap-2">
+            <div className="nm-raised flex rounded-full p-0.5">
+              <button
+                onClick={() => setUpgradeInterval("month")}
+                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                  upgradeInterval === "month"
+                    ? "bg-red-600 text-white"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Monthly
+              </button>
+              <button
+                onClick={() => setUpgradeInterval("year")}
+                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                  upgradeInterval === "year"
+                    ? "bg-red-600 text-white"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Annual
+              </button>
+            </div>
+            {upgradeInterval === "month" ? (
+              <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-400">
+                Save 27%
+              </span>
+            ) : (
+              <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
+                You save 27%
+              </span>
+            )}
+          </div>
+          <div className="mt-3 flex items-center justify-between">
+            <p className="text-sm font-semibold">
+              {`${displayUpgradePrice.symbol}${displayUpgradePrice.formatted}/${upgradeInterval === "year" ? "yr" : "mo"}`}
+            </p>
+            <form
+              action="/api/stripe/checkout"
+              method="POST"
+              data-form-type="other"
+              suppressHydrationWarning
             >
-              <ShieldAlert className="h-4 w-4 text-red-400" />
-              <span className="text-sm font-medium">Admin panel</span>
-              <span className="text-muted-foreground ml-auto text-xs">→</span>
-            </Link>
+              <input type="hidden" name="plan" value={upgradePlan} />
+              <input type="hidden" name="interval" value={upgradeInterval} />
+              <input type="hidden" name="referral" value={referral} />
+              <Button
+                type="submit"
+                size="sm"
+                className="rounded-full bg-red-600 hover:bg-red-500"
+              >
+                Upgrade
+              </Button>
+            </form>
+          </div>
+        </div>
+      )}
+      {(hasStripeCustomer || hasActiveSubscription) && (
+        <div className="border-t border-white/[0.04] px-4 py-2.5">
+          <form
+            action="/api/stripe/portal"
+            method="POST"
+            data-form-type="other"
+            suppressHydrationWarning
+          >
+            <button
+              type="submit"
+              className="text-muted-foreground hover:text-foreground text-xs transition-colors"
+            >
+              Manage billing & invoices →
+            </button>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+
+  const layout: { section: string; node: React.ReactNode }[] = [
+    // Subscription — uses its own card wrapper (no divide-y)
+    { section: "Subscription", node: subscriptionCard },
+    // Audio & summaries
+    {
+      section: "Audio & summaries",
+      node: (
+        <SummaryPreferencesSection
+          key="prefs"
+          initialLength={initialSummaryLength}
+          initialStyle={initialSummaryStyle}
+          initialCustomInstructions={initialCustomInstructions}
+        />
+      ),
+    },
+    {
+      section: "Audio & summaries",
+      node: (
+        <AudioSettingsSection
+          key="audio"
+          initialVoice={initialVoice}
+          initialLanguage={initialLanguage}
+          initialFavorites={initialFavorites}
+          initialAudioEnabled={initialAudioEnabled}
+        />
+      ),
+    },
+    // Platforms
+    {
+      section: "Platforms",
+      node: (
+        <DeliverySection
+          key="delivery"
+          initialTelegramConnected={initialTelegramConnected}
+          initialNotionConnected={initialNotionConnected}
+          initialNotionDatabaseName={initialNotionDatabaseName}
+          initialWhatsappConnected={initialWhatsappConnected}
+          initialWhatsappPhone={initialWhatsappPhone}
+          initialDiscordConnected={initialDiscordConnected}
+          initialSlackConnected={initialSlackConnected}
+        />
+      ),
+    },
+    ...(rssToken
+      ? [
+          {
+            section: "Platforms",
+            node: (
+              <PodcastFeedSection
+                key="podcast"
+                rssToken={rssToken}
+                audioEnabled={initialAudioEnabled}
+              />
+            ),
+          },
+        ]
+      : []),
+    // Notifications
+    {
+      section: "Notifications",
+      node: (
+        <NotificationsSection
+          key="notif"
+          initialPushEnabled={initialPushEnabled}
+          initialNewsletter={initialNewsletter}
+          initialAnnouncements={initialAnnouncements}
+          initialDailyDigest={initialDailyDigest}
+          initialDigestHour={initialDigestHour}
+          initialFullSummary={initialFullSummary}
+        />
+      ),
+    },
+    // Referral
+    {
+      section: "Referral",
+      node: (
+        <ReferralSection
+          key="referral"
+          referralCode={referralCode ?? ""}
+          stats={
+            referralStats ?? { total: 0, onTrial: 0, activePro: 0, rewarded: 0 }
+          }
+        />
+      ),
+    },
+    // Danger zone
+    {
+      section: "Danger zone",
+      node: (
+        <div
+          key="delete"
+          className="flex items-center justify-between px-4 py-3"
+        >
+          <div>
+            <p className="text-sm font-medium">Delete account</p>
+            <p className="text-muted-foreground text-[11px]">
+              Permanently delete all your data
+            </p>
+          </div>
+          <button
+            onClick={handleDeleteAccount}
+            className="nm-raised-sm text-muted-foreground hover:text-destructive flex items-center gap-1.5 rounded-full px-3 py-1 text-xs transition-all"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Delete
+          </button>
+        </div>
+      ),
+    },
+    // Admin
+    ...(isAdmin
+      ? [
+          {
+            section: "Admin",
+            node: (
+              <Link
+                key="admin"
+                href="/dashboard/admin"
+                className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-white/[0.02]"
+              >
+                <ShieldAlert className="h-4 w-4 text-red-400" />
+                <span className="text-sm font-medium">Admin panel</span>
+                <span className="text-muted-foreground ml-auto text-xs">→</span>
+              </Link>
+            ),
+          },
+        ]
+      : []),
+  ];
+
+  // Group consecutive rows with the same section title
+  const sections: { title: string; nodes: React.ReactNode[] }[] = [];
+  for (const item of layout) {
+    const last = sections.at(-1);
+    if (last?.title === item.section) {
+      last.nodes.push(item.node);
+    } else {
+      sections.push({ title: item.section, nodes: [item.node] });
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-8">
+      {sections.map(({ title, nodes }) => (
+        <section key={title} className="flex flex-col gap-2">
+          <h2 className="text-muted-foreground/50 px-1 text-xs font-medium tracking-wide uppercase">
+            {title}
+          </h2>
+          <div className="nm-raised divide-y divide-white/[0.06] overflow-hidden rounded-2xl">
+            {nodes}
           </div>
         </section>
-      )}
+      ))}
     </div>
   );
 }

@@ -17,12 +17,13 @@ import { dialogManager } from "@/features/dialog-manager/dialog-manager";
 import { LanguagePicker } from "@/components/dashboard/language-picker";
 import { languages } from "@/lib/languages";
 import { capture } from "@/lib/posthog/client";
+import { Switch } from "@/components/ui/switch";
 import type { Language } from "@/lib/languages";
 
 // -----------------------------------------------------------------
 // Platform brand colors — update here to change all platform rows
 // -----------------------------------------------------------------
-const CONNECTED_TEXT = "text-emerald-500/60";
+const CONNECTED_TEXT = "text-red-400/70";
 
 const PLATFORM_COLORS = {
   telegram: {
@@ -329,9 +330,6 @@ type Props = {
   initialWhatsappPhone?: string;
   initialDiscordConnected: boolean;
   initialSlackConnected: boolean;
-  initialVoice: string;
-  initialLanguage: string;
-  initialFavorites?: string[];
 };
 
 export function DeliverySection({
@@ -342,11 +340,7 @@ export function DeliverySection({
   initialWhatsappPhone = "",
   initialDiscordConnected,
   initialSlackConnected,
-  initialVoice,
-  initialLanguage,
-  initialFavorites = [],
 }: Props) {
-  const searchParams = useSearchParams();
   const supabase = createClient();
   const [telegramConnected, setTelegramConnected] = useState(
     initialTelegramConnected,
@@ -367,17 +361,6 @@ export function DeliverySection({
   const [slackConnected, setSlackConnected] = useState(initialSlackConnected);
   // Masquer Notion + WhatsApp en attente d'approbation — passer à true pour réactiver
   const showExperimentalPlatforms = false as boolean;
-  const [voice, setVoice] = useState(initialVoice);
-  const [savingVoice, setSavingVoice] = useState(false);
-  const [language, setLanguage] = useState(initialLanguage);
-  const [savingLanguage, setSavingLanguage] = useState(false);
-  const [favorites, setFavorites] = useState(initialFavorites);
-
-  const currentLanguageMeta = languages.find((l) => l.code === language);
-  const voiceList = getVoicesForLanguage(language);
-  const currentVoiceEntry =
-    voiceList.find((v) => v.value === voice) ?? voiceList[0];
-  const hasMultipleVoices = voiceList.length > 1;
 
   const openTelegramModal = () => {
     dialogManager.custom({
@@ -439,102 +422,6 @@ export function DeliverySection({
     setTelegramConnected(false);
     toast.success("Telegram disconnected");
   };
-
-  const updateVoice = async (v: string) => {
-    setVoice(v);
-    setSavingVoice(true);
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return;
-    await supabase.from("profiles").update({ tts_voice: v }).eq("id", user.id);
-    setSavingVoice(false);
-    toast.success("Voice updated");
-    capture("tts_voice_changed", { voice: v });
-  };
-
-  const openVoicePicker = () => {
-    dialogManager.custom({
-      title: "Audio voice",
-      size: "sm",
-      children: (
-        <VoicePicker
-          currentVoice={voice}
-          voiceList={voiceList}
-          onSelect={(v) => {
-            dialogManager.closeAll();
-            void updateVoice(v);
-          }}
-        />
-      ),
-    });
-  };
-
-  const updateLanguage = async (lang: Language) => {
-    // Reset voice to the default for the new language
-    const newVoices = getVoicesForLanguage(lang.code);
-    const defaultVoice = newVoices[0]?.value ?? lang.voice;
-    setLanguage(lang.code);
-    setVoice(defaultVoice);
-    setSavingLanguage(true);
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return;
-    await supabase
-      .from("profiles")
-      .update({ preferred_language: lang.code, tts_voice: defaultVoice })
-      .eq("id", user.id);
-    setSavingLanguage(false);
-    toast.success("Language updated");
-  };
-
-  const toggleFavorite = async (code: string) => {
-    const next = favorites.includes(code)
-      ? favorites.filter((c) => c !== code)
-      : [...favorites, code];
-    setFavorites(next);
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return;
-    await supabase
-      .from("profiles")
-      .update({ favorite_languages: next })
-      .eq("id", user.id);
-  };
-
-  const openLanguagePicker = () => {
-    dialogManager.custom({
-      title: "Summary language",
-      size: "sm",
-      children: (
-        <LanguagePicker
-          currentCode={language}
-          favorites={favorites}
-          onSelect={(lang) => {
-            dialogManager.closeAll();
-            void updateLanguage(lang);
-          }}
-          onToggleFavorite={(code) => void toggleFavorite(code)}
-        />
-      ),
-    });
-  };
-
-  // Auto-open modal from navbar dropdown (?open=voice or ?open=language)
-  const openParam = searchParams.get("open");
-  const handledRef = useRef(false);
-  useEffect(() => {
-    if (handledRef.current) return;
-    if (openParam === "voice") {
-      handledRef.current = true;
-      openVoicePicker();
-    } else if (openParam === "language") {
-      handledRef.current = true;
-      openLanguagePicker();
-    }
-  }, [openParam]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const disconnectNotion = async () => {
     await fetch("/api/connect/notion/disconnect", { method: "POST" });
@@ -881,7 +768,211 @@ export function DeliverySection({
           </a>
         )}
       </div>
+    </>
+  );
+}
 
+const PLAYBACK_SPEEDS = [1, 1.5, 2, 3] as const;
+const SPEED_STORAGE_KEY = "briefTubePlaybackSpeed";
+
+function PlaybackSpeedRow() {
+  const [speed, setSpeed] = useState<(typeof PLAYBACK_SPEEDS)[number]>(1);
+
+  useEffect(() => {
+    const stored = localStorage.getItem(SPEED_STORAGE_KEY);
+    if (stored) {
+      const n = parseFloat(stored);
+      if (PLAYBACK_SPEEDS.includes(n as (typeof PLAYBACK_SPEEDS)[number])) {
+        setSpeed(n as (typeof PLAYBACK_SPEEDS)[number]);
+      }
+    }
+    const handler = (e: Event) => {
+      setSpeed((e as CustomEvent).detail as (typeof PLAYBACK_SPEEDS)[number]);
+    };
+    window.addEventListener("playbackSpeedChanged", handler);
+    return () => window.removeEventListener("playbackSpeedChanged", handler);
+  }, []);
+
+  const changeSpeed = (s: (typeof PLAYBACK_SPEEDS)[number]) => {
+    setSpeed(s);
+    localStorage.setItem(SPEED_STORAGE_KEY, String(s));
+    window.dispatchEvent(
+      new CustomEvent("playbackSpeedChanged", { detail: s }),
+    );
+  };
+
+  return (
+    <div className="flex items-center justify-between px-4 py-3.5">
+      <div className="flex items-center gap-2.5">
+        <div className="nm-inset-sm flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
+          <Clock className="text-muted-foreground h-4 w-4" />
+        </div>
+        <div>
+          <p className="text-sm font-medium">Playback speed</p>
+          <p className="text-muted-foreground text-[11px]">x{speed}</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-1">
+        {PLAYBACK_SPEEDS.map((s) => (
+          <button
+            key={s}
+            onClick={() => changeSpeed(s)}
+            className={`rounded-md px-2 py-1 text-[10px] font-semibold tabular-nums transition-all ${
+              speed === s
+                ? "bg-red-600 text-white"
+                : "nm-raised-sm text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            x{s}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+type AudioSettingsSectionProps = {
+  initialVoice: string;
+  initialLanguage: string;
+  initialFavorites?: string[];
+  initialAudioEnabled: boolean;
+};
+
+export function AudioSettingsSection({
+  initialVoice,
+  initialLanguage,
+  initialFavorites = [],
+  initialAudioEnabled,
+}: AudioSettingsSectionProps) {
+  const searchParams = useSearchParams();
+  const supabase = createClient();
+  const [voice, setVoice] = useState(initialVoice);
+  const [savingVoice, setSavingVoice] = useState(false);
+  const [language, setLanguage] = useState(initialLanguage);
+  const [savingLanguage, setSavingLanguage] = useState(false);
+  const [favorites, setFavorites] = useState(initialFavorites);
+  const [audioEnabled, setAudioEnabled] = useState(initialAudioEnabled);
+
+  const saveAudioEnabled = async (enabled: boolean) => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+    const { error } = await supabase
+      .from("profiles")
+      .update({ audio_enabled: enabled })
+      .eq("id", user.id);
+    if (error) {
+      toast.error("Failed to save preference");
+      return;
+    }
+    toast.success("Preference updated");
+  };
+
+  const currentLanguageMeta = languages.find((l) => l.code === language);
+  const voiceList = getVoicesForLanguage(language);
+  const currentVoiceEntry =
+    voiceList.find((v) => v.value === voice) ?? voiceList[0];
+  const hasMultipleVoices = voiceList.length > 1;
+
+  const updateVoice = async (v: string) => {
+    setVoice(v);
+    setSavingVoice(true);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+    await supabase.from("profiles").update({ tts_voice: v }).eq("id", user.id);
+    setSavingVoice(false);
+    toast.success("Voice updated");
+    capture("tts_voice_changed", { voice: v });
+  };
+
+  const openVoicePicker = () => {
+    dialogManager.custom({
+      title: "Audio voice",
+      size: "sm",
+      children: (
+        <VoicePicker
+          currentVoice={voice}
+          voiceList={voiceList}
+          onSelect={(v) => {
+            dialogManager.closeAll();
+            void updateVoice(v);
+          }}
+        />
+      ),
+    });
+  };
+
+  const updateLanguage = async (lang: Language) => {
+    // Reset voice to the default for the new language
+    const newVoices = getVoicesForLanguage(lang.code);
+    const defaultVoice = newVoices[0]?.value ?? lang.voice;
+    setLanguage(lang.code);
+    setVoice(defaultVoice);
+    setSavingLanguage(true);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+    await supabase
+      .from("profiles")
+      .update({ preferred_language: lang.code, tts_voice: defaultVoice })
+      .eq("id", user.id);
+    setSavingLanguage(false);
+    toast.success("Language updated");
+  };
+
+  const toggleFavorite = async (code: string) => {
+    const next = favorites.includes(code)
+      ? favorites.filter((c) => c !== code)
+      : [...favorites, code];
+    setFavorites(next);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+    await supabase
+      .from("profiles")
+      .update({ favorite_languages: next })
+      .eq("id", user.id);
+  };
+
+  const openLanguagePicker = () => {
+    dialogManager.custom({
+      title: "Summary language",
+      size: "sm",
+      children: (
+        <LanguagePicker
+          currentCode={language}
+          favorites={favorites}
+          onSelect={(lang) => {
+            dialogManager.closeAll();
+            void updateLanguage(lang);
+          }}
+          onToggleFavorite={(code) => void toggleFavorite(code)}
+        />
+      ),
+    });
+  };
+
+  // Auto-open modal from navbar dropdown (?open=voice or ?open=language)
+  const openParam = searchParams.get("open");
+  const handledRef = useRef(false);
+  useEffect(() => {
+    if (handledRef.current) return;
+    if (openParam === "voice") {
+      handledRef.current = true;
+      openVoicePicker();
+    } else if (openParam === "language") {
+      handledRef.current = true;
+      openLanguagePicker();
+    }
+  }, [openParam]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <>
       {/* Language row */}
       <div className="flex items-center justify-between px-4 py-3.5">
         <div className="flex items-center gap-2.5">
@@ -954,67 +1045,30 @@ export function DeliverySection({
         </div>
       </div>
 
+      {/* Audio toggle */}
+      <div className="flex items-center justify-between px-4 py-3.5">
+        <div className="flex items-center gap-2.5">
+          <div className="nm-inset-sm flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
+            <Headphones className="text-muted-foreground h-4 w-4" />
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <p className="text-sm font-medium">Audio summaries</p>
+            <p className="text-muted-foreground text-[11px]">
+              Required for podcast feeds and Telegram voice messages
+            </p>
+          </div>
+        </div>
+        <Switch
+          checked={audioEnabled}
+          onCheckedChange={(checked) => {
+            setAudioEnabled(checked);
+            void saveAudioEnabled(checked);
+          }}
+        />
+      </div>
+
       {/* Playback speed row */}
       <PlaybackSpeedRow />
     </>
-  );
-}
-
-const PLAYBACK_SPEEDS = [1, 1.5, 2, 3] as const;
-const SPEED_STORAGE_KEY = "briefTubePlaybackSpeed";
-
-function PlaybackSpeedRow() {
-  const [speed, setSpeed] = useState<(typeof PLAYBACK_SPEEDS)[number]>(1);
-
-  useEffect(() => {
-    const stored = localStorage.getItem(SPEED_STORAGE_KEY);
-    if (stored) {
-      const n = parseFloat(stored);
-      if (PLAYBACK_SPEEDS.includes(n as (typeof PLAYBACK_SPEEDS)[number])) {
-        setSpeed(n as (typeof PLAYBACK_SPEEDS)[number]);
-      }
-    }
-    const handler = (e: Event) => {
-      setSpeed((e as CustomEvent).detail as (typeof PLAYBACK_SPEEDS)[number]);
-    };
-    window.addEventListener("playbackSpeedChanged", handler);
-    return () => window.removeEventListener("playbackSpeedChanged", handler);
-  }, []);
-
-  const changeSpeed = (s: (typeof PLAYBACK_SPEEDS)[number]) => {
-    setSpeed(s);
-    localStorage.setItem(SPEED_STORAGE_KEY, String(s));
-    window.dispatchEvent(
-      new CustomEvent("playbackSpeedChanged", { detail: s }),
-    );
-  };
-
-  return (
-    <div className="flex items-center justify-between px-4 py-3.5">
-      <div className="flex items-center gap-2.5">
-        <div className="nm-inset-sm flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
-          <Clock className="text-muted-foreground h-4 w-4" />
-        </div>
-        <div>
-          <p className="text-sm font-medium">Playback speed</p>
-          <p className="text-muted-foreground text-[11px]">x{speed}</p>
-        </div>
-      </div>
-      <div className="flex items-center gap-1">
-        {PLAYBACK_SPEEDS.map((s) => (
-          <button
-            key={s}
-            onClick={() => changeSpeed(s)}
-            className={`rounded-md px-2 py-1 text-[10px] font-semibold tabular-nums transition-all ${
-              speed === s
-                ? "bg-red-600 text-white"
-                : "nm-raised-sm text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            x{s}
-          </button>
-        ))}
-      </div>
-    </div>
   );
 }
