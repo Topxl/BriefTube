@@ -21,6 +21,50 @@ import type {
 
 const FEED_PAGE_SIZE = 20;
 
+const R2 = "https://pub-56ac81959a8e42beae1539d791297d90.r2.dev";
+
+/** Demo videos shown to new users with an empty feed */
+const DEMO_DELIVERIES: EnrichedDelivery[] = [
+  {
+    id: "demo-ted-sinek",
+    user_id: "demo",
+    video_id: "qp0HIF3SfI4",
+    status: "sent",
+    source: "demo",
+    sent_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    language: "en",
+    video: {
+      video_id: "qp0HIF3SfI4",
+      video_title: "How Great Leaders Inspire Action | Simon Sinek | TED",
+      video_url: "https://www.youtube.com/watch?v=qp0HIF3SfI4",
+      summary: null, // loaded from DB at runtime
+      audio_url: `${R2}/audio/qp0HIF3SfI4_en.mp3`,
+      channel_id: "UCAuUUnT6oDeKwE6v1NGQxug",
+      status: "completed",
+    },
+  },
+  {
+    id: "demo-huberman-sleep",
+    user_id: "demo",
+    video_id: "nm1TxQj9IsQ",
+    status: "sent",
+    source: "demo",
+    sent_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    language: "en",
+    video: {
+      video_id: "nm1TxQj9IsQ",
+      video_title: "Master Your Sleep & Be More Alert When Awake",
+      video_url: "https://www.youtube.com/watch?v=nm1TxQj9IsQ",
+      summary: null, // loaded from DB at runtime
+      audio_url: `${R2}/audio/nm1TxQj9IsQ_en.mp3`,
+      channel_id: "UC2D2CMWXMOVWx7giW1n3LIg",
+      status: "completed",
+    },
+  },
+];
+
 const getProfile = cache(async (userId: string) => {
   const supabase = await createClient();
   const { data } = await supabase
@@ -144,7 +188,7 @@ async function FeedSection({ userId }: { userId: string }) {
     p_offset: 0,
   });
 
-  const initialDeliveries: EnrichedDelivery[] = [];
+  let initialDeliveries: EnrichedDelivery[] = [];
   if (deliveryData && deliveryData.length > 0) {
     const videoIds = [...new Set(deliveryData.map((d) => d.video_id))];
     const languages = [...new Set(deliveryData.map((d) => d.language))];
@@ -167,6 +211,28 @@ async function FeedSection({ userId }: { userId: string }) {
       if (!video) continue;
       initialDeliveries.push({ ...d, video });
     }
+  }
+
+  // Show demo summaries for new users with an empty feed
+  if (initialDeliveries.length === 0) {
+    const demoIds = DEMO_DELIVERIES.map((d) => d.video_id);
+    const { data: demoVideos } = await supabase
+      .from("processed_videos")
+      .select(
+        "video_id, video_title, video_url, summary, audio_url, channel_id, status",
+      )
+      .in("video_id", demoIds)
+      .eq("language", "en");
+
+    const demoMap: Record<string, ProcessedVideo> = {};
+    for (const v of demoVideos ?? []) {
+      demoMap[v.video_id] = v;
+    }
+
+    initialDeliveries = DEMO_DELIVERIES.map((d) => ({
+      ...d,
+      video: demoMap[d.video_id] ?? d.video,
+    }));
   }
 
   const preferredLang = profile.preferred_language ?? "en";
