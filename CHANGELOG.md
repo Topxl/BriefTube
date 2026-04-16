@@ -2,6 +2,8 @@
 
 ## 2026-04-16
 
+FEATURE: add loading.tsx skeletons for Lists and Profile pages — instant navigation between dashboard tabs
+FIX: suppress Dashlane hydration warnings on GettingStarted buttons
 FIX: subscription via channel handle (@handle) fails with "Invalid request" — videoId:null rejected by Zod schema, changed to .nullish()
 FEATURE: channels icon flashes red when a channel is subscribed, activated or toggled — visual feedback via custom event + sessionStorage for post-reload
 FIX: demo videos missing text summary — RLS blocked access for new users, use admin client for demo video lookup
