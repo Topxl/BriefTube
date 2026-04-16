@@ -73,6 +73,7 @@ export function GettingStarted({
       <a
         href="/api/youtube/auth"
         className="nm-raised group relative block overflow-hidden rounded-2xl p-6 transition-all hover:brightness-110"
+        suppressHydrationWarning
       >
         <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-4">
@@ -136,6 +137,7 @@ export function GettingStarted({
                 showFeedbackDialog();
               }}
               className="text-muted-foreground hover:text-foreground rounded-full px-3 py-2 text-sm transition-colors"
+              suppressHydrationWarning
             >
               Skip, use defaults
             </button>
@@ -172,6 +174,7 @@ export function GettingStarted({
           <button
             onClick={() => setStep("customize")}
             className="text-muted-foreground hover:text-foreground rounded-full px-3 py-2 text-sm transition-colors"
+            suppressHydrationWarning
           >
             Skip
           </button>

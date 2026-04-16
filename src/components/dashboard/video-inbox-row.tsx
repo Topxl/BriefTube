@@ -127,6 +127,7 @@ export function VideoInboxRow({
           ? "Subscribed — new videos will be summarized automatically"
           : "Channel added but paused — upgrade to activate it",
       );
+      window.dispatchEvent(new Event("channel-updated"));
     } catch {
       toast.error("Failed to subscribe");
     } finally {
