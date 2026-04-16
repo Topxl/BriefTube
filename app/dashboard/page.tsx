@@ -1,7 +1,7 @@
 import { SiteConfig } from "@/site-config";
 import { Suspense, cache } from "react";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { SummariesFeed } from "@/components/dashboard/summaries-feed";
 import { SummariesFeedSkeleton } from "@/components/dashboard/summaries-feed-skeleton";
 import { TrialBanner } from "@/components/dashboard/trial-banner";
@@ -216,7 +216,8 @@ async function FeedSection({ userId }: { userId: string }) {
   // Show demo summaries for new users with an empty feed
   if (initialDeliveries.length === 0) {
     const demoIds = DEMO_DELIVERIES.map((d) => d.video_id);
-    const { data: demoVideos } = await supabase
+    const admin = createAdminClient();
+    const { data: demoVideos } = await admin
       .from("processed_videos")
       .select(
         "video_id, video_title, video_url, summary, audio_url, channel_id, status",

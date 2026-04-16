@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useDialogStore } from "@/features/dialog-manager/dialog-store";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -30,6 +31,8 @@ type Props = {
   isPro: boolean;
 };
 
+const PULSE_STORAGE_KEY = "channels-pulse";
+
 export function ChannelsSheet({
   initialSources,
   followedLists = [],
@@ -38,13 +41,47 @@ export function ChannelsSheet({
 }: Props) {
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
+  const [pulse, setPulse] = useState(false);
+
+  useEffect(() => {
+    // Flash after page reload (subscribe triggers reload)
+    if (sessionStorage.getItem(PULSE_STORAGE_KEY)) {
+      sessionStorage.removeItem(PULSE_STORAGE_KEY);
+      setPulse(true);
+      const t = setTimeout(() => setPulse(false), 1500);
+      return () => clearTimeout(t);
+    }
+  }, []);
+
+  useEffect(() => {
+    // Flash on channel toggle (no reload)
+    const handler = () => {
+      setPulse(true);
+      setTimeout(() => setPulse(false), 1500);
+    };
+    window.addEventListener("channel-updated", handler);
+    return () => window.removeEventListener("channel-updated", handler);
+  }, []);
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <Sheet
+      open={open}
+      onOpenChange={(v) => {
+        // Don't close the sheet if a dialog (e.g. upsell modal) is open on top
+        if (!v && useDialogStore.getState().dialogs.length > 0) return;
+        setOpen(v);
+      }}
+    >
       <SheetTrigger asChild>
         <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-2">
-          <Rss className="h-4 w-4" />
-          <span className="text-xs font-medium">{initialSources.length}</span>
+          <Rss
+            className={`h-4 w-4 transition-colors duration-300 ${pulse ? "text-red-400" : ""}`}
+          />
+          <span
+            className={`text-xs font-medium transition-colors duration-300 ${pulse ? "text-red-400" : ""}`}
+          >
+            {initialSources.length}
+          </span>
         </Button>
       </SheetTrigger>
       <SheetContent

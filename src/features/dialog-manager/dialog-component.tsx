@@ -37,10 +37,18 @@ export function DialogComponent(props: { dialog: Dialog }) {
       <DialogRoot
         open={true}
         onOpenChange={(open) => {
-          if (!open) handleClose();
+          if (!open) {
+            // Delay removal so Radix finishes its dismiss cycle
+            // before the Sheet underneath can react to stale pointer events
+            requestAnimationFrame(() => handleClose());
+          }
         }}
       >
-        <DialogContent>
+        <DialogContent
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+          onCloseAutoFocus={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle>{dialog.title ?? ""}</DialogTitle>
           </DialogHeader>

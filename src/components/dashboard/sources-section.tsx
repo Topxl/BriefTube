@@ -293,6 +293,7 @@ export function SourcesSection({
         toast.info("Channel added but paused — upgrade to activate it");
       }
       setPreview((p) => (p ? { ...p, isSubscribed: true } : p));
+      window.dispatchEvent(new Event("channel-updated"));
       if (data.videoId) {
         addProcessingVideo({
           videoId: data.videoId,

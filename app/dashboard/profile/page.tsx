@@ -1,5 +1,6 @@
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { unstable_cache } from "next/cache";
 import { ProfileContent } from "@/components/dashboard/profile-content";
 import { SiteConfig } from "@/site-config";
 import { env } from "@/lib/env";
@@ -147,6 +148,12 @@ async function fetchStripePrices(): Promise<PricesResponse> {
   };
 }
 
+const getCachedStripePrices = unstable_cache(
+  async () => fetchStripePrices(),
+  ["profile-stripe-prices"],
+  { revalidate: 86400 },
+);
+
 export default async function ProfilePage(props: {
   searchParams: Promise<{ success?: string; annual?: string }>;
 }) {
@@ -172,7 +179,7 @@ export default async function ProfilePage(props: {
     supabase
       .from("profiles")
       .select(
-        "subscription_status, trial_ends_at, stripe_customer_id, stripe_subscription_id, tts_voice, preferred_language, favorite_languages, max_channels, referral_code, notify_new_summaries_push, email_newsletter, email_announcements, newsletter_enabled, newsletter_hour, newsletter_full_summary, rss_token, summary_length_pref, summary_style, summary_custom_instructions",
+        "subscription_status, trial_ends_at, stripe_customer_id, stripe_subscription_id, tts_voice, preferred_language, favorite_languages, max_channels, referral_code, notify_new_summaries_push, email_newsletter, email_announcements, newsletter_enabled, newsletter_hour, newsletter_full_summary, rss_token, summary_length_pref, summary_style, summary_custom_instructions, audio_enabled",
       )
       .eq("id", user.id)
       .single(),
@@ -185,7 +192,7 @@ export default async function ProfilePage(props: {
       .select("platform, connected, credentials, external_id")
       .eq("user_id", user.id)
       .eq("connected", true),
-    fetchStripePrices(),
+    getCachedStripePrices(),
   ]);
 
   const telegramConnected = (platformConns ?? []).some(
@@ -212,12 +219,7 @@ export default async function ProfilePage(props: {
 
   const rssToken = profile?.rss_token ?? "";
 
-  const { data: audioRow } = await admin
-    .from("profiles")
-    .select("audio_enabled")
-    .eq("id", user.id)
-    .single();
-  const audioEnabled = audioRow?.audio_enabled !== false;
+  const audioEnabled = profile?.audio_enabled !== false;
   const hasActiveSubscription = profile?.subscription_status === "active";
   const activePlan = hasActiveSubscription
     ? await resolveActivePlan(profile.stripe_subscription_id)

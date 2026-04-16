@@ -5,35 +5,48 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle2 } from "@/lib/icons";
 import { dialogManager } from "@/features/dialog-manager/dialog-manager";
 import { formatCurrency } from "@/lib/format";
-import { logger } from "@/lib/logger";
 import { capture } from "@/lib/posthog/client";
+import { SiteConfig } from "@/site-config";
+import { usePrices } from "@/hooks/use-prices";
 
 type Interval = "month" | "year";
+type Plan = "plus" | "pro";
 
-type PricesData = {
-  monthly: { amount: number; currency: string };
-  annual: { amount: number; currency: string };
-};
+const PLUS_FEATURES = [
+  `${SiteConfig.plusChannelsLimit} active channels`,
+  "Priority processing",
+  "AI audio summaries",
+];
 
 const PRO_FEATURES = [
   "Unlimited active channels",
   "Priority processing",
   "Choose your TTS voice",
   "No branding in audio",
+  "Early access to new features",
 ];
 
 type Props = {
   defaultInterval?: Interval;
+  defaultPlan?: Plan;
 };
 
-export function UpsellModal({ defaultInterval = "year" }: Props) {
+export function UpsellModal({
+  defaultInterval = "year",
+  defaultPlan = "plus",
+}: Props) {
+  const { data: prices } = usePrices();
+  const [plan, setPlan] = useState<Plan>(defaultPlan);
   const [interval, setInterval] = useState<Interval>(defaultInterval);
-  const [prices, setPrices] = useState<PricesData | null>(null);
   const [referral, setReferral] = useState("");
 
   useEffect(() => {
     capture("upsell_shown", { source: "channel_limit" });
   }, []);
+
+  useEffect(() => {
+    if (prices && !prices.plus) setPlan("pro");
+  }, [prices]);
 
   useEffect(() => {
     const w = window as Window & {
@@ -45,32 +58,59 @@ export function UpsellModal({ defaultInterval = "year" }: Props) {
     });
   }, []);
 
-  useEffect(() => {
-    fetch("/api/stripe/price")
-      .then(async (res) => res.json())
-      .then((data: PricesData) => {
-        if (data.monthly.amount) setPrices(data);
-      })
-      .catch((err) => logger.error("Failed to fetch price:", err));
-  }, []);
+  const hasPlus = !!prices?.plus;
+  const features = plan === "plus" ? PLUS_FEATURES : PRO_FEATURES;
 
-  const priceData = prices
-    ? interval === "year"
-      ? prices.annual
-      : prices.monthly
-    : null;
+  const priceData =
+    plan === "plus" && prices?.plus
+      ? interval === "year"
+        ? prices.plus.annual
+        : prices.plus.monthly
+      : prices?.pro
+        ? interval === "year"
+          ? prices.pro.annual
+          : prices.pro.monthly
+        : null;
 
   const displayPrice = priceData
     ? formatCurrency(priceData.amount, priceData.currency)
     : null;
 
   const monthlyEquiv =
-    prices && interval === "year"
-      ? Math.round(prices.annual.amount / 12 / 100)
+    priceData && interval === "year"
+      ? Math.round(priceData.amount / 12 / 100)
       : null;
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Plan selector */}
+      {hasPlus && (
+        <div className="flex items-center justify-center">
+          <div className="nm-raised flex rounded-full p-1">
+            <button
+              onClick={() => setPlan("plus")}
+              className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                plan === "plus"
+                  ? "bg-red-600 text-white"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Plus
+            </button>
+            <button
+              onClick={() => setPlan("pro")}
+              className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                plan === "pro"
+                  ? "bg-red-600 text-white"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Pro
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Billing toggle */}
       <div className="flex items-center justify-center gap-3">
         <div className="nm-raised flex rounded-full p-1">
@@ -134,7 +174,7 @@ export function UpsellModal({ defaultInterval = "year" }: Props) {
 
         {/* Features */}
         <ul className="mt-4 space-y-2">
-          {PRO_FEATURES.map((f) => (
+          {features.map((f) => (
             <li key={f} className="flex items-center gap-2 text-sm">
               <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
               {f}
@@ -150,26 +190,35 @@ export function UpsellModal({ defaultInterval = "year" }: Props) {
         data-form-type="other"
         suppressHydrationWarning
         onSubmit={() => {
-          capture("upsell_clicked", { plan: "pro" });
+          capture("upsell_clicked", { plan });
         }}
       >
+        <input type="hidden" name="plan" value={plan} />
         <input type="hidden" name="interval" value={interval} />
         <input type="hidden" name="referral" value={referral} />
         <Button
           type="submit"
           className="w-full rounded-full bg-red-600 hover:bg-red-500"
         >
-          Upgrade to Pro
+          Upgrade to {plan === "plus" ? "Plus" : "Pro"}
         </Button>
       </form>
     </div>
   );
 }
 
-export function openUpsellModal(defaultInterval: Interval = "year") {
+export function openUpsellModal(
+  defaultInterval: Interval = "month",
+  defaultPlan: Plan = "plus",
+) {
   dialogManager.custom({
-    title: "Upgrade to Pro",
+    title: "Upgrade your plan",
     size: "sm",
-    children: <UpsellModal defaultInterval={defaultInterval} />,
+    children: (
+      <UpsellModal
+        defaultInterval={defaultInterval}
+        defaultPlan={defaultPlan}
+      />
+    ),
   });
 }

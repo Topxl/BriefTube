@@ -109,8 +109,8 @@ export async function POST(request: NextRequest) {
     url: z.string().max(2000).optional(),
     channelId: z.string().max(100).optional(),
     channelName: z.string().max(500).optional(),
-    videoId: z.string().max(50).optional(),
-    videoTitle: z.string().max(1000).optional(),
+    videoId: z.string().max(50).nullish(),
+    videoTitle: z.string().max(1000).nullish(),
   });
 
   let rawBody: unknown;
