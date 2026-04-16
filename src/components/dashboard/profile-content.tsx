@@ -396,16 +396,28 @@ export function ProfileContent({
             </>
           ) : (
             <div className="px-4 py-3.5">
-              <p className="text-sm font-medium">
-                {isTrial
-                  ? `${trialDaysLeft} day${trialDaysLeft !== 1 ? "s" : ""} left on your trial`
-                  : "Upgrade your plan"}
-              </p>
-              <p className="text-muted-foreground mt-0.5 text-[11px]">
-                {upgradePlan === "plus"
-                  ? `${SiteConfig.plusChannelsLimit} channels and priority processing.`
-                  : "Unlimited channels and priority processing."}
-              </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">
+                    {isTrial ? "Trial" : "Free Plan"}
+                  </p>
+                  <p className="text-muted-foreground mt-0.5 text-[11px]">
+                    {isTrial
+                      ? `${trialDaysLeft} day${trialDaysLeft !== 1 ? "s" : ""} left — up to ${SiteConfig.plusChannelsLimit} channels`
+                      : `Up to ${SiteConfig.freeChannelsLimit} channels`}
+                  </p>
+                </div>
+                <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] font-semibold text-white/60 uppercase">
+                  {isTrial ? "Trial" : "Free"}
+                </span>
+              </div>
+              <div className="mt-3 border-t border-white/[0.04] pt-3">
+                <p className="text-muted-foreground mb-2 text-[11px]">
+                  {upgradePlan === "plus"
+                    ? `${SiteConfig.plusChannelsLimit} channels and priority processing.`
+                    : "Unlimited channels and priority processing."}
+                </p>
+              </div>
 
               {/* Plan selector */}
               {hasPlus && (
@@ -518,27 +530,6 @@ export function ProfileContent({
         </div>
       </section>
 
-      {/* Platforms */}
-      <section className="flex flex-col gap-2">
-        <h2 className="text-muted-foreground/50 px-1 text-xs font-medium tracking-wide uppercase">
-          Platforms
-        </h2>
-        <div className="nm-raised divide-y divide-white/[0.06] overflow-hidden rounded-2xl">
-          <DeliverySection
-            initialTelegramConnected={initialTelegramConnected}
-            initialNotionConnected={initialNotionConnected}
-            initialNotionDatabaseName={initialNotionDatabaseName}
-            initialWhatsappConnected={initialWhatsappConnected}
-            initialWhatsappPhone={initialWhatsappPhone}
-            initialDiscordConnected={initialDiscordConnected}
-            initialSlackConnected={initialSlackConnected}
-            initialVoice={initialVoice}
-            initialLanguage={initialLanguage}
-            initialFavorites={initialFavorites}
-          />
-        </div>
-      </section>
-
       {/* Audio & summaries */}
       <section className="flex flex-col gap-2">
         <h2 className="text-muted-foreground/50 px-1 text-xs font-medium tracking-wide uppercase">
@@ -557,6 +548,27 @@ export function ProfileContent({
               audioEnabled={initialAudioEnabled}
             />
           )}
+        </div>
+      </section>
+
+      {/* Platforms */}
+      <section className="flex flex-col gap-2">
+        <h2 className="text-muted-foreground/50 px-1 text-xs font-medium tracking-wide uppercase">
+          Platforms
+        </h2>
+        <div className="nm-raised divide-y divide-white/[0.06] overflow-hidden rounded-2xl">
+          <DeliverySection
+            initialTelegramConnected={initialTelegramConnected}
+            initialNotionConnected={initialNotionConnected}
+            initialNotionDatabaseName={initialNotionDatabaseName}
+            initialWhatsappConnected={initialWhatsappConnected}
+            initialWhatsappPhone={initialWhatsappPhone}
+            initialDiscordConnected={initialDiscordConnected}
+            initialSlackConnected={initialSlackConnected}
+            initialVoice={initialVoice}
+            initialLanguage={initialLanguage}
+            initialFavorites={initialFavorites}
+          />
         </div>
       </section>
 

@@ -3,6 +3,7 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import {
   ChevronDown,
+  Copy,
   ExternalLink,
   FileText,
   Play,
@@ -526,6 +527,21 @@ export function SummaryRow({
               <Share2 className="h-3.5 w-3.5" />
               Share summary
             </DropdownMenuItem>
+            {video?.summary && (
+              <DropdownMenuItem
+                onClick={() => {
+                  void navigator.clipboard.writeText(video.summary ?? "");
+                  toast.success("Summary copied to clipboard");
+                  capture("summary_copied", {
+                    video_id: video.video_id,
+                  });
+                }}
+                className="flex items-center gap-2"
+              >
+                <Copy className="h-3.5 w-3.5" />
+                Copy summary
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
             {favoriteLanguages
               .filter((l) => l !== delivery.language)

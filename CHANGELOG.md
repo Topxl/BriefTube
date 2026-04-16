@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-04-16
+
+FEATURE: show "Free Plan" badge with channel limit in profile subscription section so free users see their current plan clearly
+FEATURE: reorder profile page sections — "Audio & summaries" and "Notifications" now appear before "Platforms" to prioritize more-used settings
+FEATURE: show demo summaries (TED + Huberman Lab) in empty dashboard feed so new users see real content immediately instead of an empty state
+FEATURE: add "Copy summary" button in summary card dropdown menu — copies full summary text to clipboard with PostHog tracking
+
+## 2026-04-15
+
+FIX(worker): protect landing page demo audio from R2 cleanup — add PROTECTED_VIDEO_IDS set in db.py to exclude qp0HIF3SfI4 (TED) and nm1TxQj9IsQ (Huberman Lab) from automatic deletion
+CHORE(worker): add regenerate_demo_audio.py script to re-generate demo audio from existing summaries via Edge TTS + R2 upload
+FIX(landing): suppress Dashlane hydration warnings on HeroUrlInput form/input/button
+
 ## 2026-04-14
 
 FEATURE(monitoring): add business-critical monitoring system — Stripe webhook tracking, web health checks, payment anomaly detection
