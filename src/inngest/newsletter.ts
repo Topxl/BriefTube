@@ -142,6 +142,23 @@ export const sendUserNewsletter = inngest.createFunction(
     }
 
     await step.run("send-email", async () => {
+      const supabase = createAdminClient();
+
+      // Insert log first to get the ID for the tracking pixel
+      const { data: logRow } = await supabase
+        .from("email_logs")
+        .insert({
+          user_id: userId,
+          email_type: "daily_digest",
+          sent_at: new Date().toISOString(),
+        })
+        .select("id")
+        .single();
+
+      const trackingPixelUrl = logRow?.id
+        ? `${SiteConfig.prodUrl}/api/email/track/${logRow.id}`
+        : undefined;
+
       const date = new Date().toLocaleDateString("fr-FR", {
         weekday: "long",
         day: "numeric",
@@ -155,6 +172,7 @@ export const sendUserNewsletter = inngest.createFunction(
           unsubscribeUrl: `${SiteConfig.prodUrl}/dashboard/profile`,
           language,
           fullSummary: fullSummary ?? false,
+          trackingPixelUrl,
         }),
       );
 
@@ -164,14 +182,6 @@ export const sendUserNewsletter = inngest.createFunction(
         subject: `your ${videos.length} summaries are ready`,
         html,
         headers: getUnsubscribeHeaders(userId, "newsletter"),
-      });
-
-      // Log to email_logs so admin dashboard can track digest sends
-      const supabase = createAdminClient();
-      await supabase.from("email_logs").insert({
-        user_id: userId,
-        email_type: "daily_digest",
-        sent_at: new Date().toISOString(),
       });
     });
 

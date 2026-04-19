@@ -220,6 +220,7 @@ export type Database = {
           created_at: string | null;
           id: string;
           language: string;
+          listened_at: string | null;
           platform: string;
           sent_at: string | null;
           source: string | null;
@@ -232,6 +233,7 @@ export type Database = {
           created_at?: string | null;
           id?: string;
           language?: string;
+          listened_at?: string | null;
           platform?: string;
           sent_at?: string | null;
           source?: string | null;
@@ -244,6 +246,7 @@ export type Database = {
           created_at?: string | null;
           id?: string;
           language?: string;
+          listened_at?: string | null;
           platform?: string;
           sent_at?: string | null;
           source?: string | null;
@@ -1260,6 +1263,7 @@ export type Database = {
           created_at: string | null;
           id: string;
           language: string;
+          listened_at: string | null;
           platform: string;
           sent_at: string | null;
           source: string | null;

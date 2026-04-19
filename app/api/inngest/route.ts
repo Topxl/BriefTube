@@ -11,6 +11,10 @@ import {
   sendOnboardingJ3,
 } from "@/inngest/onboarding";
 import { weeklyLetterDraftTrigger } from "@/inngest/weekly-letter";
+import {
+  streakBreakWarningTrigger,
+  sendStreakBreakWarning,
+} from "@/inngest/streak";
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
@@ -22,5 +26,7 @@ export const { GET, POST, PUT } = serve({
     onboardingJ3Trigger,
     sendOnboardingJ3,
     weeklyLetterDraftTrigger,
+    streakBreakWarningTrigger,
+    sendStreakBreakWarning,
   ],
 });
