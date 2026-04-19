@@ -172,7 +172,17 @@ export function GettingStarted({
             Connect a platform
           </a>
           <button
-            onClick={() => setStep("customize")}
+            onClick={() => {
+              setStep("customize");
+              const supabase = createClient();
+              void supabase.auth.getUser().then(({ data: { user } }) => {
+                if (!user) return;
+                void supabase
+                  .from("profiles")
+                  .update({ onboarding_completed: true })
+                  .eq("id", user.id);
+              });
+            }}
             className="text-muted-foreground hover:text-foreground rounded-full px-3 py-2 text-sm transition-colors"
             suppressHydrationWarning
           >

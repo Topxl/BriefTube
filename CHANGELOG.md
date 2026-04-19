@@ -2,6 +2,7 @@
 
 ## 2026-04-19
 
+FIX: persist "Skip" click on GettingStarted platform step — was only updating local React state, banner reappeared on reload
 FIX: Stripe cancel route now uses cancel_at_period_end=true instead of immediate cancel — users keep access until period end, UI already displayed the Ending state
 FIX: Stripe customer creation race condition — add idempotencyKey on customers.create to prevent duplicate customers when users click "Pay" multiple times (observed 4-11 customers per user)
 FEATURE: Add checkout abandoned email recovery flow — Stripe checkout.session.expired handler + abandoned_checkouts table + Inngest cron sends recovery email 24-48h after abandon
