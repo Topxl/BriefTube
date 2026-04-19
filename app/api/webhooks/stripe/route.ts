@@ -67,6 +67,9 @@ export const POST = async (req: NextRequest) => {
       case "checkout.session.completed":
         await checkoutSessionCompleted(event.data.object);
         break;
+      case "checkout.session.expired":
+        await checkoutSessionExpired(event.data.object);
+        break;
       case "customer.subscription.updated":
         await customerSubscriptionUpdated(event.data.object);
         break;
@@ -202,12 +205,19 @@ const checkoutSessionCompleted = async (
     true,
   );
 
+  // Mark any abandoned checkout rows as recovered
+  await supabase
+    .from("abandoned_checkouts")
+    .update({ recovered_at: new Date().toISOString() })
+    .eq("user_id", profile.id)
+    .is("recovered_at", null);
+
   // Restore only system-paused channels — preserve manual user pauses
   await restoreSystemPausedChannels(profile.id, supabase);
 
   logger.info(`Subscription activated for user: ${profile.id}`);
 
-  captureServerEvent({
+  await captureServerEvent({
     distinctId: profile.id,
     event: "subscription_activated",
     properties: {
@@ -293,6 +303,78 @@ const checkoutSessionCompleted = async (
       }
     }
   }
+};
+
+const checkoutSessionExpired = async (sessionData: Stripe.Checkout.Session) => {
+  const session = sessionData;
+
+  const customerId =
+    typeof session.customer === "string"
+      ? session.customer
+      : session.customer?.id;
+
+  const userIdFromMeta = session.metadata?.userId;
+
+  if (!customerId && !userIdFromMeta) {
+    logger.warn("checkout.session.expired missing customer and userId");
+    return;
+  }
+
+  const supabase = createAdminClient();
+
+  let userId: string | null = userIdFromMeta ?? null;
+
+  if (!userId && customerId) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("stripe_customer_id", customerId)
+      .maybeSingle();
+    userId = profile?.id ?? null;
+  }
+
+  if (!userId) {
+    logger.warn(
+      `checkout.session.expired: user not found for customer ${customerId}`,
+    );
+    return;
+  }
+
+  const plan =
+    typeof session.metadata?.plan === "string" ? session.metadata.plan : null;
+  const interval =
+    typeof session.metadata?.interval === "string"
+      ? session.metadata.interval
+      : null;
+
+  const { error: insertError } = await supabase
+    .from("abandoned_checkouts")
+    .insert({
+      user_id: userId,
+      stripe_session_id: session.id,
+      plan,
+      interval,
+      amount_total: session.amount_total,
+      currency: session.currency,
+    });
+
+  if (insertError && insertError.code !== "23505") {
+    logger.error("Failed to insert abandoned_checkouts row:", insertError);
+  }
+
+  await captureServerEvent({
+    distinctId: userId,
+    event: "checkout_abandoned",
+    properties: {
+      session_id: session.id,
+      plan,
+      interval,
+      amount_total: session.amount_total,
+      currency: session.currency,
+    },
+  });
+
+  logger.info(`Checkout session expired tracked for user: ${userId}`);
 };
 
 const customerSubscriptionUpdated = async (

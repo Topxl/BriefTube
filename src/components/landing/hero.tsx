@@ -2,6 +2,10 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { t } from "@/locales";
 import { HeroPlayer } from "./hero-player";
+import {
+  HeroPricingCtaDesktop,
+  HeroPricingCtaMobile,
+} from "./hero-pricing-cta";
 import { HeroUrlInput } from "./hero-url-input";
 
 const tl = t.landing.hero;
@@ -36,6 +40,10 @@ export function Hero() {
 
           <div className="mt-6">
             <HeroUrlInput />
+          </div>
+
+          <div className="mt-4 text-center">
+            <HeroPricingCtaMobile />
           </div>
 
           <p className="text-muted-foreground mt-4 text-xs">{tl.socialProof}</p>
@@ -73,6 +81,7 @@ export function Hero() {
             >
               <Link href="/login">{tl.ctaPrimary}</Link>
             </Button>
+            <HeroPricingCtaDesktop />
           </div>
 
           <p className="text-muted-foreground mt-4 text-sm">{tl.socialProof}</p>

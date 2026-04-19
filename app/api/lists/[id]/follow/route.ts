@@ -54,7 +54,7 @@ export async function POST(req: NextRequest, { params }: Params) {
       .eq("list_id", id)
       .eq("source_type", "list_follow");
 
-    captureServerEvent({
+    await captureServerEvent({
       distinctId: user.id,
       event: "list_unfollowed",
       properties: { list_id: id },
@@ -93,7 +93,7 @@ export async function POST(req: NextRequest, { params }: Params) {
         { status: 500 },
       );
     }
-    captureServerEvent({
+    await captureServerEvent({
       distinctId: user.id,
       event: "list_followed",
       properties: { list_id: id },
@@ -181,7 +181,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     }
   }
 
-  captureServerEvent({
+  await captureServerEvent({
     distinctId: user.id,
     event: "list_followed",
     properties: { list_id: id },

@@ -193,7 +193,7 @@ export async function POST(request: NextRequest) {
   );
 
   // Track YouTube sync
-  captureServerEvent({
+  await captureServerEvent({
     distinctId: user.id,
     event: "youtube_sync_applied",
     properties: {
