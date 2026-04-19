@@ -2,7 +2,6 @@ import { z } from "zod";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getStripe } from "@/lib/stripe";
-import { updateSubscriptionStatus } from "@/lib/stripe/helpers";
 import { logger } from "@/lib/logger";
 import { checkRateLimit, authRateLimit } from "@/lib/rate-limit";
 
@@ -38,7 +37,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const rateLimitResponse = await checkRateLimit(authRateLimit, `cancel:${user.id}`);
+  const rateLimitResponse = await checkRateLimit(
+    authRateLimit,
+    `cancel:${user.id}`,
+  );
   if (rateLimitResponse) return rateLimitResponse;
 
   const parsed = bodySchema.safeParse(await req.json());
@@ -92,13 +94,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ accepted: true });
   }
 
-  // Cancel subscription
+  // Cancel at period end: the subscription stays active until the current
+  // billing period ends, then Stripe fires customer.subscription.deleted which
+  // downgrades the profile in the webhook handler. Keeps revenue for the paid
+  // period and leaves a rescue window for win-back.
   if (profile?.stripe_subscription_id) {
     try {
-      await stripe.subscriptions.cancel(profile.stripe_subscription_id);
-      logger.info(`Subscription cancelled for user: ${userId}`);
+      await stripe.subscriptions.update(profile.stripe_subscription_id, {
+        cancel_at_period_end: true,
+      });
+      logger.info(`Subscription scheduled for cancellation: ${userId}`);
     } catch (err) {
-      logger.error("Failed to cancel subscription:", err);
+      logger.error("Failed to schedule subscription cancellation:", err);
       return NextResponse.json(
         { error: "Failed to cancel subscription" },
         { status: 500 },
@@ -106,15 +113,5 @@ export async function POST(req: Request) {
     }
   }
 
-  // Update subscription status to cancelled (inactive)
-  await updateSubscriptionStatus(supabase, userId, "cancelled", false);
-
-  // Clear subscription ID
-  await supabase
-    .from("profiles")
-    .update({ stripe_subscription_id: null })
-    .eq("id", userId);
-
-  logger.info(`Profile reverted to free plan for user: ${userId}`);
   return NextResponse.json({ cancelled: true });
 }
