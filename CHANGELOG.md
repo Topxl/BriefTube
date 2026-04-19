@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-04-19
+
+FEATURE: add deliveries.listened_at column + /api/deliveries/[id]/listened — first play/expand marks engagement for streak calculation
+FEATURE: streaks now based on real engagement (play or expand), not just delivery receipt — incentivizes users to actually consume their summaries
+FEATURE: add compact StreakChip in dashboard header — flame + streak number, tap to open full StatsSheet. Hidden when no active streak to avoid demoralizing empty states
+FEATURE: add streak break warning email — daily Inngest cron at 18 UTC finds users with streak ≥3 who haven't engaged today, sends motivational email (respects email_announcements opt-out, deduped per day)
+FEATURE: GitHub-style engagement heatmap in StatsSheet — last 13 weeks × 7 days grid, color intensity based on daily engagement count (orange-400)
+FEATURE: StatsSheet streak card now shows personal best next to current streak (Trophy icon) for loss-aversion framing
+REFACTOR: extract markEngaged helper in summary-row.tsx — deduplicates localStorage read-state logic across 3 engagement points
+REFACTOR: remove unused duplicate personal-stats.tsx component
+
+## 2026-04-17
+
+FEATURE: add open tracking pixel to daily digest emails — email_logs.opened_at now populated for newsletters
+FEATURE: add ?ref=email to daily digest links — allows PostHog to distinguish email vs dashboard traffic
+
 ## 2026-04-16
 
 FEATURE: add loading.tsx skeletons for Lists and Profile pages — instant navigation between dashboard tabs

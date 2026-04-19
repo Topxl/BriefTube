@@ -26,6 +26,7 @@ type Props = {
   unsubscribeUrl: string;
   language: string;
   fullSummary?: boolean;
+  trackingPixelUrl?: string;
 };
 
 export function DailyNewsletterEmail({
@@ -33,6 +34,7 @@ export function DailyNewsletterEmail({
   date,
   unsubscribeUrl,
   fullSummary = false,
+  trackingPixelUrl,
 }: Props) {
   return (
     <Html>
@@ -82,11 +84,14 @@ export function DailyNewsletterEmail({
                     : video.summary}
               </Text>
               <div style={buttonRow}>
-                <Button href={video.briefUrl} style={primaryButton}>
+                <Button
+                  href={`${video.briefUrl}&ref=email`}
+                  style={primaryButton}
+                >
                   Listen to audio
                 </Button>
                 <Button
-                  href={`https://www.brief-tube.com/videos/${video.videoId}`}
+                  href={`https://www.brief-tube.com/videos/${video.videoId}?ref=email`}
                   style={secondaryButton}
                 >
                   Read full summary
@@ -98,6 +103,17 @@ export function DailyNewsletterEmail({
               {i < videos.length - 1 && <Hr style={cardDivider} />}
             </Section>
           ))}
+
+          {/* Tracking pixel */}
+          {trackingPixelUrl && (
+            <Img
+              src={trackingPixelUrl}
+              alt=""
+              width="1"
+              height="1"
+              style={{ display: "block", width: "1px", height: "1px" }}
+            />
+          )}
 
           <Hr style={hr} />
 

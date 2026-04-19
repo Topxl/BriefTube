@@ -12,6 +12,7 @@ import { ProcessingVideoCard } from "@/components/dashboard/processing-video-car
 import { PendingVideoPickup } from "@/components/dashboard/pending-video-pickup";
 import { PendingVideoProcessor } from "@/components/dashboard/pending-video-processor";
 import { StatsSheet } from "@/components/dashboard/stats-sheet";
+import { StreakChip } from "@/components/dashboard/streak-chip";
 import { ChannelsSheet } from "@/components/dashboard/channels-sheet";
 import { VideoHighlighter } from "@/components/dashboard/video-highlighter";
 import type {
@@ -266,6 +267,9 @@ async function FeedSection({ userId }: { userId: string }) {
       initialChannelStates={initialChannelStates}
       headerRight={
         <>
+          <Suspense fallback={null}>
+            <StreakChip userId={userId} />
+          </Suspense>
           <Suspense
             fallback={
               <div className="h-8 w-16 animate-pulse rounded-md bg-white/[0.06]" />

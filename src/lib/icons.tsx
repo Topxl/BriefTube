@@ -79,6 +79,7 @@ import {
   TrendingUp as _TrendingUp,
   BarChart2 as _BarChart2,
   Flame as _Flame,
+  Trophy as _Trophy,
   Inbox as _Inbox,
   Bell as _Bell,
   BellOff as _BellOff,
@@ -172,6 +173,7 @@ export const ShieldAlert = wrap(_ShieldAlert);
 export const TrendingUp = wrap(_TrendingUp);
 export const BarChart2 = wrap(_BarChart2);
 export const Flame = wrap(_Flame);
+export const Trophy = wrap(_Trophy);
 export const Inbox = wrap(_Inbox);
 export const Bell = wrap(_Bell);
 export const BellOff = wrap(_BellOff);

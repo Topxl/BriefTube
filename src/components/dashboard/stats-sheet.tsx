@@ -10,25 +10,37 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Flame, Clock, TrendingUp, Inbox, Loader2, X } from "@/lib/icons";
+import {
+  Flame,
+  Clock,
+  TrendingUp,
+  Trophy,
+  Inbox,
+  Loader2,
+  X,
+} from "@/lib/icons";
 import { useSession } from "@/lib/auth-client";
+
+const HEATMAP_DAYS = 91; // 13 weeks × 7 days
 
 type Stats = {
   thisMonth: number;
   total: number;
   timeSaved: string;
   streak: number;
+  bestStreak: number;
   topChannels: { name: string; count: number }[];
+  heatmap: { date: string; count: number }[]; // oldest first, length = HEATMAP_DAYS
 };
 
 function toDateStr(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-function computeStreak(deliveryDays: Set<string>): number {
-  if (deliveryDays.size === 0) return 0;
+function computeCurrentStreak(engagementDays: Set<string>): number {
+  if (engagementDays.size === 0) return 0;
 
-  const sorted = [...deliveryDays].sort();
+  const sorted = [...engagementDays].sort();
   const mostRecentStr = sorted.at(-1);
   if (!mostRecentStr) return 0;
 
@@ -46,13 +58,50 @@ function computeStreak(deliveryDays: Set<string>): number {
   for (let i = 0; i < 365; i++) {
     const d = new Date(mostRecent);
     d.setDate(d.getDate() - i);
-    if (deliveryDays.has(toDateStr(d))) {
+    if (engagementDays.has(toDateStr(d))) {
       streak++;
     } else {
       break;
     }
   }
   return streak;
+}
+
+function computeBestStreak(engagementDays: Set<string>): number {
+  if (engagementDays.size === 0) return 0;
+
+  const sorted = [...engagementDays].sort();
+  let best = 1;
+  let run = 1;
+
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = new Date(sorted[i - 1] ?? "");
+    const curr = new Date(sorted[i] ?? "");
+    const diff = Math.round((curr.getTime() - prev.getTime()) / 86_400_000);
+    if (diff === 1) {
+      run += 1;
+      if (run > best) best = run;
+    } else if (diff > 1) {
+      run = 1;
+    }
+  }
+  return best;
+}
+
+function buildHeatmap(
+  engagementCounts: Map<string, number>,
+): { date: string; count: number }[] {
+  const result: { date: string; count: number }[] = [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  for (let i = HEATMAP_DAYS - 1; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const dateStr = toDateStr(d);
+    result.push({ date: dateStr, count: engagementCounts.get(dateStr) ?? 0 });
+  }
+  return result;
 }
 
 export function StatsSheet() {
@@ -79,7 +128,7 @@ export function StatsSheet() {
           await Promise.all([
             supabase
               .from("deliveries")
-              .select("sent_at, video_id")
+              .select("sent_at, listened_at, video_id")
               .eq("user_id", userId)
               .eq("status", "sent")
               .order("sent_at", { ascending: false }),
@@ -95,7 +144,9 @@ export function StatsSheet() {
             total: 0,
             timeSaved: "~0min",
             streak: 0,
+            bestStreak: 0,
             topChannels: [],
+            heatmap: buildHeatmap(new Map()),
           });
           setLoading(false);
           return;
@@ -116,12 +167,18 @@ export function StatsSheet() {
           (d) => d.sent_at != null && new Date(d.sent_at) >= startOfMonth,
         ).length;
 
-        const deliveryDays = new Set(
-          deliveries
-            .filter((d) => d.sent_at != null)
-            .map((d) => toDateStr(new Date(d.sent_at ?? ""))),
-        );
-        const streak = computeStreak(deliveryDays);
+        // Per-day engagement counts (drives streak, best streak, and heatmap)
+        const engagementCounts = new Map<string, number>();
+        for (const d of deliveries) {
+          if (!d.listened_at) continue;
+          const day = toDateStr(new Date(d.listened_at));
+          engagementCounts.set(day, (engagementCounts.get(day) ?? 0) + 1);
+        }
+        const engagementDays = new Set(engagementCounts.keys());
+
+        const streak = computeCurrentStreak(engagementDays);
+        const bestStreak = computeBestStreak(engagementDays);
+        const heatmap = buildHeatmap(engagementCounts);
 
         const minutesSaved = total * 10;
         const timeSaved =
@@ -156,7 +213,9 @@ export function StatsSheet() {
           total,
           timeSaved,
           streak,
+          bestStreak,
           topChannels,
+          heatmap,
         });
       } finally {
         setLoading(false);
@@ -237,14 +296,59 @@ export function StatsSheet() {
                 <div className="flex items-center justify-between">
                   <p className="text-muted-foreground text-xs">Streak</p>
                   <Flame
-                    className={`h-3 w-3 ${stats.streak > 0 ? "text-orange-400" : "text-muted-foreground/40"}`}
+                    className={`h-3 w-3 ${stats.streak > 0 ? "text-red-500" : "text-muted-foreground/40"}`}
                   />
                 </div>
-                <p
-                  className={`text-xl font-bold tabular-nums ${stats.streak > 0 ? "text-orange-400" : ""}`}
-                >
-                  {stats.streak}
-                </p>
+                <div className="flex items-baseline gap-2">
+                  <p
+                    className={`text-xl font-bold tabular-nums ${stats.streak > 0 ? "text-red-500" : ""}`}
+                  >
+                    {stats.streak}
+                  </p>
+                  {stats.bestStreak > 0 && (
+                    <span className="text-muted-foreground flex items-center gap-1 text-xs tabular-nums">
+                      <Trophy className="h-3 w-3" />
+                      {stats.bestStreak}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Engagement heatmap (last 13 weeks) */}
+            <div className="nm-raised flex flex-col gap-2 rounded-2xl p-3">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium">Last 13 weeks</p>
+                <div className="text-muted-foreground flex items-center gap-1 text-[10px]">
+                  <span>Less</span>
+                  <span className="h-2 w-2 rounded-[2px] bg-white/[0.04]" />
+                  <span className="h-2 w-2 rounded-[2px] bg-red-500/20" />
+                  <span className="h-2 w-2 rounded-[2px] bg-red-500/50" />
+                  <span className="h-2 w-2 rounded-[2px] bg-red-500" />
+                  <span>More</span>
+                </div>
+              </div>
+              <div
+                className="grid grid-flow-col grid-rows-7 gap-[3px]"
+                style={{ gridAutoColumns: "minmax(0, 1fr)" }}
+              >
+                {stats.heatmap.map((cell) => {
+                  const cls =
+                    cell.count === 0
+                      ? "bg-white/[0.04]"
+                      : cell.count === 1
+                        ? "bg-red-500/20"
+                        : cell.count <= 3
+                          ? "bg-red-500/50"
+                          : "bg-red-500";
+                  return (
+                    <div
+                      key={cell.date}
+                      className={`aspect-square rounded-[2px] ${cls}`}
+                      title={`${cell.date}: ${cell.count} ${cell.count === 1 ? "summary" : "summaries"}`}
+                    />
+                  );
+                })}
               </div>
             </div>
 

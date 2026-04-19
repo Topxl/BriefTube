@@ -188,6 +188,19 @@ export function SummaryRow({
     }
   }, [delivery.id]);
 
+  const markEngaged = useCallback(() => {
+    if (isRead) return;
+    localStorage.setItem(`read:${delivery.id}`, "1");
+    setIsRead(true);
+    // Demo deliveries are synthetic and not present in the DB
+    if (delivery.id.startsWith("demo-")) return;
+    void fetch(`/api/deliveries/${delivery.id}/listened`, {
+      method: "POST",
+    }).catch(() => {
+      // Silent — engagement tracking is best-effort
+    });
+  }, [isRead, delivery.id]);
+
   const title = video?.video_title ?? resolvedTitle ?? null;
   const thumbnailUrl = `/api/thumbnail/${delivery.video_id}`;
 
@@ -199,10 +212,7 @@ export function SummaryRow({
     } else {
       audio.playbackRate = speed;
       void audio.play();
-      if (!isRead) {
-        localStorage.setItem(`read:${delivery.id}`, "1");
-        setIsRead(true);
-      }
+      markEngaged();
       capture("summary_played", {
         video_id: delivery.video_id,
         channel_id: delivery.video?.channel_id,
@@ -212,8 +222,7 @@ export function SummaryRow({
     setPlaying(!playing);
   }, [
     playing,
-    isRead,
-    delivery.id,
+    markEngaged,
     delivery.video_id,
     delivery.video?.channel_id,
     delivery.language,
@@ -407,10 +416,7 @@ export function SummaryRow({
           onClick={() => {
             if (!video?.summary) return;
             setShowSummary(!showSummary);
-            if (!isRead) {
-              localStorage.setItem(`read:${delivery.id}`, "1");
-              setIsRead(true);
-            }
+            markEngaged();
             capture("summary_expanded", {
               video_id: delivery.video_id,
               expanded: !showSummary,
@@ -724,10 +730,7 @@ export function SummaryRow({
           type="button"
           onClick={() => {
             setShowSummary(!showSummary);
-            if (!isRead) {
-              localStorage.setItem(`read:${delivery.id}`, "1");
-              setIsRead(true);
-            }
+            markEngaged();
             capture("summary_expanded", {
               video_id: delivery.video_id,
               expanded: !showSummary,
