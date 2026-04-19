@@ -17,7 +17,7 @@ export const POST = authRoute.handler(async (_req, { ctx }) => {
     .eq("user_id", ctx.user.id)
     .eq("platform", "whatsapp");
 
-  captureServerEvent({
+  await captureServerEvent({
     distinctId: ctx.user.id,
     event: "platform_disconnected",
     properties: { platform: "whatsapp" },

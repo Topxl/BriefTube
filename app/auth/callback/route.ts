@@ -37,7 +37,9 @@ export async function GET(request: Request) {
           const googleAvatar = (
             user.identities[0].identity_data as Record<string, unknown>
           ).avatar_url as string | undefined;
-          const meta = user.user_metadata as Record<string, unknown> | undefined;
+          const meta = user.user_metadata as
+            | Record<string, unknown>
+            | undefined;
           if (googleAvatar && meta?.avatar_url !== googleAvatar) {
             await supabase.auth.updateUser({
               data: { avatar_url: googleAvatar },
@@ -93,8 +95,7 @@ export async function GET(request: Request) {
               }
             }
 
-            // Track signup (fire-and-forget)
-            captureServerEvent({
+            await captureServerEvent({
               distinctId: user.id,
               event: "signup_completed",
               properties: {

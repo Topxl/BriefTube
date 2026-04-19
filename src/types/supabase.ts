@@ -14,6 +14,50 @@ export type Database = {
   };
   public: {
     Tables: {
+      abandoned_checkouts: {
+        Row: {
+          amount_total: number | null;
+          created_at: string;
+          currency: string | null;
+          id: string;
+          interval: string | null;
+          plan: string | null;
+          recovered_at: string | null;
+          stripe_session_id: string;
+          user_id: string;
+        };
+        Insert: {
+          amount_total?: number | null;
+          created_at?: string;
+          currency?: string | null;
+          id?: string;
+          interval?: string | null;
+          plan?: string | null;
+          recovered_at?: string | null;
+          stripe_session_id: string;
+          user_id: string;
+        };
+        Update: {
+          amount_total?: number | null;
+          created_at?: string;
+          currency?: string | null;
+          id?: string;
+          interval?: string | null;
+          plan?: string | null;
+          recovered_at?: string | null;
+          stripe_session_id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "abandoned_checkouts_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       cancellation_feedbacks: {
         Row: {
           created_at: string;

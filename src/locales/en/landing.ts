@@ -23,6 +23,8 @@ export const landing = {
     subtitle:
       "Add your channels, and BriefTube handles the rest. Every new upload gets summarized by AI and turned into a short audio file. Listen from the dashboard, subscribe as a private podcast, or get it pushed to Telegram, Discord, or Slack.",
     ctaPrimary: "Start listening for free",
+    ctaPricing: "See pricing",
+    ctaPricingMobile: "Or see pricing",
     ctaSecondary: "See a live example",
     socialProof: `No credit card · Cancel anytime · ${TRIAL}-day Pro trial`,
     postTrialNote: `After trial: ${FREE} channels free forever. No card, no catch.`,

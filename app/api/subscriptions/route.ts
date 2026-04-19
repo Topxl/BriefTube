@@ -346,7 +346,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  captureServerEvent({
+  await captureServerEvent({
     distinctId: user.id,
     event: "channel_added",
     properties: {
@@ -357,7 +357,7 @@ export async function POST(request: NextRequest) {
 
   // Track "time to first value" — first channel is the key activation moment
   if ((activeCount ?? 0) === 0) {
-    captureServerEvent({
+    await captureServerEvent({
       distinctId: user.id,
       event: "first_channel_added",
       properties: {
@@ -527,7 +527,7 @@ export async function PATCH(request: NextRequest) {
   // Track channel activation/pause
   if (active !== undefined) {
     if (active) {
-      captureServerEvent({
+      await captureServerEvent({
         distinctId: user.id,
         event: "channel_activated",
         properties: {
@@ -537,7 +537,7 @@ export async function PATCH(request: NextRequest) {
         },
       });
     } else {
-      captureServerEvent({
+      await captureServerEvent({
         distinctId: user.id,
         event: "channel_paused",
         properties: {
@@ -694,7 +694,7 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  captureServerEvent({
+  await captureServerEvent({
     distinctId: user.id,
     event: "channel_removed",
     properties: {

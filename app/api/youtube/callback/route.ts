@@ -239,7 +239,7 @@ export async function GET(request: NextRequest) {
 
   // Track YouTube import
   if (imported > 0 || skipped > 0) {
-    captureServerEvent({
+    await captureServerEvent({
       distinctId: user.id,
       event: "youtube_imported",
       properties: {

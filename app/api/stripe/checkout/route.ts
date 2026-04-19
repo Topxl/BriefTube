@@ -17,7 +17,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const rateLimitResponse = await checkRateLimit(authRateLimit, `checkout:${user.id}`);
+  const rateLimitResponse = await checkRateLimit(
+    authRateLimit,
+    `checkout:${user.id}`,
+  );
   if (rateLimitResponse) return rateLimitResponse;
 
   // Read interval, plan, and referral from form body
@@ -58,14 +61,20 @@ export async function POST(req: NextRequest) {
     user.email ?? profile?.email ?? "",
   );
 
-  // If still no customer, create one
+  // If still no customer, create one.
+  // idempotencyKey prevents race conditions: parallel clicks / retries with
+  // the same userId return the same Stripe customer instead of creating
+  // duplicates.
   if (!customerId) {
-    const customer = await stripe.customers.create({
-      email: user.email ?? profile?.email ?? "",
-      metadata: {
-        userId: user.id,
+    const customer = await stripe.customers.create(
+      {
+        email: user.email ?? profile?.email ?? "",
+        metadata: {
+          userId: user.id,
+        },
       },
-    });
+      { idempotencyKey: `customer:${user.id}` },
+    );
 
     customerId = customer.id;
 
@@ -99,10 +108,12 @@ export async function POST(req: NextRequest) {
     cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/dashboard/profile`,
     metadata: {
       userId: user.id,
+      plan: String(plan),
+      interval,
     },
   });
 
-  captureServerEvent({
+  await captureServerEvent({
     distinctId: user.id,
     event: "checkout_started",
     properties: {

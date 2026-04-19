@@ -2,6 +2,12 @@
 
 ## 2026-04-19
 
+FIX: Stripe cancel route now uses cancel_at_period_end=true instead of immediate cancel — users keep access until period end, UI already displayed the Ending state
+FIX: Stripe customer creation race condition — add idempotencyKey on customers.create to prevent duplicate customers when users click "Pay" multiple times (observed 4-11 customers per user)
+FEATURE: Add checkout abandoned email recovery flow — Stripe checkout.session.expired handler + abandoned_checkouts table + Inngest cron sends recovery email 24-48h after abandon
+FEATURE: Add activation email for users who signed up but haven't connected a channel within 24-48h (complements J+1/J+3 which only targeted active users)
+FEATURE: Add "See pricing" CTA in landing Hero (desktop button + mobile link) — pricing page previously had 0.16% visibility (3 visitors / 1894)
+FIX: Signup tracking event not firing — refactor captureServerEvent as async singleton with explicit flush, await at all 20+ call sites
 FEATURE: add deliveries.listened_at column + /api/deliveries/[id]/listened — first play/expand marks engagement for streak calculation
 FEATURE: streaks now based on real engagement (play or expand), not just delivery receipt — incentivizes users to actually consume their summaries
 FEATURE: add compact StreakChip in dashboard header — flame + streak number, tap to open full StatsSheet. Hidden when no active streak to avoid demoralizing empty states
