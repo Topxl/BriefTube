@@ -67,6 +67,12 @@ export const POST = async (req: NextRequest) => {
       case "checkout.session.completed":
         await checkoutSessionCompleted(event.data.object);
         break;
+      case "checkout.session.async_payment_succeeded":
+        await checkoutSessionCompleted(event.data.object);
+        break;
+      case "checkout.session.async_payment_failed":
+        await checkoutSessionAsyncPaymentFailed(event.data.object);
+        break;
       case "checkout.session.expired":
         await checkoutSessionExpired(event.data.object);
         break;
@@ -303,6 +309,43 @@ const checkoutSessionCompleted = async (
       }
     }
   }
+};
+
+const checkoutSessionAsyncPaymentFailed = async (
+  sessionData: Stripe.Checkout.Session,
+) => {
+  const session = sessionData;
+
+  const customerId =
+    typeof session.customer === "string"
+      ? session.customer
+      : session.customer?.id;
+
+  if (!customerId) {
+    logger.warn("async_payment_failed missing customer");
+    return;
+  }
+
+  const supabase = createAdminClient();
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("id, email")
+    .eq("stripe_customer_id", customerId)
+    .maybeSingle();
+
+  if (!profile?.email) {
+    logger.error(`User not found for customer ID: ${customerId}`);
+    return;
+  }
+
+  logger.info(`Async payment failed for user: ${profile.id}`);
+
+  await sendEmail({
+    to: profile.email,
+    subject: "Your BriefTube payment failed",
+    html: PaymentFailedEmail(),
+  });
 };
 
 const checkoutSessionExpired = async (sessionData: Stripe.Checkout.Session) => {
