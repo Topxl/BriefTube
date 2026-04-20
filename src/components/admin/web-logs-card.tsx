@@ -30,16 +30,104 @@ type WebLogsApiResponse = {
   timestamp: string;
 };
 
+// Strips terminal ANSI color codes (e.g. \x1b[33m, \x1b[0m) the Next.js
+// logger emits when its output is captured via journalctl.
+// eslint-disable-next-line no-control-regex
+const ANSI_RE = /\u001b\[[0-9;]*m/g;
+
+// Matches a leading ISO-ish timestamp (with or without millis/Z).
+const TS_RE = /^(\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:\.\d+)?Z?)\s*/;
+
+// Noise patterns injected by the Next.js pretty logger output
+const NOISE_PATTERNS = [
+  /\.next\/server\/chunks\/\S+\.js:\d+\s*/g, // internal chunk path
+  /\bAppLogger\b\s*/g, // repeated logger name
+];
+
+function cleanBody(body: string): string {
+  let out = body;
+  for (const re of NOISE_PATTERNS) out = out.replace(re, "");
+  // Collapse whitespace runs to single space
+  return out.replace(/\s+/g, " ").trim();
+}
+
+// Merges multi-line entries (Next.js pretty-prints objects across several lines)
+// into a single line per log event. A line starting with a timestamp begins a
+// new entry; everything else is folded into the previous one.
+function mergeMultiline(rawLines: string[]): string[] {
+  const out: string[] = [];
+  for (const raw of rawLines) {
+    const stripped = raw.replace(ANSI_RE, "").trimEnd();
+    if (!stripped.trim()) continue;
+
+    const startsEntry = TS_RE.test(stripped) || out.length === 0;
+    if (startsEntry) {
+      out.push(stripped);
+    } else {
+      out[out.length - 1] = `${out[out.length - 1] ?? ""} ${stripped.trim()}`;
+    }
+  }
+  return out;
+}
+
 function LogLine({ line }: { line: string }) {
+  const tsMatch = TS_RE.exec(line);
+  const timestamp = tsMatch?.[1] ?? null;
+  const raw = tsMatch ? line.slice(tsMatch[0].length) : line;
+  const body = cleanBody(raw);
+
+  const levelMatch = /\b(FATAL|ERROR|WARN|INFO|DEBUG|INF|WRN|ERR)\b/.exec(body);
+  const rawLevel = levelMatch?.[1] ?? null;
+  // Normalize Infisical's 3-letter levels to standard 4-5 letter ones
+  const level =
+    rawLevel === "INF"
+      ? "INFO"
+      : rawLevel === "WRN"
+        ? "WARN"
+        : rawLevel === "ERR"
+          ? "ERROR"
+          : rawLevel;
+
+  // Strip the level token from the body (with its surrounding whitespace)
+  const message = rawLevel
+    ? body.replace(new RegExp(`\\b${rawLevel}\\b\\s*`), "")
+    : body;
+
   const isError =
-    line.includes("ERROR") ||
-    line.includes("error") ||
-    line.includes("failed") ||
-    line.includes("Failed");
+    level === "ERROR" ||
+    level === "FATAL" ||
+    /\b(failed|Failed|exception|Exception|segmentation fault)\b/.test(message);
+  const isWarn = level === "WARN";
 
-  const color = isError ? "text-red-400" : "text-muted-foreground";
+  const levelColor = isError
+    ? "bg-red-500/15 text-red-400"
+    : isWarn
+      ? "bg-yellow-500/15 text-yellow-400"
+      : level === "INFO"
+        ? "bg-blue-500/10 text-blue-300/80"
+        : "bg-white/[0.04] text-muted-foreground";
 
-  return <p className={`font-mono text-[10px] leading-5 ${color}`}>{line}</p>;
+  const messageColor = isError
+    ? "text-red-400"
+    : isWarn
+      ? "text-yellow-400"
+      : "text-foreground/80";
+
+  return (
+    <p className="flex gap-2 font-mono text-[10px] leading-5">
+      {timestamp && (
+        <span className="shrink-0 text-white/30 tabular-nums">{timestamp}</span>
+      )}
+      {level && (
+        <span
+          className={`inline-flex shrink-0 items-center rounded px-1.5 text-[9px] font-medium ${levelColor}`}
+        >
+          {level}
+        </span>
+      )}
+      <span className={`min-w-0 break-all ${messageColor}`}>{message}</span>
+    </p>
+  );
 }
 
 export function WebLogsCard({
@@ -233,7 +321,7 @@ export function WebLogsCard({
             </button>
           </div>
           <div className="flex flex-col gap-0.5">
-            {data?.recentErrors.map((line, i) => (
+            {mergeMultiline(data?.recentErrors ?? []).map((line, i) => (
               <LogLine key={i} line={line} />
             ))}
           </div>
@@ -274,8 +362,8 @@ export function WebLogsCard({
               <span className="text-muted-foreground text-xs">Loading…</span>
             </div>
           ) : (
-            <div className="flex flex-col">
-              {(data?.logLines ?? []).map((line, i) => (
+            <div className="flex flex-col gap-0.5">
+              {mergeMultiline(data?.logLines ?? []).map((line, i) => (
                 <LogLine key={i} line={line} />
               ))}
             </div>

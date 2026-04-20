@@ -30,6 +30,7 @@ type PricesData = {
 type Props = {
   isLoggedIn: boolean;
   isPro: boolean;
+  initialPrices?: PricesData | null;
 };
 
 const FREE_FEATURES = [
@@ -53,9 +54,9 @@ const PRO_FEATURES = [
   "Early access to features",
 ];
 
-export function PricingCards({ isLoggedIn, isPro }: Props) {
+export function PricingCards({ isLoggedIn, isPro, initialPrices }: Props) {
   const [interval, setInterval] = useState<Interval>("year");
-  const [prices, setPrices] = useState<PricesData | null>(null);
+  const [prices, setPrices] = useState(initialPrices ?? null);
   const [referral, setReferral] = useState("");
 
   useEffect(() => {
@@ -69,13 +70,15 @@ export function PricingCards({ isLoggedIn, isPro }: Props) {
   }, []);
 
   useEffect(() => {
+    // Skip client fetch if we already received prices from the server
+    if (initialPrices) return;
     fetch("/api/stripe/price")
       .then(async (res) => res.json())
       .then((data: PricesData) => {
         if (data.monthly.amount) setPrices(data);
       })
       .catch((err) => logger.error("Failed to fetch price:", err));
-  }, []);
+  }, [initialPrices]);
 
   const proPriceData = prices?.pro
     ? interval === "year"
@@ -151,7 +154,7 @@ export function PricingCards({ isLoggedIn, isPro }: Props) {
         )}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="mt-4 grid gap-4 md:grid-cols-3">
         {/* Free Plan */}
         <div className="nm-raised overflow-hidden rounded-2xl">
           <div className="border-b border-white/[0.04] px-5 py-5">
@@ -256,9 +259,9 @@ export function PricingCards({ isLoggedIn, isPro }: Props) {
         </div>
 
         {/* Pro Plan */}
-        <div className="nm-raised relative overflow-hidden rounded-2xl border border-red-500/[0.12]">
-          <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-            <span className="nm-raised-sm inline-flex items-center rounded-full bg-red-600 px-3 py-0.5 text-xs font-medium text-white shadow-[0_0_12px_rgba(239,68,68,0.3)]">
+        <div className="nm-raised relative rounded-2xl border border-red-500/[0.12]">
+          <div className="absolute -top-3 left-1/2 z-10 -translate-x-1/2">
+            <span className="inline-flex items-center rounded-full bg-red-600 px-3 py-0.5 text-xs font-medium whitespace-nowrap text-white shadow-[0_0_12px_rgba(239,68,68,0.3)]">
               Most popular
             </span>
           </div>
