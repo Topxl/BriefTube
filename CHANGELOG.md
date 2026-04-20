@@ -2,6 +2,8 @@
 
 ## 2026-04-21
 
+FEATURE: Stripe Checkout auto-discovers payment methods (Apple Pay, Google Pay, Link, PayPal, SEPA, etc.) instead of forcing cards only — enable methods in Stripe Dashboard and they appear automatically
+FEATURE: Handle checkout.session.async_payment_succeeded (activate sub after async payment clears) and async_payment_failed (notify user) webhook events for PayPal/SEPA support
 FIX(deploy): copy .next/*.js manifest files during deploy — required-server-files.js was a stale symlink to .json causing "SyntaxError: Unexpected token ':'" on every request
 
 ## 2026-04-20
