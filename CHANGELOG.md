@@ -2,6 +2,8 @@
 
 ## 2026-04-21
 
+FIX(landing): swap mismatched FAQ answers — Q2 (price question) now shows the pricing rationale, Q3 got its missing question back ("How does it actually work?")
+FIX(pricing): /pricing page was missing Navbar + Footer, users landed on a bare page with no way back to the rest of the site
 FIX(admin): strip ANSI escape codes from web logs card — terminal color sequences (\x1b[33m etc) appeared as literal "␛[33m" in the UI
 FEATURE(admin): extract and highlight timestamps from web log lines, color by level (ERROR/WARN/INFO), indent continuation lines of multi-line objects
 REFACTOR: Repurpose announcement broadcast into Stripe win-back — targets all Stripe customers who never paid (fetched live from Stripe API), new feedback-first email asking why they didn't subscribe with free-month offer on reply

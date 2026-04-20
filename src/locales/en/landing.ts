@@ -188,14 +188,16 @@ export const landing = {
           "No. You can switch to manual mode, browse new videos from your channels in your BriefTube inbox, and pick which ones to summarize. Great if you follow big channels and only care about specific topics. Prefer full auto? Keep it on, or toggle it per channel.",
       },
       {
+        // This question slot is overridden by priceQuestionFn in the component,
+        // so this string is never shown. Keep a label for clarity in the data.
+        question: "(price question — overridden in component)",
+        answer:
+          "Yeah, it is. We keep things lean: no big cloud infra, shared processing across users for the same video, free TTS. The goal was to build something I'd actually pay for myself, so the price had to make sense.",
+      },
+      {
         question: "How does it actually work?",
         answer:
           'When a channel you follow uploads, the video lands in your BriefTube inbox. You click "Summarize" on the ones worth your time, or enable auto mode to have them all summarized ahead of time. Summaries come as text and audio, and you can push them to Telegram, Discord, Slack, or a private podcast feed.',
-      },
-      {
-        question: "",
-        answer:
-          "Yeah, it is. We keep things lean: no big cloud infra, shared processing across users for the same video, free TTS. The goal was to build something I'd actually pay for myself, so the price had to make sense.",
       },
       {
         question: "Which languages work?",
