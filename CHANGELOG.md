@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-04-21
+
+FIX(deploy): copy .next/*.js manifest files during deploy — required-server-files.js was a stale symlink to .json causing "SyntaxError: Unexpected token ':'" on every request
+
 ## 2026-04-20
 
 FIX: AlertDialog a11y warning — dialog-manager now renders a screen-reader-only fallback description when dialog.description is undefined (e.g. onboarding feedback input dialog)
