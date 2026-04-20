@@ -95,8 +95,12 @@ export function DialogComponent(props: { dialog: Dialog }) {
             <AlertDialogDescription>
               {dialog.description}
             </AlertDialogDescription>
-          ) : (
+          ) : dialog.description ? (
             dialog.description
+          ) : (
+            <AlertDialogDescription className="sr-only">
+              {dialog.title ?? "Dialog"}
+            </AlertDialogDescription>
           )}
         </AlertDialogHeader>
 
