@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-04-20
+
+FIX: AlertDialog a11y warning — dialog-manager now renders a screen-reader-only fallback description when dialog.description is undefined (e.g. onboarding feedback input dialog)
+
 ## 2026-04-19
 
 FIX: persist "Skip" click on GettingStarted platform step — was only updating local React state, banner reappeared on reload
