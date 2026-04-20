@@ -49,29 +49,29 @@ const Footer = dynamic(async () =>
 export const metadata: Metadata = {
   title: {
     absolute:
-      "BriefTube: Automatic YouTube Summary App | Audio delivered to Telegram, Discord & Slack",
+      "BriefTube: YouTube Summaries On Your Terms | Text or audio, delivered where you want",
   },
-  description: `BriefTube is an automatic YouTube summary app. Get an AI-generated audio summary of every new video from your channels, delivered to Telegram, Discord or Slack within 30 minutes. Free for ${SiteConfig.freeChannelsLimit} channels.`,
+  description: `BriefTube turns your YouTube channels into a clean inbox. Browse new videos, pick what's worth your time, and get text or audio summaries delivered to Telegram, a private podcast feed, or your dashboard. Free for ${SiteConfig.freeChannelsLimit} channels.`,
   alternates: {
     canonical: SiteConfig.prodUrl,
   },
   openGraph: {
     title:
-      "BriefTube: Automatic YouTube Summary App | Audio delivered to Telegram, Discord & Slack",
-    description: `Stop falling behind on your YouTube channels. BriefTube turns every new video into a short audio summary and delivers it automatically to Telegram, Discord or Slack. Free for ${SiteConfig.freeChannelsLimit} channels.`,
+      "BriefTube: YouTube Summaries On Your Terms | Text or audio, delivered where you want",
+    description: `See every new video from your YouTube channels in one inbox. Summarize the ones worth your time, skip the rest. Text or audio, your call. Free for ${SiteConfig.freeChannelsLimit} channels.`,
     images: [
       {
         url: "/opengraph-image",
         width: 1200,
         height: 630,
-        alt: "BriefTube: YouTube audio summaries delivered to Telegram, Discord and Slack",
+        alt: "BriefTube: YouTube summaries, text or audio, delivered where you want",
       },
     ],
   },
   twitter: {
     title:
-      "BriefTube: Automatic YouTube Summary App | Audio delivered to Telegram, Discord & Slack",
-    description: `Stop falling behind on your YouTube channels. BriefTube turns every new video into a short audio summary and delivers it automatically to Telegram, Discord or Slack. Free for ${SiteConfig.freeChannelsLimit} channels.`,
+      "BriefTube: YouTube Summaries On Your Terms | Text or audio, delivered where you want",
+    description: `See every new video from your YouTube channels in one inbox. Summarize the ones worth your time, skip the rest. Text or audio, your call. Free for ${SiteConfig.freeChannelsLimit} channels.`,
   },
 };
 

@@ -72,9 +72,9 @@ export default async function PricingPage() {
             dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
           />
         ))}
-        <h1 className="text-3xl font-bold">Choose Your Plan</h1>
+        <h1 className="text-3xl font-bold">Simple pricing, no catch</h1>
         <p className="text-muted-foreground mt-2 text-sm">
-          Simple pricing. Upgrade or cancel anytime.
+          {`Free forever for ${SiteConfig.freeChannelsLimit} channels. Upgrade when you want more.`}
         </p>
       </div>
       <PricingCards isLoggedIn={!!user} isPro={isPro} />

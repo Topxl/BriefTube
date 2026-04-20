@@ -2,6 +2,9 @@
 
 ## 2026-04-21
 
+FIX(admin): strip ANSI escape codes from web logs card — terminal color sequences (\x1b[33m etc) appeared as literal "␛[33m" in the UI
+FEATURE(admin): extract and highlight timestamps from web log lines, color by level (ERROR/WARN/INFO), indent continuation lines of multi-line objects
+REFACTOR: Repurpose announcement broadcast into Stripe win-back — targets all Stripe customers who never paid (fetched live from Stripe API), new feedback-first email asking why they didn't subscribe with free-month offer on reply
 FEATURE: Stripe Checkout auto-discovers payment methods (Apple Pay, Google Pay, Link, PayPal, SEPA, etc.) instead of forcing cards only — enable methods in Stripe Dashboard and they appear automatically
 FEATURE: Handle checkout.session.async_payment_succeeded (activate sub after async payment clears) and async_payment_failed (notify user) webhook events for PayPal/SEPA support
 FIX(deploy): copy .next/*.js manifest files during deploy — required-server-files.js was a stale symlink to .json causing "SyntaxError: Unexpected token ':'" on every request

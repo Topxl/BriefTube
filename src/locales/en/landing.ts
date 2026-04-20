@@ -18,11 +18,11 @@ export const landing = {
   },
   hero: {
     badge: `Free up to ${FREE} channels. No credit card needed.`,
-    heading: "Stay on top of your YouTube channels",
-    headingHighlight: "without watching a single video",
+    heading: "See what's new. Pick what matters.",
+    headingHighlight: "Skip the rest.",
     subtitle:
-      "Add your channels, and BriefTube handles the rest. Every new upload gets summarized by AI and turned into a short audio file. Listen from the dashboard, subscribe as a private podcast, or get it pushed to Telegram, Discord, or Slack.",
-    ctaPrimary: "Start listening for free",
+      'Add your YouTube channels. New videos land in one inbox. Hit "Summarize" on the ones worth your time, then read it, listen to it, or get it as a podcast. No algorithm pushing what you should watch.',
+    ctaPrimary: "Try it free",
     ctaPricing: "See pricing",
     ctaPricingMobile: "Or see pricing",
     ctaSecondary: "See a live example",
@@ -49,48 +49,53 @@ export const landing = {
           "On a commute, at the gym, cooking dinner. Your ears are free but a 40-minute video isn't happening.",
       },
       {
-        title: "You miss things that matter",
+        title:
+          "You can't tell what's worth watching until you've already watched it",
         description:
-          "That one video with the insight you actually needed? You'll probably never see it.",
+          "That one video with the insight you actually needed? You'll probably never find it in time.",
       },
     ],
   },
   howItWorks: {
     heading: "How it works",
-    subtitle: "Three steps to set up. Nothing to do after that.",
+    subtitle: "Three steps to set up. Stay in control.",
     stepPrefix: "Step",
     steps: [
       {
-        title: "Add your channels",
+        title: "Add your YouTube channels",
         description:
-          "Paste a YouTube channel URL into the dashboard. That's all. No RSS setup, no API keys.",
+          "Paste a channel URL, a handle like @MKBHD, or import your YouTube subscriptions in one click.",
       },
       {
-        title: "AI reads each new video",
+        title: "See every new video in one clean inbox",
         description:
-          "When something new drops, BriefTube pulls the transcript and generates a summary. Takes under a minute for most videos.",
+          "Instead of scrolling YouTube, browse the new uploads from the channels you follow in one feed. No recommendations, no rabbit holes.",
       },
       {
-        title: "Get it wherever you are",
+        title: "Summarize the ones worth it",
         description:
-          "Your audio summary is ready within minutes. Listen from the dashboard, subscribe to your private podcast RSS feed, or get it pushed to Telegram, Discord, or Slack. More integrations coming.",
+          'Click "Summarize" on any video you want. Get it as text, audio, or a private podcast feed. Prefer full auto? Switch it on per channel.',
       },
     ],
   },
   features: {
     heading: "What you actually get",
-    subtitle:
-      "Set it up once. New summaries appear automatically, ready to play.",
+    subtitle: "Browse what's new. Pick what's worth reading or listening to.",
     items: [
+      {
+        title: "You decide what gets summarized",
+        description:
+          'Browse new videos from your channels in one feed. Click "Summarize" on the ones that look worth your time. No more auto-generated noise you\'ll never read.',
+      },
       {
         title: "Summaries that go beyond the title",
         description:
           "The AI covers the main arguments, examples, and takeaways. Not just a rephrased headline.",
       },
       {
-        title: "Audio that doesn't sound like a robot",
+        title: "Read it or listen to it. Your call.",
         description:
-          "We use Microsoft Edge's neural TTS voices. Not perfect, but genuinely listenable.",
+          "Short text summaries for quick skimming, or neural TTS audio for when your hands are busy. Both available on every summary.",
       },
       {
         title: "Fast enough to be useful",
@@ -178,9 +183,14 @@ export const landing = {
     priceQuestionFn: (price: string) => `Wait, it's only ${price}/month?`,
     items: [
       {
+        question: "Do I have to let it summarize everything automatically?",
+        answer:
+          "No. You can switch to manual mode, browse new videos from your channels in your BriefTube inbox, and pick which ones to summarize. Great if you follow big channels and only care about specific topics. Prefer full auto? Keep it on, or toggle it per channel.",
+      },
+      {
         question: "How does it actually work?",
         answer:
-          "Each channel you follow gets checked automatically through YouTube's RSS feed. The moment a new video appears, BriefTube reads its transcript, generates a summary, and converts it to audio, usually within a few minutes. You can play it from your dashboard, or have it pushed to Telegram, Discord, Slack, or your podcast app. No manual steps on your end.",
+          'When a channel you follow uploads, the video lands in your BriefTube inbox. You click "Summarize" on the ones worth your time, or enable auto mode to have them all summarized ahead of time. Summaries come as text and audio, and you can push them to Telegram, Discord, Slack, or a private podcast feed.',
       },
       {
         question: "",
