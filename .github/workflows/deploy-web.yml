@@ -72,6 +72,7 @@ jobs:
             # Update .next manifest files — glob (*) skips dotfiles so .next/ is not
             # included above; copy manifests explicitly to register new routes correctly.
             cp .next/standalone/.next/*.json "$WEB_DIR/.next/"
+            cp .next/standalone/.next/*.js "$WEB_DIR/.next/" 2>/dev/null || true
             cp .next/standalone/.next/BUILD_ID "$WEB_DIR/.next/" 2>/dev/null || true
 
             # Merge new static chunks with old ones (don't delete old chunks)
