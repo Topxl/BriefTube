@@ -53,6 +53,25 @@ export async function GET(request: Request) {
           .eq("id", user.id)
           .single();
 
+        // Supabase-native "first login ever" signal — created_at and last_sign_in_at
+        // are set together in the OAuth transaction, so they match only on the very
+        // first sign-in. Independent of profile.trial_ends_at, so the event still
+        // fires if the trial column gets pre-populated by a future trigger change.
+        const isFirstLogin =
+          user.last_sign_in_at != null &&
+          user.created_at === user.last_sign_in_at;
+
+        if (isFirstLogin) {
+          await captureServerEvent({
+            distinctId: user.id,
+            event: "signup_completed",
+            properties: {
+              email: user.email,
+              provider: "google",
+            },
+          });
+        }
+
         if (profile?.trial_ends_at === null) {
           const admin = createAdminClient();
           let deletedAccount = null;
@@ -94,15 +113,6 @@ export async function GET(request: Request) {
                   });
               }
             }
-
-            await captureServerEvent({
-              distinctId: user.id,
-              event: "signup_completed",
-              properties: {
-                email: user.email,
-                provider: "google",
-              },
-            });
           }
         }
 
