@@ -1,40 +1,52 @@
-import posthog from "posthog-js";
+import type { PostHog } from "posthog-js";
 
-export const posthogClient = posthog;
+let posthogInstance: PostHog | null = null;
+let initPromise: Promise<PostHog | null> | null = null;
 
-let initialized = false;
+async function loadPostHog(): Promise<PostHog | null> {
+  if (posthogInstance) return posthogInstance;
+  const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+  if (typeof window === "undefined" || !key) {
+    return null;
+  }
+  if (initPromise) return initPromise;
+
+  initPromise = import("posthog-js").then(({ default: posthog }) => {
+    posthog.init(key, {
+      api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "/a",
+      ui_host: "https://us.posthog.com",
+      capture_pageview: false,
+      capture_pageleave: true,
+      autocapture: true,
+      opt_in_site_apps: true,
+      session_recording: {
+        maskAllInputs: true,
+        maskTextSelector: "[data-mask]",
+      },
+      loaded: (ph) => {
+        if (process.env.NODE_ENV === "development") ph.debug();
+      },
+    });
+    posthogInstance = posthog;
+    return posthog;
+  });
+
+  return initPromise;
+}
 
 export function ensurePostHogInit(): void {
-  if (
-    initialized ||
-    typeof window === "undefined" ||
-    !process.env.NEXT_PUBLIC_POSTHOG_KEY
-  ) {
-    return;
-  }
-  initialized = true;
-  posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY, {
-    api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "/a",
-    ui_host: "https://us.posthog.com",
-    capture_pageview: false,
-    capture_pageleave: true,
-    autocapture: true,
-    opt_in_site_apps: true,
-    session_recording: {
-      maskAllInputs: true,
-      maskTextSelector: "[data-mask]",
-    },
-    loaded: (ph) => {
-      if (process.env.NODE_ENV === "development") ph.debug();
-    },
-  });
+  void loadPostHog();
+}
+
+export function getPostHogInstance(): PostHog | null {
+  return posthogInstance;
 }
 
 export function capture(
   event: string,
   properties?: Record<string, unknown>,
 ): void {
-  if (typeof window === "undefined") return;
-  ensurePostHogInit();
-  posthog.capture(event, properties);
+  // Fire-and-forget: load posthog if not yet loaded, then capture.
+  // Callers don't await — keeps the existing sync API used across the app.
+  void loadPostHog().then((ph) => ph?.capture(event, properties));
 }

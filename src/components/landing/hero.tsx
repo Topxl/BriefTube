@@ -1,12 +1,18 @@
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { t } from "@/locales";
-import { HeroPlayer } from "./hero-player";
 import {
   HeroPricingCtaDesktop,
   HeroPricingCtaMobile,
 } from "./hero-pricing-cta";
 import { HeroUrlInput } from "./hero-url-input";
+
+// HeroPlayer lives below the fold and carries the big demo-summary blobs +
+// audio state. Keep it out of the initial JS bundle to speed up LCP/TBT.
+const HeroPlayer = dynamic(async () =>
+  import("./hero-player").then((m) => ({ default: m.HeroPlayer })),
+);
 
 const tl = t.landing.hero;
 

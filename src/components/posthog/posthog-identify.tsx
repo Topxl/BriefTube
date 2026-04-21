@@ -1,7 +1,6 @@
 "use client";
 
-import posthog from "posthog-js";
-import { ensurePostHogInit } from "@/lib/posthog/client";
+import { ensurePostHogInit, getPostHogInstance } from "@/lib/posthog/client";
 import { createClient } from "@/lib/supabase/client";
 import { useEffect } from "react";
 
@@ -12,7 +11,6 @@ export function PostHogIdentify() {
     void supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return;
 
-      // Fetch profile for richer person properties
       const { data: profile } = await supabase
         .from("profiles")
         .select(
@@ -20,6 +18,9 @@ export function PostHogIdentify() {
         )
         .eq("id", user.id)
         .single();
+
+      const posthog = getPostHogInstance();
+      if (!posthog) return;
 
       const wasAnonymous = posthog.get_distinct_id() !== user.id;
 
@@ -33,13 +34,10 @@ export function PostHogIdentify() {
         onboarding_completed: profile?.onboarding_completed,
       });
 
-      // Group by plan for aggregate analytics
       if (profile?.subscription_status) {
         posthog.group("plan", profile.subscription_status);
       }
 
-      // Re-capture the current pageview now that the person is identified,
-      // because $pageview fired before identify() resolved (async Supabase call).
       if (wasAnonymous) {
         posthog.capture("$pageview", { $current_url: window.location.href });
       }

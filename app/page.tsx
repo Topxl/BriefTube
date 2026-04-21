@@ -338,13 +338,6 @@ export default async function Home() {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
         />
       ))}
-      {/* Preload LCP image: WebP, local file served from same CDN, no external fetch */}
-      <link
-        rel="preload"
-        as="image"
-        href="/demo-thumb-1.webp"
-        fetchPriority="high"
-      />
       <Navbar />
       <Hero />
       <Suspense fallback={<div className="h-[110px]" />}>

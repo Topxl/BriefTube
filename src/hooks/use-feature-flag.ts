@@ -1,26 +1,25 @@
 "use client";
 
-import { usePostHog } from "posthog-js/react";
+import { getPostHogInstance, ensurePostHogInit } from "@/lib/posthog/client";
 import { useEffect, useState } from "react";
 
-export function useFeatureFlag(
-  flagKey: string,
-): boolean | string | undefined {
-  const posthog = usePostHog();
+export function useFeatureFlag(flagKey: string): boolean | string | undefined {
   const [value, setValue] = useState<boolean | string | undefined>(undefined);
 
   useEffect(() => {
-    // Get the flag value (might already be loaded)
+    ensurePostHogInit();
+    const posthog = getPostHogInstance();
+    if (!posthog) return;
+
     const v = posthog.getFeatureFlag(flagKey);
     if (v !== undefined) {
       setValue(v);
     }
-    // Listen for flag changes
     const unsubscribe = posthog.onFeatureFlags(() => {
       setValue(posthog.getFeatureFlag(flagKey));
     });
     return unsubscribe;
-  }, [posthog, flagKey]);
+  }, [flagKey]);
 
   return value;
 }

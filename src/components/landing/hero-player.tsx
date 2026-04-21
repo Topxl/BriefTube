@@ -201,8 +201,9 @@ export function HeroPlayer() {
                     alt=""
                     width={480}
                     height={360}
-                    fetchPriority={i === 0 ? "high" : "low"}
-                    loading={i === 0 ? "eager" : "lazy"}
+                    fetchPriority="low"
+                    loading="lazy"
+                    decoding="async"
                     className="absolute inset-0 h-full w-full object-cover opacity-[0.15]"
                   />
 

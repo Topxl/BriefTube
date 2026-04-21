@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-04-22
+
+FIX(posthog): rebuild broken "Growth & Onboarding" dashboard — 3 insights (Onboarding Funnel, Time to First Channel, Weekly Retention) had `query: null` and rendered empty; restored with FunnelsQuery/RetentionQuery definitions
+PERF(landing): lazy-load posthog-js via dynamic import (~200 KiB off the initial bundle) and defer init to requestIdleCallback after LCP
+PERF(landing): lazy-load HeroPlayer below-the-fold — its demo summary blobs and audio state no longer block hero render
+PERF(landing): drop wasted `<link rel="preload">` for demo-thumb-1.webp (image is below the fold, never LCP) and downgrade thumb to loading="lazy"
+PERF(landing): switch Rewardful script to strategy="lazyOnload" — only needed on signup/checkout, not landing
+PERF(landing): add preconnect to Cloudflare R2 audio CDN so HeroPlayer audio starts faster when user interacts
+REFACTOR(posthog): remove `<PostHogProvider>` from the sync tree — init is triggered inside PostHogPageView on idle, useFeatureFlag/identify now use the shared lazy instance
+
 ## 2026-04-21
 
 FIX(landing): swap mismatched FAQ answers — Q2 (price question) now shows the pricing rationale, Q3 got its missing question back ("How does it actually work?")
