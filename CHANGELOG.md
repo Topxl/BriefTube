@@ -4,6 +4,7 @@
 
 FEATURE(admin): ship Stripe win-back broadcast — feedback-first email body ("what stopped you?") replacing the generic product-update copy, wired into admin Emails page Stripe-non-payer count + one-click send
 FIX(posthog): rebuild broken "Growth & Onboarding" dashboard — 3 insights (Onboarding Funnel, Time to First Channel, Weekly Retention) had `query: null` and rendered empty; restored with FunnelsQuery/RetentionQuery definitions
+FIX(auth): signup_completed now fires on first login via Supabase-native check (`user.created_at === user.last_sign_in_at`) instead of being gated behind `trial_ends_at IS NULL && !deletedAccount` — event is no longer skipped for returning deleted-account users and is decoupled from trigger behavior
 PERF(landing): lazy-load posthog-js via dynamic import (~200 KiB off the initial bundle) and defer init to requestIdleCallback after LCP
 PERF(landing): lazy-load HeroPlayer below-the-fold — its demo summary blobs and audio state no longer block hero render
 PERF(landing): drop wasted `<link rel="preload">` for demo-thumb-1.webp (image is below the fold, never LCP) and downgrade thumb to loading="lazy"
