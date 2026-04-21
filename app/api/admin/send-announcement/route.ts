@@ -1,9 +1,59 @@
-import { createAdminClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/mail/send-email";
 import { AnnouncementEmail } from "@/components/emails/announcement-email";
 import { env } from "@/lib/env";
 import { getUser } from "@/lib/auth/auth-user";
+import { getStripe } from "@/lib/stripe";
+import { logger } from "@/lib/logger";
 import type { NextRequest } from "next/server";
+import type Stripe from "stripe";
+
+const SUBJECT = "quick question about your BriefTube signup";
+
+const UNSUBSCRIBE_HEADERS = {
+  "List-Unsubscribe":
+    "<https://www.brief-tube.com/dashboard/profile>, <mailto:hello@brief-tube.com?subject=unsubscribe>",
+  "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+};
+
+async function fetchStripeNonPayers(): Promise<string[]> {
+  const stripe = getStripe();
+  const emails: string[] = [];
+  const seen = new Set<string>();
+
+  let startingAfter: string | undefined;
+  let hasMore = true;
+
+  while (hasMore) {
+    // eslint-disable-next-line no-await-in-loop -- cursor-based Stripe pagination is sequential by design
+    const page: Stripe.ApiList<Stripe.Customer> = await stripe.customers.list({
+      limit: 100,
+      ...(startingAfter ? { starting_after: startingAfter } : {}),
+    });
+
+    for (const customer of page.data) {
+      const email = customer.email;
+      if (!email || seen.has(email)) continue;
+
+      // eslint-disable-next-line no-await-in-loop -- one charge lookup per customer; Stripe rate limits favor sequential
+      const charges = await stripe.charges.list({
+        customer: customer.id,
+        limit: 1,
+      });
+      const hasPaid = charges.data.some((c) => c.status === "succeeded");
+      if (hasPaid) continue;
+
+      seen.add(email);
+      emails.push(email);
+    }
+
+    hasMore = page.has_more && page.data.length > 0;
+    if (hasMore) {
+      startingAfter = page.data[page.data.length - 1].id;
+    }
+  }
+
+  return emails;
+}
 
 export const POST = async (req: NextRequest) => {
   const user = await getUser();
@@ -16,32 +66,19 @@ export const POST = async (req: NextRequest) => {
 
   const isTest = req.nextUrl.searchParams.get("test") === "true";
 
-  const admin = createAdminClient();
-
-  // Test mode: only send to the admin
   if (isTest) {
-    const { data: adminProfile } = await admin
-      .from("profiles")
-      .select("id, email")
-      .eq("id", env.ADMIN_USER_ID ?? "")
-      .single();
-
-    const email = adminProfile?.email;
-    if (!email) {
+    const adminEmail = user.email;
+    if (!adminEmail) {
       return new Response(JSON.stringify({ error: "Admin email not found" }), {
         status: 500,
       });
     }
 
     const result = await sendEmail({
-      to: email,
-      subject: "[TEST] A few new things on BriefTube",
+      to: adminEmail,
+      subject: `[TEST] ${SUBJECT}`,
       html: AnnouncementEmail(),
-      headers: {
-        "List-Unsubscribe":
-          "<https://www.brief-tube.com/dashboard/profile>, <mailto:hello@brief-tube.com?subject=unsubscribe>",
-        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-      },
+      headers: UNSUBSCRIBE_HEADERS,
     });
 
     return new Response(
@@ -54,12 +91,20 @@ export const POST = async (req: NextRequest) => {
     );
   }
 
-  const { data: profiles } = await admin
-    .from("profiles")
-    .select("id, email")
-    .eq("email_announcements", true);
+  let recipients: string[];
+  try {
+    recipients = await fetchStripeNonPayers();
+  } catch (err) {
+    logger.error("[send-announcement] Failed to fetch Stripe customers", {
+      err,
+    });
+    return new Response(
+      JSON.stringify({ error: "Failed to fetch Stripe customers" }),
+      { status: 500 },
+    );
+  }
 
-  if (!profiles || profiles.length === 0) {
+  if (recipients.length === 0) {
     return new Response(JSON.stringify({ sent: 0, failed: 0, total: 0 }), {
       status: 200,
     });
@@ -68,28 +113,16 @@ export const POST = async (req: NextRequest) => {
   let sent = 0;
   let failed = 0;
 
-  for (const profile of profiles) {
-    const email = profile.email;
-
-    if (!email) {
-      failed++;
-
-      continue;
-    }
-
+  for (const email of recipients) {
     // eslint-disable-next-line no-await-in-loop
     await new Promise((resolve) => setTimeout(resolve, 600));
 
     // eslint-disable-next-line no-await-in-loop
     const result = await sendEmail({
       to: email,
-      subject: "A few new things on BriefTube",
+      subject: SUBJECT,
       html: AnnouncementEmail(),
-      headers: {
-        "List-Unsubscribe":
-          "<https://www.brief-tube.com/dashboard/profile>, <mailto:hello@brief-tube.com?subject=unsubscribe>",
-        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-      },
+      headers: UNSUBSCRIBE_HEADERS,
     });
 
     if (result.error) {
@@ -103,7 +136,7 @@ export const POST = async (req: NextRequest) => {
     JSON.stringify({
       sent,
       failed,
-      total: profiles.length,
+      total: recipients.length,
     }),
     { status: 200 },
   );

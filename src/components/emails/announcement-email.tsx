@@ -5,20 +5,15 @@ export function AnnouncementEmail(): string {
     `${
       p("Hey,") +
       p(
-        "I wanted to reach out personally. We just shipped a few things I think you'll find useful.",
+        "I noticed you created an account on BriefTube but never started a subscription. No judgment, I'm genuinely curious what happened.",
       ) +
       p(
-        "You can now receive your BriefTube summaries directly in <strong>Discord</strong> or <strong>Slack</strong>. One click to connect, no setup needed. If you're already using one of those for work or personal stuff, your audio summaries will land there automatically whenever a channel you follow posts a new video.",
+        "Was it the price? The setup friction? Did you try it and it didn't click? Something else entirely?",
       ) +
       p(
-        "We also added a personal <strong>RSS podcast feed</strong>. You get a private URL you can drop into any podcast app (Overcast, Pocket Casts, Apple Podcasts, whatever you use) and your BriefTube summaries show up as episodes.",
+        "If you hit reply with one sentence telling me why, I'll send you a free month to try it properly. No strings.",
       ) +
-      p(
-        "To connect Discord or Slack, or to grab your RSS feed, just go here: <a href='https://www.brief-tube.com/dashboard/profile' style='color:#1a1a1a;'>brief-tube.com/dashboard/profile</a>",
-      ) +
-      p(
-        "As always, if anything feels off or you have a feature request, just hit reply. I read everything.",
-      ) +
+      p("I read every reply myself. Your answer helps me fix what's broken.") +
       signature()
     }<p style="margin:32px 0 0;font-size:12px;color:#999999;"><a href="https://www.brief-tube.com/dashboard/profile" style="color:#999999;">Unsubscribe</a></p>`,
   );

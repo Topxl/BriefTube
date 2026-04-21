@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { env } from "@/lib/env";
 import { Resend } from "resend";
+import { getStripe } from "@/lib/stripe";
 import { Send, CheckCircle, Eye } from "@/lib/icons";
 import { AdminBreadcrumb } from "@/components/admin/admin-breadcrumb";
 import { DigestTriggerButton } from "@/components/admin/digest-trigger-button";
@@ -472,6 +473,41 @@ export default async function AdminEmailsPage() {
       ? Math.round((deliveredCount / resendEmails.length) * 100)
       : null;
 
+  let stripeNonPayerCount: number | null = null;
+  try {
+    if (env.STRIPE_SECRET_KEY) {
+      const stripe = getStripe();
+      const seen = new Set<string>();
+      let startingAfter: string | undefined;
+      let hasMore = true;
+
+      while (hasMore) {
+        // eslint-disable-next-line no-await-in-loop -- cursor-based Stripe pagination is sequential by design
+        const page = await stripe.customers.list({
+          limit: 100,
+          ...(startingAfter ? { starting_after: startingAfter } : {}),
+        });
+        for (const c of page.data) {
+          if (!c.email || seen.has(c.email)) continue;
+          // eslint-disable-next-line no-await-in-loop -- one charge lookup per customer; Stripe rate limits favor sequential
+          const charges = await stripe.charges.list({
+            customer: c.id,
+            limit: 1,
+          });
+          if (charges.data.some((ch) => ch.status === "succeeded")) continue;
+          seen.add(c.email);
+        }
+        hasMore = page.has_more && page.data.length > 0;
+        if (hasMore) {
+          startingAfter = page.data[page.data.length - 1].id;
+        }
+      }
+      stripeNonPayerCount = seen.size;
+    }
+  } catch {
+    // Stripe not available
+  }
+
   return (
     <div className="flex flex-col gap-8">
       <AdminBreadcrumb />
@@ -491,10 +527,12 @@ export default async function AdminEmailsPage() {
           <div className="flex items-start justify-between gap-2">
             <div>
               <p className="text-sm leading-tight font-semibold">
-                Platform delivery announcement
+                Stripe win-back
               </p>
               <p className="text-muted-foreground mt-0.5 text-[11px] leading-snug">
-                Discord, Slack & RSS: 61 users opted in
+                {stripeNonPayerCount !== null
+                  ? `${stripeNonPayerCount} Stripe signups, never paid`
+                  : "Stripe customers who never paid"}
               </p>
             </div>
           </div>
