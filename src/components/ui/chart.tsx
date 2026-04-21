@@ -5,11 +5,7 @@
 import * as React from "react";
 import * as RechartsPrimitive from "recharts";
 import type { LegendPayload } from "recharts/types/component/DefaultLegendContent";
-import type {
-  NameType,
-  Payload,
-  ValueType,
-} from "recharts/types/component/DefaultTooltipContent";
+import type { Payload } from "recharts/types/component/DefaultTooltipContent";
 import type { Props as LegendProps } from "recharts/types/component/Legend";
 import type { TooltipContentProps } from "recharts/types/component/Tooltip";
 
