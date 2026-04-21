@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { logger } from "@/lib/logger";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import type { ZodSchema } from "zod";
@@ -42,7 +43,7 @@ class RouteBuilder<TBody = unknown, TParams = unknown> {
           parsedBody = this.bodySchema.parse(rawBody) as TBody;
         } catch (err) {
           const details = err instanceof Error ? err.message : "Invalid body";
-          console.error(
+          logger.error(
             `[authRoute] ${req.method} ${req.nextUrl.pathname} body parse failed:`,
             details,
           );
@@ -66,7 +67,7 @@ class RouteBuilder<TBody = unknown, TParams = unknown> {
 
         return NextResponse.json(result);
       } catch (error) {
-        console.error(
+        logger.error(
           `[authRoute] ${req.method} ${req.nextUrl.pathname} failed:`,
           error,
         );

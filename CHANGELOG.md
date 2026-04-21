@@ -10,6 +10,7 @@ PERF(landing): drop wasted `<link rel="preload">` for demo-thumb-1.webp (image i
 PERF(landing): switch Rewardful script to strategy="lazyOnload" — only needed on signup/checkout, not landing
 PERF(landing): add preconnect to Cloudflare R2 audio CDN so HeroPlayer audio starts faster when user interacts
 REFACTOR(posthog): remove `<PostHogProvider>` from the sync tree — init is triggered inside PostHogPageView on idle, useFeatureFlag/identify now use the shared lazy instance
+CHORE(lint): clean up 7 ESLint warnings — replace `console.*` with `logger.*` in rate-limit/zod-route, drop unused imports in chart.tsx and lists/page.tsx
 
 ## 2026-04-21
 

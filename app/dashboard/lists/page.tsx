@@ -5,7 +5,6 @@ import { Pencil, Users } from "@/lib/icons";
 import { CreateListButton } from "@/components/lists/create-list-button";
 import { ShareListButton } from "@/components/lists/share-list-button";
 import { FollowButton } from "@/components/lists/follow-button";
-import { UnfollowButton } from "@/components/lists/unfollow-button";
 
 const CATEGORIES = [
   "Tech",
@@ -240,22 +239,6 @@ export default async function DashboardListsPage({
       channels: parseChannels(l.list_channels),
     }),
   );
-
-  // Followed lists with channel previews, excluding ones user created
-  const followedLists: ListData[] = (followedRaw ?? [])
-    .map((r: Record<string, unknown>) => {
-      const list = r.channel_lists as Record<string, unknown> | null;
-      if (!list) return null;
-      return {
-        id: r.list_id as string,
-        name: list.name as string,
-        category: (list.category as string | null) ?? null,
-        channelCount: extractCount(list.list_channels),
-        channels: parseChannels(list.list_channels),
-      };
-    })
-    .filter((x): x is ListData => x !== null)
-    .filter((l) => !myListsMapped.some((m) => m.id === l.id));
 
   // Public lists with channel previews
   const allPublic: ListData[] = (publicLists ?? [])

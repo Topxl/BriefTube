@@ -1,6 +1,7 @@
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 
 // Create Redis client — fallback to no-op if not configured
 let redis: Redis | undefined;
@@ -15,8 +16,8 @@ try {
       token: process.env.UPSTASH_REDIS_REST_TOKEN,
     });
   }
-} catch {
-  console.warn("Redis not configured for rate limiting");
+} catch (err) {
+  logger.warn("Redis not configured for rate limiting", err);
 }
 
 // Reusable rate limiters
