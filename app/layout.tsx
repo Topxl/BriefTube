@@ -71,6 +71,11 @@ export default function RootLayout({
       <head>
         {/* gtag must load before useEffects fire (conversion tracking) — use afterInteractive, not lazyOnload */}
         <link rel="preconnect" href="https://www.googletagmanager.com" />
+        <link
+          rel="preconnect"
+          href="https://pub-56ac81959a8e42beae1539d791297d90.r2.dev"
+          crossOrigin="anonymous"
+        />
         <link rel="dns-prefetch" href="https://noembed.com" />
         <link rel="dns-prefetch" href="https://r.wdfl.co" />
         <Script
@@ -107,13 +112,15 @@ export default function RootLayout({
             </Suspense>
           </Providers>
         </NuqsAdapter>
-        <Script id="rewardful-queue" strategy="afterInteractive">
+        {/* Rewardful only fires on signup/checkout flows. lazyOnload keeps
+            ~20 KiB off the critical path without breaking attribution. */}
+        <Script id="rewardful-queue" strategy="lazyOnload">
           {`(function(w,r){w._rwq=r;w[r]=w[r]||function(){(w[r].q=w[r].q||[]).push(arguments)}})(window,'rewardful');`}
         </Script>
         <Script
           src="https://r.wdfl.co/rw.js"
           data-rewardful="18d746"
-          strategy="afterInteractive"
+          strategy="lazyOnload"
         />
       </body>
     </html>
