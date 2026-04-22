@@ -152,24 +152,77 @@ export type VideoMeta = {
   captions: CaptionTrack[];
 };
 
+function scrapeTitleFromDom(): string | null {
+  const selectors = [
+    "ytd-watch-metadata #title h1 yt-formatted-string",
+    "h1.ytd-watch-metadata yt-formatted-string",
+    "h1.title yt-formatted-string",
+    'meta[itemprop="name"]',
+  ];
+  for (const sel of selectors) {
+    const el = document.querySelector(sel);
+    if (!el) continue;
+    const text =
+      el instanceof HTMLMetaElement
+        ? el.content
+        : (el.textContent ?? "").trim();
+    if (text) return text;
+  }
+  return null;
+}
+
+function scrapeChannelFromDom(): { id: string; name: string } {
+  const nameEl = document.querySelector(
+    "#owner ytd-channel-name #text a, #owner ytd-channel-name #text, ytd-video-owner-renderer #channel-name a",
+  );
+  const name = (nameEl?.textContent ?? "").trim();
+  // channelId is harder to scrape; best-effort from the href
+  const linkEl = document.querySelector<HTMLAnchorElement>(
+    "#owner ytd-channel-name a[href*='/channel/'], #owner ytd-channel-name a[href*='/@']",
+  );
+  const href = linkEl?.href ?? "";
+  const match = /\/channel\/([^/?]+)/.exec(href);
+  const id = match ? match[1] : "";
+  return { id, name };
+}
+
 export function extractVideoMeta(): VideoMeta | null {
-  const player = getPlayerResponse();
   const videoId = getCurrentVideoId();
-  if (!player || !videoId) return null;
-  const details = player.videoDetails ?? {};
-  // YouTube's SPA updates the URL before refreshing `ytInitialPlayerResponse`.
-  // If the cached response is still for the previous video, bail out so the
-  // caller retries instead of mixing old channelName with new videoId.
-  if (details.videoId && details.videoId !== videoId) return null;
+  if (!videoId) return null;
+
+  const player = getPlayerResponse();
+  const details = player?.videoDetails ?? {};
   const captions =
-    player.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
+    player?.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
+
+  // `ytInitialPlayerResponse` is injected at first page load only. After a
+  // SPA navigation YouTube replaces the video without updating that global,
+  // so its videoDetails still reference the *previous* video. When we detect
+  // that mismatch, fall back to DOM scraping so the sidebar still has title
+  // + channel. Captions will be empty in that branch — the extension will
+  // route to the Whisper pipeline via the server, which is fine.
+  const playerMatchesCurrent =
+    !!details.videoId && details.videoId === videoId;
+  if (playerMatchesCurrent) {
+    return {
+      videoId,
+      videoTitle: details.title ?? videoId,
+      channelId: details.channelId ?? "",
+      channelName: details.author ?? "",
+      durationSec: details.lengthSeconds ? Number(details.lengthSeconds) : 0,
+      captions,
+    };
+  }
+
+  // Stale or missing player response — scrape the DOM instead.
+  const { id: domChannelId, name: domChannelName } = scrapeChannelFromDom();
   return {
     videoId,
-    videoTitle: details.title ?? videoId,
-    channelId: details.channelId ?? "",
-    channelName: details.author ?? "",
-    durationSec: details.lengthSeconds ? Number(details.lengthSeconds) : 0,
-    captions,
+    videoTitle: scrapeTitleFromDom() ?? videoId,
+    channelId: domChannelId,
+    channelName: domChannelName,
+    durationSec: 0,
+    captions: [],
   };
 }
 
