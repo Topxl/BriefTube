@@ -464,17 +464,46 @@ function findCompetitorRoot(): HTMLElement | null {
 }
 
 /**
- * Fallback injection target when no competitor is detected. `#secondary`
- * rather than `#secondary-inner` so that when a competitor *does* appear
- * later and injects into `#secondary-inner`, we're still above it.
+ * YouTube sometimes keeps the previous `ytd-watch-flexy` in the DOM with the
+ * `hidden` attribute during SPA navigation (so the layout is ready to swap
+ * back instantly). Picking the first `#secondary` we find lands us inside
+ * that hidden tree — the extension is mounted but invisible until F5.
+ * Always return the `#secondary` inside a visible `ytd-watch-flexy`.
  */
+function isVisibleContainer(el: HTMLElement): boolean {
+  const watchFlexy = el.closest("ytd-watch-flexy");
+  if (watchFlexy && watchFlexy.hasAttribute("hidden")) return false;
+  if (el.closest("[hidden]")) return false;
+  return true;
+}
+
 function findInjectionTarget(): HTMLElement | null {
-  return (
-    document.querySelector<HTMLElement>("#secondary") ??
-    document.querySelector<HTMLElement>("#secondary-inner") ??
-    document.querySelector<HTMLElement>(
+  const secondaries = Array.from(
+    document.querySelectorAll<HTMLElement>("#secondary"),
+  );
+  for (const el of secondaries) {
+    if (isVisibleContainer(el)) return el;
+  }
+  const inners = Array.from(
+    document.querySelectorAll<HTMLElement>("#secondary-inner"),
+  );
+  for (const el of inners) {
+    if (isVisibleContainer(el)) return el;
+  }
+  const renderers = Array.from(
+    document.querySelectorAll<HTMLElement>(
       "ytd-watch-next-secondary-results-renderer",
-    )
+    ),
+  );
+  for (const el of renderers) {
+    if (isVisibleContainer(el)) return el;
+  }
+  // Fallback to anything (better than nothing).
+  return (
+    secondaries[0] ??
+    inners[0] ??
+    renderers[0] ??
+    null
   );
 }
 
