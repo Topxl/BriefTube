@@ -752,6 +752,8 @@ export type Database = {
           trial_ends_at: string | null;
           tts_voice: string | null;
           updated_at: string | null;
+          youtube_refresh_token: string | null;
+          youtube_refresh_token_iv: string | null;
           youtube_sync_diff: Json | null;
         };
         Insert: {
@@ -784,6 +786,8 @@ export type Database = {
           trial_ends_at?: string | null;
           tts_voice?: string | null;
           updated_at?: string | null;
+          youtube_refresh_token?: string | null;
+          youtube_refresh_token_iv?: string | null;
           youtube_sync_diff?: Json | null;
         };
         Update: {
@@ -816,6 +820,8 @@ export type Database = {
           trial_ends_at?: string | null;
           tts_voice?: string | null;
           updated_at?: string | null;
+          youtube_refresh_token?: string | null;
+          youtube_refresh_token_iv?: string | null;
           youtube_sync_diff?: Json | null;
         };
         Relationships: [

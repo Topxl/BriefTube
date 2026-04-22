@@ -8,6 +8,10 @@ import type { Dialog, DialogConfig } from "./dialog-types";
 type DialogStore = {
   dialogs: Dialog[];
   activeDialog: Dialog | null;
+  // Timestamp of the most recent dialog close. Used by parent surfaces (e.g.
+  // sheets that host buttons opening confirm dialogs) to ignore the close
+  // events that fire as a side-effect of closing the dialog.
+  lastClosedAt: number;
 
   addDialog: (config: Omit<DialogConfig, "id">) => string;
   removeDialog: (id: string) => void;
@@ -18,6 +22,7 @@ type DialogStore = {
 export const useDialogStore = create<DialogStore>((set) => ({
   dialogs: [],
   activeDialog: null,
+  lastClosedAt: 0,
 
   addDialog: (config) => {
     const dialog = DialogFactory.fromConfig(config);
@@ -36,6 +41,7 @@ export const useDialogStore = create<DialogStore>((set) => ({
       return {
         dialogs,
         activeDialog: dialogs[0] ?? null,
+        lastClosedAt: Date.now(),
       };
     }),
 

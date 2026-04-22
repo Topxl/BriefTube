@@ -68,7 +68,13 @@ export function ChannelsSheet({
       open={open}
       onOpenChange={(v) => {
         // Don't close the sheet if a dialog (e.g. upsell modal) is open on top
-        if (!v && useDialogStore.getState().dialogs.length > 0) return;
+        // — and also ignore the close event that fires immediately after a
+        // dialog Cancel/Confirm propagates to the sheet underneath.
+        if (!v) {
+          const store = useDialogStore.getState();
+          if (store.dialogs.length > 0) return;
+          if (Date.now() - store.lastClosedAt < 300) return;
+        }
         setOpen(v);
       }}
     >
