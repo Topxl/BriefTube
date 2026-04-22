@@ -68,7 +68,7 @@ export default function ExtensionWelcomePage() {
       <div className="mt-6 flex flex-col items-center gap-2 md:mt-8">
         <Button asChild size="lg">
           <Link
-            href="https://www.youtube.com/watch?v=qp0HIF3SfI4"
+            href="https://www.youtube.com/watch?v=nm1TxQj9IsQ"
             target="_blank"
           >
             Open a YouTube video to test
