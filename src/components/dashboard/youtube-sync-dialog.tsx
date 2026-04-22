@@ -3,8 +3,15 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { Plus, Trash2, Pause, Check, Loader2, X, RefreshCw } from "@/lib/icons";
+import { Plus, Check, Loader2, X, RefreshCw } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { capture } from "@/lib/posthog/client";
 
 type AddedChannel = {
@@ -16,6 +23,7 @@ type AddedChannel = {
 type RemovedChannel = {
   channelId: string;
   channelName: string;
+  avatarUrl: string | null;
 };
 
 type UnchangedChannel = {
@@ -31,7 +39,6 @@ type SyncDiff = {
 };
 
 type AddAction = "add_active" | "add_paused" | "ignore";
-type RemoveAction = "deactivate" | "delete" | "keep";
 
 export function YouTubeSyncDialog() {
   const router = useRouter();
@@ -40,11 +47,9 @@ export function YouTubeSyncDialog() {
   const [open, setOpen] = useState(false);
   const [applying, setApplying] = useState(false);
 
-  // Per-channel action choices
+  // Per-channel action choices for "added" only — "removed" is always
+  // auto-deactivated, no per-channel choice.
   const [addActions, setAddActions] = useState<Record<string, AddAction>>({});
-  const [removeActions, setRemoveActions] = useState<
-    Record<string, RemoveAction>
-  >({});
 
   useEffect(() => {
     if (searchParams.get("youtube_sync") === "ready") {
@@ -56,26 +61,54 @@ export function YouTubeSyncDialog() {
             return;
           }
           const parsed = (await res.json()) as SyncDiff;
+          // Cleanup the URL param either way.
+          const url = new URL(window.location.href);
+          url.searchParams.delete("youtube_sync");
+          router.replace(url.pathname + url.search);
+
+          // No new channels to decide on → apply silently (auto-deactivate
+          // anything no longer on YouTube) and just toast the result.
+          if (parsed.added.length === 0) {
+            const apply = await fetch("/api/youtube/sync", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                added: [],
+                removed: parsed.removed.map((ch) => ({
+                  channelId: ch.channelId,
+                  action: "deactivate" as const,
+                })),
+              }),
+            });
+            if (apply.ok) {
+              const r = (await apply.json()) as { deactivated: number };
+              if (r.deactivated > 0) {
+                toast.success(`${r.deactivated} channel(s) deactivated`);
+              } else {
+                toast.success("Already in sync");
+              }
+              router.refresh();
+            } else {
+              toast.error("Sync failed");
+            }
+            return;
+          }
+
+          // New channels exist — open the modal so the user can pick.
           setDiff(parsed);
           setOpen(true);
-          // Default actions: add all as paused, deactivate removed
+          // Default action: add all as paused.
           const addDefaults: Record<string, AddAction> = {};
           for (const ch of parsed.added) {
             addDefaults[ch.channelId] = "add_paused";
           }
           setAddActions(addDefaults);
-
-          const removeDefaults: Record<string, RemoveAction> = {};
-          for (const ch of parsed.removed) {
-            removeDefaults[ch.channelId] = "deactivate";
-          }
-          setRemoveActions(removeDefaults);
         } catch {
           toast.error("Failed to load sync data");
         }
       })();
     }
-  }, [searchParams]);
+  }, [searchParams, router]);
 
   const close = useCallback(() => {
     setOpen(false);
@@ -96,9 +129,10 @@ export function YouTubeSyncDialog() {
           avatarUrl: ch.avatarUrl,
           action: addActions[ch.channelId] ?? "ignore",
         })),
+        // Removed channels are always auto-deactivated.
         removed: diff.removed.map((ch) => ({
           channelId: ch.channelId,
-          action: removeActions[ch.channelId] ?? "keep",
+          action: "deactivate" as const,
         })),
       };
 
@@ -149,20 +183,13 @@ export function YouTubeSyncDialog() {
     setAddActions(next);
   };
 
-  const setAllRemoveActions = (action: RemoveAction) => {
-    if (!diff) return;
-    const next: Record<string, RemoveAction> = {};
-    for (const ch of diff.removed) next[ch.channelId] = action;
-    setRemoveActions(next);
-  };
-
   if (!open || !diff) return null;
 
   const hasChanges = diff.added.length > 0 || diff.removed.length > 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="nm-raised mx-4 flex max-h-[85vh] w-full max-w-lg flex-col rounded-2xl">
+    <div className="pointer-events-auto fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="nm-raised mx-2 flex max-h-[90vh] w-full max-w-lg flex-col rounded-2xl border border-white/[0.08] bg-[oklch(0.22_0_0)] shadow-[0_24px_80px_rgba(0,0,0,0.6)] sm:mx-4 sm:max-h-[85vh]">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-4">
           <div className="flex items-center gap-2">
@@ -192,12 +219,17 @@ export function YouTubeSyncDialog() {
               {/* New channels */}
               {diff.added.length > 0 && (
                 <section>
-                  <div className="mb-2 flex items-center justify-between">
-                    <h3 className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400">
-                      <Plus className="h-3 w-3" />
-                      New channels ({diff.added.length})
-                    </h3>
-                    <div className="flex gap-1">
+                  <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
+                      <h3 className="flex items-center gap-1.5 text-xs font-semibold">
+                        <Plus className="text-muted-foreground h-3 w-3 shrink-0" />
+                        New on YouTube ({diff.added.length})
+                      </h3>
+                      <p className="text-muted-foreground/60 mt-0.5 text-[11px] leading-snug">
+                        Pick how to add them.
+                      </p>
+                    </div>
+                    <div className="-mx-1 flex gap-1 overflow-x-auto px-1 sm:mx-0 sm:flex-wrap sm:justify-end sm:overflow-visible sm:px-0">
                       <ActionChip
                         label="All active"
                         active={diff.added.every(
@@ -234,111 +266,51 @@ export function YouTubeSyncDialog() {
                         <span className="min-w-0 flex-1 truncate text-sm">
                           {ch.channelName}
                         </span>
-                        <select
+                        <Select
                           value={addActions[ch.channelId] ?? "add_paused"}
-                          onChange={(e) =>
+                          onValueChange={(value) =>
                             setAddActions((prev) => ({
                               ...prev,
-                              [ch.channelId]: e.target.value as AddAction,
+                              [ch.channelId]: value as AddAction,
                             }))
                           }
-                          className="nm-raised-sm rounded-lg bg-transparent px-2 py-1 text-[11px] font-medium outline-none"
                         >
-                          <option value="add_active">Add active</option>
-                          <option value="add_paused">Add paused</option>
-                          <option value="ignore">Ignore</option>
-                        </select>
+                          <SelectTrigger
+                            size="sm"
+                            className="nm-raised-sm h-7 min-w-[96px] rounded-lg border-0 bg-transparent px-2 py-1 text-[11px] font-medium shadow-none"
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent align="end" className="min-w-[140px]">
+                            <SelectItem value="add_active">
+                              Add active
+                            </SelectItem>
+                            <SelectItem value="add_paused">
+                              Add paused
+                            </SelectItem>
+                            <SelectItem value="ignore">Ignore</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     ))}
                   </div>
                 </section>
               )}
 
-              {/* Removed channels */}
-              {diff.removed.length > 0 && (
-                <section>
-                  <div className="mb-2 flex items-center justify-between">
-                    <h3 className="flex items-center gap-1.5 text-xs font-semibold text-red-400">
-                      <Trash2 className="h-3 w-3" />
-                      No longer on YouTube ({diff.removed.length})
-                    </h3>
-                    <div className="flex gap-1">
-                      <ActionChip
-                        label="Deactivate all"
-                        active={diff.removed.every(
-                          (c) => removeActions[c.channelId] === "deactivate",
-                        )}
-                        onClick={() => setAllRemoveActions("deactivate")}
-                      />
-                      <ActionChip
-                        label="Delete all"
-                        active={diff.removed.every(
-                          (c) => removeActions[c.channelId] === "delete",
-                        )}
-                        onClick={() => setAllRemoveActions("delete")}
-                      />
-                      <ActionChip
-                        label="Keep all"
-                        active={diff.removed.every(
-                          (c) => removeActions[c.channelId] === "keep",
-                        )}
-                        onClick={() => setAllRemoveActions("keep")}
-                      />
-                    </div>
-                  </div>
-                  <div className="nm-inset-sm flex flex-col divide-y divide-white/[0.04] rounded-xl">
-                    {diff.removed.map((ch) => (
-                      <div
-                        key={ch.channelId}
-                        className="flex items-center gap-3 px-3 py-2"
-                      >
-                        <ChannelAvatar name={ch.channelName} url={null} />
-                        <span className="min-w-0 flex-1 truncate text-sm">
-                          {ch.channelName}
-                        </span>
-                        <select
-                          value={removeActions[ch.channelId] ?? "deactivate"}
-                          onChange={(e) =>
-                            setRemoveActions((prev) => ({
-                              ...prev,
-                              [ch.channelId]: e.target.value as RemoveAction,
-                            }))
-                          }
-                          className="nm-raised-sm rounded-lg bg-transparent px-2 py-1 text-[11px] font-medium outline-none"
-                        >
-                          <option value="deactivate">Deactivate</option>
-                          <option value="delete">Delete</option>
-                          <option value="keep">Keep</option>
-                        </select>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              {/* Unchanged summary */}
-              {diff.unchanged.length > 0 && (
-                <section>
-                  <div className="mb-2 flex items-center gap-1.5">
-                    <Pause className="text-muted-foreground h-3 w-3" />
-                    <h3 className="text-muted-foreground text-xs font-semibold">
-                      Unchanged ({diff.unchanged.length})
-                    </h3>
-                  </div>
-                  <p className="text-muted-foreground/60 text-xs">
-                    {diff.unchanged.filter((c) => c.active).length} active,{" "}
-                    {diff.unchanged.filter((c) => !c.active).length} paused
-                    &mdash; no changes needed.
-                  </p>
-                </section>
-              )}
+              {/* Removed and unchanged channels are not shown — removed are
+                  auto-deactivated server-side, unchanged are noise. */}
             </div>
           )}
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-2 border-t border-white/[0.06] px-5 py-3">
-          <Button variant="ghost" size="sm" onClick={close}>
+        <div className="flex flex-col-reverse gap-2 border-t border-white/[0.06] px-5 py-3 sm:flex-row sm:items-center sm:justify-end">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={close}
+            className="w-full sm:w-auto"
+          >
             Cancel
           </Button>
           {hasChanges && (
@@ -346,7 +318,7 @@ export function YouTubeSyncDialog() {
               size="sm"
               disabled={applying}
               onClick={() => void handleApply()}
-              className="bg-red-600 hover:bg-red-500"
+              className="w-full bg-red-600 hover:bg-red-500 sm:w-auto"
             >
               {applying && <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />}
               Apply changes
@@ -366,6 +338,9 @@ function ChannelAvatar({ name, url }: { name: string; url: string | null }) {
         src={url}
         alt={name}
         className="h-7 w-7 shrink-0 rounded-full"
+        // YouTube avatar CDN (yt3.ggpht.com / yt3.googleusercontent.com) returns
+        // 403 when the Referer is not whitelisted — `no-referrer` makes them load.
+        referrerPolicy="no-referrer"
         onError={() => setError(true)}
       />
     );
@@ -389,10 +364,10 @@ function ActionChip({
   return (
     <button
       onClick={onClick}
-      className={`rounded-full px-2 py-0.5 text-[9px] font-medium transition-colors ${
+      className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-medium whitespace-nowrap transition-colors ${
         active
           ? "nm-inset text-foreground"
-          : "text-muted-foreground/50 hover:text-muted-foreground"
+          : "text-muted-foreground/60 hover:text-foreground"
       }`}
     >
       {label}

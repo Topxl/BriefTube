@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
 import { Inbox, Play, Users } from "@/lib/icons";
 import { SummaryRow } from "@/components/dashboard/summary-row";
 import { VideoInboxRow } from "@/components/dashboard/video-inbox-row";
@@ -487,37 +488,20 @@ export function SummariesFeed({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [feedMode]);
 
-  // Infinite scroll for all tabs
-  useEffect(() => {
-    const el = sentinelRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry.isIntersecting || !hasMore || loading) return;
-        if (feedMode === "summaries") {
-          void loadDeliveries(summariesPage + 1);
-        } else if (feedMode === "all") {
-          void loadInboxVideos(inboxPage + 1);
-        } else {
-          void loadListVideos(listPage + 1);
-        }
-      },
-      { threshold: 0.1 },
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [
-    sentinelRef,
+  useInfiniteScroll({
+    ref: sentinelRef,
     hasMore,
     loading,
-    feedMode,
-    summariesPage,
-    inboxPage,
-    listPage,
-    loadDeliveries,
-    loadInboxVideos,
-    loadListVideos,
-  ]);
+    onLoadMore: () => {
+      if (feedMode === "summaries") {
+        void loadDeliveries(summariesPage + 1);
+      } else if (feedMode === "all") {
+        void loadInboxVideos(inboxPage + 1);
+      } else {
+        void loadListVideos(listPage + 1);
+      }
+    },
+  });
 
   const toggleFavorite = useCallback(
     (code: string) => {

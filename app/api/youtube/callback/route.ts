@@ -6,6 +6,7 @@ import { cookies } from "next/headers";
 import { logger } from "@/lib/logger";
 import { captureServerEvent } from "@/lib/posthog/server";
 import { getBaseUrl } from "@/lib/server-url";
+import { encryptToken } from "@/lib/youtube/token-crypto";
 
 type YouTubeSubscriptionItem = {
   snippet: {
@@ -143,14 +144,44 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const { access_token } = (await tokenRes.json()) as { access_token: string };
+  const tokenPayload = (await tokenRes.json()) as {
+    access_token: string;
+    refresh_token?: string;
+  };
+  const { access_token, refresh_token } = tokenPayload;
 
-  // Fetch existing subscriptions and YouTube channels in parallel
+  // Persist refresh_token (encrypted) so future syncs can be silent.
+  // Google only returns refresh_token on a fresh consent (prompt=consent in
+  // /api/youtube/auth) — if missing, we keep the previously stored one.
+  if (refresh_token) {
+    const encrypted = encryptToken(refresh_token);
+    if (encrypted) {
+      await supabase
+        .from("profiles")
+        .update({
+          youtube_refresh_token: encrypted.ciphertext,
+          youtube_refresh_token_iv: encrypted.iv,
+        })
+        .eq("id", user.id);
+    } else {
+      logger.warn(
+        "YOUTUBE_TOKEN_KEY missing or invalid — refresh_token not persisted",
+      );
+    }
+  }
+
+  // Fetch existing subscriptions and YouTube channels in parallel.
+  // Exclude `list_follow` rows: those are ghost subs created by following a
+  // shared list, not real YouTube subscriptions — comparing them against the
+  // YouTube API would always flag them as "removed".
   const [existingSubsRes, youtubeChannels] = await Promise.all([
     supabase
       .from("subscriptions")
-      .select("channel_id, channel_name, active")
-      .eq("user_id", user.id),
+      .select("channel_id, channel_name, channel_avatar_url, active")
+      .eq("user_id", user.id)
+      .or(
+        "source_type.is.null,source_type.eq.youtube_channel,source_type.eq.youtube_import",
+      ),
     fetchAllSubscriptions(access_token),
   ]);
 
@@ -177,6 +208,7 @@ export async function GET(request: NextRequest) {
       .map((s) => ({
         channelId: s.channel_id,
         channelName: s.channel_name,
+        avatarUrl: s.channel_avatar_url,
       }));
 
     // Unchanged: in both

@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
 import { toast } from "sonner";
 import {
   Search,
@@ -115,6 +116,9 @@ function SourceRow({
             width={32}
             height={32}
             unoptimized
+            // YouTube avatar CDN (yt3.googleusercontent.com) returns 403 when
+            // the Referer is not whitelisted — `no-referrer` makes them load.
+            referrerPolicy="no-referrer"
             className={`h-8 w-8 rounded-full transition-all ${
               !source.active && !selected ? "opacity-35" : ""
             } ${selected ? "opacity-50" : ""}`}
@@ -147,15 +151,26 @@ function SourceRow({
         >
           {nameEl}
         </p>
-        <a
-          href={`https://www.youtube.com/channel/${source.channel_id}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(e) => e.stopPropagation()}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            const url = `https://www.youtube.com/channel/${source.channel_id}`;
+            dialogManager.confirm({
+              title: "Open on YouTube?",
+              description: `This will open "${source.channel_name}" in a new tab.`,
+              action: {
+                label: "Open",
+                onClick: () => {
+                  window.open(url, "_blank", "noopener,noreferrer");
+                },
+              },
+            });
+          }}
           className="text-muted-foreground/40 hover:text-muted-foreground text-[11px] transition-colors"
         >
           YouTube
-        </a>
+        </button>
       </div>
 
       <button
@@ -203,19 +218,6 @@ export function SourcesSection({
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const supabase = createClient();
-
-  useEffect(() => {
-    const el = sentinelRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) setVisibleCount((n) => n + LOAD_MORE_STEP);
-      },
-      { threshold: 0.1 },
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [sentinelRef]);
 
   const trimmed = searchInput.trim();
   const isYT = trimmed.length > 0 && isYouTubeInput(trimmed);
@@ -331,10 +333,30 @@ export function SourcesSection({
     );
   };
 
-  const [displayedIds] = useState<string[]>(() => [
-    ...initialSources.filter((s) => s.active).map((s) => s.id),
-    ...initialSources.filter((s) => !s.active).map((s) => s.id),
-  ]);
+  // Initial render: keep the server order (created_at desc → newest first,
+  // regardless of active/paused). The "Active" / "Paused" tabs let users
+  // narrow down. Subsequent re-fetches (router.refresh after a sync apply)
+  // prepend any newly-added channels at the top so they're immediately visible.
+  const [displayedIds, setDisplayedIds] = useState<string[]>(() =>
+    initialSources.map((s) => s.id),
+  );
+
+  useEffect(() => {
+    setSources(initialSources);
+    setDisplayedIds((prev) => {
+      const prevSet = new Set(prev);
+      const newIds = initialSources
+        .filter((s) => !prevSet.has(s.id))
+        .map((s) => s.id);
+      if (newIds.length === 0) {
+        // Drop deleted ones, keep order stable for everything else.
+        const stillExists = new Set(initialSources.map((s) => s.id));
+        return prev.filter((id) => stillExists.has(id));
+      }
+      const stillExists = new Set(initialSources.map((s) => s.id));
+      return [...newIds, ...prev.filter((id) => stillExists.has(id))];
+    });
+  }, [initialSources]);
 
   const activeCount = sources.filter((s) => s.active).length;
   const atActiveLimit = !isPro && activeCount >= maxChannels;
@@ -360,6 +382,12 @@ export function SourcesSection({
 
   const hasMore = !searchNorm && visibleCount < filteredByStatus.length;
   const anySelected = selectedIds.size > 0;
+
+  useInfiniteScroll({
+    ref: sentinelRef,
+    hasMore,
+    onLoadMore: () => setVisibleCount((n) => n + LOAD_MORE_STEP),
+  });
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
@@ -595,20 +623,7 @@ export function SourcesSection({
       {sources.length > 0 && !isYT && (
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
-            <a
-              href="/api/youtube/auth"
-              className="nm-raised-sm flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium text-red-400 capitalize transition-colors hover:text-red-300"
-            >
-              <Youtube className="h-3 w-3" />
-              Import
-            </a>
-            <a
-              href="/api/youtube/auth?mode=sync"
-              className="nm-raised-sm text-muted-foreground/60 hover:text-foreground flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition-colors"
-            >
-              <RefreshCw className="h-3 w-3" />
-              Sync
-            </a>
+            <SyncButton />
           </div>
           {anySelected ? (
             <div className="flex items-center gap-1.5">
@@ -722,5 +737,44 @@ export function SourcesSection({
         </div>
       ) : null}
     </div>
+  );
+}
+
+function SyncButton() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+
+  const handleClick = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/youtube/sync/refresh", { method: "POST" });
+      if (res.ok) {
+        // Silent sync succeeded — diff is now stored in profiles, modal will open
+        router.replace("/dashboard?youtube_sync=ready");
+        router.refresh();
+        return;
+      }
+      // 401/404 — no refresh token yet. Fall back to interactive OAuth.
+      window.location.href = "/api/youtube/auth?mode=sync";
+    } catch {
+      window.location.href = "/api/youtube/auth?mode=sync";
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <button
+      onClick={() => void handleClick()}
+      disabled={loading}
+      className="nm-raised-sm text-muted-foreground/60 hover:text-foreground flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-60"
+    >
+      {loading ? (
+        <Loader2 className="h-3 w-3 animate-spin" />
+      ) : (
+        <RefreshCw className="h-3 w-3" />
+      )}
+      Sync YouTube
+    </button>
   );
 }

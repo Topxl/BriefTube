@@ -53,14 +53,29 @@ export async function GET(request: NextRequest) {
     sameSite: "lax",
   });
 
+  // Only force `prompt=consent` when we don't yet have a refresh_token stored.
+  // Google issues a refresh_token only on a fresh consent — required the first
+  // time so we can silent-sync later. On re-auth (token revoked, etc.) we omit
+  // `prompt`: the user breezes through if their Google session is still active,
+  // and Google won't send a "you authorized X" security email each time.
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("youtube_refresh_token")
+    .eq("id", user.id)
+    .single();
+  const hasRefreshToken = !!profile?.youtube_refresh_token;
+
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: `${baseUrl}/api/youtube/callback`,
     response_type: "code",
     scope: "https://www.googleapis.com/auth/youtube.readonly",
-    access_type: "online",
+    access_type: "offline",
     state,
   });
+  if (!hasRefreshToken) {
+    params.set("prompt", "consent");
+  }
 
   return NextResponse.redirect(
     `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`,
