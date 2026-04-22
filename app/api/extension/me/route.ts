@@ -1,3 +1,5 @@
+import { NextResponse } from "next/server";
+import { z } from "zod";
 import { corsPreflight, extensionRoute } from "@/lib/extension-route";
 import {
   getAnonQuotaSnapshot,
@@ -6,6 +8,32 @@ import {
 import { createAdminClient } from "@/lib/supabase/server";
 
 export const OPTIONS = corsPreflight;
+
+const patchSchema = z.object({
+  preferredLanguage: z.string().min(2).max(10).optional(),
+});
+type PatchBody = z.infer<typeof patchSchema>;
+
+export const PATCH = extensionRoute
+  .body(patchSchema)
+  .handler(async (_req, { body, user }) => {
+    if (!user) {
+      return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+    }
+    const { preferredLanguage } = body as PatchBody;
+    if (!preferredLanguage) {
+      return { ok: true };
+    }
+    const supabase = createAdminClient();
+    const { error } = await supabase
+      .from("profiles")
+      .update({ preferred_language: preferredLanguage })
+      .eq("id", user.id);
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    return { ok: true };
+  });
 
 export const GET = extensionRoute.handler(async (req, { user }) => {
   const deviceId = req.headers.get("x-device-id") ?? "";

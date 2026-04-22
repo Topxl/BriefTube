@@ -30,7 +30,8 @@ type Msg =
   | { type: "STATUS"; payload: { videoId: string; language: string } }
   | { type: "SUBSCRIBE_CHANNEL"; payload: unknown }
   | { type: "SIGN_IN" }
-  | { type: "SIGN_OUT" };
+  | { type: "SIGN_OUT" }
+  | { type: "UPDATE_LANGUAGE"; payload: { preferredLanguage: string } };
 
 async function sendMessage<T>(msg: Msg): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -114,6 +115,25 @@ function App() {
       .then(setMe)
       .catch(() => setMe(null));
   }, [meta?.videoId]);
+
+  // React instantly when the session changes in chrome.storage (sign-in or
+  // sign-out from another tab). Without this, the sidebar kept showing the
+  // anonymous quota for ~30 s after a successful Google sign-in until the
+  // next videoId change triggered a /me refetch.
+  useEffect(() => {
+    const handler = (
+      changes: Record<string, chrome.storage.StorageChange>,
+      area: string,
+    ) => {
+      if (area !== "local") return;
+      if (!("brieftube_session" in changes)) return;
+      sendMessage<MeResponse>({ type: "ME" })
+        .then(setMe)
+        .catch(() => setMe(null));
+    };
+    chrome.storage.onChanged.addListener(handler);
+    return () => chrome.storage.onChanged.removeListener(handler);
+  }, []);
 
   // Pre-flight cache lookup: if this video+language is already in
   // processed_videos (because the same user, or anyone else, already
@@ -306,15 +326,45 @@ function App() {
       // Clear the current summary so the auto-request kicks in again.
       setSummary(null);
       setSummaryError(null);
-      // Persist locally — a future refactor can push this to profile.preferred_language.
+      // Persist locally first (instant, survives reload even for anon users).
       try {
         void chrome.storage.local.set({ brieftube_lang_override: lang });
       } catch {
         // ignore
       }
+      // Also persist to the profile so the user's choice sticks across
+      // devices and is reused by the main app + worker.
+      void sendMessage({
+        type: "UPDATE_LANGUAGE",
+        payload: { preferredLanguage: lang },
+      }).catch(() => undefined);
     },
     [],
   );
+
+  // Apply the local override on top of /me so the extension respects the
+  // last language the user picked, even when the server profile hasn't
+  // been updated yet (e.g. offline, or before our PATCH round-trip).
+  useEffect(() => {
+    try {
+      void chrome.storage.local
+        .get("brieftube_lang_override")
+        .then((res) => {
+          const override = res?.brieftube_lang_override as string | undefined;
+          if (!override) return;
+          setMe((prev) =>
+            prev && prev.user
+              ? {
+                  ...prev,
+                  user: { ...prev.user, preferredLanguage: override },
+                }
+              : prev,
+          );
+        });
+    } catch {
+      // ignore
+    }
+  }, [me?.user?.id]);
 
   const onSubscribeChannel = useCallback(async () => {
     if (!meta || !meta.channelId) return;
@@ -601,16 +651,32 @@ globalObserver.observe(document.documentElement, {
 });
 
 scheduleEnsure();
-// YouTube fires several lifecycle events on SPA navigation. Listen to all of
-// them so we re-mount as soon as possible when the user clicks a suggested
-// video instead of waiting for the 150 ms polling tick.
-window.addEventListener("yt-navigate-finish", scheduleEnsure);
-window.addEventListener("yt-navigate-start", scheduleEnsure);
-window.addEventListener("yt-page-data-updated", scheduleEnsure);
-window.addEventListener("yt-page-data-fetched", scheduleEnsure);
-window.addEventListener("popstate", scheduleEnsure);
 
-// Aggressive poll — every 150 ms. The check is three DOM lookups and one
-// comparison, so the cost is negligible. This guarantees we reclaim position
-// within one frame of a competitor pushing us down.
-setInterval(scheduleEnsure, 150);
+// On YouTube SPA navigation, `#secondary` is typically re-rendered and our
+// host gets detached. A single re-mount attempt sometimes loses the race
+// because YouTube continues to replace children for ~1-2 seconds after the
+// nav event. Burst-retry every 100 ms for 3 s to guarantee we reclaim the
+// slot regardless of YouTube's timing.
+let burstTimer: number | null = null;
+function startBurstRetry() {
+  if (burstTimer !== null) window.clearInterval(burstTimer);
+  let attempts = 0;
+  burstTimer = window.setInterval(() => {
+    ensureMounted();
+    if (++attempts >= 30) {
+      if (burstTimer !== null) window.clearInterval(burstTimer);
+      burstTimer = null;
+    }
+  }, 100);
+}
+
+window.addEventListener("yt-navigate-finish", startBurstRetry);
+window.addEventListener("yt-navigate-start", startBurstRetry);
+window.addEventListener("yt-page-data-updated", startBurstRetry);
+window.addEventListener("yt-page-data-fetched", startBurstRetry);
+window.addEventListener("popstate", startBurstRetry);
+
+// Steady-state poll — every 100 ms. The check is three DOM lookups and one
+// comparison, so the cost is negligible. Guarantees we reclaim position
+// within one frame of a competitor or YouTube pushing us out.
+setInterval(scheduleEnsure, 100);
