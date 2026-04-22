@@ -221,6 +221,22 @@ def update_video_audio(video_id: str, language: str, audio_url: str | None, audi
     logger.info(f"[{video_id}] audio_status → {audio_status} (url={'set' if audio_url else 'none'})")
 
 
+def save_transcript_text(video_id: str, text: str) -> None:
+    """Persist the raw transcript to every processed_videos row for this video.
+
+    The transcript source is identical across languages (summaries are translated
+    downstream), so we write the same text to all rows. Consumed by the Chrome
+    extension's Transcript tab via /api/extension/status/[videoId].
+    """
+    if not text:
+        return
+    try:
+        sb = get_client()
+        sb.table("processed_videos").update({"transcript_text": text}).eq("video_id", video_id).execute()
+    except Exception as e:
+        logger.warning(f"[{video_id}] transcript_text DB write failed (non-fatal): {e}")
+
+
 def has_audio_subscribers(channel_id: str, language: str) -> bool:
     """Check if any active subscriber for this channel has audio enabled and matching language."""
     sb = get_client()

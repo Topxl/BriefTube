@@ -1,0 +1,52 @@
+{
+  "manifest_version": 3,
+  "name": "BriefTube: AI YouTube summaries",
+  "description": "Fast, accurate YouTube video summaries with timestamps, audio, and channel subscriptions. Powered by Gemini.",
+  "version": "0.1.0",
+  "action": {
+    "default_popup": "src/popup/index.html",
+    "default_icon": {
+      "16": "public/icons/icon-16.png",
+      "32": "public/icons/icon-32.png",
+      "48": "public/icons/icon-48.png",
+      "128": "public/icons/icon-128.png"
+    }
+  },
+  "icons": {
+    "16": "public/icons/icon-16.png",
+    "32": "public/icons/icon-32.png",
+    "48": "public/icons/icon-48.png",
+    "128": "public/icons/icon-128.png"
+  },
+  "background": {
+    "service_worker": "src/background/index.ts",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.youtube.com/*", "https://m.youtube.com/*"],
+      "js": ["src/content/index.tsx"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.brief-tube.com/extension/auth*",
+        "https://brief-tube.com/extension/auth*",
+        "http://localhost/extension/auth*",
+        "http://127.0.0.1/extension/auth*"
+      ],
+      "js": ["src/content-auth/index.ts"],
+      "run_at": "document_start",
+      "all_frames": false
+    }
+  ],
+  "permissions": ["storage", "activeTab", "tabs"],
+  "host_permissions": [
+    "https://www.youtube.com/*",
+    "https://m.youtube.com/*",
+    "https://*.brief-tube.com/*",
+    "https://brief-tube.com/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*"
+  ]
+}

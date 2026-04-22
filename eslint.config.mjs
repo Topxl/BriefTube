@@ -48,7 +48,7 @@ export default [
   },
   // NextJS
   {
-    ignores: [".next/"],
+    ignores: [".next/", "extension/"],
   },
   pluginNext.configs["core-web-vitals"],
   // Rules config

@@ -391,6 +391,8 @@ async def _process_video(
                     transcript_extractor.last_transcript_source or "unknown",
                     transcript_cost,
                 )
+                # Persist to DB so the extension can read it without filesystem fallback
+                await asyncio.to_thread(db.save_transcript_text, video_id, transcript)
 
         # ── Post-transcript alerts ──────────────────────────────────────
 

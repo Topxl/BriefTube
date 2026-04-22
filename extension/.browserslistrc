@@ -1,0 +1,2 @@
+# Chrome extension only targets modern Chromium (MV3 is Chrome 88+)
+chrome >= 110
