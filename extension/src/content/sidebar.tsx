@@ -566,12 +566,8 @@ function SummaryPanel(props: {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center gap-3 py-12 text-[var(--bt-text-muted)]">
+      <div className="flex items-center justify-center py-12">
         <Loader2 className="text-brand size-6 animate-spin" />
-        <p className="text-[13px] font-medium">Reading the video…</p>
-        <p className="text-[11px] text-[var(--bt-text-dim)]">
-          Usually takes 2-3 seconds
-        </p>
       </div>
     );
   }
@@ -736,12 +732,8 @@ function TranscriptPanel(props: {
 
   if (loading && !transcript) {
     return (
-      <div className="flex flex-col items-center gap-3 py-12 text-[var(--bt-text-muted)]">
+      <div className="flex items-center justify-center py-12">
         <Loader2 className="text-brand size-6 animate-spin" />
-        <p className="text-[13px] font-medium">Transcribing with Whisper…</p>
-        <p className="text-[11px] text-[var(--bt-text-dim)]">
-          1-2 minutes, depending on video length
-        </p>
       </div>
     );
   }
