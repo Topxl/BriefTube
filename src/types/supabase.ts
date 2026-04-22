@@ -7,8 +7,6 @@ export type Json =
   | Json[];
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.1";
   };
@@ -340,6 +338,71 @@ export type Database = {
           },
         ];
       };
+      extension_anon_usage: {
+        Row: {
+          created_at: string;
+          device_id: string;
+          last_ip: string | null;
+          last_user_agent: string | null;
+          last_video_id: string | null;
+          summaries_count: number;
+          updated_at: string;
+          usage_date: string;
+        };
+        Insert: {
+          created_at?: string;
+          device_id: string;
+          last_ip?: string | null;
+          last_user_agent?: string | null;
+          last_video_id?: string | null;
+          summaries_count?: number;
+          updated_at?: string;
+          usage_date?: string;
+        };
+        Update: {
+          created_at?: string;
+          device_id?: string;
+          last_ip?: string | null;
+          last_user_agent?: string | null;
+          last_video_id?: string | null;
+          summaries_count?: number;
+          updated_at?: string;
+          usage_date?: string;
+        };
+        Relationships: [];
+      };
+      extension_user_usage: {
+        Row: {
+          created_at: string;
+          summaries_count: number;
+          updated_at: string;
+          usage_date: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          summaries_count?: number;
+          updated_at?: string;
+          usage_date?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          summaries_count?: number;
+          updated_at?: string;
+          usage_date?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "extension_user_usage_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       feature_requests: {
         Row: {
           admin_notes: string | null;
@@ -595,6 +658,7 @@ export type Database = {
           transcript_length: number | null;
           transcript_source: string | null;
           transcript_status: string | null;
+          transcript_text: string | null;
           video_id: string;
           video_title: string | null;
           video_url: string | null;
@@ -619,6 +683,7 @@ export type Database = {
           transcript_length?: number | null;
           transcript_source?: string | null;
           transcript_status?: string | null;
+          transcript_text?: string | null;
           video_id: string;
           video_title?: string | null;
           video_url?: string | null;
@@ -643,6 +708,7 @@ export type Database = {
           transcript_length?: number | null;
           transcript_source?: string | null;
           transcript_status?: string | null;
+          transcript_text?: string | null;
           video_id?: string;
           video_title?: string | null;
           video_url?: string | null;
@@ -728,6 +794,7 @@ export type Database = {
           email: string;
           email_announcements: boolean | null;
           email_newsletter: boolean | null;
+          extension_installed_at: string | null;
           favorite_languages: string[];
           id: string;
           max_channels: number | null;
@@ -762,6 +829,7 @@ export type Database = {
           email: string;
           email_announcements?: boolean | null;
           email_newsletter?: boolean | null;
+          extension_installed_at?: string | null;
           favorite_languages?: string[];
           id: string;
           max_channels?: number | null;
@@ -796,6 +864,7 @@ export type Database = {
           email?: string;
           email_announcements?: boolean | null;
           email_newsletter?: boolean | null;
+          extension_installed_at?: string | null;
           favorite_languages?: string[];
           id?: string;
           max_channels?: number | null;
@@ -1351,6 +1420,19 @@ export type Database = {
           title: string;
           video_id: string;
         }[];
+      };
+      increment_extension_anon_usage: {
+        Args: {
+          p_device_id: string;
+          p_ip: string;
+          p_user_agent: string;
+          p_video_id: string;
+        };
+        Returns: number;
+      };
+      increment_extension_user_usage: {
+        Args: { p_user_id: string };
+        Returns: number;
       };
       pick_next_processing_job: {
         Args: never;

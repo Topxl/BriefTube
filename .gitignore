@@ -45,6 +45,7 @@ src/generated
 
 # Python
 worker/__pycache__/
+worker/tests/__pycache__/
 worker/venv/
 worker/*.log
 worker/*.log.*

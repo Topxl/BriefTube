@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Only reset the INNER React root — never the shadow host. Resetting the host
+   via `:host { all: initial }` silently wipes out our inline border-radius,
+   overflow and box-shadow. The host's visual properties are set inline from
+   the content script for maximum specificity. */
+.brieftube-root {
+  all: initial;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
+    sans-serif;
+}
+
+.brieftube-root * {
+  box-sizing: border-box;
+}
+
+/* Theme variables — default to dark (matches YouTube's default), overridden
+   to light via the host's [data-theme="light"] attribute which is set from
+   the content script based on YouTube's own theme state. */
+/* Palette aligned with YouTube's own design tokens so the sidebar blends
+   seamlessly with the comments / recommended-videos column.
+   - Dark mode bg #0f0f0f mirrors YouTube's --yt-spec-base-background
+   - #272727 mirrors --yt-spec-badge-chip-background / chip bg
+   - Light mode #ffffff, elevated #f2f2f2, muted #606060 (YouTube constants) */
+:host {
+  color-scheme: dark;
+  --bt-bg: #0f0f0f;
+  --bt-bg-elevated: #272727;
+  --bt-text: #f1f1f1;
+  --bt-text-soft: rgba(241, 241, 241, 0.92);
+  --bt-text-muted: #aaaaaa;
+  --bt-text-dim: rgba(241, 241, 241, 0.45);
+  --bt-text-faint: rgba(241, 241, 241, 0.3);
+  --bt-border: rgba(255, 255, 255, 0.1);
+  --bt-hover-bg: rgba(255, 255, 255, 0.05);
+  --bt-hover-bg-strong: rgba(255, 255, 255, 0.1);
+}
+
+:host([data-theme="light"]) {
+  color-scheme: light;
+  --bt-bg: #ffffff;
+  --bt-bg-elevated: #f2f2f2;
+  --bt-text: #0f0f0f;
+  --bt-text-soft: rgba(15, 15, 15, 0.9);
+  --bt-text-muted: #606060;
+  --bt-text-dim: #909090;
+  --bt-text-faint: rgba(15, 15, 15, 0.35);
+  --bt-border: rgba(0, 0, 0, 0.1);
+  --bt-hover-bg: rgba(0, 0, 0, 0.05);
+  --bt-hover-bg-strong: rgba(0, 0, 0, 0.1);
+}
+
+/* Scrollbar — colours tracked in CSS vars so it flips with the theme. */
+.brieftube-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--bt-border) transparent;
+}
+.brieftube-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.brieftube-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.brieftube-scroll::-webkit-scrollbar-thumb {
+  background: var(--bt-hover-bg-strong);
+  border-radius: 3px;
+}
+.brieftube-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--bt-text-dim);
+}
+.brieftube-scroll::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Native audio player controls respect host color-scheme automatically. */
