@@ -61,6 +61,7 @@ function App() {
   const [summary, setSummary] = useState<SummarizeResponse | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
+  const [statusCheckPending, setStatusCheckPending] = useState(false);
   const [subscribed, setSubscribed] = useState<
     "idle" | "pending" | "done" | "error"
   >("idle");
@@ -73,6 +74,7 @@ function App() {
       setTranscriptError(null);
       setSummary(null);
       setSummaryError(null);
+      setStatusCheckPending(false);
       setSubscribed("idle");
     };
     const check = () => {
@@ -122,6 +124,7 @@ function App() {
     if (!meta?.videoId) return;
     const lang = me?.user?.preferredLanguage ?? "en";
     let cancelled = false;
+    setStatusCheckPending(true);
     sendMessage<StatusResponse>({
       type: "STATUS",
       payload: { videoId: meta.videoId, language: lang },
@@ -149,7 +152,10 @@ function App() {
           setTranscriptError(null);
         }
       })
-      .catch(() => undefined);
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled) setStatusCheckPending(false);
+      });
     return () => {
       cancelled = true;
     };
@@ -329,6 +335,7 @@ function App() {
       summary={summary}
       summaryLoading={summaryLoading}
       summaryError={summaryError}
+      statusCheckPending={statusCheckPending}
       onRequestSummary={onRequestSummary}
       onEnqueueWorker={onEnqueueWorker}
       onSignIn={onSignIn}

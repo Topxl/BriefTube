@@ -30,6 +30,7 @@ type Props = {
   summary: SummarizeResponse | null;
   summaryLoading: boolean;
   summaryError: string | null;
+  statusCheckPending: boolean;
   onRequestSummary: () => void;
   onEnqueueWorker: () => void;
   onSignIn: () => void;
@@ -106,6 +107,7 @@ export function Sidebar(props: Props) {
     summary,
     summaryLoading,
     summaryError,
+    statusCheckPending,
     onRequestSummary,
     onEnqueueWorker,
     onSignIn,
@@ -279,6 +281,7 @@ export function Sidebar(props: Props) {
             loading={summaryLoading}
             error={summaryError}
             transcriptError={transcriptError}
+            statusCheckPending={statusCheckPending}
             canSummarize={canSummarize}
             onRequestSummary={onRequestSummary}
             onEnqueueWorker={onEnqueueWorker}
@@ -499,6 +502,7 @@ function SummaryPanel(props: {
   loading: boolean;
   error: string | null;
   transcriptError: string | null;
+  statusCheckPending: boolean;
   canSummarize: boolean;
   onRequestSummary: () => void;
   onEnqueueWorker: () => void;
@@ -508,6 +512,7 @@ function SummaryPanel(props: {
     loading,
     error,
     transcriptError,
+    statusCheckPending,
     canSummarize,
     onRequestSummary,
     onEnqueueWorker,
@@ -520,6 +525,22 @@ function SummaryPanel(props: {
         <p className="text-[13px] font-medium">Reading the video…</p>
         <p className="text-[11px] text-[var(--bt-text-dim)]">
           Usually takes 2-3 seconds
+        </p>
+      </div>
+    );
+  }
+
+  // Don't show "No captions" prematurely while we're still checking if a
+  // cached summary exists — the pre-flight /status call often surfaces a
+  // ready-to-go summary within ~300 ms, and flashing the Whisper CTA
+  // beforehand makes users think the extension is broken.
+  if (statusCheckPending && !summary) {
+    return (
+      <div className="flex flex-col items-center gap-3 py-12 text-[var(--bt-text-muted)]">
+        <Loader2 className="text-brand size-6 animate-spin" />
+        <p className="text-[13px] font-medium">Checking for a cached summary…</p>
+        <p className="text-[11px] text-[var(--bt-text-dim)]">
+          Most popular videos are already processed
         </p>
       </div>
     );
