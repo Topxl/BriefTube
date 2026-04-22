@@ -4,6 +4,7 @@ import {
   fetchStatus,
   subscribeChannel,
   summarize,
+  updatePreferredLanguage,
 } from "@/lib/api";
 import { BRIEFTUBE_CONFIG } from "@/lib/config";
 import { clearSession, getDeviceId, setSession } from "@/lib/storage";
@@ -74,6 +75,13 @@ chrome.runtime.onMessage.addListener(
           case "GET_DEVICE_ID": {
             const id = await getDeviceId();
             sendResponse({ ok: true, data: id });
+            return;
+          }
+          case "UPDATE_LANGUAGE": {
+            const data = await updatePreferredLanguage(
+              message.payload.preferredLanguage,
+            );
+            sendResponse({ ok: true, data });
             return;
           }
           case "AUTH_CALLBACK": {

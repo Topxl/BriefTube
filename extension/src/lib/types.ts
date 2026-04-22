@@ -94,4 +94,5 @@ export type BgMessage =
     }
   | { type: "SIGN_IN" }
   | { type: "SIGN_OUT" }
-  | { type: "GET_DEVICE_ID" };
+  | { type: "GET_DEVICE_ID" }
+  | { type: "UPDATE_LANGUAGE"; payload: { preferredLanguage: string } };

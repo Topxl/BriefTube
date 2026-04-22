@@ -75,6 +75,15 @@ export async function fetchMe(): Promise<MeResponse> {
   return apiFetch<MeResponse>("/api/extension/me", { method: "GET" });
 }
 
+export async function updatePreferredLanguage(
+  preferredLanguage: string,
+): Promise<{ ok: boolean }> {
+  return apiFetch<{ ok: boolean }>("/api/extension/me", {
+    method: "PATCH",
+    body: JSON.stringify({ preferredLanguage }),
+  });
+}
+
 export async function summarize(
   request: SummarizeRequest,
 ): Promise<SummarizeResponse> {
