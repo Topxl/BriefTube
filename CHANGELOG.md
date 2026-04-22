@@ -3,6 +3,7 @@
 ## 2026-04-23
 
 FIX(extension-transcript): surface transcripts from Whisper-processed videos in the Transcript tab — worker was archiving transcripts to `/home/brieftube/transcripts/{id}.json` on disk only, so videos without native YouTube captions had a cached summary but an empty Transcript tab. Added `processed_videos.transcript_text` column (migration `20260423_add_transcript_text.sql`), `/api/extension/status/[videoId]` now selects + returns it with a filesystem fallback that auto-backfills the DB on first read. Sidebar renders plain paragraph mode when no timestamps are available, timestamped clickable lines otherwise.
+UX(extension-welcome): compact responsive layout — `/extension/welcome` fits in one viewport without scrolling (3-col grid on desktop, tighter padding, smaller header, shorter feature copy) so the "Open a YouTube video" CTA and dashboard link are above the fold.
 FEATURE(worker): persist raw transcripts to DB on every extraction — new `db.save_transcript_text(video_id, text)` helper called from `main.py` right after `transcript_store.save()`. Closes the extension's Transcript tab dependency on filesystem fallback for new videos; legacy videos still backfill on first extension hit.
 
 ## 2026-04-22
