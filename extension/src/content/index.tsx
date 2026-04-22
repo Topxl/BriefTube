@@ -110,10 +110,31 @@ function App() {
     };
   }, []);
 
+  // Paint the authenticated state instantly by hydrating from chrome.storage
+  // cache before the network round-trip completes. Without this, every page
+  // load flashed the anonymous "Sign in for more" header for ~500-1000 ms
+  // before /me responded. The cache is refreshed with every fresh fetch.
+  useEffect(() => {
+    let cancelled = false;
+    void chrome.storage.local.get("brieftube_me_cache").then((res) => {
+      if (cancelled) return;
+      const cached = res?.brieftube_me_cache as MeResponse | undefined;
+      if (cached) setMe((prev) => prev ?? cached);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Keep /me fresh: refetch on videoId change (picks up quota changes made
+  // in other tabs) and persist the response to the cache above.
   useEffect(() => {
     sendMessage<MeResponse>({ type: "ME" })
-      .then(setMe)
-      .catch(() => setMe(null));
+      .then((fresh) => {
+        setMe(fresh);
+        void chrome.storage.local.set({ brieftube_me_cache: fresh });
+      })
+      .catch(() => setMe((prev) => prev ?? null));
   }, [meta?.videoId]);
 
   // React instantly when the session changes in chrome.storage (sign-in or
@@ -128,7 +149,10 @@ function App() {
       if (area !== "local") return;
       if (!("brieftube_session" in changes)) return;
       sendMessage<MeResponse>({ type: "ME" })
-        .then(setMe)
+        .then((fresh) => {
+          setMe(fresh);
+          void chrome.storage.local.set({ brieftube_me_cache: fresh });
+        })
         .catch(() => setMe(null));
     };
     chrome.storage.onChanged.addListener(handler);
