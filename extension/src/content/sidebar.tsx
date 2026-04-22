@@ -536,12 +536,8 @@ function SummaryPanel(props: {
   // beforehand makes users think the extension is broken.
   if (statusCheckPending && !summary) {
     return (
-      <div className="flex flex-col items-center gap-3 py-12 text-[var(--bt-text-muted)]">
+      <div className="flex items-center justify-center py-12">
         <Loader2 className="text-brand size-6 animate-spin" />
-        <p className="text-[13px] font-medium">Checking for a cached summary…</p>
-        <p className="text-[11px] text-[var(--bt-text-dim)]">
-          Most popular videos are already processed
-        </p>
       </div>
     );
   }
