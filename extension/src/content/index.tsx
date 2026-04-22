@@ -236,6 +236,7 @@ function App() {
           const res = await sendMessage<{
             status: string;
             summary: string | null;
+            transcript: string | null;
             language: string;
             sourceLanguage: string | null;
             audioUrl: string | null;
@@ -251,6 +252,15 @@ function App() {
               cached: false,
               audioUrl: res.audioUrl,
             });
+            if (res.transcript) {
+              setTranscript({
+                text: res.transcript,
+                timedLines: [],
+                languageCode: res.sourceLanguage ?? res.language,
+                auto: true,
+              });
+              setTranscriptError(null);
+            }
             setSummaryLoading(false);
             clearInterval(timer);
           } else if (res.status === "failed") {
@@ -530,7 +540,24 @@ function ensureMounted(): boolean {
   if (!isWatchPage()) return false;
 
   let host = document.getElementById(SIDEBAR_HOST_ID);
-  if (!host) host = buildHost();
+  // Edge case: YouTube's SPA navigation can swap `#secondary` or
+  // `ytd-watch-flexy`, which detaches our host. getElementById returns null
+  // for detached nodes, so normally the check below catches it — but if the
+  // old host is still referenced elsewhere, verify it's actually connected.
+  if (host && !host.isConnected) host = null;
+  if (!host) {
+    // Tear down the previous React root before rebuilding so we don't leak
+    // renderers across navigations.
+    if (reactRoot) {
+      try {
+        reactRoot.unmount();
+      } catch {
+        // Ignore — the container is already gone.
+      }
+      reactRoot = null;
+    }
+    host = buildHost();
+  }
 
   const competitor = findCompetitorRoot();
   if (competitor?.parentNode) {
@@ -574,7 +601,13 @@ globalObserver.observe(document.documentElement, {
 });
 
 scheduleEnsure();
+// YouTube fires several lifecycle events on SPA navigation. Listen to all of
+// them so we re-mount as soon as possible when the user clicks a suggested
+// video instead of waiting for the 150 ms polling tick.
 window.addEventListener("yt-navigate-finish", scheduleEnsure);
+window.addEventListener("yt-navigate-start", scheduleEnsure);
+window.addEventListener("yt-page-data-updated", scheduleEnsure);
+window.addEventListener("yt-page-data-fetched", scheduleEnsure);
 window.addEventListener("popstate", scheduleEnsure);
 
 // Aggressive poll — every 150 ms. The check is three DOM lookups and one

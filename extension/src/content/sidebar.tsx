@@ -305,6 +305,9 @@ export function Sidebar(props: Props) {
           <TranscriptPanel
             transcript={transcript}
             transcriptError={transcriptError}
+            statusCheckPending={statusCheckPending}
+            loading={summaryLoading}
+            onEnqueueWorker={onEnqueueWorker}
           />
         ) : null}
       </section>
@@ -664,20 +667,71 @@ function ChaptersPanel(props: {
 function TranscriptPanel(props: {
   transcript: ExtractedTranscript | null;
   transcriptError: string | null;
+  statusCheckPending: boolean;
+  loading: boolean;
+  onEnqueueWorker: () => void;
 }) {
-  const { transcript, transcriptError } = props;
+  const {
+    transcript,
+    transcriptError,
+    statusCheckPending,
+    loading,
+    onEnqueueWorker,
+  } = props;
   const [copied, setCopied] = useState(false);
 
-  if (transcriptError === "no_captions" || !transcript) {
+  // Match the SummaryPanel lifecycle: spinner while checking cache, loader
+  // while Whisper is running, CTA only once we've confirmed nothing is
+  // available.
+  if (statusCheckPending && !transcript) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="text-brand size-6 animate-spin" />
+      </div>
+    );
+  }
+
+  if (loading && !transcript) {
+    return (
+      <div className="flex flex-col items-center gap-3 py-12 text-[var(--bt-text-muted)]">
+        <Loader2 className="text-brand size-6 animate-spin" />
+        <p className="text-[13px] font-medium">Transcribing with Whisper…</p>
+        <p className="text-[11px] text-[var(--bt-text-dim)]">
+          1-2 minutes, depending on video length
+        </p>
+      </div>
+    );
+  }
+
+  if (transcriptError === "no_captions" && !transcript) {
+    return (
+      <div className="flex flex-col gap-4 py-4 text-center">
+        <div className="flex flex-col gap-1">
+          <p className="text-[14px] font-semibold text-[var(--bt-text)]">
+            No captions on this video
+          </p>
+          <p className="text-[12px] text-[var(--bt-text-muted)]">
+            We'll transcribe the audio with Whisper (1-2 min) and generate a
+            summary so you get both here.
+          </p>
+        </div>
+        <button
+          onClick={onEnqueueWorker}
+          className="bg-brand hover:bg-brand-dark flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-[14px] font-semibold text-[var(--bt-text)] transition"
+        >
+          <Sparkles className="size-4" />
+          Transcribe &amp; summarize
+        </button>
+      </div>
+    );
+  }
+
+  if (!transcript) {
     return (
       <div className="flex flex-col items-center gap-2 py-10 text-center">
         <AlignLeft className="size-6 text-[var(--bt-text-faint)]" />
         <p className="text-[13px] font-medium text-[var(--bt-text-muted)]">
           No transcript available
-        </p>
-        <p className="max-w-[260px] text-[11px] text-[var(--bt-text-dim)]">
-          This video has no captions. Subscribe to the channel to have
-          BriefTube transcribe new uploads via Whisper.
         </p>
       </div>
     );
