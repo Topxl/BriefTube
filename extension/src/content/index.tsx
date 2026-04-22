@@ -1,5 +1,6 @@
 import { createRoot, type Root } from "react-dom/client";
 import { StrictMode, useCallback, useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
 import {
   extractVideoMeta,
   fetchTranscript,
@@ -408,7 +409,19 @@ function App() {
     }
   }, [meta]);
 
-  if (!meta) return null;
+  // During YouTube SPA navigation, the URL updates before
+  // `ytInitialPlayerResponse` catches up — meta stays null for anywhere from
+  // 100 ms to a few seconds. Rendering null here collapsed the host to
+  // height:0 and the sidebar appeared to "disappear" until F5. Render a
+  // placeholder instead so the slot stays visible while the poll waits for
+  // YouTube to refresh its state.
+  if (!meta) {
+    return (
+      <div className="flex items-center justify-center py-10">
+        <Loader2 className="text-brand size-5 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <Sidebar
