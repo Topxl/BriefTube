@@ -55,7 +55,7 @@ export default function ExtensionWelcomePage() {
         />
         <Feature
           icon={Languages}
-          title="15+ languages"
+          title="55+ languages"
           body="Summaries translated to your preferred language regardless of the video's source."
         />
         <Feature
