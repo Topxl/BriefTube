@@ -21,57 +21,67 @@ Both alternatives keep the brand first, drop the "YouTube" adjective into descri
 
 ### Short summary (max 132 characters)
 
-`Summarize any YouTube video in seconds. Read, listen, or get the full transcript from a sidebar on the watch page.` (114 chars)
+`Personalized AI summaries for YouTube. Subscribe to channels to auto-summarize every new upload. 55+ languages.` (111 chars)
 
 ### Detailed description (max 16,000 characters)
 
 ```
-BriefTube adds a sidebar to every YouTube watch page that turns the video you are watching into a short written summary, an audio brief you can listen to, and the full searchable transcript. It runs in your browser — open the video, click the BriefTube button, get the gist in under thirty seconds.
+BriefTube turns every YouTube video into a personalized summary you can read or listen to — and auto-summarizes every new upload from the channels you subscribe to, so you stay caught up without ever watching a 40-minute video you did not need.
 
-The goal is simple: stop wasting time on videos that could have been a paragraph. Scan the summary first, then decide whether the video is worth twenty minutes of your attention. If it is, you still have the transcript to jump straight to the interesting part.
+Tailored to how you read
 
-What you can do with BriefTube
+You pick how the summary is delivered, and BriefTube writes to your spec every time:
 
-- Generate a structured summary of the current YouTube video, with key points and timestamps
-- Listen to an audio version of the summary (Pro), useful for commutes or chores
-- Read the full transcript in a searchable panel, with click-to-seek timestamps
-- Switch the output language — summaries are produced in the language you prefer, not the video's
-- Subscribe to a YouTube channel with one click and receive every new video's summary via Telegram, delivered by the BriefTube service at brief-tube.com
-- Copy the summary or transcript to paste into your notes, chat, or document
+- Length: brief (one paragraph), standard (balanced), or detailed (thorough)
+- Style: narrative prose, key-point list, or actionable takeaways
+- Language: 55+ supported, translated regardless of the video's original language
 
-Pricing, up front
+The sidebar sits next to the YouTube player. Open any video, get the summary rewritten in your style, in your language, in seconds.
 
-- Anonymous use: three summaries per day, no account required, no email asked
-- Free account (sign in with Google): ten summaries per day
-- Pro plan: unlimited summaries, audio briefs, priority processing, and channel subscriptions delivered via Telegram
+Auto-summarize the channels you follow
 
-There is no hidden paywall. The three daily anonymous summaries are not a trial — they reset every day and cost you nothing. You only sign in when you want more, and you only pay if you want audio and unlimited volume.
+Subscribe to a channel once from the sidebar and BriefTube will automatically summarize every new video the creator uploads — delivered to you on Telegram, Discord, or email through the BriefTube service at brief-tube.com. No refreshing a watch-later list, no catching up after a two-week trip. New upload, new summary, in your inbox or chat.
 
-Privacy position
+Listen instead of reading (Pro)
 
-BriefTube does not require an account to try. When you use it anonymously, the only identifier stored on your device is a random UUID used to count your daily quota — no email, no name, no cookies from ad networks. When you sign in, BriefTube uses Supabase authentication with Google OAuth; the extension stores a session token locally so you stay signed in between tabs.
+Every summary can be played as audio using a natural Edge TTS voice. Commute, workout, dishes — a fifteen-minute video becomes a two-minute audio brief. This is the Pro tier.
 
-Video transcripts and the resulting summaries are processed on BriefTube's servers using Google Gemini, then cached so that repeat requests for the same video are instant and cheaper for everyone. Summaries and transcripts are not sold, not used for advertising, and not shared with third parties outside the processing pipeline.
+Transparent pricing, no hidden paywall
 
-Full details: https://www.brief-tube.com/privacy
+- Anonymous: 3 personalized summaries per day, no account, no credit card
+- Free account (Google sign-in): 10 per day, plus automatic channel summaries
+- Pro: unlimited summaries, audio briefs, priority processing, multi-platform delivery (Telegram, Discord, email)
 
-How to use it
+The free anonymous tier is not a trial. It resets every day and costs you nothing. You only sign in when you want more — and you only pay if you want audio or unlimited volume.
+
+Privacy first
+
+No account required to try. When you use BriefTube anonymously, the only thing stored on your device is a random UUID used to count your daily quota. No email, no name, no ad-tracking cookies. When you sign in, the extension uses Supabase with Google OAuth and stores only the session token locally.
+
+Videos are summarized on BriefTube's servers using Google Gemini. Summaries are cached so repeat requests for the same video are instant. Nothing is sold, tracked for advertising, or shared outside the processing pipeline.
+
+Full privacy policy: https://www.brief-tube.com/privacy
+
+How it works
 
 1. Install the extension and open any video on youtube.com.
-2. The BriefTube sidebar appears next to the player. Click "Summarize" to generate the summary, or open the Transcript tab to read the full text.
-3. To get audio briefs, channel subscriptions, and unlimited daily summaries, click "Sign in" in the extension popup and connect your Google account.
+2. The BriefTube sidebar appears next to the player. Click Summarize.
+3. Open the menu to set your preferred language, summary length, and style — every future summary is written that way until you change it.
+4. To unlock audio briefs, channel auto-summaries, and multi-platform delivery, sign in with Google and upgrade to Pro when you are ready.
 
-Supported surfaces
+What BriefTube handles for you
 
-- youtube.com watch pages, in every language supported by YouTube captions
-- Videos without captions are handled through BriefTube's server-side transcription pipeline, so you can still get a summary when the creator did not publish subtitles
+- Videos with YouTube captions: summarized instantly from the existing transcript
+- Videos without captions: transcribed automatically via BriefTube's server-side pipeline, then summarized — so you still get a summary when the creator did not publish subtitles
+- Videos in any of 55+ languages: translated to your preferred language before summarizing
+- Long videos: no arbitrary length caps — podcasts, lectures, and live streams are supported
 
-What this extension does not do
+What the extension does not do
 
-- It does not download videos or audio files from YouTube
-- It does not modify, block, or replace YouTube's player, ads, or recommendations
-- It does not run remote code — every script is bundled into the extension package at build time
-- It does not read pages outside of youtube.com and brief-tube.com
+- Does not download video or audio files from YouTube
+- Does not modify, block, or replace YouTube's player, ads, or recommendations
+- Does not read any pages outside youtube.com and brief-tube.com
+- Does not run remote code — every script is bundled into the extension package at build time
 
 Links
 
@@ -79,7 +89,7 @@ Links
 - Privacy policy: https://www.brief-tube.com/privacy
 - Support and contact: https://www.brief-tube.com/support
 
-BriefTube is built and maintained as part of the BriefTube SaaS at brief-tube.com. The extension is the fastest way to try the product; the web app adds channel monitoring, multi-platform delivery, and long-term summary history.
+BriefTube is built and maintained as part of the BriefTube SaaS at brief-tube.com. The extension is the fastest way to try the product; the web app adds channel monitoring, multi-platform delivery, and a long-term summary library.
 ```
 
 ### Category
