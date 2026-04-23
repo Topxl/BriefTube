@@ -31,9 +31,7 @@
     {
       "matches": [
         "https://www.brief-tube.com/extension/auth*",
-        "https://brief-tube.com/extension/auth*",
-        "http://localhost/extension/auth*",
-        "http://127.0.0.1/extension/auth*"
+        "https://brief-tube.com/extension/auth*"
       ],
       "js": ["src/content-auth/index.ts"],
       "run_at": "document_start",
@@ -45,8 +43,6 @@
     "https://www.youtube.com/*",
     "https://m.youtube.com/*",
     "https://*.brief-tube.com/*",
-    "https://brief-tube.com/*",
-    "http://localhost/*",
-    "http://127.0.0.1/*"
+    "https://brief-tube.com/*"
   ]
 }
