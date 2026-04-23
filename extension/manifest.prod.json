@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "BriefTube: AI YouTube summaries",
-  "description": "Fast, accurate YouTube video summaries with timestamps, audio, and channel subscriptions. Powered by Gemini.",
+  "description": "Personalized AI summaries for YouTube. Subscribe to channels to auto-summarize every new upload. 55+ languages.",
   "version": "0.1.0",
   "action": {
     "default_popup": "src/popup/index.html",
