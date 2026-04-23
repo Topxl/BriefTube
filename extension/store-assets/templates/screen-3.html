@@ -1,0 +1,310 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>BriefTube screen 3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" />
+<style>
+  :root {
+    --bg: #0F0F0F;
+    --surface: #272727;
+    --text: #F1F1F1;
+    --text-muted: #AAAAAA;
+    --text-soft: rgba(241, 241, 241, 0.92);
+    --border: rgba(255, 255, 255, 0.08);
+    --brand: #DC2626;
+    --hover-bg-strong: rgba(255, 255, 255, 0.10);
+  }
+  html, body {
+    margin: 0;
+    padding: 0;
+    font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  .canvas {
+    position: relative;
+    width: 1280px;
+    height: 800px;
+    overflow: hidden;
+    background: var(--bg);
+  }
+  .aura {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(120px);
+    pointer-events: none;
+    opacity: 0.55;
+  }
+  .aura-red {
+    width: 900px;
+    height: 900px;
+    background: #991B1B;
+    top: -240px;
+    left: -220px;
+  }
+  .aura-violet {
+    width: 900px;
+    height: 900px;
+    background: #1E1B4B;
+    bottom: -260px;
+    right: -220px;
+  }
+  .grain {
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.5 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+    opacity: 0.03;
+    mix-blend-mode: overlay;
+    pointer-events: none;
+  }
+  .hero {
+    position: absolute;
+    top: 52px;
+    left: 0;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+  .headline {
+    text-align: center;
+    max-width: 1100px;
+    font-weight: 700;
+    font-size: 56px;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    color: #fff;
+    margin: 0;
+  }
+  .sub {
+    text-align: center;
+    max-width: 760px;
+    font-weight: 500;
+    font-size: 22px;
+    line-height: 1.35;
+    color: var(--text-muted);
+    margin: 0;
+  }
+  .stage {
+    position: absolute;
+    top: 220px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 1080px;
+    height: 520px;
+  }
+  .tilt {
+    transform: perspective(1600px) rotateY(-2deg);
+  }
+  .shot {
+    width: 100%;
+    height: 100%;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 40px 80px -16px rgba(0, 0, 0, 0.6);
+    background: #0F0F0F;
+    overflow: hidden;
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr 400px;
+  }
+  .yt { background: #0F0F0F; padding: 20px 22px 18px 22px; display: flex; flex-direction: column; gap: 14px; }
+  .yt-player { width: 100%; aspect-ratio: 16 / 9; background: #0a0a0a; border-radius: 10px; position: relative; overflow: hidden; }
+  .yt-thumb { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .yt-play { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 84px; height: 60px; border-radius: 14px; background: rgba(0, 0, 0, 0.78); display: flex; align-items: center; justify-content: center; z-index: 2; }
+  .yt-play svg { width: 36px; height: 36px; }
+  .yt-scrub { position: absolute; left: 16px; right: 16px; bottom: 18px; height: 3px; border-radius: 2px; background: rgba(255, 255, 255, 0.2); }
+  .yt-scrub-fill { width: 22%; height: 100%; background: var(--brand); border-radius: 2px; }
+  .yt-dur { position: absolute; right: 16px; bottom: 28px; font-size: 10px; font-weight: 600; color: #fff; background: rgba(0, 0, 0, 0.6); padding: 2px 6px; border-radius: 3px; }
+  .yt-title { font-size: 16px; font-weight: 600; color: #fff; line-height: 1.3; margin: 0; }
+  .yt-meta-row { display: flex; align-items: center; gap: 10px; }
+  .yt-avatar { width: 36px; height: 36px; border-radius: 50%; background: #000 url("../assets/avatar-hubermanlab.jpg") center/cover no-repeat; flex-shrink: 0; }
+  .yt-meta-text { display: flex; flex-direction: column; gap: 2px; }
+  .yt-channel { font-size: 13px; color: #fff; font-weight: 600; }
+  .yt-stats { font-size: 11px; color: #AAAAAA; }
+  .yt-actions { display: flex; gap: 8px; margin-left: auto; }
+  .yt-btn { background: rgba(255, 255, 255, 0.1); border-radius: 18px; padding: 7px 14px; font-size: 11px; color: #fff; font-weight: 500; }
+  .yt-btn.primary { background: #fff; color: #0F0F0F; font-weight: 600; }
+  .yt-desc { background: rgba(255, 255, 255, 0.04); border-radius: 10px; padding: 10px 12px; font-size: 11px; color: #AAAAAA; line-height: 1.4; }
+
+  .sidebar { width: 400px; background: var(--bg); display: flex; flex-direction: column; border-left: 1px solid var(--border); }
+  .sb-header { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: var(--surface); border-bottom: 1px solid var(--border); }
+  .sb-logo { width: 32px; height: 32px; border-radius: 7px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; }
+  .sb-logo img { width: 32px; height: 32px; display: block; border-radius: 7px; }
+  .sb-quota { flex: 1; font-size: 12px; color: #6EE7B7; font-weight: 500; }
+  .sb-avatar { width: 26px; height: 26px; border-radius: 50%; background: #000 url("../assets/avatar-mrbeast.jpg") center/cover no-repeat; flex-shrink: 0; border: 1px solid var(--border); }
+  .sb-tabs { display: flex; background: var(--surface); border-bottom: 1px solid var(--border); }
+  .sb-tab { flex: 1; display: flex; align-items: center; justify-content: center; gap: 5px; padding: 12px 4px; font-size: 11px; font-weight: 600; color: var(--text-muted); position: relative; }
+  .sb-tab.active { color: var(--text); }
+  .sb-tab.active::after { content: ""; position: absolute; left: 12px; right: 12px; bottom: 0; height: 3px; border-radius: 3px 3px 0 0; background: var(--brand); }
+  .sb-tab svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  .sb-body { flex: 1; padding: 10px 10px; overflow: hidden; display: flex; flex-direction: column; gap: 2px; }
+  .tr-header { display: flex; justify-content: space-between; align-items: center; padding: 4px 6px 8px; }
+  .tr-badge { font-size: 10px; color: var(--text-muted); font-weight: 500; }
+  .tr-copy { display: flex; align-items: center; gap: 4px; background: rgba(255,255,255,0.06); color: var(--text-soft); font-size: 10px; font-weight: 500; padding: 3px 7px; border-radius: 5px; }
+  .tr-copy svg { width: 10px; height: 10px; stroke: currentColor; fill: none; stroke-width: 2; }
+  .tr-line { display: flex; gap: 10px; padding: 5px 8px; border-radius: 7px; align-items: flex-start; }
+  .tr-line.hover { background: rgba(255,255,255,0.05); }
+  .tr-time { font-family: "SFMono-Regular", Menlo, monospace; font-size: 10px; font-weight: 600; background: var(--hover-bg-strong); color: var(--text-muted); padding: 2px 6px; border-radius: 4px; flex-shrink: 0; margin-top: 1px; }
+  .tr-line.hover .tr-time { background: var(--brand); color: #fff; }
+  .tr-text { font-size: 11.5px; color: var(--text-soft); line-height: 1.5; }
+
+  .sb-footer { padding: 12px 14px; background: var(--surface); border-top: 1px solid var(--border); }
+  .sb-subscribe { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--brand); color: #fff; font-size: 12px; font-weight: 600; border-radius: 10px; padding: 9px 12px; box-shadow: 0 6px 20px -6px rgba(220, 38, 38, 0.5); }
+  .sb-subscribe svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* Spotlight + cursor */
+  .spotlight {
+    position: absolute;
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.18), transparent 70%);
+    pointer-events: none;
+    z-index: 10;
+  }
+  .cursor {
+    position: absolute;
+    width: 42px;
+    height: 42px;
+    z-index: 12;
+    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.6));
+  }
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="aura aura-red"></div>
+  <div class="aura aura-violet"></div>
+  <div class="grain"></div>
+
+  <div class="hero">
+    <h1 class="headline">Jump to the exact moment</h1>
+    <p class="sub">Click any timestamp to seek instantly</p>
+  </div>
+
+  <div class="stage">
+    <div class="tilt" style="width:100%;height:100%;position:relative;">
+      <div class="shot">
+        <div class="yt">
+          <div class="yt-player">
+            <img class="yt-thumb" src="../assets/nm1TxQj9IsQ.jpg" alt="" />
+            <div class="yt-play">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#fff" d="M8 5v14l11-7z"/></svg>
+            </div>
+            <div class="yt-dur">1:52:31</div>
+            <div class="yt-scrub"><div class="yt-scrub-fill"></div></div>
+          </div>
+          <h2 class="yt-title">How your nervous system works - Huberman Lab</h2>
+          <div class="yt-meta-row">
+            <div class="yt-avatar"></div>
+            <div class="yt-meta-text">
+              <div class="yt-channel">Andrew Huberman</div>
+              <div class="yt-stats">1.2M views - 3 days ago</div>
+            </div>
+            <div class="yt-actions">
+              <div class="yt-btn primary">Subscribe</div>
+              <div class="yt-btn">Share</div>
+            </div>
+          </div>
+          <div class="yt-desc">
+            A deep dive into how your nervous system regulates focus, stress, and recovery. Clickable timestamps lead to specific topics for efficient review.
+          </div>
+        </div>
+
+        <div class="sidebar">
+          <div class="sb-header">
+            <div class="sb-logo"><img src="data:image/png;base64,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" alt="BriefTube" /></div>
+            <div class="sb-quota">Pro - unlimited summaries</div>
+            <div class="sb-avatar"></div>
+          </div>
+          <div class="sb-tabs">
+            <div class="sb-tab">
+              <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              Summary
+            </div>
+            <div class="sb-tab">
+              <svg viewBox="0 0 24 24"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+              Chapters
+            </div>
+            <div class="sb-tab">
+              <svg viewBox="0 0 24 24"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1v-6h3zM3 19a2 2 0 0 0 2 2h1v-6H3z"/></svg>
+              Audio
+              <svg viewBox="0 0 24 24" style="width:10px;height:10px;opacity:0.55"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </div>
+            <div class="sb-tab active">
+              <svg viewBox="0 0 24 24"><line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/></svg>
+              Transcript
+            </div>
+          </div>
+          <div class="sb-body">
+            <div class="tr-header">
+              <div class="tr-badge">Auto-generated - EN</div>
+              <div class="tr-copy">
+                <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                Copy
+              </div>
+            </div>
+            <div class="tr-line">
+              <span class="tr-time">05:28</span>
+              <span class="tr-text">the first thing people ask is whether memories are stored in a single location...</span>
+            </div>
+            <div class="tr-line hover" id="target-row">
+              <span class="tr-time">06:51</span>
+              <span class="tr-text">and that's why sleep is the most powerful memory tool we have, full stop.</span>
+            </div>
+            <div class="tr-line">
+              <span class="tr-time">08:12</span>
+              <span class="tr-text">REM specifically seems to lock in emotional content while slow-wave...</span>
+            </div>
+            <div class="tr-line">
+              <span class="tr-time">09:04</span>
+              <span class="tr-text">the forgetting curve isn't a bug, it's a feature of the system.</span>
+            </div>
+            <div class="tr-line">
+              <span class="tr-time">10:37</span>
+              <span class="tr-text">spaced repetition works because it mimics what the hippocampus does naturally...</span>
+            </div>
+            <div class="tr-line">
+              <span class="tr-time">12:15</span>
+              <span class="tr-text">there's a reason we forget names but remember smells from childhood.</span>
+            </div>
+            <div class="tr-line">
+              <span class="tr-time">13:48</span>
+              <span class="tr-text">context-dependent memory shows up in every study we've run on this topic...</span>
+            </div>
+            <div class="tr-line">
+              <span class="tr-time">15:22</span>
+              <span class="tr-text">caffeine after learning actually improves consolidation in some cases.</span>
+            </div>
+          </div>
+          <div class="sb-footer">
+            <div class="sb-subscribe">
+              <svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/><line x1="12" y1="7" x2="12" y2="13"/><line x1="9" y1="10" x2="15" y2="10"/></svg>
+              Subscribe to Andrew Huberman
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Spotlight + cursor, positioned over the "06:51" line
+         Row ~98px tall each in the transcript list, so "06:51" is the 2nd line.
+         Sidebar starts at x ~680 within the stage; header 48 + tabs 42 + header pad + body top -->
+    <div class="spotlight" style="right: 170px; top: 200px;"></div>
+    <!-- macOS-style pointing-hand cursor SVG -->
+    <svg class="cursor" style="right: 220px; top: 220px;" viewBox="0 0 32 32">
+      <path d="M12 2 L12 16 L8.5 12.5 C7.8 11.8 6.7 11.8 6 12.5 C5.3 13.2 5.3 14.3 6 15 L12.5 22 C13.5 23.5 15 24.5 17 24.5 L22 24.5 C24.5 24.5 26.5 22.5 26.5 20 L26.5 12.5 C26.5 11.4 25.6 10.5 24.5 10.5 C23.4 10.5 22.5 11.4 22.5 12.5 L22.5 9.5 C22.5 8.4 21.6 7.5 20.5 7.5 C19.4 7.5 18.5 8.4 18.5 9.5 L18.5 8 C18.5 6.9 17.6 6 16.5 6 C15.4 6 14.5 6.9 14.5 8 L14.5 4 C14.5 2.9 13.6 2 12.5 2 C11.4 2 10.5 2.9 10.5 4 L10.5 4 Z"
+            fill="white" stroke="black" stroke-width="1.2" stroke-linejoin="round"/>
+    </svg>
+  </div>
+</div>
+</body>
+</html>
