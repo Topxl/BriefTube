@@ -1,0 +1,397 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>BriefTube screen 2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" />
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: #0F0F0F;
+    color: #F1F1F1;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  .canvas {
+    position: relative;
+    width: 1280px;
+    height: 800px;
+    overflow: hidden;
+    background: #0F0F0F;
+  }
+  .aura {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(120px);
+    pointer-events: none;
+    opacity: 0.55;
+  }
+  .aura-red {
+    width: 900px;
+    height: 900px;
+    background: #991B1B;
+    top: -240px;
+    left: -220px;
+  }
+  .aura-violet {
+    width: 900px;
+    height: 900px;
+    background: #1E1B4B;
+    bottom: -260px;
+    right: -220px;
+  }
+  .grain {
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.5 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+    opacity: 0.03;
+    mix-blend-mode: overlay;
+    pointer-events: none;
+  }
+  .hero {
+    position: absolute;
+    top: 52px;
+    left: 0;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+  .headline {
+    text-align: center;
+    max-width: 1100px;
+    font-weight: 700;
+    font-size: 56px;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    color: #fff;
+    margin: 0;
+  }
+  .sub {
+    text-align: center;
+    max-width: 760px;
+    font-weight: 500;
+    font-size: 22px;
+    line-height: 1.35;
+    color: #AAAAAA;
+    margin: 0;
+  }
+  .grid {
+    position: absolute;
+    top: 220px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 1120px;
+    height: 520px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 18px;
+  }
+  .tile {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .thumb {
+    aspect-ratio: 16 / 9;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 20px 40px -16px rgba(0, 0, 0, 0.5);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-end;
+    padding: 8px;
+    background: #0a0a0a;
+  }
+  .thumb-icon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .thumb-icon svg {
+    width: 44px;
+    height: 44px;
+    opacity: 0.85;
+  }
+  .tile-info {
+    display: flex;
+    gap: 8px;
+  }
+  .tile-channel-avatar {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .tile-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .tile-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #F1F1F1;
+    line-height: 1.3;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .tile-channel {
+    font-size: 11px;
+    color: #AAAAAA;
+  }
+
+  /* Thumbnail palettes -- varied so the grid isn't monotone */
+  .t-tech   { background: linear-gradient(135deg, #1e293b, #0f172a); }
+  .t-finance{ background: linear-gradient(135deg, #064e3b, #022c22); }
+  .t-news   { background: linear-gradient(135deg, #7f1d1d, #450a0a); }
+  .t-review { background: linear-gradient(135deg, #334155, #0f172a); }
+  .t-podcast{ background: linear-gradient(135deg, #3f3f46, #18181b); }
+  .t-edu    { background: linear-gradient(135deg, #1e3a8a, #0c1e4a); }
+  .t-fitness{ background: linear-gradient(135deg, #78350f, #431407); }
+  .t-food   { background: linear-gradient(135deg, #713f12, #422006); }
+  .t-gaming { background: linear-gradient(135deg, #4c1d95, #2e1065); }
+  .t-science{ background: linear-gradient(135deg, #0c4a6e, #082f49); }
+  .t-history{ background: linear-gradient(135deg, #44403c, #1c1917); }
+  .t-future { background: linear-gradient(135deg, #134e4a, #042f2e); }
+
+  .av-tech { background: linear-gradient(135deg, #64748b, #334155); }
+  .av-finance { background: linear-gradient(135deg, #10b981, #065f46); }
+  .av-news { background: linear-gradient(135deg, #ef4444, #991b1b); }
+  .av-review { background: linear-gradient(135deg, #cbd5e1, #64748b); }
+  .av-podcast { background: linear-gradient(135deg, #a1a1aa, #52525b); }
+  .av-edu { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+  .av-fitness { background: linear-gradient(135deg, #f59e0b, #b45309); }
+  .av-food { background: linear-gradient(135deg, #fbbf24, #d97706); }
+  .av-gaming { background: linear-gradient(135deg, #a855f7, #6b21a8); }
+  .av-science { background: linear-gradient(135deg, #06b6d4, #0e7490); }
+  .av-history { background: linear-gradient(135deg, #a8a29e, #44403c); }
+  .av-future { background: linear-gradient(135deg, #14b8a6, #0f766e); }
+
+  .thumb img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .thumb .thumb-dur {
+    position: relative;
+    z-index: 2;
+    background: rgba(0, 0, 0, 0.85);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 5px;
+    border-radius: 3px;
+  }
+  .tile-channel-avatar.initial {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    background: #4b4b4b !important;
+  }
+  .tile-channel-avatar.photo {
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="aura aura-red"></div>
+  <div class="aura aura-violet"></div>
+  <div class="grain"></div>
+
+  <div class="hero">
+    <h1 class="headline">Summarize anything on YouTube</h1>
+    <p class="sub">Tutorials, podcasts, news, reviews, and more</p>
+  </div>
+
+  <div class="grid">
+    <div class="tile">
+      <div class="thumb">
+        <img src="../assets/SwQhKFMxmDY.jpg" alt="" />
+        <span class="thumb-dur">2:47:03</span>
+      </div>
+      <div class="tile-info">
+        <div class="tile-channel-avatar photo" style="background-image:url('../assets/avatar-richroll.jpg')"></div>
+        <div class="tile-text">
+          <div class="tile-title">Change Your Brain: Neuroscientist Dr. Andrew Huberman | Rich Roll Podcast</div>
+          <div class="tile-channel">Rich Roll</div>
+        </div>
+      </div>
+    </div>
+    <div class="tile">
+      <div class="thumb">
+        <img src="../assets/L_Guz73e6fw.jpg" alt="" />
+        <span class="thumb-dur">2:33:54</span>
+      </div>
+      <div class="tile-info">
+        <div class="tile-channel-avatar photo" style="background-image:url('../assets/avatar-lexfridman.jpg')"></div>
+        <div class="tile-text">
+          <div class="tile-title">Sam Altman: OpenAI CEO on GPT-4, ChatGPT, and the Future of AI | Lex Fridman Podcast #367</div>
+          <div class="tile-channel">Lex Fridman</div>
+        </div>
+      </div>
+    </div>
+    <div class="tile">
+      <div class="thumb">
+        <img src="../assets/3OUrr_2UCYs.jpg" alt="" />
+        <span class="thumb-dur">1:48:22</span>
+      </div>
+      <div class="tile-info">
+        <div class="tile-channel-avatar photo" style="background-image:url('../assets/avatar-thediaryofaceo.jpg')"></div>
+        <div class="tile-text">
+          <div class="tile-title">THEY'RE LYING TO YOU ABOUT PEPTIDES!</div>
+          <div class="tile-channel">The Diary Of A CEO</div>
+        </div>
+      </div>
+    </div>
+    <div class="tile">
+      <div class="thumb">
+        <img src="../assets/c347oYQO57A.jpg" alt="" />
+        <span class="thumb-dur">12:41</span>
+      </div>
+      <div class="tile-info">
+        <div class="tile-channel-avatar photo" style="background-image:url('../assets/avatar-mkbhd.jpg')"></div>
+        <div class="tile-text">
+          <div class="tile-title">So This is Peak Smartphone</div>
+          <div class="tile-channel">Marques Brownlee</div>
+        </div>
+      </div>
+    </div>
+    <div class="tile">
+      <div class="thumb">
+        <img src="../assets/DxL2HoqLbyA.jpg" alt="" />
+        <span class="thumb-dur">21:12</span>
+      </div>
+      <div class="tile-info">
+        <div class="tile-channel-avatar photo" style="background-image:url('../assets/avatar-veritasium.jpg')"></div>
+        <div class="tile-text">
+          <div class="tile-title">The Most Misunderstood Concept in Physics</div>
+          <div class="tile-channel">Veritasium</div>
+        </div>
+      </div>
+    </div>
+    <div class="tile">
+      <div class="thumb">
+        <img src="../assets/1fQkVqno-uI.jpg" alt="" />
+        <span class="thumb-dur">10:26</span>
+      </div>
+      <div class="tile-info">
+        <div class="tile-channel-avatar photo" style="background-image:url('../assets/avatar-kurzgesagt.jpg')"></div>
+        <div class="tile-text">
+          <div class="tile-title">The Fermi Paradox II — Solutions and Ideas – Where Are All The Aliens?</div>
+          <div class="tile-channel">Kurzgesagt - In a Nutshell</div>
+        </div>
+      </div>
+    </div>
+    <div class="tile">
+      <div class="thumb">
+        <img src="../assets/aircAruvnKk.jpg" alt="" />
+        <span class="thumb-dur">19:13</span>
+      </div>
+      <div class="tile-info">
+        <div class="tile-channel-avatar photo" style="background-image:url('../assets/avatar-3blue1brown.jpg')"></div>
+        <div class="tile-text">
+          <div class="tile-title">But what is a neural network? | Deep learning chapter 1</div>
+          <div class="tile-channel">3Blue1Brown</div>
+        </div>
+      </div>
+    </div>
+    <div class="tile">
+      <div class="thumb">
+        <img src="../assets/cy_dLgAN8U4.jpg" alt="" />
+        <span class="thumb-dur">17:44</span>
+      </div>
+      <div class="tile-info">
+        <div class="tile-channel-avatar photo" style="background-image:url('../assets/avatar-philipdefranco.jpg')"></div>
+        <div class="tile-text">
+          <div class="tile-title">Why This One Map Has Trump Freaking Out</div>
+          <div class="tile-channel">Philip DeFranco</div>
+        </div>
+      </div>
+    </div>
+    <div class="tile">
+      <div class="thumb">
+        <img src="../assets/zOp6FCBn8ZA.jpg" alt="" />
+        <span class="thumb-dur">15:38</span>
+      </div>
+      <div class="tile-info">
+        <div class="tile-channel-avatar photo" style="background-image:url('../assets/avatar-johnnyharris.jpg')"></div>
+        <div class="tile-text">
+          <div class="tile-title">Why we need more silver</div>
+          <div class="tile-channel">Johnny Harris</div>
+        </div>
+      </div>
+    </div>
+    <div class="tile">
+      <div class="thumb">
+        <img src="../assets/f1rK6WfCjCQ.jpg" alt="" />
+        <span class="thumb-dur">11:07</span>
+      </div>
+      <div class="tile-info">
+        <div class="tile-channel-avatar photo" style="background-image:url('../assets/avatar-aliabdaal.jpg')"></div>
+        <div class="tile-text">
+          <div class="tile-title">The biggest myth in business</div>
+          <div class="tile-channel">Ali Abdaal</div>
+        </div>
+      </div>
+    </div>
+    <div class="tile">
+      <div class="thumb">
+        <img src="../assets/qp0HIF3SfI4.jpg" alt="" />
+        <span class="thumb-dur">18:01</span>
+      </div>
+      <div class="tile-info">
+        <div class="tile-channel-avatar photo" style="background-image:url('../assets/avatar-ted.jpg')"></div>
+        <div class="tile-text">
+          <div class="tile-title">How Great Leaders Inspire Action | Simon Sinek | TED</div>
+          <div class="tile-channel">TED</div>
+        </div>
+      </div>
+    </div>
+    <div class="tile">
+      <div class="thumb">
+        <img src="../assets/6VCyrdMLrcY.jpg" alt="" />
+        <span class="thumb-dur">16:52</span>
+      </div>
+      <div class="tile-info">
+        <div class="tile-channel-avatar photo" style="background-image:url('../assets/avatar-markrober.jpg')"></div>
+        <div class="tile-text">
+          <div class="tile-title">Engineering a $1 Cup of Lemonade</div>
+          <div class="tile-channel">Mark Rober</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

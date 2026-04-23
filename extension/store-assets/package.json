@@ -1,0 +1,14 @@
+{
+  "name": "brieftube-store-assets",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Chrome Web Store asset generator for BriefTube",
+  "scripts": {
+    "generate": "tsx generate.ts"
+  },
+  "dependencies": {
+    "playwright": "^1.58.2",
+    "tsx": "^4.20.0"
+  }
+}
