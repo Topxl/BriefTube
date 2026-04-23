@@ -1,7 +1,13 @@
 # Changelog
 
+## 2026-04-24
+
+FIX(admin): /api/admin/worker no longer 502s in dev — timeout was 8s (vs 15s on /web-logs and /services) and each of the 3 parallel admin routes was paying a fresh 2.8s SSH handshake, so the worker call tripped before the logs finished transferring
+PERF(admin): multiplex dev-mode SSH to the VPS via ControlMaster (new `src/lib/worker-ssh.ts` helper) — first call still ~3.5s to set up the socket, subsequent calls drop to ~0.6s instead of ~2.8s each. Turns three sequential handshakes into one, which means the admin dashboard loads in ~4s instead of ~11s
+
 ## 2026-04-23
 
+CHORE(extension-store-assets): add `facebook-cover.html` template + wire `facebook-profile` and `facebook-cover` into `generate.ts` — generates 400x400 profile pic and 1640x924 cover for the BriefTube Facebook Page (critical content inside 1200x675 safe zone, bottom/top 80 px left clear for FB profile-pic and page-name overlays).
 CHORE(extension-store-assets): replace screen 2's 12 music-video tiles with real non-music thumbnails (podcasts, tutorials, news, tech reviews, science, TED, engineering) from Rich Roll, Lex Fridman, Diary of a CEO, MKBHD, Veritasium, Kurzgesagt, 3Blue1Brown, Philip DeFranco, Johnny Harris, Ali Abdaal, TED, Mark Rober. Replace initial-letter-circle channel avatars with real YouTube channel logos on screens 1/3/5 (Huberman Lab) and screen 4 (Platzi); screen 2 tiles now each show their real channel avatar too.
 CHORE(extension-store-assets): swap fake BriefTube glyph for real `icon-128.png` base64 (marquee, promo tile, 5 screenshots, screen-5 toast) and replace fake video-player gradients with real YouTube thumbnails (`nm1TxQj9IsQ` on screens 1/3/5, `qp0HIF3SfI4` on screen 4, 12 music-video thumbs on screen 2 collage). Thumbnails pre-fetched to `assets/` so generation stays offline-safe.
 CHORE(extension): scaffold `extension/store-assets/` with 7 self-contained HTML templates (5 screenshots 1280x800, 1 promo tile 440x280, 1 marquee 1400x560) and a Playwright generator (`pnpm generate`) that renders rights-clean Chrome Web Store PNGs — no real YouTube capture, pure HTML/CSS/SVG of the sidebar UI. Output folder gitignored.

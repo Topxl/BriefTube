@@ -1,11 +1,8 @@
 import { NextResponse } from "next/server";
-import { exec } from "child_process";
-import { promisify } from "util";
 import { env } from "@/lib/env";
 import { getUser } from "@/lib/auth/auth-user";
 import { workerFetch } from "@/lib/worker-fetch";
-
-const execAsync = promisify(exec);
+import { sshWorkerCall } from "@/lib/worker-ssh";
 
 async function requireAdminOrNull() {
   const user = await getUser();
@@ -27,8 +24,7 @@ export async function GET() {
   // Dev mode: SSH to VPS to fetch services (uses local SSH key)
   if (process.env.NODE_ENV === "development") {
     try {
-      const cmd = `ssh -o ConnectTimeout=5 brieftube-vps "curl -s -H 'Authorization: Bearer ${env.WORKER_API_SECRET}' http://localhost:8080/services"`;
-      const { stdout } = await execAsync(cmd, { timeout: 15_000 });
+      const stdout = await sshWorkerCall("/services");
       return NextResponse.json(JSON.parse(stdout));
     } catch (e) {
       return NextResponse.json(

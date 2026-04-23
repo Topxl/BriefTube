@@ -8,6 +8,7 @@ import { env } from "@/lib/env";
 import { getUser } from "@/lib/auth/auth-user";
 import { logger } from "@/lib/logger";
 import { workerFetch } from "@/lib/worker-fetch";
+import { sshWorkerCall } from "@/lib/worker-ssh";
 
 const execAsync = promisify(exec);
 const LOG_PATH = path.join(process.cwd(), "worker", "worker.log");
@@ -32,8 +33,7 @@ export async function GET() {
   // Avoids needing port forwarding or exposing the worker port publicly.
   if (process.env.NODE_ENV === "development" && env.WORKER_API_SECRET) {
     try {
-      const cmd = `ssh -o ConnectTimeout=5 brieftube-vps "curl -s -H 'Authorization: Bearer ${env.WORKER_API_SECRET}' http://localhost:8080/logs"`;
-      const { stdout } = await execAsync(cmd, { timeout: 8000 });
+      const stdout = await sshWorkerCall("/logs");
       return NextResponse.json(JSON.parse(stdout));
     } catch (e) {
       return NextResponse.json(
