@@ -22,22 +22,75 @@ import type { Database } from "@/types/supabase";
  *   export const OPTIONS = corsPreflight;
  */
 
-const CORS_HEADERS: Record<string, string> = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+const STATIC_CORS_HEADERS: Record<string, string> = {
+  "Access-Control-Allow-Methods": "GET, POST, PATCH, OPTIONS",
   "Access-Control-Allow-Headers":
     "Content-Type, Authorization, X-Device-Id, X-Extension-Version",
   "Access-Control-Max-Age": "86400",
   Vary: "Origin",
 };
 
-export function corsPreflight() {
-  return new Response(null, { status: 204, headers: CORS_HEADERS });
+/**
+ * Return the CORS Allow-Origin value for this request, or null if the origin
+ * is not trusted. We reflect the Origin header (rather than sending `*`) so
+ * callers can't forge requests from arbitrary third-party sites.
+ *
+ * Accepted:
+ *   - chrome-extension://<id> (extension background/content scripts)
+ *   - https://{brief-tube.com, www.brief-tube.com, staging.brief-tube.com, ...}
+ *   - http(s)://localhost:* (dev only)
+ */
+function resolveAllowedOrigin(req: NextRequest): string | null {
+  const origin = req.headers.get("origin");
+  if (!origin) return null;
+
+  if (origin.startsWith("chrome-extension://")) return origin;
+
+  let parsed: URL;
+  try {
+    parsed = new URL(origin);
+  } catch {
+    return null;
+  }
+
+  const host = parsed.hostname;
+  if (host === "brief-tube.com" || host.endsWith(".brief-tube.com")) {
+    return origin;
+  }
+
+  if (
+    process.env.NODE_ENV !== "production" &&
+    (host === "localhost" || host === "127.0.0.1")
+  ) {
+    return origin;
+  }
+
+  return null;
 }
 
-function withCors(res: Response | NextResponse): Response {
+function buildCorsHeaders(req: NextRequest): Record<string, string> {
+  const allowOrigin = resolveAllowedOrigin(req);
+  if (!allowOrigin) {
+    // No CORS headers emitted → browser blocks cross-origin access.
+    // Same-origin (brief-tube.com calling its own API) still works since
+    // browsers don't enforce CORS on same-origin requests.
+    return { Vary: "Origin" };
+  }
+  return {
+    ...STATIC_CORS_HEADERS,
+    "Access-Control-Allow-Origin": allowOrigin,
+  };
+}
+
+export function corsPreflight(req: NextRequest): Response {
+  return new Response(null, { status: 204, headers: buildCorsHeaders(req) });
+}
+
+function withCors(req: NextRequest, res: Response | NextResponse): Response {
   const headers = new Headers(res.headers);
-  for (const [k, v] of Object.entries(CORS_HEADERS)) headers.set(k, v);
+  for (const [k, v] of Object.entries(buildCorsHeaders(req))) {
+    headers.set(k, v);
+  }
   return new Response(res.body, {
     status: res.status,
     statusText: res.statusText,
@@ -133,6 +186,7 @@ class ExtensionRouteBuilder<TBody = unknown, TParams = unknown> {
         const user = await resolveUser(req);
         if (this.requireAuth && !user) {
           return withCors(
+            req,
             NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
           );
         }
@@ -146,6 +200,7 @@ class ExtensionRouteBuilder<TBody = unknown, TParams = unknown> {
           } catch (err) {
             const details = err instanceof Error ? err.message : "Invalid body";
             return withCors(
+              req,
               NextResponse.json(
                 { error: "Invalid request body", details },
                 { status: 400 },
@@ -161,15 +216,16 @@ class ExtensionRouteBuilder<TBody = unknown, TParams = unknown> {
         });
 
         if (result instanceof Response || result instanceof NextResponse) {
-          return withCors(result);
+          return withCors(req, result);
         }
-        return withCors(NextResponse.json(result));
+        return withCors(req, NextResponse.json(result));
       } catch (error) {
         logger.error(
           `[extensionRoute] ${req.method} ${req.nextUrl.pathname} failed:`,
           error,
         );
         return withCors(
+          req,
           NextResponse.json(
             { error: "Internal server error" },
             { status: 500 },
