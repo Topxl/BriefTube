@@ -1,6 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { env } from "@/lib/env";
-import { checkRateLimit, getRequestIp, publicRateLimit } from "@/lib/rate-limit";
+import {
+  checkRateLimit,
+  getRequestIp,
+  publicRateLimit,
+} from "@/lib/rate-limit";
 import { createHmac } from "crypto";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
@@ -24,10 +28,17 @@ function validateTwilioSignature(
 
 // Incoming messages from Twilio WhatsApp (POST)
 export async function POST(req: NextRequest) {
-  const rateLimitResponse = await checkRateLimit(publicRateLimit, `wh-whatsapp:${getRequestIp(req)}`);
+  const rateLimitResponse = await checkRateLimit(
+    publicRateLimit,
+    `wh-whatsapp:${getRequestIp(req)}`,
+  );
   if (rateLimitResponse) return rateLimitResponse;
 
   const authToken = env.TWILIO_AUTH_TOKEN;
+
+  if (!authToken) {
+    return new NextResponse("Unauthorized", { status: 401 });
+  }
 
   const body = await req.text();
   const params = Object.fromEntries(new URLSearchParams(body)) as Record<
@@ -35,13 +46,10 @@ export async function POST(req: NextRequest) {
     string | undefined
   >;
 
-  // Validate Twilio signature if auth token is configured
-  if (authToken) {
-    const signature = req.headers.get("x-twilio-signature") ?? "";
-    const url = req.nextUrl.toString();
-    if (!validateTwilioSignature(authToken, url, params, signature)) {
-      return new NextResponse("Unauthorized", { status: 401 });
-    }
+  const signature = req.headers.get("x-twilio-signature") ?? "";
+  const url = req.nextUrl.toString();
+  if (!validateTwilioSignature(authToken, url, params, signature)) {
+    return new NextResponse("Unauthorized", { status: 401 });
   }
 
   // Extract the incoming message
