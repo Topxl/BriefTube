@@ -131,3 +131,12 @@ export async function subscribeChannel(payload: {
     body: JSON.stringify(payload),
   });
 }
+
+export async function exchangeHandoff(
+  code: string,
+): Promise<StoredSession> {
+  return apiFetch<StoredSession>("/api/extension/auth/exchange", {
+    method: "POST",
+    body: JSON.stringify({ code }),
+  });
+}

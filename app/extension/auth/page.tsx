@@ -1,5 +1,11 @@
+import crypto from "crypto";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient, createClient } from "@/lib/supabase/server";
+import {
+  encryptHandoff,
+  isHandoffCryptoConfigured,
+} from "@/lib/extension/handoff-crypto";
+import { logger } from "@/lib/logger";
 import { ExtensionAuthBridge } from "./_components/extension-auth-bridge";
 
 type PageProps = {
@@ -8,22 +14,25 @@ type PageProps = {
   }>;
 };
 
+const HANDOFF_TTL_SECONDS = 120;
+
 /**
  * Extension sign-in bridge.
  *
  * Flow:
  * 1. The extension opens this page in a normal browser tab (`chrome.tabs.create`).
- * 2. If the visitor is already signed in on brief-tube.com, the page renders
- *    the session tokens into a hidden DOM node. The extension's auth content
- *    script (see extension/src/content-auth/) reads that node and relays the
- *    session to its background service worker, then closes the tab.
- * 3. If not signed in, redirect to /login?next=/extension/auth and come back.
+ * 2. If the visitor is signed in on brief-tube.com, we encrypt the Supabase
+ *    session (access + refresh token) under a random one-time code, store it
+ *    in `extension_auth_handoffs`, and render *only the code* in the DOM.
+ * 3. The extension's auth content script reads the code, relays it to the
+ *    background service worker, which POSTs it to /api/extension/auth/exchange
+ *    to trade it for the actual tokens (one-time, 2-minute TTL).
+ * 4. If not signed in, redirect to /login?next=/extension/auth and come back.
  *
- * No chrome.identity.launchWebAuthFlow — that API is picky about URLs, blocks
- * localhost during development, and surfaces opaque errors. A plain tab works
- * everywhere (localhost, production, dev prod preview) and the content-script
- * handoff is purely internal to the extension, so it's unaffected by CSP,
- * popup blockers, or uBlock.
+ * Why not render the tokens directly: any other extension the user has
+ * installed with host_permissions on brief-tube.com could read the hidden
+ * DOM node. The handoff-code pattern means only whoever exchanges first
+ * gets the tokens, and we can revoke unused codes at any time.
  */
 export default async function ExtensionAuthPage({ searchParams }: PageProps) {
   const params = await searchParams;
@@ -50,11 +59,68 @@ export default async function ExtensionAuthPage({ searchParams }: PageProps) {
     redirect(`/login?next=${encodeURIComponent(next)}`);
   }
 
+  if (!isHandoffCryptoConfigured()) {
+    logger.error(
+      "[extension/auth] EXTENSION_HANDOFF_KEY (or YOUTUBE_TOKEN_KEY fallback) is not configured — cannot hand off session to extension",
+    );
+    return (
+      <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-4 px-6 text-center">
+        <h1 className="text-2xl font-semibold">
+          Extension sign-in unavailable
+        </h1>
+        <p className="text-muted-foreground">
+          Server misconfiguration — please try again later or contact support.
+        </p>
+      </div>
+    );
+  }
+
+  const payload = JSON.stringify({
+    accessToken: session.access_token,
+    refreshToken: session.refresh_token,
+    expiresAt: session.expires_at ?? 0,
+  });
+  const encrypted = encryptHandoff(payload);
+  if (!encrypted) {
+    logger.error("[extension/auth] encryption failed");
+    return (
+      <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-4 px-6 text-center">
+        <h1 className="text-2xl font-semibold">
+          Extension sign-in unavailable
+        </h1>
+        <p className="text-muted-foreground">Please try again later.</p>
+      </div>
+    );
+  }
+
+  const code = crypto.randomBytes(24).toString("base64url");
+  const expiresAt = new Date(Date.now() + HANDOFF_TTL_SECONDS * 1000);
+
+  const admin = createAdminClient();
+  const { error: insertError } = await admin
+    .from("extension_auth_handoffs")
+    .insert({
+      code,
+      user_id: session.user.id,
+      ciphertext: encrypted.ciphertext,
+      iv: encrypted.iv,
+      expires_at: expiresAt.toISOString(),
+    });
+  if (insertError) {
+    logger.error("[extension/auth] failed to persist handoff", insertError);
+    return (
+      <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-4 px-6 text-center">
+        <h1 className="text-2xl font-semibold">
+          Extension sign-in unavailable
+        </h1>
+        <p className="text-muted-foreground">Please try again later.</p>
+      </div>
+    );
+  }
+
   return (
     <ExtensionAuthBridge
-      accessToken={session.access_token}
-      refreshToken={session.refresh_token}
-      expiresAt={session.expires_at ?? 0}
+      handoffCode={code}
       userEmail={session.user.email ?? ""}
     />
   );

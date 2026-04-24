@@ -1,5 +1,6 @@
 import {
   enqueue,
+  exchangeHandoff,
   fetchMe,
   fetchStatus,
   subscribeChannel,
@@ -10,13 +11,9 @@ import { BRIEFTUBE_CONFIG } from "@/lib/config";
 import { clearSession, getDeviceId, setSession } from "@/lib/storage";
 import type { BgMessage } from "@/lib/types";
 
-type AuthCallbackMessage = {
-  type: "AUTH_CALLBACK";
-  payload: {
-    accessToken: string;
-    refreshToken: string;
-    expiresAt: number;
-  };
+type AuthHandoffCodeMessage = {
+  type: "AUTH_HANDOFF_CODE";
+  payload: { code: string };
 };
 
 function openSignInFlow() {
@@ -27,10 +24,16 @@ function openSignInFlow() {
 
 chrome.runtime.onMessage.addListener(
   (
-    message: BgMessage | AuthCallbackMessage,
-    _sender,
+    message: BgMessage | AuthHandoffCodeMessage,
+    sender,
     sendResponse,
   ) => {
+    // Ignore messages from any context other than our own extension
+    // (content scripts, popup, other extension surfaces all share our id).
+    if (sender.id && sender.id !== chrome.runtime.id) {
+      sendResponse({ ok: false, error: "invalid_sender" });
+      return false;
+    }
     (async () => {
       try {
         switch (message.type) {
@@ -84,11 +87,12 @@ chrome.runtime.onMessage.addListener(
             sendResponse({ ok: true, data });
             return;
           }
-          case "AUTH_CALLBACK": {
+          case "AUTH_HANDOFF_CODE": {
+            const session = await exchangeHandoff(message.payload.code);
             await setSession({
-              accessToken: message.payload.accessToken,
-              refreshToken: message.payload.refreshToken,
-              expiresAt: message.payload.expiresAt,
+              accessToken: session.accessToken,
+              refreshToken: session.refreshToken,
+              expiresAt: session.expiresAt,
             });
             sendResponse({ ok: true });
             return;
