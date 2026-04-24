@@ -1,4 +1,4 @@
-import { env } from "@/lib/env";
+import { checkCronAuth } from "@/lib/cron/auth";
 import { runTrialReminders } from "@/lib/cron/trial-reminders";
 import { runActivationEmails } from "@/lib/cron/activation-emails";
 import { runReengagementEmails } from "@/lib/cron/reengagement-emails";
@@ -9,12 +9,8 @@ import type { NextRequest } from "next/server";
 export const maxDuration = 300;
 
 export const GET = async (req: NextRequest) => {
-  const authHeader = req.headers.get("authorization");
-  const expected = `Bearer ${env.CRON_SECRET}`;
-
-  if (!env.CRON_SECRET || authHeader !== expected) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const unauthorized = checkCronAuth(req);
+  if (unauthorized) return unauthorized;
 
   const [
     trialResult,
