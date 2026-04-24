@@ -11,6 +11,11 @@ async function loadPostHog(): Promise<PostHog | null> {
   }
   if (initPromise) return initPromise;
 
+  // Disable session recording on public pages (landing, pricing, blog…) — saves
+  // ~50 KiB of `posthog-recorder.js` for visitors who aren't logged in. The
+  // dashboard tree explicitly re-enables it via `posthog.startSessionRecording()`.
+  const isPublicPage = !window.location.pathname.startsWith("/dashboard");
+
   initPromise = import("posthog-js").then(({ default: posthog }) => {
     posthog.init(key, {
       api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "/a",
@@ -19,6 +24,7 @@ async function loadPostHog(): Promise<PostHog | null> {
       capture_pageleave: true,
       autocapture: true,
       opt_in_site_apps: true,
+      disable_session_recording: isPublicPage,
       session_recording: {
         maskAllInputs: true,
         maskTextSelector: "[data-mask]",

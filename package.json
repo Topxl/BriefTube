@@ -169,9 +169,9 @@
     }
   },
   "browserslist": [
-    "chrome >= 93",
-    "firefox >= 90",
-    "safari >= 15.4",
-    "edge >= 93"
+    "chrome >= 105",
+    "firefox >= 105",
+    "safari >= 16.4",
+    "edge >= 105"
   ]
 }
