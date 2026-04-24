@@ -1,33 +1,25 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
-import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { authRoute } from "@/lib/zod-route";
+import { createClient } from "@/lib/supabase/server";
 import { authRateLimit, checkRateLimit } from "@/lib/rate-limit";
+import { NextResponse } from "next/server";
 
-type Params = { params: Promise<{ id: string }> };
+type Params = { id: string };
 
 /**
  * POST /api/features/[id]/vote
  * Toggle the current user's vote for a feature request.
  * Returns the new vote state and the new votes_count.
  */
-export async function POST(_req: NextRequest, { params }: Params) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+export const POST = authRoute.handler(async (_req, { ctx, params }) => {
+  const featureId = (params as unknown as Params).id;
 
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const rl = await checkRateLimit(authRateLimit, `vote:${user.id}`);
+  const rl = await checkRateLimit(authRateLimit, `vote:${ctx.user.id}`);
   if (rl) return rl;
 
-  const { id: featureId } = await params;
-  const admin = createAdminClient();
+  const supabase = await createClient();
 
   // Verify the feature exists
-  const { data: feature } = await admin
+  const { data: feature } = await supabase
     .from("feature_requests")
     .select("id, status, needs_admin_review, user_id")
     .eq("id", featureId)
@@ -38,40 +30,40 @@ export async function POST(_req: NextRequest, { params }: Params) {
   }
 
   // Block votes on pending features unless the caller is the proposer
-  if (feature.needs_admin_review && feature.user_id !== user.id) {
+  if (feature.needs_admin_review && feature.user_id !== ctx.user.id) {
     return NextResponse.json({ error: "Feature not found" }, { status: 404 });
   }
 
   // Toggle: check if a vote already exists
-  const { data: existingVote } = await admin
+  const { data: existingVote } = await supabase
     .from("feature_votes")
     .select("id")
     .eq("feature_request_id", featureId)
-    .eq("user_id", user.id)
+    .eq("user_id", ctx.user.id)
     .maybeSingle();
 
   let voted: boolean;
   if (existingVote) {
-    await admin.from("feature_votes").delete().eq("id", existingVote.id);
+    await supabase.from("feature_votes").delete().eq("id", existingVote.id);
     voted = false;
   } else {
-    await admin.from("feature_votes").insert({
+    await supabase.from("feature_votes").insert({
       feature_request_id: featureId,
-      user_id: user.id,
+      user_id: ctx.user.id,
     });
     voted = true;
   }
 
   // Re-read the votes_count (kept in sync by trigger)
-  const { data: updated } = await admin
+  const { data: updated } = await supabase
     .from("feature_requests")
     .select("votes_count")
     .eq("id", featureId)
     .maybeSingle();
 
-  return NextResponse.json({
+  return {
     ok: true,
     voted,
     votes_count: updated?.votes_count ?? 0,
-  });
-}
+  };
+});
