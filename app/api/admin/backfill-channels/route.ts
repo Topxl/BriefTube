@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireAdminApi } from "@/lib/auth/require-admin-api";
 import { createAdminClient } from "@/lib/supabase/server";
 import { fetchVideoMetadata } from "@/lib/youtube";
 import { logger } from "@/lib/logger";
@@ -8,17 +9,10 @@ import { logger } from "@/lib/logger";
  * Fetches the real UC channel ID from YouTube (via oEmbed + page scrape).
  *
  * Usage: POST /api/admin/backfill-channels
- * Protected by ENABLE_TEST_AUTH or dev mode for safety.
  */
 export async function POST() {
-  // Only available in dev or when explicitly enabled
-  const enabled =
-    process.env.NODE_ENV !== "production" ||
-    process.env.ENABLE_TEST_AUTH === "true" ||
-    process.env.ENABLE_BACKFILL === "true";
-  if (!enabled) {
-    return NextResponse.json({ error: "Not available" }, { status: 404 });
-  }
+  const auth = await requireAdminApi();
+  if (!auth.ok) return auth.response;
 
   const admin = createAdminClient();
 
@@ -77,7 +71,7 @@ export async function POST() {
     batches.push(uniqueIds.slice(i, i + 5));
   }
   // Sequential batches to rate-limit YouTube requests
-   
+
   for (const batch of batches) {
     // eslint-disable-next-line no-await-in-loop
     const batchResults = await processBatch(batch);
