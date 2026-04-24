@@ -221,9 +221,10 @@ write_systemd_hardening "brieftube-web" "ReadWritePaths=/home/${TARGET_USER}/web
 # brieftube-worker: needs write to worker dir (logs, transcripts)
 write_systemd_hardening "brieftube-worker" "ReadWritePaths=/home/${TARGET_USER}/app /home/${TARGET_USER}/transcripts"
 
-# brieftube-log-bot: read-only is fine
+# brieftube-log-bot: needs write to worker dir for log_bot.lock (single-instance
+# guard) and log_bot.log (stdout/stderr forwarding).
 if systemctl list-unit-files | grep -q "^brieftube-log-bot.service"; then
-  write_systemd_hardening "brieftube-log-bot" ""
+  write_systemd_hardening "brieftube-log-bot" "ReadWritePaths=/home/${TARGET_USER}/app"
 fi
 
 # ---------------------------------------------------------------------------
