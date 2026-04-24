@@ -8,6 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { LayoutDashboard, ListVideo, LogOut, User } from "@/lib/icons";
 import { ChannelSearchBar } from "@/components/dashboard/channel-search-bar";
 import { createClient } from "@/lib/supabase/client";
+import { signOutAction } from "@/features/auth/sign-out.action";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -76,20 +77,9 @@ function isActive(href: string, pathname: string) {
 
 function UserAvatar() {
   const profile = useUserProfile();
-  const supabase = createClient();
 
   const handleLogout = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch {
-      document.cookie.split(";").forEach((c) => {
-        const name = c.split("=")[0].trim();
-        if (name.startsWith("sb-")) {
-          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
-        }
-      });
-    }
-    window.location.href = "/";
+    await signOutAction();
   };
 
   return (

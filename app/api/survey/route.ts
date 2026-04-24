@@ -44,7 +44,7 @@ export async function POST(req: Request) {
       .maybeSingle();
 
     if (!profile) {
-      return NextResponse.json({ status: "invalid_token" }, { status: 404 });
+      return NextResponse.json({ status: "invalid" }, { status: 400 });
     }
 
     const { data: existing } = await admin
@@ -54,7 +54,7 @@ export async function POST(req: Request) {
       .maybeSingle();
 
     if (existing) {
-      return NextResponse.json({ status: "already_responded" });
+      return NextResponse.json({ status: "invalid" }, { status: 400 });
     }
 
     const activeData = data as {
@@ -78,7 +78,7 @@ export async function POST(req: Request) {
 
     if (insertResult.error) {
       if (insertResult.error.code === "23505") {
-        return NextResponse.json({ status: "already_responded" });
+        return NextResponse.json({ status: "invalid" }, { status: 400 });
       }
       throw insertResult.error;
     }
