@@ -25,20 +25,25 @@ export async function GET(request: NextRequest) {
 
   try {
     const parsed = new URL(url);
+    if (parsed.protocol !== "https:") {
+      return NextResponse.json({ error: "Unsupported URL" }, { status: 400 });
+    }
     const allowed = [
       "youtube.com",
       "www.youtube.com",
       "youtu.be",
       "m.youtube.com",
+      "brief-tube.com",
+      "www.brief-tube.com",
     ];
-    if (!allowed.includes(parsed.hostname)) {
-      return NextResponse.json(
-        { error: "Only YouTube URLs are supported" },
-        { status: 400 },
-      );
+    const isAllowed =
+      allowed.includes(parsed.hostname) ||
+      parsed.hostname.endsWith(".brief-tube.com");
+    if (!isAllowed) {
+      return NextResponse.json({ error: "Unsupported URL" }, { status: 400 });
     }
   } catch {
-    return NextResponse.json({ error: "Invalid URL" }, { status: 400 });
+    return NextResponse.json({ error: "Unsupported URL" }, { status: 400 });
   }
 
   // Detect video URL
