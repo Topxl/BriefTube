@@ -201,8 +201,10 @@ export function HeroPlayer() {
                     alt=""
                     width={480}
                     height={360}
-                    fetchPriority="low"
-                    loading="lazy"
+                    // First card is the LCP element on mobile — load it eagerly
+                    // with high priority. Second card stays lazy.
+                    fetchPriority={i === 0 ? "high" : "low"}
+                    loading={i === 0 ? "eager" : "lazy"}
                     decoding="async"
                     className="absolute inset-0 h-full w-full object-cover opacity-[0.15]"
                   />
