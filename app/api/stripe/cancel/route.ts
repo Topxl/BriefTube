@@ -57,7 +57,7 @@ export async function POST(req: Request) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("stripe_subscription_id")
+    .select("stripe_subscription_id, stripe_customer_id")
     .eq("id", userId)
     .single();
 
@@ -76,10 +76,26 @@ export async function POST(req: Request) {
   }
 
   if (acceptOffer) {
-    if (profile?.stripe_subscription_id) {
+    const subId = profile?.stripe_subscription_id;
+    const custId = profile?.stripe_customer_id;
+    if (subId && custId) {
+      // Verify subscription ownership before updating
+      const sub = await stripe.subscriptions.retrieve(subId);
+      const customerId =
+        typeof sub.customer === "string" ? sub.customer : sub.customer.id;
+      if (customerId !== custId) {
+        logger.error(
+          `[cancel] Subscription ${subId} does not belong to customer ${custId} (got ${customerId})`,
+        );
+        return NextResponse.json(
+          { error: "Subscription mismatch" },
+          { status: 403 },
+        );
+      }
+
       await ensureRetentionCoupon();
       try {
-        await stripe.subscriptions.update(profile.stripe_subscription_id, {
+        await stripe.subscriptions.update(subId, {
           discounts: [{ coupon: COUPON_ID }],
         });
         logger.info(`Retention offer accepted for user: ${userId}`);
@@ -98,9 +114,25 @@ export async function POST(req: Request) {
   // billing period ends, then Stripe fires customer.subscription.deleted which
   // downgrades the profile in the webhook handler. Keeps revenue for the paid
   // period and leaves a rescue window for win-back.
-  if (profile?.stripe_subscription_id) {
+  const subId = profile?.stripe_subscription_id;
+  const custId = profile?.stripe_customer_id;
+  if (subId && custId) {
+    // Verify subscription ownership before cancelling
+    const sub = await stripe.subscriptions.retrieve(subId);
+    const customerId =
+      typeof sub.customer === "string" ? sub.customer : sub.customer.id;
+    if (customerId !== custId) {
+      logger.error(
+        `[cancel] Subscription ${subId} does not belong to customer ${custId} (got ${customerId})`,
+      );
+      return NextResponse.json(
+        { error: "Subscription mismatch" },
+        { status: 403 },
+      );
+    }
+
     try {
-      await stripe.subscriptions.update(profile.stripe_subscription_id, {
+      await stripe.subscriptions.update(subId, {
         cancel_at_period_end: true,
       });
       logger.info(`Subscription scheduled for cancellation: ${userId}`);

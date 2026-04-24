@@ -62,6 +62,20 @@ export const POST = async (req: NextRequest) => {
     );
   }
 
+  // CRITICAL: Check idempotency BEFORE processing to prevent duplicate side-effects
+  // on Stripe retry. If this event has already been processed, return 200 immediately.
+  const admin = createAdminClient();
+  const { data: existing } = await admin
+    .from("webhook_events")
+    .select("event_id")
+    .eq("event_id", event.id)
+    .maybeSingle();
+
+  if (existing) {
+    logger.info(`Stripe event ${event.id} already processed, skipping`);
+    return NextResponse.json({ received: true, duplicate: true });
+  }
+
   try {
     switch (event.type) {
       case "checkout.session.completed":
@@ -84,6 +98,12 @@ export const POST = async (req: NextRequest) => {
         break;
       case "invoice.payment_failed":
         await invoicePaymentFailed(event.data.object);
+        break;
+      case "charge.refunded":
+        await chargeRefunded(event.data.object);
+        break;
+      case "charge.dispute.created":
+        await chargeDisputeCreated(event.data.object);
         break;
       default:
         logger.info(`Unhandled event type: ${event.type}`);
@@ -538,4 +558,36 @@ const invoicePaymentFailed = async (invoiceData: Stripe.Invoice) => {
     subject: "Your BriefTube payment failed",
     html: PaymentFailedEmail(),
   });
+};
+
+const chargeRefunded = async (chargeData: Stripe.Charge) => {
+  const charge = chargeData;
+  const customerId =
+    typeof charge.customer === "string" ? charge.customer : charge.customer?.id;
+
+  if (!customerId) {
+    logger.warn("Missing customer in charge.refunded event");
+    return;
+  }
+
+  const supabase = createAdminClient();
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("id, subscription_status")
+    .eq("stripe_customer_id", customerId)
+    .maybeSingle();
+
+  if (profile && profile.subscription_status !== "free") {
+    logger.warn(`Charge refunded for user ${profile.id}, downgrading to free`);
+    await updateSubscriptionStatus(supabase, profile.id, "free", false);
+  }
+};
+
+const chargeDisputeCreated = async (disputeData: Stripe.Dispute) => {
+  const dispute = disputeData;
+  logger.warn(
+    `Dispute opened: ${dispute.id} on charge ${dispute.charge}. Review in Stripe dashboard.`,
+  );
+  // TODO: send admin alert via Telegram/Slack once infra ready
 };
