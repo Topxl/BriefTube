@@ -4,6 +4,7 @@ import { env } from "@/lib/env";
 import { getUser } from "@/lib/auth/auth-user";
 import { getStripe } from "@/lib/stripe";
 import { logger } from "@/lib/logger";
+import { checkRateLimit, heavyRateLimit } from "@/lib/rate-limit";
 import type { NextRequest } from "next/server";
 import type Stripe from "stripe";
 
@@ -55,6 +56,8 @@ async function fetchStripeNonPayers(): Promise<string[]> {
   return emails;
 }
 
+const MAX_RECIPIENTS_PER_RUN = 1000;
+
 export const POST = async (req: NextRequest) => {
   const user = await getUser();
 
@@ -63,6 +66,13 @@ export const POST = async (req: NextRequest) => {
       status: 401,
     });
   }
+
+  // Rate-limit to prevent Resend spam if admin account is compromised
+  const rl = await checkRateLimit(
+    heavyRateLimit,
+    `send-announcement:${user.id}`,
+  );
+  if (rl) return rl;
 
   const isTest = req.nextUrl.searchParams.get("test") === "true";
 
@@ -108,6 +118,14 @@ export const POST = async (req: NextRequest) => {
     return new Response(JSON.stringify({ sent: 0, failed: 0, total: 0 }), {
       status: 200,
     });
+  }
+
+  // Hard cap to prevent catastrophic Resend burn if fetch ever over-returns
+  if (recipients.length > MAX_RECIPIENTS_PER_RUN) {
+    logger.warn(
+      `[send-announcement] truncating recipients from ${recipients.length} to ${MAX_RECIPIENTS_PER_RUN}`,
+    );
+    recipients = recipients.slice(0, MAX_RECIPIENTS_PER_RUN);
   }
 
   let sent = 0;
