@@ -49,7 +49,7 @@ export const POST = authRoute
     // 1. Verify the conversation belongs to the current user
     const { data: conv } = await admin
       .from("chat_conversations")
-      .select("id, user_id, status, subject")
+      .select("id, user_id, status, subject, escalated_at")
       .eq("id", conversationId)
       .maybeSingle();
 
@@ -110,6 +110,9 @@ export const POST = authRoute
       const fr = leaResponse.detected_feature_request;
 
       // Check quota: max 5 pending features per user
+      // Note: under high concurrency, parallel requests may both pass the count check
+      // before either insert completes, allowing a brief +/-1 overrun. This is acceptable
+      // to avoid complex transactional overhead; quota enforcement is advisory, not hard.
       const { count: pendingCount } = await admin
         .from("feature_requests")
         .select("id", { count: "exact", head: true })
@@ -212,17 +215,23 @@ export const POST = authRoute
         .eq("id", conversationId);
     }
 
-    // 9. Admin notification email on escalation
+    // 9. Admin notification email on escalation (throttle to one per conversation per hour)
     if (leaResponse.should_escalate) {
-      void notifyAdminEscalation({
-        conversationId,
-        userId: ctx.user.id,
-        userMessage: message,
-        leaMessage: finalLeaMessage,
-        reason: leaResponse.escalation_reason ?? "unknown",
-        subject:
-          leaResponse.conversation_subject ?? conv.subject ?? "No subject",
-      });
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      const alreadyEscalatedRecently =
+        conv.escalated_at && new Date(conv.escalated_at) > new Date(oneHourAgo);
+
+      if (!alreadyEscalatedRecently) {
+        void notifyAdminEscalation({
+          conversationId,
+          userId: ctx.user.id,
+          userMessage: message,
+          leaMessage: finalLeaMessage,
+          reason: leaResponse.escalation_reason ?? "unknown",
+          subject:
+            leaResponse.conversation_subject ?? conv.subject ?? "No subject",
+        });
+      }
     }
 
     return {
