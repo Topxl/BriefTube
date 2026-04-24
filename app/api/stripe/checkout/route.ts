@@ -6,6 +6,7 @@ import type { NextRequest } from "next/server";
 import { getOrFindStripeCustomerId } from "@/lib/stripe/helpers";
 import { checkRateLimit, authRateLimit } from "@/lib/rate-limit";
 import { captureServerEvent } from "@/lib/posthog/server";
+import { z } from "zod";
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
@@ -27,7 +28,18 @@ export async function POST(req: NextRequest) {
   const formData = await req.formData().catch(() => null);
   const interval = formData?.get("interval") === "year" ? "year" : "month";
   const plan = formData?.get("plan") || "pro";
-  const referral = formData?.get("referral");
+
+  // Validate referral code format before passing to Stripe
+  const referralSchema = z
+    .string()
+    .regex(/^[A-Za-z0-9_-]{3,32}$/, "Invalid referral code format")
+    .optional();
+
+  const rawReferral = formData?.get("referral");
+  const referralParsed = referralSchema.safeParse(
+    typeof rawReferral === "string" ? rawReferral : undefined,
+  );
+  const referral = referralParsed.success ? referralParsed.data : undefined;
 
   let priceId: string;
   if (plan === "plus") {
