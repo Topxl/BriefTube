@@ -29,6 +29,18 @@ const ASSETS: Asset[] = [
   { name: "screen-5", template: "screen-5.html", width: 1280, height: 800 },
   { name: "promo-tile", template: "promo-tile.html", width: 440, height: 280 },
   { name: "marquee", template: "marquee.html", width: 1400, height: 560 },
+  {
+    name: "facebook-profile",
+    template: "facebook-profile.html",
+    width: 400,
+    height: 400,
+  },
+  {
+    name: "facebook-cover",
+    template: "facebook-cover.html",
+    width: 1640,
+    height: 924,
+  },
 ];
 
 async function renderOne(browser: Browser, asset: Asset, outputDir: string) {
