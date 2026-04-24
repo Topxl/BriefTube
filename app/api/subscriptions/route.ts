@@ -270,7 +270,9 @@ export async function POST(request: NextRequest) {
 
   try {
     const rssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${finalChannelId}`;
-    const rssResponse = await fetch(rssUrl);
+    const rssResponse = await fetch(rssUrl, {
+      signal: AbortSignal.timeout(5000),
+    });
     const rssText = await rssResponse.text();
 
     // Extract entries in order (first = most recent)
