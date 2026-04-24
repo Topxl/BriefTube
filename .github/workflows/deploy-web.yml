@@ -94,6 +94,7 @@ jobs:
               echo "✅ Web app deployed successfully"
             else
               echo "❌ Web app failed to start"
-              sudo journalctl -u brieftube-web -n 20 --no-pager
+              # Arg order matches hardened sudoers pattern: `journalctl -u <unit> --no-pager *`
+              sudo journalctl -u brieftube-web --no-pager -n 20
               exit 1
             fi
