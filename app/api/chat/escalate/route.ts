@@ -31,7 +31,7 @@ export const POST = authRoute
 
     const { data: conv } = await admin
       .from("chat_conversations")
-      .select("id, user_id, status, subject")
+      .select("id, user_id, status, subject, escalated_at")
       .eq("id", conversationId)
       .maybeSingle();
 
@@ -66,14 +66,21 @@ export const POST = authRoute
       .limit(1)
       .maybeSingle();
 
-    void notifyAdminEscalation({
-      conversationId,
-      userId: ctx.user.id,
-      userMessage: lastUserMsg?.content ?? "(aucun message)",
-      leaMessage: "(escalade manuelle demandée par l'utilisateur)",
-      reason: escalationReason,
-      subject: conv.subject ?? "Sans sujet",
-    });
+    // Throttle admin notification to one per conversation per hour
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const alreadyEscalatedRecently =
+      conv.escalated_at && new Date(conv.escalated_at) > new Date(oneHourAgo);
+
+    if (!alreadyEscalatedRecently) {
+      void notifyAdminEscalation({
+        conversationId,
+        userId: ctx.user.id,
+        userMessage: lastUserMsg?.content ?? "(aucun message)",
+        leaMessage: "(escalade manuelle demandée par l'utilisateur)",
+        reason: escalationReason,
+        subject: conv.subject ?? "Sans sujet",
+      });
+    }
 
     return { ok: true, status: "pending_human" };
   });

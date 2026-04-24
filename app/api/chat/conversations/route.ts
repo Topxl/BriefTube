@@ -1,7 +1,7 @@
 import { authRoute } from "@/lib/zod-route";
 import { createAdminClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
-import { checkRateLimit, authRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit, heavyRateLimit } from "@/lib/rate-limit";
 
 /**
  * GET /api/chat/conversations
@@ -39,7 +39,7 @@ export const GET = authRoute.handler(async (_req, { ctx }) => {
  * Creates a brand new conversation for the current user.
  */
 export const POST = authRoute.handler(async (_req, { ctx }) => {
-  const rl = await checkRateLimit(authRateLimit, `chat-conv:${ctx.user.id}`);
+  const rl = await checkRateLimit(heavyRateLimit, `chat-conv:${ctx.user.id}`);
   if (rl) return rl;
 
   const admin = createAdminClient();
