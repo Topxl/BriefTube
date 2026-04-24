@@ -1,39 +1,30 @@
 /**
  * Content script that runs on the `/extension/auth` bridge page.
  *
- * The page (a React Server Component on brief-tube.com) renders the user's
- * Supabase session into a hidden DOM node. This script reads it, hands it
- * back to the extension's background via chrome.runtime.sendMessage (internal,
- * so it works on localhost too — externally_connectable would not), and
- * closes the tab.
+ * The page renders a one-time handoff code into a hidden DOM node. We read
+ * the code, relay it to the background service worker, which POSTs it to
+ * `/api/extension/auth/exchange` to receive the actual Supabase session.
  *
- * Using the DOM as the handoff channel (vs. postMessage or a CustomEvent)
- * keeps the contract trivial for the page and avoids race conditions:
- * we simply wait for the node to appear.
+ * We deliberately never touch the tokens themselves from this content script
+ * (historically they lived on the DOM directly — see commit ). Doing the
+ * exchange server-side means any other extension with host_permissions on
+ * brief-tube.com only sees the code, and the server invalidates it after a
+ * single exchange (or 2 minutes, whichever comes first).
  */
-
-type SessionPayload = {
-  accessToken: string;
-  refreshToken: string;
-  expiresAt: number;
-};
 
 const HANDOFF_NODE_ID = "brieftube-extension-handoff";
 
-function readHandoff(): SessionPayload | null {
+function readHandoffCode(): string | null {
   const node = document.getElementById(HANDOFF_NODE_ID);
   if (!node) return null;
-  const accessToken = node.dataset.accessToken ?? "";
-  const refreshToken = node.dataset.refreshToken ?? "";
-  const expiresAt = Number(node.dataset.expiresAt ?? "0");
-  if (!accessToken || !refreshToken) return null;
-  return { accessToken, refreshToken, expiresAt };
+  const code = node.dataset.handoffCode ?? "";
+  return code.length > 0 ? code : null;
 }
 
-async function finish(payload: SessionPayload) {
+async function finish(code: string) {
   await new Promise<void>((resolve) => {
     chrome.runtime.sendMessage(
-      { type: "AUTH_CALLBACK", payload },
+      { type: "AUTH_HANDOFF_CODE", payload: { code } },
       () => resolve(),
     );
   });
@@ -42,9 +33,9 @@ async function finish(payload: SessionPayload) {
 }
 
 function poll() {
-  const payload = readHandoff();
-  if (payload) {
-    void finish(payload);
+  const code = readHandoffCode();
+  if (code) {
+    void finish(code);
     return true;
   }
   return false;
@@ -58,7 +49,7 @@ if (!poll()) {
     childList: true,
     subtree: true,
     attributes: true,
-    attributeFilter: ["data-access-token"],
+    attributeFilter: ["data-handoff-code"],
   });
   // Safety cutoff: the user may have closed the tab or hit the invalid-redirect
   // branch; stop observing after 5 min.

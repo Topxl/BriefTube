@@ -4,35 +4,30 @@ import { CheckCircle2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
 type Props = {
-  accessToken: string;
-  refreshToken: string;
-  expiresAt: number;
+  handoffCode: string;
   userEmail: string;
 };
 
 /**
  * Bridge between the user's brief-tube.com session and the Chrome extension.
  *
- * We render the session tokens into a hidden DOM node with stable data-*
- * attributes. The BriefTube extension injects a content script on this page
- * (see `extension/src/content-auth/index.ts`) that reads the node and relays
- * the session to the extension's background service worker, then closes the
- * tab. If the extension is not installed, the node simply sits there.
+ * We render a single-use handoff code into a hidden DOM node. The extension's
+ * content script (see `extension/src/content-auth/index.ts`) reads the code
+ * and relays it to the background service worker, which POSTs it to
+ * `/api/extension/auth/exchange` to receive the actual session tokens.
+ *
+ * We intentionally do NOT render the tokens themselves: any other extension
+ * the user has installed with host_permissions on brief-tube.com would be
+ * able to read them. The code is useless without a server round-trip, and
+ * the server invalidates it after the first exchange (plus a 2-minute TTL).
  */
-export function ExtensionAuthBridge({
-  accessToken,
-  refreshToken,
-  expiresAt,
-  userEmail,
-}: Props) {
+export function ExtensionAuthBridge({ handoffCode, userEmail }: Props) {
   return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-6">
       {/* The extension's content script reads this node. */}
       <div
         id="brieftube-extension-handoff"
-        data-access-token={accessToken}
-        data-refresh-token={refreshToken}
-        data-expires-at={String(expiresAt)}
+        data-handoff-code={handoffCode}
         hidden
       />
 

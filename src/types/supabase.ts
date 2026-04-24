@@ -338,6 +338,36 @@ export type Database = {
           },
         ];
       };
+      extension_auth_handoffs: {
+        Row: {
+          code: string;
+          ciphertext: string;
+          created_at: string;
+          expires_at: string;
+          iv: string;
+          used_at: string | null;
+          user_id: string;
+        };
+        Insert: {
+          code: string;
+          ciphertext: string;
+          created_at?: string;
+          expires_at: string;
+          iv: string;
+          used_at?: string | null;
+          user_id: string;
+        };
+        Update: {
+          code?: string;
+          ciphertext?: string;
+          created_at?: string;
+          expires_at?: string;
+          iv?: string;
+          used_at?: string | null;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       extension_anon_usage: {
         Row: {
           created_at: string;
