@@ -1,56 +1,27 @@
-import crypto from "crypto";
+import {
+  decryptSecret,
+  encryptSecret,
+  isSecretBoxConfigured,
+  type EncryptedPayload,
+} from "@/lib/crypto/secret-box";
 
 // AES-256-GCM. Key is a 32-byte hex string (64 chars) in env YOUTUBE_TOKEN_KEY.
 // Generate one with: `openssl rand -hex 32` and store it in Infisical (/web).
 
-const ALGO = "aes-256-gcm";
-const IV_BYTES = 12;
-
-function getKey(): Buffer | null {
-  const hex = process.env.YOUTUBE_TOKEN_KEY;
-  if (hex?.length !== 64) return null;
-  try {
-    return Buffer.from(hex, "hex");
-  } catch {
-    return null;
-  }
+function getKey(): string | undefined {
+  return process.env.YOUTUBE_TOKEN_KEY;
 }
 
 export function isTokenCryptoConfigured(): boolean {
-  return getKey() !== null;
+  return isSecretBoxConfigured(getKey());
 }
 
-export type EncryptedToken = {
-  ciphertext: string; // hex (encrypted bytes + 16-byte auth tag appended)
-  iv: string; // hex
-};
+export type EncryptedToken = EncryptedPayload;
 
 export function encryptToken(plaintext: string): EncryptedToken | null {
-  const key = getKey();
-  if (!key) return null;
-  const iv = crypto.randomBytes(IV_BYTES);
-  const cipher = crypto.createCipheriv(ALGO, key, iv);
-  const enc = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
-  const tag = cipher.getAuthTag();
-  return {
-    ciphertext: Buffer.concat([enc, tag]).toString("hex"),
-    iv: iv.toString("hex"),
-  };
+  return encryptSecret(getKey(), plaintext);
 }
 
 export function decryptToken(payload: EncryptedToken): string | null {
-  const key = getKey();
-  if (!key) return null;
-  try {
-    const buf = Buffer.from(payload.ciphertext, "hex");
-    const tag = buf.subarray(buf.length - 16);
-    const enc = buf.subarray(0, buf.length - 16);
-    const iv = Buffer.from(payload.iv, "hex");
-    const decipher = crypto.createDecipheriv(ALGO, key, iv);
-    decipher.setAuthTag(tag);
-    const dec = Buffer.concat([decipher.update(enc), decipher.final()]);
-    return dec.toString("utf8");
-  } catch {
-    return null;
-  }
+  return decryptSecret(getKey(), payload);
 }
