@@ -26,6 +26,7 @@ Usage:
 import json
 import logging
 import os
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -37,6 +38,9 @@ _PROD_DIR = Path("/home/brieftube/transcripts")
 _DEV_DIR = Path(__file__).parent / "transcripts"
 _STORE_DIR = _PROD_DIR if _PROD_DIR.parent.exists() else _DEV_DIR
 
+# YouTube video IDs are exactly 11 characters: [A-Za-z0-9_-]
+_VIDEO_ID_RE = re.compile(r"^[A-Za-z0-9_-]{11}$")
+
 
 class TranscriptStore:
     """Permanent transcript file archive."""
@@ -45,6 +49,17 @@ class TranscriptStore:
         self._dir = store_dir
         self._dir.mkdir(parents=True, exist_ok=True)
         logger.info(f"Transcript store: {self._dir}")
+
+    @staticmethod
+    def _validate_video_id(video_id: str) -> str:
+        """Validate video_id format to prevent path traversal.
+
+        YouTube video IDs are exactly 11 chars, [A-Za-z0-9_-]. Reject anything
+        else to prevent path traversal attacks.
+        """
+        if not _VIDEO_ID_RE.match(video_id):
+            raise ValueError(f"Invalid video_id format: {video_id!r}")
+        return video_id
 
     def save(
         self,
@@ -55,6 +70,7 @@ class TranscriptStore:
         cost: float = 0.0,
     ) -> None:
         """Save transcript to disk. Overwrites if already exists."""
+        self._validate_video_id(video_id)
         entry = {
             "text": text,
             "language": language,
@@ -71,6 +87,7 @@ class TranscriptStore:
 
     def load(self, video_id: str) -> dict | None:
         """Load transcript from disk. Returns None if not found."""
+        self._validate_video_id(video_id)
         path = self._dir / f"{video_id}.json"
         if not path.exists():
             return None
@@ -84,6 +101,7 @@ class TranscriptStore:
 
     def exists(self, video_id: str) -> bool:
         """Check if transcript is archived."""
+        self._validate_video_id(video_id)
         return (self._dir / f"{video_id}.json").exists()
 
     def count(self) -> int:

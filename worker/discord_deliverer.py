@@ -2,10 +2,34 @@
 
 import httpx
 import logging
+from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
 DISCORD_COLOR = 0xDC2626  # BriefTube red
+
+
+def _validate_discord_webhook_url(url: str) -> bool:
+    """Accept only https://discord.com/api/webhooks/* and related Discord domains.
+
+    Prevents SSRF attacks via user-supplied malicious webhook URLs.
+    """
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        return False
+    if parsed.scheme != "https":
+        return False
+    if parsed.hostname not in (
+        "discord.com",
+        "discordapp.com",
+        "ptb.discord.com",
+        "canary.discord.com",
+    ):
+        return False
+    if not parsed.path.startswith("/api/webhooks/"):
+        return False
+    return True
 
 
 async def send_to_discord(
@@ -26,6 +50,13 @@ async def send_to_discord(
     if not webhook_url:
         logger.warning(f"Discord delivery skipped: no webhook URL for {video_id}")
         return False
+
+    if not _validate_discord_webhook_url(webhook_url):
+        logger.warning(
+            f"Discord delivery rejected: invalid webhook URL for {video_id} — "
+            f"must be https://discord.com/api/webhooks/*"
+        )
+        return None  # Permanent failure — disconnect the platform connection
 
     excerpt = summary[:500].strip()
     if len(summary) > 500:
