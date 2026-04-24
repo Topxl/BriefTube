@@ -41,8 +41,14 @@ load_dotenv(override=True)
 
 # ── Single-instance enforcement ─────────────────────────────────────
 
-_PID_FILE = Path(__file__).parent / "log_bot.pid"
-_LOCK_FILE = Path(__file__).parent / "log_bot.lock"
+# Lock/PID live under /tmp rather than the worker dir because the systemd
+# hardening drop-in sets ProtectHome=read-only (see scripts/vps/harden.sh).
+# With PrivateTmp=yes each service instance gets its own tmpfs under /tmp,
+# so the lock is automatically fresh on each restart and invisible to other
+# processes — which is exactly what we want for single-instance enforcement.
+_LOCK_DIR = Path("/tmp")
+_PID_FILE = _LOCK_DIR / "brieftube-log-bot.pid"
+_LOCK_FILE = _LOCK_DIR / "brieftube-log-bot.lock"
 _lock_fd = None  # keep fd open for the lifetime of the process (flock is held by the fd)
 
 
