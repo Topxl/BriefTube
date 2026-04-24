@@ -2,10 +2,6 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { t } from "@/locales";
-import {
-  HeroPricingCtaDesktop,
-  HeroPricingCtaMobile,
-} from "./hero-pricing-cta";
 import { HeroUrlInput } from "./hero-url-input";
 
 // HeroPlayer lives below the fold and carries the big demo-summary blobs +
@@ -48,10 +44,6 @@ export function Hero() {
             <HeroUrlInput />
           </div>
 
-          <div className="mt-4 text-center">
-            <HeroPricingCtaMobile />
-          </div>
-
           <p className="text-muted-foreground mt-4 text-xs">{tl.socialProof}</p>
 
           {/* Demo player (optional on mobile, more compact) */}
@@ -79,7 +71,7 @@ export function Hero() {
             <HeroUrlInput />
           </div>
 
-          <div className="mt-6 flex items-center justify-center gap-4">
+          <div className="mt-6 flex items-center justify-center">
             <Button
               size="lg"
               className="h-12 bg-red-600 px-8 text-base shadow-[0_0_30px_rgba(239,68,68,0.3)] transition-all duration-300 hover:bg-red-500 hover:shadow-[0_0_40px_rgba(239,68,68,0.4)]"
@@ -87,7 +79,6 @@ export function Hero() {
             >
               <Link href="/login">{tl.ctaPrimary}</Link>
             </Button>
-            <HeroPricingCtaDesktop />
           </div>
 
           <p className="text-muted-foreground mt-4 text-sm">{tl.socialProof}</p>

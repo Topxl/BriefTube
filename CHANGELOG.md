@@ -2,6 +2,7 @@
 
 ## 2026-04-24
 
+CLEANUP(landing): drop "See pricing" CTA from the hero (mobile + desktop) — funnel was sending visitors to /pricing instead of letting them try the product. Navbar still has the Pricing anchor link for users who want it. Deletes the now-orphan `hero-pricing-cta.tsx`.
 PERF(landing): three wins to fix mobile PageSpeed (was 64/100, LCP 4.7s) — (1) eager + fetchpriority=high on the first HeroPlayer thumbnail (it's the LCP element on mobile, was lazy/low), (2) disable PostHog session_recording on public pages (saves ~50 KiB of `posthog-recorder.js` for visitors who aren't logged in), (3) bump browserslist to chrome/edge/firefox 105 + safari 16.4 to drop ~45 KiB of polyfills (Array.prototype.at/flat/flatMap, Object.hasOwn, etc.) that modern browsers no longer need
 FIX(admin): /api/admin/worker no longer 502s in dev — timeout was 8s (vs 15s on /web-logs and /services) and each of the 3 parallel admin routes was paying a fresh 2.8s SSH handshake, so the worker call tripped before the logs finished transferring
 PERF(admin): multiplex dev-mode SSH to the VPS via ControlMaster (new `src/lib/worker-ssh.ts` helper) — first call still ~3.5s to set up the socket, subsequent calls drop to ~0.6s instead of ~2.8s each. Turns three sequential handshakes into one, which means the admin dashboard loads in ~4s instead of ~11s
