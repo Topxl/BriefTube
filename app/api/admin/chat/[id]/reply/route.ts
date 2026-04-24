@@ -98,6 +98,15 @@ export async function POST(req: NextRequest, { params }: Params) {
 
         if (!userProfile?.email) return;
 
+        // Validate email format (defense-in-depth)
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(userProfile.email)) {
+          logger.warn("[admin/chat/reply] invalid email in profiles", {
+            email: userProfile.email,
+          });
+          return;
+        }
+
         const subject = conv.subject ?? "Your support request";
         const link = "https://www.brief-tube.com/dashboard";
         const html = `
