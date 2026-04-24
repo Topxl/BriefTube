@@ -15,6 +15,7 @@ import re
 import threading
 import urllib.parse
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Optional, Tuple
 from youtube_transcript_api import YouTubeTranscriptApi
@@ -292,6 +293,32 @@ class TranscriptExtractor:
                 continue
         return {}
 
+    def _ensure_video_metadata(self, video_id: str) -> Optional[str]:
+        """Fetch Invidious metadata lazily, cache it, and return skip reason if any.
+
+        Called before expensive fallbacks (Piped, proxy-API retries, yt-dlp,
+        Whisper) — not eagerly, so the ~73% of videos that get a transcript
+        from the youtube_api/Invidious race never pay the metadata round-trip.
+
+        Safe to call multiple times — subsequent calls are no-ops.
+        Returns a skip reason ("music_content", "drama_movie") or None.
+        """
+        if not self.last_video_metadata:
+            self.last_video_metadata = TranscriptExtractor._fetch_invidious_metadata(video_id)
+            if self.last_video_metadata:
+                genre = self.last_video_metadata.get("genre", "")
+                dur = self.last_video_metadata.get("duration_seconds")
+                logger.info(
+                    f"[{video_id}] Invidious metadata: genre={genre!r}"
+                    + (f" duration={dur}s" if dur else "")
+                )
+        if not self.last_video_metadata:
+            return None
+        genre = self.last_video_metadata.get("genre", "")
+        dur = self.last_video_metadata.get("duration_seconds", 0)
+        keywords = set(self.last_video_metadata.get("keywords", []))
+        return content_filter.check_metadata_skip(genre, dur, keywords)
+
     def get_transcript(
         self,
         youtube_url: str,
@@ -321,37 +348,15 @@ class TranscriptExtractor:
         if not video_id:
             return None, None, "Invalid YouTube URL", 0.0
 
-        # Fetch rich metadata from Invidious (genre, keywords, duration, views, …).
-        # Used for: language-agnostic music detection + storing enriched metadata in DB.
-        self.last_video_metadata = TranscriptExtractor._fetch_invidious_metadata(video_id)
-        if self.last_video_metadata:
-            genre = self.last_video_metadata.get("genre", "")
-            dur = self.last_video_metadata.get("duration_seconds")
-            logger.info(
-                f"[{video_id}] Invidious metadata: genre={genre!r}"
-                + (f" duration={dur}s" if dur else "")
-            )
-            dur = self.last_video_metadata.get("duration_seconds", 0)
-            keywords = set(self.last_video_metadata.get("keywords", []))
-            metadata_skip = content_filter.check_metadata_skip(genre, dur, keywords)
-            if metadata_skip:
-                logger.info(
-                    f"[{video_id}] Content filter ({metadata_skip}): "
-                    f"genre={genre!r}, duration={dur // 60 if dur else '?'}min — skipping"
-                )
-                return None, None, metadata_skip, 0.0
+        # Invidious metadata is fetched lazily via self._ensure_video_metadata()
+        # — only before expensive fallbacks (Piped, proxy pool, yt-dlp, Whisper).
+        # The fast path below (youtube_api direct + Invidious subs race) skips it.
 
         try:
-            # Try to get transcript in preferred language order
-            transcript_data = None
-            detected_lang = None
-            ip_blocked = False
-
             _IP_BLOCK_SIGNALS = ("blocking requests", "429", "too many requests", "proxy")
 
             def _fetch_with_api(api: YouTubeTranscriptApi) -> tuple:
                 """Try fetching transcript with given api. Returns (data, lang, blocked)."""
-                nonlocal ip_blocked
                 for lang in preferred_languages:
                     try:
                         data = api.fetch(video_id, languages=[lang])
@@ -372,98 +377,143 @@ class TranscriptExtractor:
                         logger.error(f"Could not find any transcript: {e}")
                     return None, None, blocked
 
-            # Step 1: try direct (no proxy) — free, no bandwidth cost.
-            # Skip if we already know the VPS IP is blocked (avoids a guaranteed failure).
+            # ── Fast path: race youtube_api direct + Invidious subtitles ────
+            # Both are free and typically return in 2-5s. First to deliver a
+            # usable transcript wins; the loser keeps running in the background
+            # and its result is discarded. Saves ~3-8s on the videos that used
+            # to fall sequentially from direct to Invidious.
             if is_direct_blocked():
-                ip_blocked = True
-                transcript_data = None
-                detected_lang = None
-            else:
-                api = self._get_api(use_proxy=False)
-                transcript_data, detected_lang, ip_blocked = _fetch_with_api(api)
-                if ip_blocked:
-                    mark_direct_blocked()
-
-            # Step 2 (lightweight proxy): youtube-transcript-api via Webshare is tried
-            # at step 2d, only after free alternatives (Invidious/Piped) fail.
-            # This costs <<1 KB vs 10-100 MB for yt-dlp/Whisper via proxy.
-
-            if detected_lang == 'auto' and transcript_data is not None:
-                logger.info("Found transcript via multi-language fallback")
-            elif detected_lang and transcript_data is not None:
-                logger.info(f"Found transcript in preferred language: {detected_lang}")
-
-            # Record whether this call was IP-blocked (thread-safe)
-            with self._ip_blocked_lock:
-                self.last_ip_blocked = ip_blocked
-
-            if transcript_data is None:
-                # Step 2b: Try Invidious (free YouTube proxy — bypasses datacenter IP blocks)
-                # Tried first: faster than yt-dlp and works regardless of VPS IP
-                inv_text, inv_lang, _ = self._invidious_subtitles(video_id, preferred_languages)
+                # VPS IP known blocked — skip direct, only try Invidious
+                with self._ip_blocked_lock:
+                    self.last_ip_blocked = True
+                inv_text, inv_lang, _ = self._invidious_subtitles(
+                    video_id, preferred_languages
+                )
                 if inv_text:
                     self.last_transcript_source = "invidious"
+                    logger.info(
+                        f"✅ Invidious transcript ({len(inv_text)} chars) "
+                        f"in language: {inv_lang} [FREE]"
+                    )
                     return inv_text, inv_lang, None, 0.0
+            else:
+                api = self._get_api(use_proxy=False)
 
-                # Step 2c: Try Piped (second free proxy, different infrastructure)
-                piped_text, piped_lang, _ = self._piped_subtitles(video_id, preferred_languages)
-                if piped_text:
-                    self.last_transcript_source = "piped"
-                    return piped_text, piped_lang, None, 0.0
+                def _race_direct():
+                    data, lang, blocked = _fetch_with_api(api)
+                    if data is None:
+                        return None, None, blocked
+                    return " ".join(e.text for e in data), lang, blocked
 
-                # Step 2d: youtube-transcript-api via Static ISP proxy pool.
-                # Much lighter than yt-dlp (KB vs MB of metadata). Each retry
-                # picks a different IP from the pool (sample without replacement),
-                # so transient bot-detection on one IP doesn't kill the attempt.
-                # All retries stay within the flat-rate Static ISP plan.
-                proxy_urls = _iter_static_proxy_urls(_get_retry_count())
-                for i, http_proxy in enumerate(proxy_urls, 1):
-                    api_proxy = self._get_api(use_proxy=True, proxy_url=http_proxy)
-                    proxy_data, proxy_lang, proxy_blocked = _fetch_with_api(api_proxy)
-                    if proxy_data is not None:
-                        full_text = " ".join([entry.text for entry in proxy_data])
-                        host = http_proxy.split("@")[-1] if "@" in http_proxy else "?"
+                def _race_invidious():
+                    text, lang, _err = self._invidious_subtitles(
+                        video_id, preferred_languages
+                    )
+                    return text, lang, False
+
+                ex = ThreadPoolExecutor(
+                    max_workers=2, thread_name_prefix=f"race-{video_id[:8]}"
+                )
+                try:
+                    fut_api = ex.submit(_race_direct)
+                    fut_inv = ex.submit(_race_invidious)
+                    futs = {fut_api: "youtube_api", fut_inv: "invidious"}
+                    race_winner = None
+                    race_blocked = False
+                    for fut in as_completed(futs):
+                        source = futs[fut]
+                        try:
+                            text, lang, blocked = fut.result()
+                        except Exception as e:
+                            logger.debug(
+                                f"[{video_id}] {source} race errored: {e}"
+                            )
+                            continue
+                        if source == "youtube_api" and blocked:
+                            race_blocked = True
+                        if text:
+                            race_winner = (text, lang, source)
+                            for other in futs:
+                                if other is not fut:
+                                    other.cancel()
+                            break
+                    if race_blocked:
+                        mark_direct_blocked()
+                    with self._ip_blocked_lock:
+                        self.last_ip_blocked = race_blocked
+                    if race_winner:
+                        text, lang, source = race_winner
+                        self.last_transcript_source = source
                         logger.info(
-                            f"✅ YouTube transcript via pool[{i}/{len(proxy_urls)}] "
-                            f"({host}) ({len(full_text)} chars) in language: {proxy_lang}"
+                            f"✅ {source} transcript ({len(text)} chars) "
+                            f"in language: {lang} [FREE, race]"
                         )
-                        self.last_transcript_source = "youtube_api"
-                        return full_text, proxy_lang, None, 0.0
-                    if i < len(proxy_urls):
-                        host = http_proxy.split("@")[-1] if "@" in http_proxy else "?"
-                        logger.debug(
-                            f"YouTube transcript via pool[{i}/{len(proxy_urls)}] "
-                            f"({host}) failed, trying next IP..."
-                        )
+                        return text, lang, None, 0.0
+                finally:
+                    ex.shutdown(wait=False)
 
-                # Step 2e: Try yt-dlp (detects live/premiere, player_client fallbacks)
-                # Tried after proxies: slower on bot-detected IPs but catches edge cases
-                vtt_text, vtt_lang, vtt_error = self._ytdlp_subtitles(youtube_url, preferred_languages)
-                if vtt_text:
-                    self.last_transcript_source = "yt-dlp"
-                    return vtt_text, vtt_lang, None, 0.0
-                if vtt_error and vtt_error.startswith("premiere_not_available_yet"):
-                    # Scheduled/premiere video — skip Whisper, snooze until it starts
-                    return None, None, vtt_error, 0.0
-                if vtt_error == "video_is_live":
-                    # Live stream in progress — no captions yet, skip Whisper entirely
-                    return None, None, "video_is_live", 0.0
+            # ── Slow fallbacks ──────────────────────────────────────────────
+            # Both fast sources failed. Fetch metadata now for the content
+            # filter check (avoids wasting bandwidth on music/long movies via
+            # Piped/yt-dlp/Whisper).
+            meta_skip = self._ensure_video_metadata(video_id)
+            if meta_skip:
+                logger.info(
+                    f"[{video_id}] Content filter ({meta_skip}) — "
+                    f"skipping fallback cascade"
+                )
+                return None, None, meta_skip, 0.0
 
-                # Step 4: Whisper API fallback (paid, uses Groq quota)
-                if self.enable_whisper_fallback and self.whisper_transcriber:
-                    logger.warning("YouTube transcripts not available, trying Whisper API fallback...")
-                    self.last_transcript_source = "whisper"
-                    return self._whisper_fallback(youtube_url, preferred_languages, video_title)
-                else:
-                    return None, None, "no_transcript_available", 0.0
+            # Step 2c: Try Piped (second free proxy, different infrastructure)
+            piped_text, piped_lang, _ = self._piped_subtitles(video_id, preferred_languages)
+            if piped_text:
+                self.last_transcript_source = "piped"
+                return piped_text, piped_lang, None, 0.0
 
-            # Combine all text segments
-            full_text = " ".join([entry.text for entry in transcript_data])
+            # Step 2d: youtube-transcript-api via Static ISP proxy pool.
+            # Much lighter than yt-dlp (KB vs MB of metadata). Each retry
+            # picks a different IP from the pool (sample without replacement),
+            # so transient bot-detection on one IP doesn't kill the attempt.
+            proxy_urls = _iter_static_proxy_urls(_get_retry_count())
+            for i, http_proxy in enumerate(proxy_urls, 1):
+                api_proxy = self._get_api(use_proxy=True, proxy_url=http_proxy)
+                proxy_data, proxy_lang, proxy_blocked = _fetch_with_api(api_proxy)
+                if proxy_data is not None:
+                    full_text = " ".join([entry.text for entry in proxy_data])
+                    host = http_proxy.split("@")[-1] if "@" in http_proxy else "?"
+                    logger.info(
+                        f"✅ YouTube transcript via pool[{i}/{len(proxy_urls)}] "
+                        f"({host}) ({len(full_text)} chars) in language: {proxy_lang}"
+                    )
+                    self.last_transcript_source = "youtube_api"
+                    return full_text, proxy_lang, None, 0.0
+                if i < len(proxy_urls):
+                    host = http_proxy.split("@")[-1] if "@" in http_proxy else "?"
+                    logger.debug(
+                        f"YouTube transcript via pool[{i}/{len(proxy_urls)}] "
+                        f"({host}) failed, trying next IP..."
+                    )
 
-            logger.info(f"✅ YouTube transcript extracted ({len(full_text)} chars) in language: {detected_lang} [FREE]")
+            # Step 2e: Try yt-dlp (detects live/premiere, player_client fallbacks)
+            # Tried after proxies: slower on bot-detected IPs but catches edge cases
+            vtt_text, vtt_lang, vtt_error = self._ytdlp_subtitles(youtube_url, preferred_languages)
+            if vtt_text:
+                self.last_transcript_source = "yt-dlp"
+                return vtt_text, vtt_lang, None, 0.0
+            if vtt_error and vtt_error.startswith("premiere_not_available_yet"):
+                # Scheduled/premiere video — skip Whisper, snooze until it starts
+                return None, None, vtt_error, 0.0
+            if vtt_error == "video_is_live":
+                # Live stream in progress — no captions yet, skip Whisper entirely
+                return None, None, "video_is_live", 0.0
 
-            self.last_transcript_source = "youtube_api"
-            return full_text, detected_lang, None, 0.0  # YouTube transcripts are free
+            # Step 4: Whisper API fallback (paid, uses Groq quota)
+            if self.enable_whisper_fallback and self.whisper_transcriber:
+                logger.warning("YouTube transcripts not available, trying Whisper API fallback...")
+                self.last_transcript_source = "whisper"
+                return self._whisper_fallback(youtube_url, preferred_languages, video_title)
+            else:
+                return None, None, "no_transcript_available", 0.0
 
         except TranscriptsDisabled:
             logger.warning(f"Transcripts are disabled for video: {video_id}")
