@@ -49,8 +49,13 @@ jobs:
             # change very rarely and are applied manually over SSH with full
             # sudo. The hardened /etc/sudoers.d/brieftube only whitelists
             # start/stop/restart/status for the 3 units — no daemon-reload.
+            #
+            # brieftube-log-bot is intentionally NOT restarted here: the
+            # main worker already runs its own log-bot polling loop
+            # (create_log_bot_application + _log_bot_poll_loop in main.py),
+            # and running both on the same token causes a 409 Conflict from
+            # Telegram. The standalone service is kept stopped.
             sudo systemctl restart brieftube-worker
-            sudo systemctl restart brieftube-log-bot
             sleep 2
 
             echo "→ Status:"
@@ -58,4 +63,3 @@ jobs:
             # requires an exact argv match (no trailing args), and stdout is
             # already non-TTY in CI so systemd doesn't invoke a pager anyway.
             sudo systemctl status brieftube-worker || true
-            sudo systemctl status brieftube-log-bot || true
