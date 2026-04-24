@@ -9,7 +9,7 @@ import type { NextRequest } from "next/server";
 export const maxDuration = 300;
 
 export const GET = async (req: NextRequest) => {
-  const unauthorized = checkCronAuth(req);
+  const unauthorized = await checkCronAuth(req);
   if (unauthorized) return unauthorized;
 
   const [
