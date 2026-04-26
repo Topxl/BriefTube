@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "BriefTube: AI YouTube summaries",
   "description": "Personalized AI summaries for YouTube. Subscribe to channels to auto-summarize every new upload. 55+ languages.",
-  "version": "0.1.0",
+  "version": "0.1.3",
   "action": {
     "default_popup": "src/popup/index.html",
     "default_icon": {
@@ -24,8 +24,13 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://www.youtube.com/*", "https://m.youtube.com/*"],
-      "js": ["src/content/index.tsx"],
+      "matches": [
+        "https://www.youtube.com/*",
+        "https://m.youtube.com/*"
+      ],
+      "js": [
+        "src/content/index.tsx"
+      ],
       "run_at": "document_idle"
     },
     {
@@ -33,12 +38,16 @@
         "https://www.brief-tube.com/extension/auth*",
         "https://brief-tube.com/extension/auth*"
       ],
-      "js": ["src/content-auth/index.ts"],
+      "js": [
+        "src/content-auth/index.ts"
+      ],
       "run_at": "document_start",
       "all_frames": false
     }
   ],
-  "permissions": ["storage"],
+  "permissions": [
+    "storage"
+  ],
   "host_permissions": [
     "https://www.youtube.com/*",
     "https://m.youtube.com/*",

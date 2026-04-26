@@ -4,5 +4,6 @@ dist
 .env
 .env.local
 *.log
+brieftube-extension-v*.zip
 store-assets/output/
 store-assets/node_modules/
