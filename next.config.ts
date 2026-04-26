@@ -214,9 +214,37 @@ const nextConfig: NextConfig = {
         source: "/(.*)",
         headers: securityHeaders,
       },
-      // Long-term cache for static demo asset
+      // Long-term cache for static demo assets (LCP candidate on mobile)
       {
-        source: "/demo-thumb-1.webp",
+        source: "/demo-thumb-:slug.webp",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+      {
+        source: "/demo-thumb-:slug.jpg",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+      // Long-term cache for landing page logo assets
+      {
+        source: "/logo.svg",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+      {
+        source: "/logo-:slug.png",
         headers: [
           {
             key: "Cache-Control",

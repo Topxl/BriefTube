@@ -188,11 +188,9 @@ export function WeeklyLetterEmail({
             </Section>
 
             {/* Body: the narrative itself */}
-            <Section
-              style={{ padding: "32px 40px 8px" }}
-               
-              dangerouslySetInnerHTML={{ __html: bodyHtml }}
-            />
+            <Section style={{ padding: "32px 40px 8px" }}>
+              <div dangerouslySetInnerHTML={{ __html: bodyHtml }} />
+            </Section>
 
             {/* Signature */}
             <Section style={{ padding: "16px 40px 0" }}>
