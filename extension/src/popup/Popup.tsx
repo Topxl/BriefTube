@@ -9,6 +9,7 @@ import {
   Zap,
 } from "lucide-react";
 import type { MeResponse } from "@/lib/types";
+import logoUrl from "../../public/icons/icon-128.png";
 
 async function send<T>(
   type: string,
@@ -50,9 +51,11 @@ export function Popup() {
     <div className="flex min-h-[380px] w-[340px] flex-col bg-neutral-950 text-white">
       <header className="flex items-center justify-between border-b border-white/10 px-4 py-3">
         <div className="flex items-center gap-2">
-          <div className="bg-brand flex size-8 items-center justify-center rounded-lg">
-            <Zap className="size-4" />
-          </div>
+          <img
+            src={logoUrl}
+            alt="BriefTube"
+            className="size-8 rounded-lg"
+          />
           <div>
             <p className="text-sm font-semibold">BriefTube</p>
             <p className="text-[10px] tracking-wider text-white/50 uppercase">

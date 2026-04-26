@@ -15,12 +15,12 @@ import {
   LogOut,
   Play,
   Sparkles,
-  Zap,
 } from "lucide-react";
 import { clsx } from "clsx";
 import type { ExtractedTranscript, VideoMeta } from "./transcript";
 import { seekTo } from "./transcript";
 import type { MeResponse, SummarizeResponse } from "@/lib/types";
+import logoUrl from "../../public/icons/icon-128.png";
 
 type Props = {
   meta: VideoMeta;
@@ -211,9 +211,12 @@ export function Sidebar(props: Props) {
       style={{ fontFamily: "inherit" }}
     >
       <header className="flex items-center gap-3 border-b border-[var(--bt-border)] bg-[var(--bt-bg-elevated)] px-4 py-3">
-        <div className="bg-brand flex size-8 shrink-0 items-center justify-center rounded-lg">
-          <Zap className="size-4 fill-white text-white" />
-        </div>
+        <img
+          src={logoUrl}
+          alt="BriefTube"
+          className="size-8 shrink-0 rounded-lg"
+        />
+
         {!authenticated ? (
           <>
             <span className="flex-1 truncate text-[12px] text-[var(--bt-text-soft)]">

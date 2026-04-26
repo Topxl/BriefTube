@@ -1,13 +1,15 @@
 {
   "name": "brieftube-extension",
-  "version": "0.1.0",
+  "version": "0.1.3",
   "private": true,
   "type": "module",
   "description": "BriefTube Chrome extension: AI summaries for YouTube videos",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "prebuild:prod": "node scripts/bump-version.mjs",
     "build:prod": "BRIEFTUBE_PROD=1 NODE_ENV=production tsc --noEmit && BRIEFTUBE_PROD=1 NODE_ENV=production vite build",
+    "postbuild:prod": "node scripts/zip-release.mjs",
     "preview": "vite preview",
     "lint": "eslint src --ext .ts,.tsx"
   },
