@@ -1,7 +1,7 @@
 import Script from "next/script";
 import { NextTopLoader } from "@/features/page/next-top-loader";
 import { ServerToaster } from "@/features/server-sonner/server-toaster";
-import { LeaChatWidget } from "@/features/lea-chat/lea-chat-widget";
+import { LeaChatWidgetLoader } from "@/features/lea-chat/lea-chat-widget-loader";
 import { cn } from "@/lib/utils";
 import { SiteConfig } from "@/site-config";
 import type { Metadata } from "next";
@@ -56,7 +56,6 @@ export const metadata: Metadata = {
 
 const GeistSans = Inter({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
   variable: "--font-geist-sans",
   display: "optional",
 });
@@ -69,7 +68,6 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
       <head>
-        {/* gtag must load before useEffects fire (conversion tracking) — use afterInteractive, not lazyOnload */}
         <link rel="preconnect" href="https://www.googletagmanager.com" />
         <link
           rel="preconnect"
@@ -78,12 +76,15 @@ export default function RootLayout({
         />
         <link rel="dns-prefetch" href="https://noembed.com" />
         <link rel="dns-prefetch" href="https://r.wdfl.co" />
+        {/* gtag is only used to fire conversion events on signup/checkout
+            actions, not on pageview, so lazyOnload keeps it off the critical
+            path of every visit. */}
         <Script
           async
           src="https://www.googletagmanager.com/gtag/js?id=G-NSS12KB41V"
-          strategy="afterInteractive"
+          strategy="lazyOnload"
         />
-        <Script id="gtag-config" strategy="afterInteractive">
+        <Script id="gtag-config" strategy="lazyOnload">
           {`
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
@@ -107,9 +108,7 @@ export default function RootLayout({
             <Suspense>
               <ServerToaster />
             </Suspense>
-            <Suspense fallback={null}>
-              <LeaChatWidget />
-            </Suspense>
+            <LeaChatWidgetLoader />
           </Providers>
         </NuqsAdapter>
         {/* Rewardful only fires on signup/checkout flows. lazyOnload keeps

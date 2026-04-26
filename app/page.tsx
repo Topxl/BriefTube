@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import dynamic from "next/dynamic";
-import { Suspense } from "react";
 import { unstable_cache } from "next/cache";
 import { Hero } from "@/components/landing/hero";
 import { Navbar } from "@/components/landing/navbar";
@@ -340,31 +339,17 @@ export default async function Home() {
       ))}
       <Navbar />
       <Hero />
-      <Suspense fallback={<div className="h-[110px]" />}>
-        <SocialProof stats={stats} />
-      </Suspense>
+      <SocialProof stats={stats} />
       <div className="section-divider" />
-      <Suspense fallback={<div className="h-64" />}>
-        <Problem />
-      </Suspense>
-      <Suspense fallback={<div className="h-64" />}>
-        <HowItWorks />
-      </Suspense>
+      <Problem />
+      <HowItWorks />
       <div className="section-divider" />
-      <Suspense fallback={<div className="h-64" />}>
-        <Features />
-      </Suspense>
-      <Suspense fallback={<div className="h-64" />}>
-        <Pricing prices={prices} />
-      </Suspense>
+      <Features />
+      <Pricing prices={prices} />
       <div className="section-divider" />
-      <Suspense fallback={<div className="h-64" />}>
-        <FAQ />
-      </Suspense>
+      <FAQ />
       {/* FinalCTA removed: hero URL input is the primary CTA now */}
-      <Suspense fallback={<div className="h-32" />}>
-        <Footer />
-      </Suspense>
+      <Footer />
     </main>
   );
 }
