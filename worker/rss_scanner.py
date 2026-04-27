@@ -10,7 +10,6 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import db
 from content_filter import is_music_title as is_likely_music
-from content_filter import is_drama_movie_title as is_likely_drama_movie
 from content_filter import is_youtube_short
 from youtube_utils import extract_video_id as _yt_extract_video_id
 
@@ -156,13 +155,6 @@ def scan_all_channels():
             # Duration alone is NOT a signal (6h+ podcasts like Lex Fridman must pass).
             if is_likely_music(video["title"]):
                 logger.info(f"Music/ambient skip (title): {video['title'][:80]} ({vid})")
-                known_video_ids.add(vid)
-                continue
-
-            # Skip Nollywood/drama movies — no YouTube transcripts, 1-3h long,
-            # Whisper retry downloads 50-65 MB via proxy each time → bandwidth explosion.
-            if is_likely_drama_movie(video["title"]):
-                logger.info(f"Drama movie skip (title): {video['title'][:80]} ({vid})")
                 known_video_ids.add(vid)
                 continue
 
