@@ -1,18 +1,14 @@
 """Unit tests for content_filter.py — centralized content filtering rules."""
 
-import pytest
 from content_filter import (
     is_music_title,
-    is_drama_movie_title,
     is_youtube_short,
     should_skip_title,
     check_metadata_skip,
-    CATEGORY_DURATION_GATES,
-    MOVIE_KEYWORDS,
 )
 
 
-# ── is_music_title ────────────────────────────────���──────────────────────────
+# ── is_music_title ───────────────────────────────────────────────────────────
 
 class TestIsMusicTitle:
     """Titles that MUST be detected as music/ambient."""
@@ -100,50 +96,7 @@ class TestIsMusicTitleShouldPass:
         assert not is_music_title("Interview with a Jazz Musician")
 
 
-# ── is_drama_movie_title ────────────────────────────���────────────────────────
-
-class TestIsDramaMovieTitle:
-    """Titles that match drama/movie/course patterns."""
-
-    def test_nollywood(self):
-        assert is_drama_movie_title("Latest Nollywood Movie 2026")
-
-    def test_nigerian_movie(self):
-        assert is_drama_movie_title("Best Nigerian Movie — Will Make You Cry")
-
-    def test_funny_movie(self):
-        assert is_drama_movie_title("Funny Movie That Will Make You Laugh")
-
-    def test_ethiopian_drama(self):
-        assert is_drama_movie_title("ስኩል ላይፍ — Episode 45")
-
-    def test_full_course(self):
-        assert is_drama_movie_title("Python Full Course 2026 for Beginners")
-
-    def test_simplilearn(self):
-        assert is_drama_movie_title("Data Science Tutorial For Beginners | Simplilearn")
-
-    def test_african_movie(self):
-        assert is_drama_movie_title("Best African Movie 2026")
-
-
-class TestIsDramaMovieTitleShouldPass:
-    """Titles that must NOT be filtered."""
-
-    def test_movie_review(self):
-        assert not is_drama_movie_title("Movie Review: Oppenheimer")
-
-    def test_tech_video(self):
-        assert not is_drama_movie_title("How to Deploy a Node.js App")
-
-    def test_empty(self):
-        assert not is_drama_movie_title("")
-
-    def test_short_tutorial(self):
-        assert not is_drama_movie_title("React Tutorial — Build a Todo App")
-
-
-# ── is_youtube_short ──────────────────────────────────────────��──────────────
+# ── is_youtube_short ─────────────────────────────────────────────────────────
 
 class TestIsYoutubeShort:
     def test_shorts_url(self):
@@ -159,13 +112,14 @@ class TestIsYoutubeShort:
 # ── should_skip_title ────────────────────────────────────────────────────────
 
 class TestShouldSkipTitle:
-    """Combined title check returning skip reason."""
+    """Title check returning skip reason."""
 
     def test_music_returns_music_content(self):
         assert should_skip_title("lofi beats to study") == "music_content"
 
-    def test_drama_returns_drama_movie(self):
-        assert should_skip_title("Latest Nollywood Movie") == "drama_movie"
+    def test_drama_no_longer_filtered(self):
+        # Drama/movie title filter was removed — these now pass through.
+        assert should_skip_title("Latest Nollywood Movie") is None
 
     def test_normal_returns_none(self):
         assert should_skip_title("How to Build a SaaS") is None
@@ -173,16 +127,11 @@ class TestShouldSkipTitle:
     def test_empty_returns_none(self):
         assert should_skip_title("") is None
 
-    def test_music_takes_precedence_over_drama(self):
-        # If both match (unlikely but possible), music wins
-        result = should_skip_title("Nonstop Worship Songs Nollywood")
-        assert result == "music_content"
-
 
 # ── check_metadata_skip ──────────────────────────────────────────────────────
 
 class TestCheckMetadataSkip:
-    """Invidious metadata-based filtering."""
+    """Invidious metadata-based filtering — only Music genre is filtered."""
 
     def test_music_genre(self):
         assert check_metadata_skip("Music", 240) == "music_content"
@@ -190,39 +139,24 @@ class TestCheckMetadataSkip:
     def test_music_genre_case_insensitive(self):
         assert check_metadata_skip("music", 0) == "music_content"
 
-    def test_film_short_passes(self):
-        # 20 min film trailer — under 30 min threshold
-        assert check_metadata_skip("Film & Animation", 1200) is None
+    def test_film_long_no_longer_blocked(self):
+        # Category/duration gates were removed — long films now pass through.
+        assert check_metadata_skip("Film & Animation", 7200) is None
 
-    def test_film_long_blocked(self):
-        # 2h movie — over 30 min threshold
-        assert check_metadata_skip("Film & Animation", 7200) == "drama_movie"
+    def test_sports_long_no_longer_blocked(self):
+        assert check_metadata_skip("Sports", 7200) is None
 
-    def test_sports_short_passes(self):
-        assert check_metadata_skip("Sports", 1800) is None
+    def test_entertainment_long_no_longer_blocked(self):
+        assert check_metadata_skip("Entertainment", 5400) is None
 
-    def test_sports_long_blocked(self):
-        assert check_metadata_skip("Sports", 7200) == "drama_movie"
+    def test_nonprofits_long_no_longer_blocked(self):
+        assert check_metadata_skip("Nonprofits & Activism", 3600) is None
 
-    def test_entertainment_long_blocked(self):
-        assert check_metadata_skip("Entertainment", 5400) == "drama_movie"
-
-    def test_nonprofits_long_blocked(self):
-        assert check_metadata_skip("Nonprofits & Activism", 3600) == "drama_movie"
-
-    def test_science_no_gate(self):
-        # Science has no duration gate — any length passes
+    def test_science_passes(self):
         assert check_metadata_skip("Science & Technology", 36000) is None
 
-    def test_movie_keywords_long(self):
-        assert check_metadata_skip("People & Blogs", 7200, {"full movie", "2026"}) == "drama_movie"
-
-    def test_movie_keywords_short_passes(self):
-        # Under 30 min, movie keywords don't trigger
-        assert check_metadata_skip("People & Blogs", 600, {"full movie"}) is None
-
-    def test_no_keywords_no_skip(self):
-        assert check_metadata_skip("People & Blogs", 7200, {"cooking", "recipe"}) is None
+    def test_movie_keywords_no_longer_filter(self):
+        assert check_metadata_skip("People & Blogs", 7200, {"full movie", "2026"}) is None
 
     def test_empty_genre(self):
         assert check_metadata_skip("", 3600) is None
