@@ -47,6 +47,12 @@ export function Navbar() {
           >
             {tl.faq}
           </Link>
+          <Link
+            href="/business"
+            className="hover:text-foreground rounded-full px-3 py-1.5 transition-colors duration-150 hover:bg-white/[0.06]"
+          >
+            For teams
+          </Link>
         </div>
 
         <div className="flex items-center gap-3">

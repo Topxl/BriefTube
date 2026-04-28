@@ -20,6 +20,7 @@ const navLinks = [
   { label: tl.features, href: "#features" },
   { label: tl.pricing, href: "#pricing" },
   { label: tl.faq, href: "#faq" },
+  { label: "For teams", href: "/business" },
 ];
 
 export function LandingMobileNav() {
