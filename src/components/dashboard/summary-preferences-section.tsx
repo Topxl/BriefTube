@@ -12,24 +12,29 @@ import {
   Zap,
 } from "@/lib/icons";
 
-type LengthPref = "brief" | "standard" | "detailed";
+type LengthPref = "brief" | "standard" | "detailed" | "auto";
 type StylePref = "key_points" | "narrative" | "actionable";
 
 const LENGTH_OPTIONS: { value: LengthPref; label: string; desc: string }[] = [
   {
     value: "brief",
     label: "Brief",
-    desc: "1-2 min audio, key takeaways only",
+    desc: "~1 min audio, key takeaways only",
   },
   {
     value: "standard",
     label: "Standard",
-    desc: "3-4 min audio, balanced coverage",
+    desc: "~4 min audio, balanced coverage",
   },
   {
     value: "detailed",
     label: "Detailed",
-    desc: "5+ min audio, comprehensive",
+    desc: "~8 min audio, comprehensive",
+  },
+  {
+    value: "auto",
+    label: "Auto",
+    desc: "Scales with video length (1-8 min)",
   },
 ];
 

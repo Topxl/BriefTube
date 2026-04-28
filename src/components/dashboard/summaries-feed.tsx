@@ -18,7 +18,7 @@ import type {
 
 const PAGE_SIZE = 20;
 
-type SummaryLengthPref = "brief" | "standard" | "detailed";
+type SummaryLengthPref = "brief" | "standard" | "detailed" | "auto";
 type SummaryStylePref = "key_points" | "narrative" | "actionable";
 
 type ChannelState = {
@@ -220,6 +220,10 @@ export function SummariesFeed({
   const [titles, setTitles] = useState<Record<string, string>>({});
   const [favLangs, setFavLangs] = useState(initialFavLangs);
   const [preferredLang, setPreferredLang] = useState(initialPreferredLang);
+  const [profileLengthPref, setProfileLengthPref] =
+    useState<SummaryLengthPref>("standard");
+  const [profileStylePref, setProfileStylePref] =
+    useState<SummaryStylePref>("narrative");
   const supabase = useMemo(() => createClient(), []);
   const [channelStates, setChannelStates] = useState(initialChannelStates);
 
@@ -340,7 +344,9 @@ export function SummariesFeed({
         const [{ data: profile }, { data: subs }] = await Promise.all([
           supabase
             .from("profiles")
-            .select("favorite_languages, preferred_language")
+            .select(
+              "favorite_languages, preferred_language, summary_length_pref, summary_style",
+            )
             .eq("id", user.id)
             .single(),
           supabase
@@ -352,6 +358,12 @@ export function SummariesFeed({
         ]);
         const pref = profile?.preferred_language ?? "en";
         setPreferredLang(pref);
+        setProfileLengthPref(
+          (profile?.summary_length_pref ?? "standard") as SummaryLengthPref,
+        );
+        setProfileStylePref(
+          (profile?.summary_style ?? "narrative") as SummaryStylePref,
+        );
         const langs = [
           ...new Set([...(profile?.favorite_languages ?? []), pref]),
         ];
@@ -966,6 +978,8 @@ export function SummariesFeed({
                           )
                       : undefined
                   }
+                  profileLengthPref={profileLengthPref}
+                  profileStylePref={profileStylePref}
                 />
               ))
             : (feedMode === "all" ? inboxVideos : listVideos).map((v) =>
@@ -1023,6 +1037,8 @@ export function SummariesFeed({
                     onSummaryStyleChange={(style) =>
                       void updateSummaryStyle(v.channel_id, style)
                     }
+                    profileLengthPref={profileLengthPref}
+                    profileStylePref={profileStylePref}
                   />
                 ) : (
                   <VideoInboxRow
@@ -1052,6 +1068,7 @@ export function SummariesFeed({
                     onSummaryLengthChange={(length) =>
                       void updateSummaryLength(v.channel_id, length)
                     }
+                    profileLengthPref={profileLengthPref}
                   />
                 ),
               )}

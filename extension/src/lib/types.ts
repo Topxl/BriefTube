@@ -4,7 +4,7 @@ export type ExtensionUser = {
   avatarUrl: string | null;
   preferredLanguage: string;
   ttsVoice: string | null;
-  summaryLengthPref: "brief" | "standard" | "detailed";
+  summaryLengthPref: "brief" | "standard" | "detailed" | "auto";
   summaryStyle: "narrative" | "key_points" | "actionable";
 };
 
@@ -19,7 +19,7 @@ export type ExtensionQuota = {
 export type MeResponse = {
   authenticated: boolean;
   user: ExtensionUser | null;
-  quota: ExtensionQuota;
+  quota: ExtensionQuota | null;
 };
 
 export type SummarizeRequest = {
@@ -31,9 +31,8 @@ export type SummarizeRequest = {
   sourceLanguage?: string;
   targetLanguage?: string;
   videoDurationSec?: number;
-  lengthPref?: "brief" | "standard" | "detailed";
+  lengthPref?: "brief" | "standard" | "detailed" | "auto";
   stylePref?: "narrative" | "key_points" | "actionable";
-  deviceId?: string;
 };
 
 export type SummarizeResponse = {
@@ -94,5 +93,4 @@ export type BgMessage =
     }
   | { type: "SIGN_IN" }
   | { type: "SIGN_OUT" }
-  | { type: "GET_DEVICE_ID" }
   | { type: "UPDATE_LANGUAGE"; payload: { preferredLanguage: string } };

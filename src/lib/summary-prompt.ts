@@ -23,14 +23,47 @@ const LANGUAGE_NAMES: Record<string, string> = {
   tr: "Türkçe",
 };
 
-export type LengthPref = "brief" | "standard" | "detailed";
+export type LengthPref = "brief" | "standard" | "detailed" | "auto";
 export type StylePref = "narrative" | "key_points" | "actionable";
 
-const LENGTH_CAPS: Record<LengthPref, number> = {
-  brief: 300,
-  standard: 800,
+// Keep in sync with worker/gemini_api.py LENGTH_CAPS / LENGTH_TOKEN_CAPS.
+const LENGTH_CAPS: Record<Exclude<LengthPref, "auto">, number> = {
+  brief: 180,
+  standard: 600,
   detailed: 1200,
 };
+
+const LENGTH_TOKEN_CAPS: Record<Exclude<LengthPref, "auto">, number> = {
+  brief: 500,
+  standard: 1300,
+  detailed: 2400,
+};
+
+const AUTO_RATIO = 0.18;
+const AUTO_MIN_WORDS = 150;
+const AUTO_MAX_WORDS = 1200;
+
+function computeAutoTargetWords(transcriptWords: number): number {
+  return Math.max(
+    AUTO_MIN_WORDS,
+    Math.min(AUTO_MAX_WORDS, Math.floor(transcriptWords * AUTO_RATIO)),
+  );
+}
+
+/**
+ * Resolve max_output_tokens for a given preference.
+ * For 'auto', scales with transcript length; for fixed presets, returns the cap.
+ */
+export function getMaxTokensForLength(
+  lengthPref: LengthPref,
+  transcriptWords = 0,
+): number {
+  if (lengthPref === "auto") {
+    const target = computeAutoTargetWords(transcriptWords);
+    return Math.floor(target * 2.25);
+  }
+  return LENGTH_TOKEN_CAPS[lengthPref];
+}
 
 function styleInstruction(stylePref: StylePref): string {
   if (stylePref === "key_points") {
@@ -61,8 +94,11 @@ export function buildSummaryPrompt(params: {
 
   const targetLangName =
     LANGUAGE_NAMES[targetLanguage.toLowerCase()] ?? targetLanguage;
-  const audioMaxWords = LENGTH_CAPS[lengthPref];
   const transcriptWords = transcript.split(/\s+/).length;
+  const audioMaxWords =
+    lengthPref === "auto"
+      ? computeAutoTargetWords(transcriptWords)
+      : LENGTH_CAPS[lengthPref];
 
   let minWords: number;
   let maxWords: number;
@@ -96,13 +132,12 @@ export function buildSummaryPrompt(params: {
     : "2. Capture the key points and main ideas from the transcript.\n";
 
   let prompt =
-    `${
-      intro
-    }ABSOLUTE RULE: base yourself ONLY on the provided transcript. Do not use any external knowledge about this video or topic. If the transcript is ambiguous or incomplete, summarize what is present without inventing.\n\n` +
+    `${intro}HARD LENGTH LIMIT: your summary MUST be ${lengthGuidance}. This is a non-negotiable upper bound. Stop writing once you reach ${maxWords} words, even if mid-thought. Brevity is more important than completeness.\n\n` +
+    `ABSOLUTE RULE: base yourself ONLY on the provided transcript. Do not use any external knowledge about this video or topic. If the transcript is ambiguous or incomplete, summarize what is present without inventing.\n\n` +
     `Instructions:\n` +
-    `1. Summary of ${lengthGuidance} — NEVER exceed this limit\n${
+    `1. Summary of ${lengthGuidance} — NEVER exceed ${maxWords} words\n${
       selectivity
-    }3. Avoid repetitions and filler.\n${styleInstruction(
+    }3. Avoid repetitions and filler. Cut every word that does not add information.\n${styleInstruction(
       stylePref,
     )}5. Output language: ${targetLangName} — mandatory\n`;
 
@@ -111,7 +146,7 @@ export function buildSummaryPrompt(params: {
     prompt += `6. Additional user preferences (apply as best you can without contradicting the rules above): ${cleaned}\n`;
   }
 
-  prompt += `\nTranscript:\n${transcript}\n\nSummary in ${targetLangName} (${lengthGuidance}):`;
+  prompt += `\nTranscript:\n${transcript}\n\nSummary in ${targetLangName} (${lengthGuidance}, hard limit ${maxWords} words):`;
   return prompt;
 }
 
