@@ -221,7 +221,7 @@ export function SummariesFeed({
   const [favLangs, setFavLangs] = useState(initialFavLangs);
   const [preferredLang, setPreferredLang] = useState(initialPreferredLang);
   const [profileLengthPref, setProfileLengthPref] =
-    useState<SummaryLengthPref>("standard");
+    useState<SummaryLengthPref>("auto");
   const [profileStylePref, setProfileStylePref] =
     useState<SummaryStylePref>("narrative");
   const supabase = useMemo(() => createClient(), []);
@@ -359,7 +359,7 @@ export function SummariesFeed({
         const pref = profile?.preferred_language ?? "en";
         setPreferredLang(pref);
         setProfileLengthPref(
-          (profile?.summary_length_pref ?? "standard") as SummaryLengthPref,
+          (profile?.summary_length_pref ?? "auto") as SummaryLengthPref,
         );
         setProfileStylePref(
           (profile?.summary_style ?? "narrative") as SummaryStylePref,

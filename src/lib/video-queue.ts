@@ -27,7 +27,14 @@ export async function queueVideoForProcessing(
   supabase: SupabaseClient,
   params: QueueVideoParams,
 ): Promise<{ queued: boolean }> {
-  const { userId, videoId, videoTitle, channelId, userLang, priority = 0 } = params;
+  const {
+    userId,
+    videoId,
+    videoTitle,
+    channelId,
+    userLang,
+    priority = 0,
+  } = params;
   const videoUrl = toVideoUrl(videoId);
 
   // Fetch user's summary preferences (profile defaults)
@@ -46,9 +53,14 @@ export async function queueVideoForProcessing(
     .maybeSingle();
 
   // Channel overrides take priority over profile defaults
-  const summaryLengthPref = subscription?.summary_length_pref ?? prefs?.summary_length_pref ?? "standard";
-  const summaryStyle = subscription?.summary_style ?? prefs?.summary_style ?? "narrative";
-  const summaryCustomInstructions = subscription?.summary_custom_instructions ?? prefs?.summary_custom_instructions ?? "";
+  const summaryLengthPref =
+    subscription?.summary_length_pref ?? prefs?.summary_length_pref ?? "auto";
+  const summaryStyle =
+    subscription?.summary_style ?? prefs?.summary_style ?? "narrative";
+  const summaryCustomInstructions =
+    subscription?.summary_custom_instructions ??
+    prefs?.summary_custom_instructions ??
+    "";
 
   // Check current processing status — filter by language to avoid mixing rows
   // (a video can have separate fr/en rows; maybeSingle() would error on multiple)
@@ -105,7 +117,9 @@ export async function queueVideoForProcessing(
   // Priority: caller-provided > existing-same-lang > other-lang > oEmbed fetch > videoId
   let title: string =
     (videoTitle && videoTitle !== videoId ? videoTitle : null) ||
-    (existing?.video_title && existing.video_title !== videoId && existing.video_title !== "[pre-subscription]"
+    (existing?.video_title &&
+    existing.video_title !== videoId &&
+    existing.video_title !== "[pre-subscription]"
       ? existing.video_title
       : null) ||
     otherLang?.video_title ||
@@ -113,8 +127,12 @@ export async function queueVideoForProcessing(
 
   // Resolve channel_id from existing row, other-language row, or caller
   let resolvedChannelId: string =
-    (existing?.channel_id && existing.channel_id !== "" ? existing.channel_id : null) ||
-    (otherLang?.channel_id && otherLang.channel_id !== "" ? otherLang.channel_id : null) ||
+    (existing?.channel_id && existing.channel_id !== ""
+      ? existing.channel_id
+      : null) ||
+    (otherLang?.channel_id && otherLang.channel_id !== ""
+      ? otherLang.channel_id
+      : null) ||
     channelId ||
     "";
 
@@ -135,7 +153,9 @@ export async function queueVideoForProcessing(
       .update({
         status: "pending",
         video_title: title,
-        ...(resolvedChannelId !== existing.channel_id ? { channel_id: resolvedChannelId } : {}),
+        ...(resolvedChannelId !== existing.channel_id
+          ? { channel_id: resolvedChannelId }
+          : {}),
       })
       .eq("video_id", videoId)
       .eq("language", userLang);
