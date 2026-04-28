@@ -8,7 +8,7 @@ import {
   updatePreferredLanguage,
 } from "@/lib/api";
 import { BRIEFTUBE_CONFIG } from "@/lib/config";
-import { clearSession, getDeviceId, setSession } from "@/lib/storage";
+import { clearSession, setSession } from "@/lib/storage";
 import type { BgMessage } from "@/lib/types";
 
 type AuthHandoffCodeMessage = {
@@ -73,11 +73,6 @@ chrome.runtime.onMessage.addListener(
           case "SIGN_OUT": {
             await clearSession();
             sendResponse({ ok: true });
-            return;
-          }
-          case "GET_DEVICE_ID": {
-            const id = await getDeviceId();
-            sendResponse({ ok: true, data: id });
             return;
           }
           case "UPDATE_LANGUAGE": {

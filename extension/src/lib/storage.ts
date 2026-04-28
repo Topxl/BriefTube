@@ -1,4 +1,3 @@
-import { nanoid } from "nanoid";
 import { STORAGE_KEYS } from "./config";
 import type { StoredSession } from "./types";
 
@@ -13,14 +12,6 @@ async function setItem<T>(key: string, value: T) {
 
 async function removeItem(key: string) {
   await chrome.storage.local.remove(key);
-}
-
-export async function getDeviceId(): Promise<string> {
-  const existing = await getItem<string>(STORAGE_KEYS.deviceId);
-  if (existing) return existing;
-  const id = nanoid();
-  await setItem(STORAGE_KEYS.deviceId, id);
-  return id;
 }
 
 export async function getSession(): Promise<StoredSession | null> {
