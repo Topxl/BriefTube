@@ -8,6 +8,7 @@ import {
 } from "@/lib/extension-quota";
 import {
   buildSummaryPrompt,
+  computeGeminiCost,
   getMaxTokensForLength,
   type LengthPref,
 } from "@/lib/summary-prompt";
@@ -162,8 +163,11 @@ export const POST = extensionRoute
     const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
     let summary: string | null = null;
     let modelUsed: string | null = null;
+    let summaryCostUsd: number | null = null;
+    let summaryLatencyMs = 0;
 
     const tryModel = async (modelName: string) => {
+      const t0 = Date.now();
       try {
         const model = genAI.getGenerativeModel({
           model: modelName,
@@ -182,7 +186,17 @@ export const POST = extensionRoute
         });
         const result = await model.generateContent(prompt);
         const text = result.response.text().trim();
-        if (text.length >= 100) return { text, modelName };
+        if (text.length >= 100) {
+          const usage = result.response.usageMetadata;
+          const costUsd = usage
+            ? computeGeminiCost(
+                modelName,
+                usage.promptTokenCount,
+                usage.candidatesTokenCount,
+              )
+            : null;
+          return { text, modelName, costUsd, latencyMs: Date.now() - t0 };
+        }
       } catch (err) {
         logger.warn(
           `[extension/summarize] model ${modelName} failed: ${err instanceof Error ? err.message : String(err)}`,
@@ -195,11 +209,15 @@ export const POST = extensionRoute
     if (primary) {
       summary = primary.text;
       modelUsed = primary.modelName;
+      summaryCostUsd = primary.costUsd;
+      summaryLatencyMs = primary.latencyMs;
     } else {
       const fallback = await tryModel(GEMINI_FALLBACK);
       if (fallback) {
         summary = fallback.text;
         modelUsed = fallback.modelName;
+        summaryCostUsd = fallback.costUsd;
+        summaryLatencyMs = fallback.latencyMs;
       }
     }
 
@@ -209,6 +227,8 @@ export const POST = extensionRoute
         { status: 502 },
       );
     }
+
+    const summaryWordCount = summary.trim().split(/\s+/).length;
 
     // Post-summary writes (persist + quota increment) are independent — run in
     // parallel to shave another ~150 ms off the response.
@@ -221,6 +241,10 @@ export const POST = extensionRoute
           .eq("language", effectiveTarget)
           .maybeSingle();
 
+        const generationLatency = {
+          summary_ms: summaryLatencyMs,
+          total_ms: summaryLatencyMs,
+        };
         if (existingRow) {
           await supabase
             .from("processed_videos")
@@ -233,6 +257,12 @@ export const POST = extensionRoute
               transcript_length: transcript.length,
               transcript_source: "extension",
               summary_length: summary.length,
+              length_pref: effectiveLength,
+              style_pref: effectiveStyle,
+              model_used: modelUsed,
+              summary_cost_usd: summaryCostUsd,
+              summary_word_count: summaryWordCount,
+              generation_latency_ms: generationLatency,
             })
             .eq("id", existingRow.id);
         } else {
@@ -249,6 +279,12 @@ export const POST = extensionRoute
             transcript_length: transcript.length,
             transcript_source: "extension",
             processed_at: new Date().toISOString(),
+            length_pref: effectiveLength,
+            style_pref: effectiveStyle,
+            model_used: modelUsed,
+            summary_cost_usd: summaryCostUsd,
+            summary_word_count: summaryWordCount,
+            generation_latency_ms: generationLatency,
             metadata: {
               origin: "extension",
               model: modelUsed,

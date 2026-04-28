@@ -225,6 +225,13 @@ class GeminiSummarizer:
         "gemini-2.5-flash-lite",   # Fallback — $0.10/$0.40 per 1M tokens (2.0/1.5-flash both removed)
     ]
 
+    # USD per 1M tokens (input, output) — keep in sync with Google AI pricing.
+    # Used to compute summary_cost_usd and surface it in the dashboard stats.
+    PRICING = {
+        "gemini-2.5-flash":      {"input": 0.30, "output": 2.50},
+        "gemini-2.5-flash-lite": {"input": 0.10, "output": 0.40},
+    }
+
     def __init__(self, api_key: Optional[str] = None):
         """
         Initialize Gemini API client
@@ -248,7 +255,7 @@ class GeminiSummarizer:
         length_pref: str = 'auto',
         style_pref: str = 'narrative',
         custom_instructions: str = '',
-    ) -> Tuple[Optional[str], Optional[str]]:
+    ) -> Tuple[Optional[str], Optional[str], Optional[str], Optional[float]]:
         """
         Summarize a video transcript and translate to target language.
 
@@ -261,15 +268,15 @@ class GeminiSummarizer:
             source_language: Language code of the transcript (e.g., 'en', 'fr')
             target_language: Desired language for the summary (default: 'fr')
             model: Optional specific model to use (default: tries models in order)
-            length_pref: User preference for summary length ('brief', 'standard', 'detailed')
+            length_pref: User preference for summary length ('brief', 'standard', 'detailed', 'auto')
             style_pref: User preference for summary style ('key_points', 'narrative', 'actionable')
             custom_instructions: Free-text user instructions (max 500 chars)
 
         Returns:
-            Tuple of (summary_text, error_message)
+            Tuple of (summary_text, error_message, model_used, cost_usd)
         """
         if not transcript or len(transcript.strip()) < 50:
-            return None, "transcript_too_short"
+            return None, "transcript_too_short", None, None
 
         prompt = build_summary_prompt(transcript, source_language, target_language, length_pref, style_pref, custom_instructions)
 
@@ -323,12 +330,29 @@ class GeminiSummarizer:
                     logger.warning(f"Summary too short ({len(summary)} chars), trying next model")
                     continue
 
+                # Compute cost from token usage. Falls back to None if usage_metadata
+                # is missing (older API versions or partial responses).
+                cost_usd: Optional[float] = None
+                try:
+                    usage = response.usage_metadata
+                    in_tokens = getattr(usage, "prompt_token_count", 0) or 0
+                    out_tokens = getattr(usage, "candidates_token_count", 0) or 0
+                    pricing = self.PRICING.get(model_name)
+                    if pricing:
+                        cost_usd = round(
+                            (in_tokens / 1_000_000) * pricing["input"]
+                            + (out_tokens / 1_000_000) * pricing["output"],
+                            6,
+                        )
+                except Exception:
+                    pass
+
                 logger.info(
                     f"✅ Successfully generated summary with {model_name}: "
-                    f"{len(summary)} chars"
+                    f"{len(summary)} chars, cost=${cost_usd if cost_usd is not None else '?'}"
                 )
 
-                return summary, None
+                return summary, None, model_name, cost_usd
 
             except Exception as e:
                 err_str = str(e).lower()
@@ -345,5 +369,5 @@ class GeminiSummarizer:
 
         # All models failed — distinguish transient rate limits from hard failures
         if all_rate_limited:
-            return None, "rate_limited"
-        return None, "all_models_failed"
+            return None, "rate_limited", None, None
+        return None, "all_models_failed", None, None

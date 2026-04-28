@@ -65,6 +65,31 @@ export function getMaxTokensForLength(
   return LENGTH_TOKEN_CAPS[lengthPref];
 }
 
+// USD per 1M tokens (input, output) for Gemini direct calls — keep in sync
+// with worker/gemini_api.py PRICING. Used to compute summary_cost_usd in the
+// extension fast-path summarize route for the admin stats dashboard.
+export const GEMINI_PRICING: Record<string, { input: number; output: number }> =
+  {
+    "gemini-2.5-flash": { input: 0.3, output: 2.5 },
+    "gemini-2.5-flash-lite": { input: 0.1, output: 0.4 },
+  };
+
+/** Compute USD cost from input/output tokens for a given Gemini model. */
+export function computeGeminiCost(
+  modelName: string,
+  inputTokens: number,
+  outputTokens: number,
+): number | null {
+  if (!(modelName in GEMINI_PRICING)) return null;
+  const pricing = GEMINI_PRICING[modelName];
+  return Number(
+    (
+      (inputTokens / 1_000_000) * pricing.input +
+      (outputTokens / 1_000_000) * pricing.output
+    ).toFixed(6),
+  );
+}
+
 function styleInstruction(stylePref: StylePref): string {
   if (stylePref === "key_points") {
     return "4. Structure as a clear list of key points with the main takeaways. Use short, punchy sentences suitable for audio listening.\n";

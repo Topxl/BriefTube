@@ -184,6 +184,11 @@ def mark_video_completed(
     transcript_source: str | None = None,
     processing_time_s: float | None = None,
     audio_status: str = "completed",
+    length_pref: str | None = None,
+    style_pref: str | None = None,
+    model_used: str | None = None,
+    summary_cost_usd: float | None = None,
+    summary_word_count: int | None = None,
 ):
     sb = get_client()
     update_data = {
@@ -208,17 +213,44 @@ def mark_video_completed(
     # Backfill title if the row was created without one (e.g. language-chained rows)
     if video_title:
         update_data["video_title"] = video_title
+    # Tier-1 generation metrics — used by the admin stats dashboard
+    if length_pref is not None:
+        update_data["length_pref"] = length_pref
+    if style_pref is not None:
+        update_data["style_pref"] = style_pref
+    if model_used is not None:
+        update_data["model_used"] = model_used
+    if summary_cost_usd is not None:
+        update_data["summary_cost_usd"] = summary_cost_usd
+    if summary_word_count is not None:
+        update_data["summary_word_count"] = summary_word_count
     sb.table("processed_videos").update(update_data).eq("video_id", video_id).eq("language", language).execute()
 
 
-def update_video_audio(video_id: str, language: str, audio_url: str | None, audio_status: str) -> None:
+def update_video_audio(
+    video_id: str,
+    language: str,
+    audio_url: str | None,
+    audio_status: str,
+    audio_duration_sec: float | None = None,
+) -> None:
     """Update audio fields on a processed video after TTS generation."""
     sb = get_client()
     update_data: dict = {"audio_status": audio_status}
     if audio_url is not None:
         update_data["audio_url"] = audio_url
+    if audio_duration_sec is not None:
+        update_data["audio_duration_sec"] = audio_duration_sec
     sb.table("processed_videos").update(update_data).eq("video_id", video_id).eq("language", language).execute()
-    logger.info(f"[{video_id}] audio_status → {audio_status} (url={'set' if audio_url else 'none'})")
+    logger.info(f"[{video_id}] audio_status → {audio_status} (url={'set' if audio_url else 'none'}, duration={audio_duration_sec}s)")
+
+
+def update_video_latency(video_id: str, language: str, latency_ms: dict) -> None:
+    """Persist per-step latency breakdown after the pipeline finishes."""
+    sb = get_client()
+    sb.table("processed_videos").update(
+        {"generation_latency_ms": latency_ms}
+    ).eq("video_id", video_id).eq("language", language).execute()
 
 
 def save_transcript_text(video_id: str, text: str) -> None:
