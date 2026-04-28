@@ -105,7 +105,7 @@ def build_summary_prompt(
     transcript: str,
     source_language: Optional[str] = None,
     target_language: str = 'fr',
-    length_pref: str = 'standard',
+    length_pref: str = 'auto',
     style_pref: str = 'narrative',
     custom_instructions: str = '',
 ) -> str:
@@ -245,7 +245,7 @@ class GeminiSummarizer:
         source_language: Optional[str] = None,
         target_language: str = 'fr',
         model: Optional[str] = None,
-        length_pref: str = 'standard',
+        length_pref: str = 'auto',
         style_pref: str = 'narrative',
         custom_instructions: str = '',
     ) -> Tuple[Optional[str], Optional[str]]:

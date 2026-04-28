@@ -131,7 +131,7 @@ export const POST = extensionRoute
     const profile = profileRes.data as ProfileRow | null;
     const effectiveLength: LengthPref = (lengthPref ??
       profile?.summary_length_pref ??
-      "standard") as LengthPref;
+      "auto") as LengthPref;
     const effectiveStyle =
       stylePref ??
       (profile?.summary_style as

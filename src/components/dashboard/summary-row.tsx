@@ -593,7 +593,7 @@ export function SummaryRow({
                 </div>
                 {SUMMARY_LENGTH_OPTIONS.map((opt) => {
                   const effective =
-                    summaryLengthPref ?? profileLengthPref ?? "standard";
+                    summaryLengthPref ?? profileLengthPref ?? "auto";
                   return (
                     <DropdownMenuItem
                       key={opt.value}

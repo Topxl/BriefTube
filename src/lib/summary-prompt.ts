@@ -87,7 +87,7 @@ export function buildSummaryPrompt(params: {
     transcript,
     sourceLanguage = null,
     targetLanguage = "fr",
-    lengthPref = "standard",
+    lengthPref = "auto",
     stylePref = "narrative",
     customInstructions = "",
   } = params;

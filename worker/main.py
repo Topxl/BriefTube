@@ -336,7 +336,7 @@ async def _process_video(
     user_language = job.get("user_language") or "fr"
     channel_id = job.get("channel_id", "")
     tts_voice = _resolve_tts_voice(job.get("tts_voice"), user_language)
-    summary_length_pref = job.get("summary_length_pref") or "standard"
+    summary_length_pref = job.get("summary_length_pref") or "auto"
     summary_style = job.get("summary_style") or "narrative"
     summary_custom_instructions = job.get("summary_custom_instructions") or ""
     if tts_voice != (job.get("tts_voice") or None):
