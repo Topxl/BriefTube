@@ -114,13 +114,14 @@ function AudioWaveform() {
   );
 }
 
-type SummaryLengthPref = "brief" | "standard" | "detailed";
+type SummaryLengthPref = "brief" | "standard" | "detailed" | "auto";
 type SummaryStylePref = "key_points" | "narrative" | "actionable";
 
 const SUMMARY_LENGTH_OPTIONS: { value: SummaryLengthPref; label: string }[] = [
   { value: "brief", label: "Brief" },
   { value: "standard", label: "Standard" },
   { value: "detailed", label: "Detailed" },
+  { value: "auto", label: "Auto" },
 ];
 
 const SUMMARY_STYLE_OPTIONS: { value: SummaryStylePref; label: string }[] = [
@@ -142,6 +143,8 @@ export function SummaryRow({
   onSummaryLengthChange,
   summaryStylePref,
   onSummaryStyleChange,
+  profileLengthPref,
+  profileStylePref,
   onSubscribeChannel,
 }: {
   delivery: EnrichedDelivery;
@@ -156,6 +159,9 @@ export function SummaryRow({
   onSummaryLengthChange?: (length: SummaryLengthPref | null) => void;
   summaryStylePref?: SummaryStylePref | null;
   onSummaryStyleChange?: (style: SummaryStylePref | null) => void;
+  /** Profile-wide default — shown next to "Use profile" so the user knows the inherited value */
+  profileLengthPref?: SummaryLengthPref;
+  profileStylePref?: SummaryStylePref;
   /** Called when user wants to subscribe to the channel (not yet subscribed) */
   onSubscribeChannel?: () => void;
 }) {
@@ -585,37 +591,29 @@ export function SummaryRow({
                   <FileText className="h-3.5 w-3.5" />
                   Summary length
                 </div>
-                <DropdownMenuItem
-                  onClick={() => onSummaryLengthChange(null)}
-                  className="flex items-center gap-2 pl-4"
-                >
-                  <span
-                    className={
-                      summaryLengthPref == null ? "text-red-400" : "invisible"
-                    }
-                  >
-                    ●
-                  </span>
-                  Channel default
-                </DropdownMenuItem>
-                {SUMMARY_LENGTH_OPTIONS.map((opt) => (
-                  <DropdownMenuItem
-                    key={opt.value}
-                    onClick={() => onSummaryLengthChange(opt.value)}
-                    className="flex items-center gap-2 pl-4"
-                  >
-                    <span
-                      className={
-                        summaryLengthPref === opt.value
-                          ? "text-red-400"
-                          : "invisible"
-                      }
+                {SUMMARY_LENGTH_OPTIONS.map((opt) => {
+                  const effective =
+                    summaryLengthPref ?? profileLengthPref ?? "standard";
+                  return (
+                    <DropdownMenuItem
+                      key={opt.value}
+                      onClick={() => onSummaryLengthChange(opt.value)}
+                      className="flex items-center gap-2 pl-4"
                     >
-                      ●
-                    </span>
-                    {opt.label}
-                  </DropdownMenuItem>
-                ))}
+                      <span
+                        className={
+                          effective === opt.value ? "text-red-400" : "invisible"
+                        }
+                      >
+                        ●
+                      </span>
+                      {opt.label}
+                    </DropdownMenuItem>
+                  );
+                })}
+                <p className="text-muted-foreground/60 px-3 pt-1 pb-1.5 text-[10px] leading-tight">
+                  Applies to future summaries from this channel.
+                </p>
               </>
             )}
             {onSummaryStyleChange && (
@@ -625,37 +623,29 @@ export function SummaryRow({
                   <MessageSquareText className="h-3.5 w-3.5" />
                   Summary style
                 </div>
-                <DropdownMenuItem
-                  onClick={() => onSummaryStyleChange(null)}
-                  className="flex items-center gap-2 pl-4"
-                >
-                  <span
-                    className={
-                      summaryStylePref == null ? "text-red-400" : "invisible"
-                    }
-                  >
-                    ●
-                  </span>
-                  Channel default
-                </DropdownMenuItem>
-                {SUMMARY_STYLE_OPTIONS.map((opt) => (
-                  <DropdownMenuItem
-                    key={opt.value}
-                    onClick={() => onSummaryStyleChange(opt.value)}
-                    className="flex items-center gap-2 pl-4"
-                  >
-                    <span
-                      className={
-                        summaryStylePref === opt.value
-                          ? "text-red-400"
-                          : "invisible"
-                      }
+                {SUMMARY_STYLE_OPTIONS.map((opt) => {
+                  const effective =
+                    summaryStylePref ?? profileStylePref ?? "narrative";
+                  return (
+                    <DropdownMenuItem
+                      key={opt.value}
+                      onClick={() => onSummaryStyleChange(opt.value)}
+                      className="flex items-center gap-2 pl-4"
                     >
-                      ●
-                    </span>
-                    {opt.label}
-                  </DropdownMenuItem>
-                ))}
+                      <span
+                        className={
+                          effective === opt.value ? "text-red-400" : "invisible"
+                        }
+                      >
+                        ●
+                      </span>
+                      {opt.label}
+                    </DropdownMenuItem>
+                  );
+                })}
+                <p className="text-muted-foreground/60 px-3 pt-1 pb-1.5 text-[10px] leading-tight">
+                  Applies to future summaries from this channel.
+                </p>
               </>
             )}
             <DropdownMenuSeparator />

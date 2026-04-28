@@ -3,22 +3,18 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { corsPreflight, extensionRoute } from "@/lib/extension-route";
 import {
-  getAnonQuotaSnapshot,
   getUserQuotaSnapshot,
-  incrementAnonUsage,
   incrementUserUsage,
-  type QuotaSnapshot,
 } from "@/lib/extension-quota";
-import { buildSummaryPrompt, type LengthPref } from "@/lib/summary-prompt";
+import {
+  buildSummaryPrompt,
+  getMaxTokensForLength,
+  type LengthPref,
+} from "@/lib/summary-prompt";
 import { createAdminClient } from "@/lib/supabase/server";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
-import {
-  authRateLimit,
-  checkRateLimit,
-  getRequestIp,
-  publicRateLimit,
-} from "@/lib/rate-limit";
+import { authRateLimit, checkRateLimit } from "@/lib/rate-limit";
 
 const GEMINI_PRIMARY = "gemini-2.5-flash";
 const GEMINI_FALLBACK = "gemini-2.5-flash-lite";
@@ -32,9 +28,8 @@ const bodySchema = z.object({
   sourceLanguage: z.string().max(10).optional(),
   targetLanguage: z.string().max(10).optional(),
   videoDurationSec: z.number().int().nonnegative().optional(),
-  lengthPref: z.enum(["brief", "standard", "detailed"]).optional(),
+  lengthPref: z.enum(["brief", "standard", "detailed", "auto"]).optional(),
   stylePref: z.enum(["narrative", "key_points", "actionable"]).optional(),
-  deviceId: z.string().max(100).optional(),
 });
 type Body = z.infer<typeof bodySchema>;
 
@@ -48,8 +43,12 @@ type ProfileRow = {
 export const OPTIONS = corsPreflight;
 
 export const POST = extensionRoute
+  .requireAuthenticated()
   .body(bodySchema)
-  .handler(async (req, { body, user }) => {
+  .handler(async (_req, { body, user }) => {
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const {
       videoId,
       videoTitle,
@@ -61,7 +60,6 @@ export const POST = extensionRoute
       videoDurationSec,
       lengthPref,
       stylePref,
-      deviceId,
     } = body as Body;
 
     if (!env.GEMINI_API_KEY) {
@@ -71,36 +69,23 @@ export const POST = extensionRoute
       );
     }
 
-    const rlIdentifier = user
-      ? `ext-summ:${user.id}`
-      : `ext-summ-anon:${deviceId ?? getRequestIp(req)}`;
-    const rl = await checkRateLimit(
-      user ? authRateLimit : publicRateLimit,
-      rlIdentifier,
-    );
+    const rl = await checkRateLimit(authRateLimit, `ext-summ:${user.id}`);
     if (rl) return rl;
-
-    if (!user && !deviceId) {
-      return NextResponse.json({ error: "missing_device_id" }, { status: 400 });
-    }
 
     const supabase = createAdminClient();
 
-    // Target language is known up-front: client sends user's preferred_language
-    // when authed, anon falls back to source language or "en". Knowing this
-    // before fetching profile/cache lets all three DB roundtrips run in
-    // parallel and saves ~400 ms vs the old sequential pattern.
+    // Target language is known up-front: client sends user's preferred_language.
+    // Knowing this before fetching profile/cache lets all three DB roundtrips
+    // run in parallel and saves ~400 ms vs the old sequential pattern.
     const effectiveTarget = targetLanguage ?? sourceLanguage ?? "en";
 
-    const profileQuery = user
-      ? supabase
-          .from("profiles")
-          .select(
-            "preferred_language, summary_length_pref, summary_style, summary_custom_instructions",
-          )
-          .eq("id", user.id)
-          .single()
-      : Promise.resolve({ data: null as ProfileRow | null });
+    const profileQuery = supabase
+      .from("profiles")
+      .select(
+        "preferred_language, summary_length_pref, summary_style, summary_custom_instructions",
+      )
+      .eq("id", user.id)
+      .single();
 
     const cacheQuery = supabase
       .from("processed_videos")
@@ -110,16 +95,8 @@ export const POST = extensionRoute
       .eq("status", "completed")
       .maybeSingle();
 
-    // `deviceId` is guaranteed non-null in the anon branch because of the
-    // earlier `if (!user && !deviceId)` guard, but TS narrowing doesn't reach
-    // this ternary — pull it into a local so we avoid the non-null assertion.
-    const anonDeviceId = deviceId ?? "";
-    const quotaQuery: Promise<QuotaSnapshot> = user
-      ? getUserQuotaSnapshot(user.id)
-      : getAnonQuotaSnapshot(anonDeviceId);
-
     const [quotaSnapshot, profileRes, cacheRes] = await Promise.all([
-      quotaQuery,
+      getUserQuotaSnapshot(user.id),
       profileQuery,
       cacheQuery,
     ]);
@@ -129,9 +106,7 @@ export const POST = extensionRoute
       return NextResponse.json(
         {
           error: "quota_exceeded",
-          message: user
-            ? "Daily free limit reached. Upgrade to Pro for unlimited."
-            : "Daily free limit reached. Sign in for more.",
+          message: "Daily free limit reached. Upgrade to Pro for unlimited.",
           quota: quotaSnapshot,
         },
         { status: 402 },
@@ -154,23 +129,18 @@ export const POST = extensionRoute
 
     // Build Gemini request using profile preferences when available
     const profile = profileRes.data as ProfileRow | null;
-    const effectiveLength: LengthPref = user
-      ? ((lengthPref ??
-          profile?.summary_length_pref ??
-          "standard") as LengthPref)
-      : "brief";
-    const effectiveStyle = user
-      ? (stylePref ??
-        (profile?.summary_style as
-          | "narrative"
-          | "key_points"
-          | "actionable"
-          | undefined) ??
-        "narrative")
-      : "narrative";
-    const customInstructions = user
-      ? (profile?.summary_custom_instructions ?? "")
-      : "";
+    const effectiveLength: LengthPref = (lengthPref ??
+      profile?.summary_length_pref ??
+      "standard") as LengthPref;
+    const effectiveStyle =
+      stylePref ??
+      (profile?.summary_style as
+        | "narrative"
+        | "key_points"
+        | "actionable"
+        | undefined) ??
+      "narrative";
+    const customInstructions = profile?.summary_custom_instructions ?? "";
 
     const prompt = buildSummaryPrompt({
       transcript,
@@ -180,6 +150,14 @@ export const POST = extensionRoute
       stylePref: effectiveStyle,
       customInstructions,
     });
+
+    // Hard token cap per length preset — soft prompt instructions are unreliable.
+    // For 'auto', the cap scales with transcript length.
+    const transcriptWords = transcript.split(/\s+/).length;
+    const maxOutputTokens = getMaxTokensForLength(
+      effectiveLength,
+      transcriptWords,
+    );
 
     const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
     let summary: string | null = null;
@@ -195,7 +173,7 @@ export const POST = extensionRoute
           // single biggest latency win (~-7 s on a typical podcast transcript).
           generationConfig: {
             temperature: 0.7,
-            maxOutputTokens: 8192,
+            maxOutputTokens,
             thinkingConfig: { thinkingBudget: 0 },
           } as unknown as {
             temperature: number;
@@ -288,25 +266,14 @@ export const POST = extensionRoute
 
     const usagePromise = (async (): Promise<number | null> => {
       try {
-        if (user) {
-          const newCount = await incrementUserUsage(user.id);
-          return Math.max(0, 10 - newCount);
-        }
-        if (deviceId) {
-          const newCount = await incrementAnonUsage({
-            deviceId,
-            videoId,
-            userAgent: req.headers.get("user-agent") ?? "",
-            ip: getRequestIp(req),
-          });
-          return Math.max(0, 3 - newCount);
-        }
+        const newCount = await incrementUserUsage(user.id);
+        return Math.max(0, 10 - newCount);
       } catch (err) {
         logger.warn(
           `[extension/summarize] quota increment failed: ${String(err)}`,
         );
+        return null;
       }
-      return null;
     })();
 
     const [, quotaRemaining] = await Promise.all([

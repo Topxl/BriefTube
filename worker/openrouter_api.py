@@ -61,7 +61,8 @@ class OpenRouterSummarizer:
             return None, "transcript_too_short"
 
         prompt = build_summary_prompt(transcript, source_language, target_language, length_pref, style_pref, custom_instructions)
-        max_tokens = get_max_tokens_for_length(length_pref)
+        transcript_words = len(transcript.split())
+        max_tokens = get_max_tokens_for_length(length_pref, transcript_words)
         models_to_try = [model] if model else self.MODELS
         all_rate_limited = True
 

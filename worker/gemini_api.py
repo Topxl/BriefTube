@@ -52,9 +52,36 @@ LENGTH_TOKEN_CAPS = {
     'detailed': 2400,   # cap at ~1600 words, target 1200
 }
 
+# Auto mode: scale target to transcript length instead of using a fixed cap.
+# Ratio chosen so the audio duration stays roughly proportional to video length:
+#   - 3 min video  (~450 words)  -> ~150 words target (~1 min audio, 33%)
+#   - 10 min video (~1500 words) -> ~270 words target (~1.8 min audio, 18%)
+#   - 30 min video (~4500 words) -> ~810 words target (~5.4 min audio, 18%)
+#   - 60 min video (~9000 words) -> 1200 words capped (~8 min audio, 13%)
+_AUTO_RATIO = 0.18
+_AUTO_MIN_WORDS = 150     # never less than ~1 min audio
+_AUTO_MAX_WORDS = 1200    # never more than ~8 min audio
 
-def get_max_tokens_for_length(length_pref: str) -> int:
-    """Return the hard token ceiling for a given length preference."""
+
+def _compute_auto_target_words(transcript_words: int) -> int:
+    """Scale target words to transcript length, bounded to a sensible range."""
+    return max(_AUTO_MIN_WORDS, min(_AUTO_MAX_WORDS, int(transcript_words * _AUTO_RATIO)))
+
+
+def get_max_tokens_for_length(length_pref: str, transcript_words: int = 0) -> int:
+    """Return the hard token ceiling for a given length preference.
+
+    For 'auto', the cap scales with transcript length; for fixed presets it
+    returns LENGTH_TOKEN_CAPS[length_pref].
+
+    Args:
+        length_pref: 'brief' | 'standard' | 'detailed' | 'auto'
+        transcript_words: required for 'auto' mode (ignored otherwise)
+    """
+    if length_pref == 'auto':
+        target = _compute_auto_target_words(transcript_words)
+        # 1.5 tokens/word (fr/multilingual) * 1.5 safety margin = 2.25
+        return int(target * 2.25)
     return LENGTH_TOKEN_CAPS.get(length_pref, LENGTH_TOKEN_CAPS['standard'])
 
 
@@ -102,8 +129,11 @@ def build_summary_prompt(
     # Never ask for MORE words than the original — that forces hallucination.
     # AUDIO_MAX_WORDS is the soft target communicated to the model; the hard
     # technical limit comes from max_output_tokens (LENGTH_TOKEN_CAPS).
-    AUDIO_MAX_WORDS = LENGTH_CAPS.get(length_pref, LENGTH_CAPS['standard'])
     transcript_words = len(transcript.split())
+    if length_pref == 'auto':
+        AUDIO_MAX_WORDS = _compute_auto_target_words(transcript_words)
+    else:
+        AUDIO_MAX_WORDS = LENGTH_CAPS.get(length_pref, LENGTH_CAPS['standard'])
 
     if transcript_words < 150:
         # Very short video — keep 60-80% of original, never exceed it
@@ -244,8 +274,10 @@ class GeminiSummarizer:
         prompt = build_summary_prompt(transcript, source_language, target_language, length_pref, style_pref, custom_instructions)
 
         # Hard token cap per length preset — soft prompt instructions are unreliable,
-        # so we enforce length at the API level via max_output_tokens.
-        max_tokens = get_max_tokens_for_length(length_pref)
+        # so we enforce length at the API level via max_output_tokens. For 'auto'
+        # the cap is computed from transcript length.
+        transcript_words = len(transcript.split())
+        max_tokens = get_max_tokens_for_length(length_pref, transcript_words)
 
         # Try models in order
         models_to_try = [model] if model else self.MODELS
