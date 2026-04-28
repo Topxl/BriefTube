@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-04-28
+
+FIX(worker): summary length presets (`brief`/`standard`/`detailed`) now actually enforce their target audio duration. Audit on 14 days of prod data showed `brief` users averaging 555 words (~3.7 min audio) instead of the targeted 1-2 min, and `standard` averaging 1053 words (~7 min) instead of 4-5 min. Root cause: Gemini and OpenRouter ignore soft prompt instructions like "about 300 words", and `max_output_tokens` was set to a flat 8192 (≈3000 words possible) regardless of the user's preference. Three fixes in `worker/gemini_api.py` + `worker/openrouter_api.py`: (1) tighten `LENGTH_CAPS` from 300/800/1200 to 180/600/1200 words so the prompt asks for less; (2) introduce `LENGTH_TOKEN_CAPS` (500/1300/2400 tokens) and pass it as `max_output_tokens` to both providers — this is a hard technical ceiling the model cannot exceed; (3) strengthen the prompt with an explicit `HARD LENGTH LIMIT` section at the top, repeat the cap at the bottom, and tell the model to stop mid-thought rather than continue past the limit. Both Gemini's `generate_content` and OpenRouter's `chat.completions` now log the `length_pref` and `max_tokens` they're using for easier debugging.
+
 ## 2026-04-27
 
 FIX(worker): remove the drama_movie content filter entirely — it was rejecting every new video pushed to the queue. The category+duration gates (Film & Animation > 30min, Sports > 60min, Entertainment > 60min, Nonprofits > 45min) plus the title phrase list and "full movie" keyword set were causing 100% false positives whenever the youtube_api/Invidious fast paths failed and the slow fallback ran the metadata check. Only the music_content filter remains, which is the one that actually saves Whisper bandwidth. Also clears the test suite of the now-removed symbols.

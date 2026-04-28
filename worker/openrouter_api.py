@@ -10,7 +10,7 @@ import os
 from typing import Optional, Tuple
 from openai import OpenAI
 
-from gemini_api import build_summary_prompt
+from gemini_api import build_summary_prompt, get_max_tokens_for_length
 
 logger = logging.getLogger(__name__)
 
@@ -61,16 +61,20 @@ class OpenRouterSummarizer:
             return None, "transcript_too_short"
 
         prompt = build_summary_prompt(transcript, source_language, target_language, length_pref, style_pref, custom_instructions)
+        max_tokens = get_max_tokens_for_length(length_pref)
         models_to_try = [model] if model else self.MODELS
         all_rate_limited = True
 
         for model_name in models_to_try:
             try:
-                logger.info(f"[OpenRouter] Attempting with model: {model_name}")
+                logger.info(
+                    f"[OpenRouter] Attempting with model: {model_name} "
+                    f"(length_pref={length_pref}, max_tokens={max_tokens})"
+                )
                 response = self.client.chat.completions.create(
                     model=model_name,
                     messages=[{"role": "user", "content": prompt}],
-                    max_tokens=4096,
+                    max_tokens=max_tokens,
                     temperature=0.7,
                 )
                 summary = response.choices[0].message.content.strip()
