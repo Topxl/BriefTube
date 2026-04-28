@@ -32,6 +32,32 @@ LANGUAGE_NAMES = {
 }
 
 
+# Target word count per preset (used in the prompt instruction).
+# Tightened 2026-04-28: previous values (300/800/1200) caused systemic overshoot
+# because Gemini treats prompt word counts as soft hints. Combined with the new
+# LENGTH_TOKEN_CAPS hard limit, these targets now produce reliable audio durations.
+LENGTH_CAPS = {
+    'brief': 180,       # ~1-2 min audio at 150 wpm (was 300)
+    'standard': 600,    # ~4 min audio (was 800)
+    'detailed': 1200,   # ~8 min audio (unchanged)
+}
+
+# Hard cap on max_output_tokens passed to the model — the only reliable way to
+# enforce length, since LLMs ignore "X words max" prompt instructions. Sized
+# with ~1.5x margin over LENGTH_CAPS to account for token-to-word ratio
+# (~1.5 tokens/word in French/multilingual) and natural sentence completion.
+LENGTH_TOKEN_CAPS = {
+    'brief': 500,       # cap at ~330 words technically possible, target 180
+    'standard': 1300,   # cap at ~870 words, target 600
+    'detailed': 2400,   # cap at ~1600 words, target 1200
+}
+
+
+def get_max_tokens_for_length(length_pref: str) -> int:
+    """Return the hard token ceiling for a given length preference."""
+    return LENGTH_TOKEN_CAPS.get(length_pref, LENGTH_TOKEN_CAPS['standard'])
+
+
 def _style_instruction(style_pref: str) -> str:
     """Return prompt instruction line for the requested summary style."""
     if style_pref == 'key_points':
@@ -74,14 +100,9 @@ def build_summary_prompt(
 
     # Determine target summary length based on transcript length and user preference.
     # Never ask for MORE words than the original — that forces hallucination.
-    # Hard cap at AUDIO_MAX_WORDS: beyond this, Gemini would be truncated by
-    # max_output_tokens (4096 ≈ 3000 words) producing a cut mid-sentence.
-    LENGTH_CAPS = {
-        'brief': 300,       # ~1-2 min at normal speech rate
-        'standard': 800,    # ~4-5 min
-        'detailed': 1200,   # ~6-8 min
-    }
-    AUDIO_MAX_WORDS = LENGTH_CAPS.get(length_pref, 800)
+    # AUDIO_MAX_WORDS is the soft target communicated to the model; the hard
+    # technical limit comes from max_output_tokens (LENGTH_TOKEN_CAPS).
+    AUDIO_MAX_WORDS = LENGTH_CAPS.get(length_pref, LENGTH_CAPS['standard'])
     transcript_words = len(transcript.split())
 
     if transcript_words < 150:
@@ -129,13 +150,17 @@ def build_summary_prompt(
 
     prompt_parts = [
         intro,
+        f"HARD LENGTH LIMIT: your summary MUST be {length_guidance}. "
+        f"This is a non-negotiable upper bound. Stop writing once you reach "
+        f"{max_words} words, even if mid-thought. Brevity is more important "
+        f"than completeness.\n\n"
         "ABSOLUTE RULE: base yourself ONLY on the provided transcript. "
         "Do not use any external knowledge about this video or topic. "
         "If the transcript is ambiguous or incomplete, summarize what is present without inventing.\n\n"
         "Instructions:\n"
-        f"1. Summary of {length_guidance} — NEVER exceed this limit\n"
+        f"1. Summary of {length_guidance} — NEVER exceed {max_words} words\n"
         + selectivity_instruction +
-        "3. Avoid repetitions and filler.\n"
+        "3. Avoid repetitions and filler. Cut every word that does not add information.\n"
         + _style_instruction(style_pref) +
         f"5. Output language: {target_lang_name} — mandatory\n"
     ]
@@ -150,7 +175,7 @@ def build_summary_prompt(
 
     prompt_parts.append(
         f"\nTranscript:\n{transcript}\n\n"
-        f"Summary in {target_lang_name} ({length_guidance}):"
+        f"Summary in {target_lang_name} ({length_guidance}, hard limit {max_words} words):"
     )
 
     return "".join(prompt_parts)
@@ -218,6 +243,10 @@ class GeminiSummarizer:
 
         prompt = build_summary_prompt(transcript, source_language, target_language, length_pref, style_pref, custom_instructions)
 
+        # Hard token cap per length preset — soft prompt instructions are unreliable,
+        # so we enforce length at the API level via max_output_tokens.
+        max_tokens = get_max_tokens_for_length(length_pref)
+
         # Try models in order
         models_to_try = [model] if model else self.MODELS
 
@@ -225,7 +254,10 @@ class GeminiSummarizer:
 
         for model_name in models_to_try:
             try:
-                logger.info(f"Attempting summarization with model: {model_name}")
+                logger.info(
+                    f"Attempting summarization with model: {model_name} "
+                    f"(length_pref={length_pref}, max_tokens={max_tokens})"
+                )
 
                 response = self.client.models.generate_content(
                     model=model_name,
@@ -237,7 +269,7 @@ class GeminiSummarizer:
                         # and truncate summaries mid-sentence.
                         # Summarization needs no complex reasoning → disable it.
                         thinking_config=ThinkingConfig(thinking_budget=0),
-                        max_output_tokens=8192,
+                        max_output_tokens=max_tokens,
                     )
                 )
 
