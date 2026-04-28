@@ -31,6 +31,15 @@ class OpenRouterSummarizer:
         "deepseek/deepseek-v3.2",        # $0.26/1M in, 163k ctx — excellent multilingual
     ]
 
+    # USD per 1M tokens (input, output). Output prices approximated where not
+    # explicitly listed — refresh from openrouter.ai/<model> page when needed.
+    PRICING = {
+        "google/gemini-2.5-flash-lite": {"input": 0.10, "output": 0.40},
+        "google/gemini-2.0-flash-001":  {"input": 0.10, "output": 0.40},
+        "openai/gpt-oss-120b":          {"input": 0.039, "output": 0.20},
+        "deepseek/deepseek-v3.2":       {"input": 0.26, "output": 1.10},
+    }
+
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.environ.get("OPENROUTER_API_KEY")
         if not self.api_key:
@@ -55,10 +64,16 @@ class OpenRouterSummarizer:
         length_pref: str = "auto",
         style_pref: str = "narrative",
         custom_instructions: str = "",
-    ) -> Tuple[Optional[str], Optional[str]]:
-        """Summarize transcript via OpenRouter. Same interface as GeminiSummarizer."""
+    ) -> Tuple[Optional[str], Optional[str], Optional[str], Optional[float]]:
+        """Summarize transcript via OpenRouter. Same interface as GeminiSummarizer.
+
+        Returns:
+            (summary_text, error_message, model_used, cost_usd)
+            model_used is prefixed with "openrouter:" so it's distinguishable from
+            direct Gemini calls in the processed_videos.model_used column.
+        """
         if not transcript or len(transcript.strip()) < 50:
-            return None, "transcript_too_short"
+            return None, "transcript_too_short", None, None
 
         prompt = build_summary_prompt(transcript, source_language, target_language, length_pref, style_pref, custom_instructions)
         transcript_words = len(transcript.split())
@@ -84,8 +99,26 @@ class OpenRouterSummarizer:
                     logger.warning(f"[OpenRouter] Summary too short ({len(summary)} chars), trying next model")
                     continue
 
-                logger.info(f"✅ [OpenRouter] Summary with {model_name}: {len(summary)} chars")
-                return summary, None
+                cost_usd: Optional[float] = None
+                try:
+                    usage = response.usage
+                    in_tokens = getattr(usage, "prompt_tokens", 0) or 0
+                    out_tokens = getattr(usage, "completion_tokens", 0) or 0
+                    pricing = self.PRICING.get(model_name)
+                    if pricing:
+                        cost_usd = round(
+                            (in_tokens / 1_000_000) * pricing["input"]
+                            + (out_tokens / 1_000_000) * pricing["output"],
+                            6,
+                        )
+                except Exception:
+                    pass
+
+                logger.info(
+                    f"✅ [OpenRouter] Summary with {model_name}: {len(summary)} chars, "
+                    f"cost=${cost_usd if cost_usd is not None else '?'}"
+                )
+                return summary, None, f"openrouter:{model_name}", cost_usd
 
             except Exception as e:
                 err_str = str(e).lower()
@@ -96,5 +129,5 @@ class OpenRouterSummarizer:
                 continue
 
         if all_rate_limited:
-            return None, "rate_limited"
-        return None, "all_models_failed"
+            return None, "rate_limited", None, None
+        return None, "all_models_failed", None, None

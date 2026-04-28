@@ -545,7 +545,7 @@ async def _process_video(
 
         # Step 2: Summarize
         logger.info(f"[{video_id}] Generating summary...")
-        summary, summary_error = await asyncio.to_thread(
+        summary, summary_error, model_used, summary_cost_usd = await asyncio.to_thread(
             gemini_summarizer.summarize,
             transcript=transcript,
             source_language=source_lang,
@@ -566,7 +566,7 @@ async def _process_video(
                 logger.warning(
                     f"[{video_id}] Gemini failed ({summary_error}) — trying OpenRouter fallback"
                 )
-                summary, or_error = await asyncio.to_thread(
+                summary, or_error, model_used, summary_cost_usd = await asyncio.to_thread(
                     openrouter_summarizer.summarize,
                     transcript=transcript,
                     source_language=source_lang,
@@ -599,6 +599,7 @@ async def _process_video(
         # ── PHASE 1: Text summary ready — deliver immediately ──────────
         clean_summary = clean_for_tts(summary)
         processing_time = (datetime.now() - start_time).total_seconds()
+        summary_word_count = len(summary.split())
         video_metadata = {
             **transcript_extractor.last_video_metadata,
             "transcript_cost": transcript_cost,
@@ -614,6 +615,11 @@ async def _process_video(
             transcript_source=transcript_extractor.last_transcript_source or None,
             processing_time_s=processing_time,
             audio_status="pending",
+            length_pref=summary_length_pref,
+            style_pref=summary_style,
+            model_used=model_used,
+            summary_cost_usd=summary_cost_usd,
+            summary_word_count=summary_word_count,
         )
         _video_completed = True  # Do not call mark_video_failed after this point
 
@@ -639,6 +645,23 @@ async def _process_video(
                 )
                 _t_audio = time.monotonic() - _t0 - _t_transcript - _t_summary
 
+                # Best-effort audio duration via ffprobe (already installed for
+                # OGG conversion). Falls back to None — non-critical metric.
+                audio_duration_sec: float | None = None
+                try:
+                    probe = await asyncio.create_subprocess_exec(
+                        "ffprobe", "-v", "error", "-show_entries",
+                        "format=duration", "-of",
+                        "default=noprint_wrappers=1:nokey=1", str(audio_path),
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.DEVNULL,
+                    )
+                    out, _ = await probe.communicate()
+                    if probe.returncode == 0:
+                        audio_duration_sec = round(float(out.decode().strip()), 2)
+                except Exception:
+                    pass
+
                 # Upload to Cloudflare R2 (zero egress cost)
                 storage_key = f"audio/{video_id}_{user_language}.mp3"
                 try:
@@ -649,9 +672,11 @@ async def _process_video(
                     audio_url = str(audio_path)
                 _t_upload = time.monotonic() - _t0 - _t_transcript - _t_summary - _t_audio
 
-                # Update video with audio
+                # Update video with audio (+ duration once we know it)
                 await asyncio.to_thread(
-                    db.update_video_audio, video_id, user_language, audio_url, "completed"
+                    db.update_video_audio,
+                    video_id, user_language, audio_url, "completed",
+                    audio_duration_sec=audio_duration_sec,
                 )
 
                 # Create audio deliveries for audio-enabled users
@@ -669,6 +694,23 @@ async def _process_video(
                 db.update_video_audio, video_id, user_language, None, "skipped"
             )
             logger.info(f"[{video_id}] Audio skipped: no audio subscribers")
+
+        # Persist per-step latency breakdown (jsonb) for the admin stats dashboard
+        try:
+            await asyncio.to_thread(
+                db.update_video_latency,
+                video_id,
+                user_language,
+                {
+                    "transcript_ms": int(_t_transcript * 1000),
+                    "summary_ms": int(_t_summary * 1000),
+                    "tts_ms": int(_t_audio * 1000),
+                    "upload_ms": int(_t_upload * 1000),
+                    "total_ms": int(processing_time * 1000),
+                },
+            )
+        except Exception as e:
+            logger.warning(f"[{video_id}] Latency persist failed (non-fatal): {e}")
 
         db.complete_job(job["id"])
 
