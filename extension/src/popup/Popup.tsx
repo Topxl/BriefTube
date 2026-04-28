@@ -93,7 +93,7 @@ export function Popup() {
                 </div>
 
                 <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-3">
-                  {me.quota.isPro ? (
+                  {me.quota?.isPro ? (
                     <div className="flex items-center gap-2 text-sm">
                       <Zap className="size-4 text-emerald-400" />
                       <span className="font-medium">Pro: unlimited</span>
@@ -103,7 +103,7 @@ export function Popup() {
                       <div className="flex items-baseline justify-between">
                         <span className="text-xs text-white/60">Today</span>
                         <span className="text-sm font-semibold">
-                          {me.quota.used}/{me.quota.limit ?? "?"}
+                          {me.quota?.used ?? 0}/{me.quota?.limit ?? "?"}
                         </span>
                       </div>
                       <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
@@ -112,7 +112,8 @@ export function Popup() {
                           style={{
                             width: `${Math.min(
                               100,
-                              ((me.quota.used || 0) / (me.quota.limit ?? 1)) *
+                              ((me.quota?.used ?? 0) /
+                                (me.quota?.limit ?? 1)) *
                                 100,
                             )}%`,
                           }}
@@ -125,7 +126,7 @@ export function Popup() {
                   )}
                 </div>
 
-                {!me.quota.isPro ? (
+                {!me.quota?.isPro ? (
                   <a
                     href="https://www.brief-tube.com/dashboard/billing"
                     target="_blank"
@@ -147,15 +148,11 @@ export function Popup() {
               <div className="flex flex-col gap-3">
                 <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-3">
                   <p className="text-xs text-white/70">
-                    You have{" "}
-                    <span className="font-medium text-white">
-                      {me?.quota.remaining ?? 3} free
-                    </span>{" "}
-                    summaries today without an account.
+                    Sign in to start summarizing YouTube videos.
                   </p>
                   <p className="mt-1 text-[11px] text-white/50">
-                    Sign in to get 10/day free, save your summaries, and
-                    subscribe to channels.
+                    10 free summaries per day, 55+ languages, save them in your
+                    library.
                   </p>
                 </div>
                 <button

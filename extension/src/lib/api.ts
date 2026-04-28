@@ -1,5 +1,5 @@
 import { BRIEFTUBE_CONFIG } from "./config";
-import { clearSession, getDeviceId, getSession, setSession } from "./storage";
+import { clearSession, getSession, setSession } from "./storage";
 import type {
   MeResponse,
   StatusResponse,
@@ -24,11 +24,9 @@ async function refreshSession(
 async function withAuth(
   init: RequestInit = {},
 ): Promise<RequestInit & { headers: Record<string, string> }> {
-  const deviceId = await getDeviceId();
   const session = await getSession();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    "X-Device-Id": deviceId,
     "X-Extension-Version": BRIEFTUBE_CONFIG.extensionVersion,
     ...((init.headers as Record<string, string> | undefined) ?? {}),
   };
@@ -87,10 +85,9 @@ export async function updatePreferredLanguage(
 export async function summarize(
   request: SummarizeRequest,
 ): Promise<SummarizeResponse> {
-  const deviceId = await getDeviceId();
   return apiFetch<SummarizeResponse>("/api/extension/summarize", {
     method: "POST",
-    body: JSON.stringify({ ...request, deviceId }),
+    body: JSON.stringify(request),
   });
 }
 

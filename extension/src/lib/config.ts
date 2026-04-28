@@ -34,7 +34,6 @@ export const AUTH_MATCH_PATTERNS = DEV_MODE
     ];
 
 export const STORAGE_KEYS = {
-  deviceId: "brieftube_device_id",
   session: "brieftube_session",
   preferences: "brieftube_prefs",
   lastMeCache: "brieftube_me_cache",

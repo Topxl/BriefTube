@@ -1520,12 +1520,8 @@ export type Database = {
         }
       }
     }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
+    Enums: Record<never, never>
+    CompositeTypes: Record<never, never>
   }
 }
 
@@ -1650,4 +1646,4 @@ export const Constants = {
   public: {
     Enums: {},
   },
-} as const
+} as const;

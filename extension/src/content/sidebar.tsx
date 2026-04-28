@@ -177,12 +177,12 @@ export function Sidebar(props: Props) {
     return () => document.removeEventListener("mousedown", handler);
   }, [menuOpen]);
 
-  const isPro = !!me?.quota.isPro;
+  const isPro = !!me?.quota?.isPro;
   const authenticated = !!me?.authenticated;
-  const quotaRemaining = me?.quota.remaining ?? null;
-  const quotaLimit = me?.quota.limit ?? null;
+  const quotaRemaining = me?.quota?.remaining ?? null;
+  const quotaLimit = me?.quota?.limit ?? null;
   const canSummarize =
-    quotaRemaining === null || quotaRemaining > 0 || isPro || !!summary;
+    authenticated && (quotaRemaining === null || quotaRemaining > 0 || isPro || !!summary);
 
   // Track which videoId we've already auto-requested so we don't fire again on
   // the same video, but DO re-fire when the user switches videos.
@@ -220,16 +220,13 @@ export function Sidebar(props: Props) {
         {!authenticated ? (
           <>
             <span className="flex-1 truncate text-[12px] text-[var(--bt-text-soft)]">
-              <span className="font-semibold text-[var(--bt-text)]">
-                {quotaRemaining ?? 3} free
-              </span>{" "}
-              summaries left today
+              Sign in to summarize this video
             </span>
             <button
               onClick={onSignIn}
               className="bg-brand hover:bg-brand-dark rounded-full px-3 py-1.5 text-[11px] font-semibold text-white transition"
             >
-              Sign in for more
+              Sign in
             </button>
           </>
         ) : (
@@ -329,8 +326,10 @@ export function Sidebar(props: Props) {
             transcriptError={transcriptError}
             statusCheckPending={statusCheckPending}
             canSummarize={canSummarize}
+            authenticated={authenticated}
             onRequestSummary={onRequestSummary}
             onEnqueueWorker={onEnqueueWorker}
+            onSignIn={onSignIn}
           />
         ) : null}
         {activeTab === "chapters" ? (
@@ -553,8 +552,10 @@ function SummaryPanel(props: {
   transcriptError: string | null;
   statusCheckPending: boolean;
   canSummarize: boolean;
+  authenticated: boolean;
   onRequestSummary: () => void;
   onEnqueueWorker: () => void;
+  onSignIn: () => void;
 }) {
   const {
     summary,
@@ -563,8 +564,10 @@ function SummaryPanel(props: {
     transcriptError,
     statusCheckPending,
     canSummarize,
+    authenticated,
     onRequestSummary,
     onEnqueueWorker,
+    onSignIn,
   } = props;
 
   if (loading) {
@@ -583,6 +586,33 @@ function SummaryPanel(props: {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="text-brand size-6 animate-spin" />
+      </div>
+    );
+  }
+
+  // Not signed in → push sign-in CTA. The summarize endpoint requires auth
+  // server-side; surfacing it here avoids a 401 round-trip.
+  if (!authenticated && !summary) {
+    return (
+      <div className="flex flex-col items-center gap-4 py-6 text-center">
+        <div className="flex size-12 items-center justify-center rounded-full bg-brand/15">
+          <Sparkles className="text-brand size-6" />
+        </div>
+        <div className="flex flex-col gap-1">
+          <p className="text-[14px] font-semibold text-[var(--bt-text)]">
+            Sign in to summarize
+          </p>
+          <p className="max-w-[260px] text-[12px] text-[var(--bt-text-muted)]">
+            Get AI summaries of any YouTube video in 55+ languages. Free with a
+            Google account.
+          </p>
+        </div>
+        <button
+          onClick={onSignIn}
+          className="bg-brand hover:bg-brand-dark inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-[13px] font-semibold text-white transition"
+        >
+          Sign in with Google
+        </button>
       </div>
     );
   }
