@@ -50,7 +50,7 @@ export const metadata: Metadata = {
     absolute:
       "BriefTube: YouTube Summaries On Your Terms | Text or audio, delivered where you want",
   },
-  description: `BriefTube turns your YouTube channels into a clean inbox. Browse new videos, pick what's worth your time, and get text or audio summaries delivered to Telegram, a private podcast feed, or your dashboard. Free for ${SiteConfig.freeChannelsLimit} channels.`,
+  description: `Your YouTube channels in one inbox — text or audio summaries delivered to Telegram, a private podcast, or your dashboard. Free for ${SiteConfig.freeChannelsLimit} channels.`,
   alternates: {
     canonical: SiteConfig.prodUrl,
   },
