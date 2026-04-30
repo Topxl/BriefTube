@@ -224,6 +224,7 @@ export function SummariesFeed({
     useState<SummaryLengthPref>("auto");
   const [profileStylePref, setProfileStylePref] =
     useState<SummaryStylePref>("narrative");
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const supabase = useMemo(() => createClient(), []);
   const [channelStates, setChannelStates] = useState(initialChannelStates);
 
@@ -339,6 +340,7 @@ export function SummariesFeed({
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) return;
+      setCurrentUserId(user.id);
 
       if (pageNum === 0) {
         const [{ data: profile }, { data: subs }] = await Promise.all([
@@ -619,6 +621,37 @@ export function SummariesFeed({
       if (channel) void supabase.removeChannel(channel);
     };
   }, [supabase]);
+
+  // Realtime: refetch the feed when a new delivery is inserted for this user.
+  // Without this, manually triggering Summarize on a new video used to require
+  // a page refresh — processed_videos UPDATE fires before the worker creates
+  // the delivery row, so the feed didn't catch the new item.
+  useEffect(() => {
+    if (!currentUserId) return;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    try {
+      channel = supabase
+        .channel(`deliveries-inserts-${currentUserId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "deliveries",
+            filter: `user_id=eq.${currentUserId}`,
+          },
+          () => {
+            void loadDeliveries(0, true);
+          },
+        )
+        .subscribe();
+    } catch {
+      // WebSocket unavailable — fall back to the polling/highlight path
+    }
+    return () => {
+      if (channel) void supabase.removeChannel(channel);
+    };
+  }, [supabase, currentUserId, loadDeliveries]);
 
   // Resolve missing titles via noembed API
   useEffect(() => {
