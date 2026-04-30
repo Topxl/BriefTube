@@ -6,6 +6,8 @@ import { DashboardNav } from "@/components/dashboard/nav";
 import { PostHogIdentify } from "@/components/posthog/posthog-identify";
 import { YouTubeSyncDialog } from "@/components/dashboard/youtube-sync-dialog";
 import { ImportedChannelsReview } from "@/components/dashboard/imported-channels-review";
+import { StatsSheet } from "@/components/dashboard/stats-sheet";
+import { HeartbeatPinger } from "@/components/dashboard/heartbeat-pinger";
 
 export default async function DashboardLayout({
   children,
@@ -36,6 +38,8 @@ export default async function DashboardLayout({
       <Suspense fallback={null}>
         <ImportedChannelsReview />
       </Suspense>
+      <StatsSheet />
+      <HeartbeatPinger />
     </div>
   );
 }

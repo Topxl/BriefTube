@@ -3,7 +3,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { LayoutDashboard, ListVideo, LogOut, User } from "@/lib/icons";
 import { ChannelSearchBar } from "@/components/dashboard/channel-search-bar";
@@ -77,6 +77,7 @@ function isActive(href: string, pathname: string) {
 
 function UserAvatar() {
   const profile = useUserProfile();
+  const router = useRouter();
 
   const handleLogout = async () => {
     await signOutAction();
@@ -109,16 +110,15 @@ function UserAvatar() {
           <p className="truncate text-xs font-medium">{profile?.email ?? ""}</p>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link href="/dashboard/profile?open=voice">Voice & delivery</Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/dashboard/profile?open=language">Language</Link>
+        <DropdownMenuItem
+          onSelect={() => router.push("/dashboard/profile?open=language")}
+        >
+          Language
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => window.dispatchEvent(new Event("open-stats"))}
         >
-          Your stats
+          My stats
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem

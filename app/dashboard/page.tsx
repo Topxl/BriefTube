@@ -11,7 +11,6 @@ import { GettingStarted } from "@/components/dashboard/getting-started";
 import { ProcessingVideoCard } from "@/components/dashboard/processing-video-card";
 import { PendingVideoPickup } from "@/components/dashboard/pending-video-pickup";
 import { PendingVideoProcessor } from "@/components/dashboard/pending-video-processor";
-import { StatsSheet } from "@/components/dashboard/stats-sheet";
 import { StreakChip } from "@/components/dashboard/streak-chip";
 import { ChannelsSheet } from "@/components/dashboard/channels-sheet";
 import { VideoHighlighter } from "@/components/dashboard/video-highlighter";
@@ -277,7 +276,6 @@ async function FeedSection({ userId }: { userId: string }) {
           >
             <ChannelsSheetSection userId={userId} />
           </Suspense>
-          <StatsSheet />
         </>
       }
       banners={
