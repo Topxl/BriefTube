@@ -53,6 +53,37 @@ function ProcessingCard({ video }: { video: ProcessingVideo }) {
     return () => clearInterval(interval);
   }, [video.startedAt]);
 
+  // Resolve the real title via noembed when the card was created with the
+  // videoId as placeholder — happens when the user clicks Summarize before
+  // the link-preview returned, or when the server-side oEmbed call timed out.
+  useEffect(() => {
+    if (video.title !== video.videoId) return;
+    let cancelled = false;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 4000);
+    fetch(
+      `https://noembed.com/embed?url=https://www.youtube.com/watch?v=${video.videoId}`,
+      { signal: controller.signal },
+    )
+      .then(async (r) => r.json() as Promise<{ title?: string }>)
+      .then((data) => {
+        if (cancelled || !data.title) return;
+        addProcessingVideo({
+          videoId: video.videoId,
+          title: data.title,
+          startedAt: video.startedAt,
+        });
+      })
+      .catch(() => {
+        /* noembed unavailable — keep videoId placeholder */
+      })
+      .finally(() => clearTimeout(timer));
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [video.videoId, video.title, video.startedAt]);
+
   // Poll the status every 5s as a fallback for Realtime (which can lag)
   useEffect(() => {
     let cancelled = false;
