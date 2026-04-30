@@ -303,9 +303,12 @@ export type Database = {
       deliveries: {
         Row: {
           audio_required: boolean
+          completed: boolean
           created_at: string | null
           id: string
           language: string
+          last_listened_at: string | null
+          listen_progress_pct: number | null
           listened_at: string | null
           platform: string
           sent_at: string | null
@@ -316,9 +319,12 @@ export type Database = {
         }
         Insert: {
           audio_required?: boolean
+          completed?: boolean
           created_at?: string | null
           id?: string
           language?: string
+          last_listened_at?: string | null
+          listen_progress_pct?: number | null
           listened_at?: string | null
           platform?: string
           sent_at?: string | null
@@ -329,9 +335,12 @@ export type Database = {
         }
         Update: {
           audio_required?: boolean
+          completed?: boolean
           created_at?: string | null
           id?: string
           language?: string
+          last_listened_at?: string | null
+          listen_progress_pct?: number | null
           listened_at?: string | null
           platform?: string
           sent_at?: string | null
@@ -1441,9 +1450,12 @@ export type Database = {
         Args: { p_limit: number; p_offset: number; p_user_id: string }
         Returns: {
           audio_required: boolean
+          completed: boolean
           created_at: string | null
           id: string
           language: string
+          last_listened_at: string | null
+          listen_progress_pct: number | null
           listened_at: string | null
           platform: string
           sent_at: string | null
@@ -1520,8 +1532,12 @@ export type Database = {
         }
       }
     }
-    Enums: Record<never, never>
-    CompositeTypes: Record<never, never>
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
 }
 
@@ -1646,4 +1662,4 @@ export const Constants = {
   public: {
     Enums: {},
   },
-} as const;
+} as const

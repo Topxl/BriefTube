@@ -207,6 +207,23 @@ export function SummaryRow({
     });
   }, [isRead, delivery.id]);
 
+  // Report listen progress / completion to the backend. Best-effort, idempotent
+  // server-side (progress is monotonic, completed flag is sticky).
+  const reportProgress = useCallback(
+    (progressPct: number, completed: boolean) => {
+      if (delivery.id.startsWith("demo-")) return;
+      const pct = Math.max(0, Math.min(100, Math.round(progressPct)));
+      void fetch(`/api/deliveries/${delivery.id}/listened`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ progressPct: pct, completed }),
+      }).catch(() => {
+        /* best-effort */
+      });
+    },
+    [delivery.id],
+  );
+
   const title = video?.video_title ?? resolvedTitle ?? null;
   const thumbnailUrl = `/api/thumbnail/${delivery.video_id}`;
 
@@ -215,6 +232,10 @@ export function SummaryRow({
     if (!audio) return;
     if (playing) {
       audio.pause();
+      // Snapshot progress on pause — captures abandonment % for engagement stats
+      if (audio.duration) {
+        reportProgress((audio.currentTime / audio.duration) * 100, false);
+      }
     } else {
       audio.playbackRate = speed;
       void audio.play();
@@ -229,6 +250,7 @@ export function SummaryRow({
   }, [
     playing,
     markEngaged,
+    reportProgress,
     delivery.video_id,
     delivery.video?.channel_id,
     delivery.language,
@@ -264,7 +286,8 @@ export function SummaryRow({
     setPlaying(false);
     setProgress(0);
     setCurrentTime(0);
-  }, []);
+    reportProgress(100, true);
+  }, [reportProgress]);
 
   const handleSeek = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const audio = audioRef.current;
