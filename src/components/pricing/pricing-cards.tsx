@@ -156,7 +156,7 @@ export function PricingCards({ isLoggedIn, isPro, initialPrices }: Props) {
 
       <div className="mt-4 grid gap-4 md:grid-cols-3">
         {/* Free Plan */}
-        <div className="nm-raised overflow-hidden rounded-2xl">
+        <div className="nm-raised order-3 overflow-hidden rounded-2xl md:order-1">
           <div className="border-b border-white/[0.04] px-5 py-5">
             <p className="text-sm font-semibold tracking-wide uppercase">
               Free
@@ -185,15 +185,20 @@ export function PricingCards({ isLoggedIn, isPro, initialPrices }: Props) {
               </Button>
             )}
             {!isLoggedIn && (
-              <Button asChild className="mt-5 w-full rounded-full">
-                <a href="/login">Start free trial</a>
-              </Button>
+              <>
+                <Button asChild className="mt-5 w-full rounded-full">
+                  <a href="/login">Get started free</a>
+                </Button>
+                <p className="text-muted-foreground mt-2 text-center text-xs">
+                  No credit card · Cancel anytime
+                </p>
+              </>
             )}
           </div>
         </div>
 
         {/* Plus Plan */}
-        <div className="nm-raised overflow-hidden rounded-2xl">
+        <div className="nm-raised order-2 overflow-hidden rounded-2xl md:order-2">
           <div className="border-b border-white/[0.04] px-5 py-5">
             <p className="text-sm font-semibold tracking-wide uppercase">
               Plus
@@ -247,19 +252,24 @@ export function PricingCards({ isLoggedIn, isPro, initialPrices }: Props) {
                 </Button>
               </form>
             ) : (
-              <Button
-                asChild
-                className="mt-5 w-full rounded-full"
-                variant="outline"
-              >
-                <a href="/login">Start Plus Trial</a>
-              </Button>
+              <>
+                <Button
+                  asChild
+                  className="mt-5 w-full rounded-full"
+                  variant="outline"
+                >
+                  <a href="/login">Try Pro free for 30 days</a>
+                </Button>
+                <p className="text-muted-foreground mt-2 text-center text-xs">
+                  No credit card · Cancel anytime
+                </p>
+              </>
             )}
           </div>
         </div>
 
         {/* Pro Plan */}
-        <div className="nm-raised relative rounded-2xl border border-red-500/[0.12]">
+        <div className="nm-raised relative order-1 rounded-2xl border border-red-500/[0.12] md:order-3">
           <div className="absolute -top-3 left-1/2 z-10 -translate-x-1/2">
             <span className="inline-flex items-center rounded-full bg-red-600 px-3 py-0.5 text-xs font-medium whitespace-nowrap text-white shadow-[0_0_12px_rgba(239,68,68,0.3)]">
               Most popular
@@ -322,12 +332,17 @@ export function PricingCards({ isLoggedIn, isPro, initialPrices }: Props) {
                 </Button>
               </form>
             ) : (
-              <Button
-                asChild
-                className="mt-5 w-full rounded-full bg-red-600 hover:bg-red-500"
-              >
-                <a href="/login">Start Pro Trial</a>
-              </Button>
+              <>
+                <Button
+                  asChild
+                  className="mt-5 w-full rounded-full bg-red-600 hover:bg-red-500"
+                >
+                  <a href="/login">Try Pro free for 30 days</a>
+                </Button>
+                <p className="text-muted-foreground mt-2 text-center text-xs">
+                  No credit card · Cancel anytime
+                </p>
+              </>
             )}
           </div>
         </div>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { GoogleLoginButton } from "./_components/google-login-button";
+import { EmailMagicLinkForm } from "./_components/email-magic-link-form";
 import { t } from "@/locales";
 import { SiteConfig } from "@/site-config";
 import { createAdminClient } from "@/lib/supabase/server";
@@ -120,7 +121,18 @@ export default async function LoginPage() {
           </div>
 
           <div className="space-y-4 px-6 pt-4 pb-6">
+            <p className="text-muted-foreground text-center text-xs">
+              {tl.trustLine}
+            </p>
             <GoogleLoginButton />
+            <div className="flex items-center gap-3">
+              <div className="h-px flex-1 bg-white/[0.08]" />
+              <span className="text-muted-foreground text-[11px] uppercase tracking-wider">
+                {tl.dividerOr}
+              </span>
+              <div className="h-px flex-1 bg-white/[0.08]" />
+            </div>
+            <EmailMagicLinkForm />
             <p className="text-muted-foreground text-center text-xs">
               {tl.terms}
             </p>

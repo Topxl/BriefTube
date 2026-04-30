@@ -338,7 +338,7 @@ export default async function Home() {
         />
       ))}
       <Navbar />
-      <Hero />
+      <Hero stats={stats} />
       <SocialProof stats={stats} />
       <div className="section-divider" />
       <Problem />

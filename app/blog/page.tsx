@@ -13,8 +13,51 @@ export const metadata: Metadata = {
 };
 
 export default function BlogPage() {
+  const blogJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Blog",
+    name: "BriefTube Blog",
+    description:
+      "Guides on YouTube summarization, productivity, and AI tools for staying on top of channel feeds.",
+    url: `${SiteConfig.prodUrl}/blog`,
+    publisher: {
+      "@type": "Organization",
+      name: "BriefTube",
+      url: SiteConfig.prodUrl,
+    },
+    blogPost: articles.map((article) => ({
+      "@type": "BlogPosting",
+      headline: article.title,
+      url: `${SiteConfig.prodUrl}/blog/${article.slug}`,
+      datePublished: new Date(article.date).toISOString(),
+      image: `${SiteConfig.prodUrl}/opengraph-image`,
+      author: {
+        "@type": "Person",
+        name: "Vin",
+      },
+    })),
+  };
+
+  const itemListJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    itemListElement: articles.map((article, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      url: `${SiteConfig.prodUrl}/blog/${article.slug}`,
+    })),
+  };
+
   return (
     <div className="bg-background min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(blogJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+      />
       <Navbar />
 
       <main className="mx-auto max-w-6xl px-6 pt-32 pb-20">

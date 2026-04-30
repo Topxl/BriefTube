@@ -66,6 +66,47 @@ export default async function PricingPage() {
         },
       ],
     },
+    {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      name: "BriefTube",
+      description:
+        "AI-powered YouTube summarization with automatic monitoring and audio delivery to Telegram, Discord, Slack, and podcast apps.",
+      brand: { "@type": "Brand", name: "BriefTube" },
+      offers: {
+        "@type": "AggregateOffer",
+        lowPrice: "0",
+        highPrice: "79",
+        priceCurrency: "USD",
+        offerCount: "3",
+        offers: [
+          {
+            "@type": "Offer",
+            name: "Free",
+            price: "0",
+            priceCurrency: "USD",
+            availability: "https://schema.org/InStock",
+            url: "https://www.brief-tube.com/pricing",
+          },
+          {
+            "@type": "Offer",
+            name: "Plus (Annual)",
+            price: "50",
+            priceCurrency: "USD",
+            availability: "https://schema.org/InStock",
+            url: "https://www.brief-tube.com/pricing",
+          },
+          {
+            "@type": "Offer",
+            name: "Pro (Annual)",
+            price: "79",
+            priceCurrency: "USD",
+            availability: "https://schema.org/InStock",
+            url: "https://www.brief-tube.com/pricing",
+          },
+        ],
+      },
+    },
   ];
 
   return (
@@ -93,6 +134,27 @@ export default async function PricingPage() {
 
         {/* Pricing explainer */}
         <div className="mt-16 flex flex-col gap-10 border-t border-white/[0.06] pt-12">
+          <section className="flex flex-col gap-3">
+            <h2 className="text-lg font-semibold">
+              Do I need a credit card to start?
+            </h2>
+            <p className="text-muted-foreground text-sm leading-relaxed">
+              No. The 30-day Pro trial requires zero payment info. You&apos;re
+              welcome to cancel before it ends and drop to the free plan.
+            </p>
+          </section>
+
+          <section className="flex flex-col gap-3">
+            <h2 className="text-lg font-semibold">
+              What happens after the trial?
+            </h2>
+            <p className="text-muted-foreground text-sm leading-relaxed">
+              You drop back to the free plan automatically. Your channels and
+              summary history are kept. No surprise charges, no cancellation
+              fees.
+            </p>
+          </section>
+
           <section className="flex flex-col gap-3">
             <h2 className="text-lg font-semibold">
               What does the free plan include?

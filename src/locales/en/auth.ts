@@ -5,6 +5,21 @@ export const auth = {
       "AI audio summaries of your YouTube channels, delivered automatically",
     terms:
       "By signing in, you agree to our Terms of Service and Privacy Policy",
+    trustLine:
+      "Free forever for 5 channels · 30-day Pro trial included · No credit card.",
+    dividerOr: "or",
+    magicLink: {
+      emailPlaceholder: "you@example.com",
+      submitLabel: "Send magic link",
+      submittingLabel: "Sending...",
+      sentHeading: "Check your inbox",
+      sentBody: (email: string) =>
+        `We sent a magic link to ${email}. Click the link to sign in. (Check spam if you don't see it within a minute.)`,
+      useDifferentEmail: "Use a different email",
+      errorInvalidEmail: "Please enter a valid email address.",
+      errorGeneric:
+        "Something went wrong sending the magic link. Please try again.",
+    },
   },
   forgotPassword: {
     heading: "Reset your password",

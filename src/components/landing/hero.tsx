@@ -1,5 +1,6 @@
 import Link from "next/link";
 import dynamic from "next/dynamic";
+import { FileText, Sparkles, Tv2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { t } from "@/locales";
 import { HeroUrlInput } from "./hero-url-input";
@@ -12,7 +13,51 @@ const HeroPlayer = dynamic(async () =>
 
 const tl = t.landing.hero;
 
-export function Hero() {
+type HeroStat = { value: string; label: string };
+
+type HeroProps = {
+  stats?: HeroStat[];
+};
+
+function findStat(stats: HeroStat[] | undefined, keyword: string) {
+  return stats?.find((s) => s.label.toLowerCase().includes(keyword));
+}
+
+function TrustStrip({ stats }: { stats?: HeroStat[] }) {
+  const summariesStat = findStat(stats, "summar");
+  const channelsStat = findStat(stats, "channel");
+
+  const summariesLabel = summariesStat
+    ? `${summariesStat.value} summaries delivered`
+    : "25,000+ summaries delivered";
+  const channelsLabel = channelsStat
+    ? `${channelsStat.value} channels tracked`
+    : "1,900+ channels tracked";
+
+  return (
+    <div
+      role="region"
+      aria-label="Social proof"
+      className="text-muted-foreground mx-auto mt-5 flex max-w-3xl flex-col items-center justify-center gap-3 text-xs sm:flex-row sm:gap-0 sm:divide-x sm:divide-white/[0.08]"
+    >
+      <span className="inline-flex items-center gap-1.5 sm:px-4">
+        <FileText className="size-3.5 opacity-70" aria-hidden="true" />
+        {summariesLabel}
+      </span>
+      <span className="inline-flex items-center gap-1.5 sm:px-4">
+        <Tv2 className="size-3.5 opacity-70" aria-hidden="true" />
+        {channelsLabel}
+      </span>
+      <span className="inline-flex items-center gap-1.5 text-center sm:px-4 sm:text-left">
+        <Sparkles className="size-3.5 opacity-70" aria-hidden="true" />
+        Channels users track: MKBHD, Lex Fridman, Y Combinator, a16z, All-In
+        Podcast
+      </span>
+    </div>
+  );
+}
+
+export function Hero({ stats }: HeroProps = {}) {
   return (
     <section className="relative overflow-hidden pt-24 pb-10 md:pt-44 md:pb-32">
       {/* Gradient background orbs */}
@@ -44,6 +89,8 @@ export function Hero() {
             <HeroUrlInput />
           </div>
 
+          <TrustStrip stats={stats} />
+
           <p className="text-muted-foreground mt-4 text-xs">{tl.socialProof}</p>
 
           {/* Demo player (optional on mobile, more compact) */}
@@ -70,6 +117,8 @@ export function Hero() {
           <div className="mt-10">
             <HeroUrlInput />
           </div>
+
+          <TrustStrip stats={stats} />
 
           <div className="mt-6 flex items-center justify-center">
             <Button

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { SiteConfig } from "@/site-config";
 
 export const metadata: Metadata = {
-  title: "YouTube Summary App: AI-Powered, Automatic | BriefTube",
+  title: "YouTube Summary App: AI-Powered, Automatic",
   description: `Get an AI-generated YouTube summary for every new video from the channels you follow. BriefTube creates automatic audio summaries and delivers them to Telegram, Discord, Slack, or your podcast app. Free for ${SiteConfig.freeChannelsLimit} channels.`,
   alternates: {
     canonical: `${SiteConfig.prodUrl}/youtube-summary`,
