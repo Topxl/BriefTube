@@ -21,8 +21,6 @@ import {
 } from "@/lib/icons";
 import { useSession } from "@/lib/auth-client";
 
-const HEATMAP_DAYS = 91; // 13 weeks × 7 days
-
 type Stats = {
   thisMonth: number;
   total: number;
@@ -30,7 +28,6 @@ type Stats = {
   streak: number;
   bestStreak: number;
   topChannels: { name: string; count: number }[];
-  heatmap: { date: string; count: number }[]; // oldest first, length = HEATMAP_DAYS
 };
 
 function toDateStr(d: Date): string {
@@ -88,22 +85,6 @@ function computeBestStreak(engagementDays: Set<string>): number {
   return best;
 }
 
-function buildHeatmap(
-  engagementCounts: Map<string, number>,
-): { date: string; count: number }[] {
-  const result: { date: string; count: number }[] = [];
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  for (let i = HEATMAP_DAYS - 1; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    const dateStr = toDateStr(d);
-    result.push({ date: dateStr, count: engagementCounts.get(dateStr) ?? 0 });
-  }
-  return result;
-}
-
 export function StatsSheet() {
   const session = useSession();
   const isMobile = useIsMobile();
@@ -124,21 +105,66 @@ export function StatsSheet() {
       try {
         const supabase = createClient();
 
-        const [{ data: deliveries }, { data: subscriptions }] =
-          await Promise.all([
-            supabase
-              .from("deliveries")
-              .select("sent_at, listened_at, video_id")
-              .eq("user_id", userId)
-              .eq("status", "sent")
-              .order("sent_at", { ascending: false }),
-            supabase
-              .from("subscriptions")
-              .select("channel_id, channel_name")
-              .eq("user_id", userId),
-          ]);
+        const startOfMonth = new Date();
+        startOfMonth.setDate(1);
+        startOfMonth.setHours(0, 0, 0, 0);
 
-        if (!deliveries || deliveries.length === 0) {
+        // Distinct-video counts via RPC. We can't do this client-side because
+        // (a) Supabase caps row results at 1000 by default and (b) `count: "exact"`
+        // counts rows, not distinct video_ids — a user can receive the same
+        // video across multiple platforms (Telegram + Discord + email) AND
+        // multiple languages, so raw row counts overstate by ~2x.
+        const [
+          countsRes,
+          activeDaysRes,
+          { data: deliveries },
+          { data: subscriptions },
+        ] = await Promise.all([
+          // RPC isn't in the generated supabase types yet — cast at the call
+          // site rather than regenerating the 52 KB types file.
+          (
+            supabase.rpc as unknown as (
+              fn: string,
+              args: { user_id_in: string },
+            ) => Promise<{
+              data: { total: number; this_month: number } | null;
+            }>
+          )("get_user_summary_counts", { user_id_in: userId }),
+          // Streak is now driven by `user_active_days` (filled by the heartbeat
+          // pinger on every dashboard mount), not by `listened_at` — the old
+          // signal was always 0 for users who consume on Telegram/Discord/email.
+          (
+            supabase.from as unknown as (t: string) => {
+              select: (cols: string) => {
+                eq: (
+                  c: string,
+                  v: string,
+                ) => Promise<{ data: { day: string }[] | null }>;
+              };
+            }
+          )("user_active_days")
+            .select("day")
+            .eq("user_id", userId),
+          // Recent 1000 deliveries are enough to compute the top-5 channels.
+          supabase
+            .from("deliveries")
+            .select("video_id")
+            .eq("user_id", userId)
+            .eq("status", "sent")
+            .order("sent_at", { ascending: false }),
+          supabase
+            .from("subscriptions")
+            .select("channel_id, channel_name")
+            .eq("user_id", userId),
+        ]);
+
+        const counts = Array.isArray(countsRes.data)
+          ? countsRes.data[0]
+          : countsRes.data;
+        const total = Number(counts?.total ?? 0);
+        const thisMonth = Number(counts?.this_month ?? 0);
+
+        if (total === 0) {
           setStats({
             thisMonth: 0,
             total: 0,
@@ -146,39 +172,29 @@ export function StatsSheet() {
             streak: 0,
             bestStreak: 0,
             topChannels: [],
-            heatmap: buildHeatmap(new Map()),
           });
           setLoading(false);
           return;
         }
 
-        const videoIds = [...new Set(deliveries.map((d) => d.video_id))];
-        const { data: videos } = await supabase
-          .from("processed_videos")
-          .select("video_id, channel_id")
-          .in("video_id", videoIds);
+        const safeDeliveries = deliveries ?? [];
 
-        const total = deliveries.length;
+        const videoIds = [...new Set(safeDeliveries.map((d) => d.video_id))];
+        const { data: videos } = videoIds.length
+          ? await supabase
+              .from("processed_videos")
+              .select("video_id, channel_id")
+              .in("video_id", videoIds)
+          : { data: [] };
 
-        const startOfMonth = new Date();
-        startOfMonth.setDate(1);
-        startOfMonth.setHours(0, 0, 0, 0);
-        const thisMonth = deliveries.filter(
-          (d) => d.sent_at != null && new Date(d.sent_at) >= startOfMonth,
-        ).length;
-
-        // Per-day engagement counts (drives streak, best streak, and heatmap)
-        const engagementCounts = new Map<string, number>();
-        for (const d of deliveries) {
-          if (!d.listened_at) continue;
-          const day = toDateStr(new Date(d.listened_at));
-          engagementCounts.set(day, (engagementCounts.get(day) ?? 0) + 1);
-        }
-        const engagementDays = new Set(engagementCounts.keys());
-
-        const streak = computeCurrentStreak(engagementDays);
-        const bestStreak = computeBestStreak(engagementDays);
-        const heatmap = buildHeatmap(engagementCounts);
+        // Streak based on calendar days the user opened the dashboard (sent
+        // by `HeartbeatPinger`). Independent of how the user consumes summaries
+        // (Telegram, email, web) — what counts is just visiting the site.
+        const activeDays = new Set<string>(
+          (activeDaysRes.data ?? []).map((r) => r.day),
+        );
+        const streak = computeCurrentStreak(activeDays);
+        const bestStreak = computeBestStreak(activeDays);
 
         const minutesSaved = total * 10;
         const timeSaved =
@@ -194,7 +210,7 @@ export function StatsSheet() {
         );
 
         const channelCounts: Partial<Record<string, number>> = {};
-        for (const delivery of deliveries) {
+        for (const delivery of safeDeliveries) {
           const channelId = videoToChannel.get(delivery.video_id);
           if (!channelId) continue;
           channelCounts[channelId] = (channelCounts[channelId] ?? 0) + 1;
@@ -215,7 +231,6 @@ export function StatsSheet() {
           streak,
           bestStreak,
           topChannels,
-          heatmap,
         });
       } finally {
         setLoading(false);
@@ -312,43 +327,6 @@ export function StatsSheet() {
                     </span>
                   )}
                 </div>
-              </div>
-            </div>
-
-            {/* Engagement heatmap (last 13 weeks) */}
-            <div className="nm-raised flex flex-col gap-2 rounded-2xl p-3">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-medium">Last 13 weeks</p>
-                <div className="text-muted-foreground flex items-center gap-1 text-[10px]">
-                  <span>Less</span>
-                  <span className="h-2 w-2 rounded-[2px] bg-white/[0.04]" />
-                  <span className="h-2 w-2 rounded-[2px] bg-red-500/20" />
-                  <span className="h-2 w-2 rounded-[2px] bg-red-500/50" />
-                  <span className="h-2 w-2 rounded-[2px] bg-red-500" />
-                  <span>More</span>
-                </div>
-              </div>
-              <div
-                className="grid grid-flow-col grid-rows-7 gap-[3px]"
-                style={{ gridAutoColumns: "minmax(0, 1fr)" }}
-              >
-                {stats.heatmap.map((cell) => {
-                  const cls =
-                    cell.count === 0
-                      ? "bg-white/[0.04]"
-                      : cell.count === 1
-                        ? "bg-red-500/20"
-                        : cell.count <= 3
-                          ? "bg-red-500/50"
-                          : "bg-red-500";
-                  return (
-                    <div
-                      key={cell.date}
-                      className={`aspect-square rounded-[2px] ${cls}`}
-                      title={`${cell.date}: ${cell.count} ${cell.count === 1 ? "summary" : "summaries"}`}
-                    />
-                  );
-                })}
               </div>
             </div>
 
