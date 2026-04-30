@@ -14,6 +14,7 @@ import { PendingVideoProcessor } from "@/components/dashboard/pending-video-proc
 import { StreakChip } from "@/components/dashboard/streak-chip";
 import { ChannelsSheet } from "@/components/dashboard/channels-sheet";
 import { VideoHighlighter } from "@/components/dashboard/video-highlighter";
+import { markOnboardingCompletedById } from "@/lib/onboarding/mark-completed";
 import type {
   EnrichedDelivery,
   ProcessedVideo,
@@ -97,7 +98,12 @@ async function DashboardBanners({ userId }: { userId: string }) {
 
   const hasChannel = (sources ?? []).length > 0;
   const hasConnection = (connections ?? []).length > 0;
-  const onboardingCompleted = profile.onboarding_completed ?? false;
+  let onboardingCompleted = profile.onboarding_completed ?? false;
+
+  if (!onboardingCompleted && hasChannel && hasConnection) {
+    await markOnboardingCompletedById(userId, "auto_happy_path");
+    onboardingCompleted = true;
+  }
 
   const trialEndsAt = profile.trial_ends_at ?? null;
   const nowMs = Date.now();

@@ -1,25 +1,23 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
-import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
+import {
+  markOnboardingCompletedById,
+  type OnboardingCompletionSource,
+} from "@/lib/onboarding/mark-completed";
 
-export async function completeOnboarding() {
+type SkipSource = Extract<
+  OnboardingCompletionSource,
+  "skip_step_2" | "skip_step_3"
+>;
+
+export async function markOnboardingCompleted(
+  source: SkipSource,
+): Promise<void> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
   if (!user) return;
-
-  // Use admin client to bypass any session/RLS issues on the update
-  const admin = createAdminClient();
-  await admin
-    .from("profiles")
-    .update({ onboarding_completed: true })
-    .eq("id", user.id);
-
-  // Invalidate dashboard cache then redirect server-side to guarantee fresh data
-  revalidatePath("/dashboard", "page");
-  redirect("/dashboard");
+  await markOnboardingCompletedById(user.id, source);
 }

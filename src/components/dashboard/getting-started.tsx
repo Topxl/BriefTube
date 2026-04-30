@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { Check, Youtube, ArrowRight } from "@/lib/icons";
-import { createClient } from "@/lib/supabase/client";
 import { dialogManager } from "@/features/dialog-manager/dialog-manager";
 import { toast } from "sonner";
+import { markOnboardingCompleted } from "@app/onboarding/actions";
 
 // -----------------------------------------------------------------
 // Main component: 3-step onboarding
@@ -126,14 +126,7 @@ export function GettingStarted({
             <button
               onClick={() => {
                 setStep("done");
-                const supabase = createClient();
-                void supabase.auth.getUser().then(({ data: { user } }) => {
-                  if (!user) return;
-                  void supabase
-                    .from("profiles")
-                    .update({ onboarding_completed: true })
-                    .eq("id", user.id);
-                });
+                void markOnboardingCompleted("skip_step_3");
                 showFeedbackDialog();
               }}
               className="text-muted-foreground hover:text-foreground rounded-full px-3 py-2 text-sm transition-colors"
@@ -174,14 +167,7 @@ export function GettingStarted({
           <button
             onClick={() => {
               setStep("customize");
-              const supabase = createClient();
-              void supabase.auth.getUser().then(({ data: { user } }) => {
-                if (!user) return;
-                void supabase
-                  .from("profiles")
-                  .update({ onboarding_completed: true })
-                  .eq("id", user.id);
-              });
+              void markOnboardingCompleted("skip_step_2");
             }}
             className="text-muted-foreground hover:text-foreground rounded-full px-3 py-2 text-sm transition-colors"
             suppressHydrationWarning
