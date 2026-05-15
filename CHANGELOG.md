@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-05-16
+
+FIX(worker): stop scanning channels for expired-trial users — get_active_channel_ids() now joins profiles and only returns channels with at least one eligible subscriber (paying or valid trial), eliminating wasted Gemini/Groq/TTS spend
+
 ## 2026-05-15
 
 CHORE(infra): migrate compute to Modal.com + Raspberry Pi — modal_processor.py dispatches transcript/summary/TTS/R2 to Modal; Pi handles RSS, DB state, Telegram delivery; web app moves to Vercel; deploy-worker.yml deploys Modal via CI; update-pi.sh polls GitHub every 5min for auto-updates

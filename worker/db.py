@@ -66,25 +66,43 @@ def get_all_channel_ids() -> list[str]:
 
 
 def get_active_channel_ids() -> set[str]:
-    """Get channel IDs that have at least one active subscriber.
+    """Get channel IDs that have at least one *eligible* subscriber.
+
+    Eligible = paying user (active/past_due) OR free trial not yet expired.
+    Channels where every subscriber has an expired trial are excluded —
+    scanning them would waste Gemini/Groq quota with no delivery at the end.
 
     Paginated — same reason as get_all_channel_ids().
     """
+    from datetime import datetime, timezone
+
     sb = get_client()
     channel_ids: set[str] = set()
     offset = 0
     while True:
         res = (
             sb.table("subscriptions")
-            .select("channel_id")
+            .select("channel_id, profiles(subscription_status, trial_ends_at)")
             .eq("active", True)
             .range(offset, offset + 999)
             .execute()
         )
         if not res.data:
             break
+        now = datetime.now(timezone.utc)
         for row in res.data:
-            channel_ids.add(row["channel_id"])
+            profile = row.get("profiles") or {}
+            status = profile.get("subscription_status", "free")
+            trial_ends_at = profile.get("trial_ends_at")
+            if status in ("active", "past_due"):
+                channel_ids.add(row["channel_id"])
+            elif status == "free" and trial_ends_at:
+                try:
+                    expires = datetime.fromisoformat(trial_ends_at.replace("Z", "+00:00"))
+                    if expires > now:
+                        channel_ids.add(row["channel_id"])
+                except (ValueError, AttributeError):
+                    pass
         if len(res.data) < 1000:
             break
         offset += 1000
