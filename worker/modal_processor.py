@@ -34,23 +34,14 @@ brieftube_image = (
         "aiohttp>=3.9.0",
         "supabase>=2.0.0",
         "psutil>=5.9.0",
-        "httpx[http2]",
     )
-)
-
-# Mount worker source into container at /worker
-worker_mount = modal.Mount.from_local_dir(
-    local_path="worker",
-    remote_path="/worker",
-    condition=lambda p: not any(
-        x in p for x in ["__pycache__", ".pyc", "venv/", "tests/", "cache/", ".log"]
-    ),
+    # Add worker source code into the image at build time (Modal 1.x API)
+    .add_local_dir("worker", remote_path="/worker")
 )
 
 
 @app.function(
     image=brieftube_image,
-    mounts=[worker_mount],
     secrets=[modal.Secret.from_name("brieftube-worker")],
     timeout=1200,
     retries=0,  # Pi handles retry logic
