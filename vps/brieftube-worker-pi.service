@@ -1,0 +1,18 @@
+[Unit]
+Description=BriefTube Worker (Pi)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/brieftube/worker
+EnvironmentFile=/home/pi/.brieftube-secrets.env
+ExecStart=/home/pi/brieftube/vps/run-worker-pi.sh
+Restart=on-failure
+RestartSec=10
+StandardOutput=append:/home/pi/brieftube/worker/worker.log
+StandardError=append:/home/pi/brieftube/worker/worker.log
+
+[Install]
+WantedBy=multi-user.target

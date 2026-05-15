@@ -2,6 +2,9 @@
 
 ## 2026-05-15
 
+CHORE(infra): migrate compute to Modal.com + Raspberry Pi — modal_processor.py dispatches transcript/summary/TTS/R2 to Modal; Pi handles RSS, DB state, Telegram delivery; web app moves to Vercel; deploy-worker.yml deploys Modal via CI; update-pi.sh polls GitHub every 5min for auto-updates
+FEATURE(worker): Modal fast-path in _process_video — calls compute_video.remote.aio() if Modal available, falls back to local processing if Modal unreachable
+
 FIX(worker): detect "Private video" in yt-dlp subtitle and audio download — fail immediately with video_unavailable instead of exhausting all 7 proxy IPs and retrying
 FIX(worker): private videos no longer fall through to Whisper fallback — skip Whisper when yt-dlp returns video_unavailable
 FIX(worker): remove video_unavailable from should_retry list — private/deleted videos never become available (premieres have their own premiere_not_available_yet error)

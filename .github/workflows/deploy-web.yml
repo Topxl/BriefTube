@@ -15,6 +15,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - uses: actions/checkout@v4
+
       - name: Fetch secrets from Infisical
         uses: Infisical/secrets-action@v1.0.7
         with:
@@ -22,79 +24,28 @@ jobs:
           client-secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
           project-slug: "brieftube-server-qy7-v"
           env-slug: "prod"
-          secret-path: "/deploy"
+          secret-path: "/web"
           export-type: "env"
 
-      - name: Deploy to VPS
-        uses: appleboy/ssh-action@v1
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          host: ${{ env.VPS_HOST }}
-          username: brieftube
-          key: ${{ env.VPS_SSH_KEY }}
-          command_timeout: 10m
-          script: |
-            set -e
-            cd /home/brieftube/app
+          node-version: "22"
 
-            echo "→ Pulling latest code..."
-            git fetch origin main
-            git reset --hard origin/main
-            git clean -fd -e worker/cache -e worker/*.log -e worker/*.log.* 2>/dev/null || true
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
 
-            echo "→ Installing dependencies..."
-            pnpm install --frozen-lockfile
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
-            echo "→ Getting Infisical token..."
-            TOKEN=$(infisical login \
-              --method=universal-auth \
-              --client-id="${INFISICAL_UNIVERSAL_AUTH_CLIENT_ID}" \
-              --client-secret="${INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET}" \
-              --plain --silent 2>/dev/null)
-
-            echo "→ Building Next.js..."
-            infisical run \
-              --token="${TOKEN}" \
-              --projectId=089a5c93-5c51-4a24-8bf0-9d8bceb3a114 \
-              --env=prod \
-              --path=/web \
-              -- pnpm build
-
-            echo "→ Copying standalone build..."
-            WEB_DIR="/home/brieftube/web"
-
-            # Keep old static chunks for users with cached pages (avoids chunk load errors)
-            # Only delete server files, not static assets
-            rm -rf "$WEB_DIR/.next/server" "$WEB_DIR/server.js" "$WEB_DIR/package.json"
-
-            cp -r .next/standalone/* "$WEB_DIR/"
-            cp -r .next/standalone/.next/server "$WEB_DIR/.next/server"
-
-            # Update .next manifest files — glob (*) skips dotfiles so .next/ is not
-            # included above; copy manifests explicitly to register new routes correctly.
-            cp .next/standalone/.next/*.json "$WEB_DIR/.next/"
-            cp .next/standalone/.next/*.js "$WEB_DIR/.next/" 2>/dev/null || true
-            cp .next/standalone/.next/BUILD_ID "$WEB_DIR/.next/" 2>/dev/null || true
-
-            # Merge new static chunks with old ones (don't delete old chunks)
-            cp -r .next/static/* "$WEB_DIR/.next/static/" 2>/dev/null || cp -r .next/static "$WEB_DIR/.next/static"
-
-            # Clean up chunks older than 24h (previous deploys)
-            find "$WEB_DIR/.next/static/chunks" -name "*.js" -mmin +1440 -delete 2>/dev/null || true
-
-            # Replace public/ fully
-            rm -rf "$WEB_DIR/public"
-            cp -r public "$WEB_DIR/public"
-
-            echo "→ Restarting web service..."
-            sudo systemctl restart brieftube-web
-            sleep 3
-
-            echo "→ Health check..."
-            if curl -sf http://localhost:3000 > /dev/null; then
-              echo "✅ Web app deployed successfully"
-            else
-              echo "❌ Web app failed to start"
-              # Arg order matches hardened sudoers pattern: `journalctl -u <unit> --no-pager *`
-              sudo journalctl -u brieftube-web --no-pager -n 20
-              exit 1
-            fi
+      - name: Deploy to Vercel
+        run: |
+          pnpm add -g vercel
+          vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+          vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+          vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}

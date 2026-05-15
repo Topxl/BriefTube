@@ -22,6 +22,14 @@ import aiohttp
 import psutil
 
 from config import RSS_CHECK_INTERVAL, TELEGRAM_BOT_TOKEN, LOG_BOT_TOKEN, SUPABASE_URL, ADMIN_TELEGRAM_CHAT_ID, MAX_CONCURRENT_VIDEOS, MAX_CPU_PERCENT, MAX_LOAD_PER_CPU, MIN_FREE_RAM_MB, CPU_CHECK_INTERVAL, HEALTH_PORT, WORKER_INSTANCE, APP_URL, WORKER_API_SECRET, PUSH_NOTIFY_SECRET
+
+# Modal.com compute offloading — optional, falls back to local if unavailable
+try:
+    from modal_processor import compute_video as _modal_compute_video
+    _MODAL_ENABLED = True
+except Exception:
+    _MODAL_ENABLED = False
+    _modal_compute_video = None  # type: ignore
 from transcript_extractor import TranscriptExtractor, validate_cookies
 from transcript_cache import transcript_cache
 from transcript_store import transcript_store
@@ -305,6 +313,46 @@ async def rss_loop(alert_system: MonitoringAlert):
         await asyncio.sleep(RSS_CHECK_INTERVAL)
 
 
+# ── Modal compute helper ───────────────────────────────────────
+
+async def _compute_via_modal(
+    video_id: str,
+    youtube_url: str,
+    video_title: str,
+    user_language: str,
+    channel_id: str,
+    tts_voice: str,
+    summary_length_pref: str,
+    summary_style: str,
+    summary_custom_instructions: str,
+) -> "dict | None":
+    """Dispatch compute to Modal. Returns result dict or None (fallback to local)."""
+    if not _MODAL_ENABLED:
+        return None
+    try:
+        cached = transcript_cache.get(video_id)
+        archived = transcript_store.load(video_id) if not cached else None
+        needs_audio = await asyncio.to_thread(db.has_audio_subscribers, channel_id, user_language)
+        return await _modal_compute_video.remote.aio(
+            video_id=video_id,
+            youtube_url=youtube_url,
+            video_title=video_title,
+            user_language=user_language,
+            summary_length_pref=summary_length_pref,
+            summary_style=summary_style,
+            summary_custom_instructions=summary_custom_instructions,
+            audio_enabled=needs_audio,
+            tts_voice=tts_voice,
+            cached_transcript=cached["text"] if cached else (archived["text"] if archived else None),
+            cached_transcript_lang=cached["language"] if cached else (archived["language"] if archived else None),
+            cached_transcript_source=cached["source"] if cached else (archived["source"] if archived else None),
+            cached_transcript_cost=cached["cost"] if cached else 0.0,
+        )
+    except Exception as e:
+        logger.error(f"[{video_id}] Modal dispatch failed, falling back to local: {e}")
+        return None
+
+
 # ── Processor: single video ────────────────────────────────────
 
 async def _process_video(
@@ -349,6 +397,132 @@ async def _process_video(
     _video_completed = False
 
     try:
+
+        # ── Modal fast path ────────────────────────────────────────────────
+        _mr = await _compute_via_modal(
+            video_id, youtube_url, video_title, user_language, channel_id,
+            tts_voice, summary_length_pref, summary_style, summary_custom_instructions,
+        )
+        if _mr is not None:
+            # Unpack Modal result into local variables so existing DB code below works
+            transcript = _mr.get("transcript")
+            source_lang = _mr.get("source_lang") or "unknown"
+            transcript_cost = _mr.get("transcript_cost", 0.0)
+            error = _mr.get("error")
+            transcript_extractor.last_transcript_source = _mr.get("transcript_source", "modal")
+            transcript_extractor.last_video_metadata = {"title": _mr.get("invidious_title", "")}
+            transcript_extractor.last_ip_blocked = False
+            _t_transcript = _mr.get("timings", {}).get("transcript_ms", 0) / 1000
+
+            if not transcript:
+                # Re-use existing transcript error handling below
+                pass
+            else:
+                # Backfill title from Modal metadata
+                invidious_title = _mr.get("invidious_title", "")
+                if invidious_title and (not video_title or video_title == video_id):
+                    video_title = invidious_title
+
+                if len(transcript.strip()) < 200:
+                    logger.info(f"[{video_id}] Transcript too short ({len(transcript)} chars) — failing permanently")
+                    db.fail_job(job["id"], immediate=True, error_reason="transcript_too_short")
+                    return
+
+                summary = _mr.get("summary")
+                model_used = _mr.get("model_used")
+                summary_cost_usd = _mr.get("summary_cost", 0.0)
+                _t_summary = _mr.get("timings", {}).get("summary_ms", 0) / 1000
+
+                if not summary:
+                    modal_err = _mr.get("error", "")
+                    if modal_err == "rate_limited" or _mr.get("error_type") == "summary_error":
+                        logger.warning(f"[{video_id}] Modal summarizers rate-limited — snoozed 30min")
+                        db.snooze_job(job["id"], minutes=30)
+                        return
+                    raise Exception(f"Modal summary failed: {modal_err}")
+
+                logger.info(
+                    f"[{video_id}] Transcript: {len(transcript)} chars, lang: {source_lang}, cost: ${transcript_cost:.4f}"
+                )
+                logger.info(f"[{video_id}] Summary: {len(summary)} chars (via Modal)")
+
+                clean_summary = clean_for_tts(summary)
+                processing_time = (datetime.now() - start_time).total_seconds()
+                video_metadata = {
+                    **transcript_extractor.last_video_metadata,
+                    "transcript_cost": transcript_cost,
+                    "transcript_length": len(transcript),
+                    "source_language": source_lang,
+                    "summary_length": len(summary),
+                }
+                db.mark_video_completed(
+                    video_id, summary, audio_url=None,
+                    metadata=video_metadata, language=user_language,
+                    video_title=video_title or None,
+                    transcript_source=transcript_extractor.last_transcript_source,
+                    processing_time_s=processing_time,
+                    audio_status="pending",
+                    length_pref=summary_length_pref, style_pref=summary_style,
+                    model_used=model_used, summary_cost_usd=summary_cost_usd,
+                    summary_word_count=len(summary.split()),
+                )
+                _video_completed = True
+
+                await asyncio.to_thread(
+                    db.create_deliveries_for_video, video_id, channel_id, user_language, audio_only=False
+                )
+                logger.info(f"[{video_id}] Text summary delivered (phase 1 via Modal)")
+
+                audio_url = _mr.get("audio_url") or ""
+                audio_duration_sec = _mr.get("audio_duration")
+                _t_audio = _mr.get("timings", {}).get("tts_ms", 0) / 1000
+                _t_upload = _mr.get("timings", {}).get("upload_ms", 0) / 1000
+
+                if audio_url:
+                    await asyncio.to_thread(
+                        db.update_video_audio, video_id, user_language, audio_url, "completed",
+                        audio_duration_sec=audio_duration_sec,
+                    )
+                    await asyncio.to_thread(
+                        db.create_deliveries_for_video, video_id, channel_id, user_language, audio_only=True
+                    )
+                    logger.info(f"[{video_id}] Audio ready (phase 2 via Modal)")
+                else:
+                    await asyncio.to_thread(
+                        db.update_video_audio, video_id, user_language, None, "skipped"
+                    )
+
+                try:
+                    await asyncio.to_thread(
+                        db.update_video_latency, video_id, user_language,
+                        {k: v for k, v in _mr.get("timings", {}).items()},
+                    )
+                except Exception as e:
+                    logger.warning(f"[{video_id}] Latency persist failed (non-fatal): {e}")
+
+                db.complete_job(job["id"])
+                next_lang = await asyncio.to_thread(
+                    db.get_next_pending_language_for_video, video_id, user_language
+                )
+                if next_lang:
+                    re_queued = await asyncio.to_thread(
+                        db.enqueue_video_for_language, video_id, youtube_url, video_title,
+                        channel_id, next_lang, None,
+                    )
+                    if re_queued:
+                        logger.info(f"[{video_id}] Queued for next language: {next_lang}")
+
+                stats.record_video_processed(processing_time)
+                logger.info(
+                    f"✅ [{video_id}] Done: {video_title} "
+                    f"(transcript: ${transcript_cost:.4f}, source: {source_lang}, "
+                    f"transcript_source: modal, summary: {len(summary)} chars, "
+                    f"audio: {'yes' if audio_url else 'skipped'}, "
+                    f"time: {processing_time:.1f}s | Modal)"
+                )
+                return
+
+        # ── Local fallback (Modal disabled or dispatch failed) ─────────────
 
         # Step 1: Extract transcript (check cache → archive → fresh extraction)
         cached = transcript_cache.get(video_id)

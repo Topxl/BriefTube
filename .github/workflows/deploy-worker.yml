@@ -1,4 +1,4 @@
-name: Deploy Worker
+name: Deploy Worker (Modal)
 
 on:
   push:
@@ -9,57 +9,25 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy:
+  deploy-modal:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Fetch secrets from Infisical
-        uses: Infisical/secrets-action@v1.0.7
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
-          client-id: ${{ secrets.INFISICAL_CLIENT_ID }}
-          client-secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
-          project-slug: "brieftube-server-qy7-v"
-          env-slug: "prod"
-          secret-path: "/deploy"
-          export-type: "env"
+          python-version: "3.12"
 
-      - name: Deploy to VPS
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ env.VPS_HOST }}
-          username: brieftube
-          key: ${{ env.VPS_SSH_KEY }}
-          script: |
-            set -e
-            cd /home/brieftube/app
+      - name: Install Modal
+        run: pip install modal
 
-            echo "→ Pulling latest code..."
-            # Discard any local changes (e.g. from manual SSH deploys) so git pull never blocks.
-            # Runtime-generated files (worker.pid, log_bot.lock) are gitignored so reset is safe.
-            git fetch origin main
-            git reset --hard origin/main
+      - name: Deploy Modal function
+        run: modal deploy worker/modal_processor.py
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
 
-            echo "→ Updating dependencies..."
-            worker/venv/bin/pip install -r worker/requirements.txt -q
-            worker/venv/bin/pip install -U yt-dlp -q
-
-            echo "→ Restarting services..."
-            chmod +x vps/*.sh 2>/dev/null || true
-            # daemon-reload is intentionally omitted: unit files (*.service)
-            # change very rarely and are applied manually over SSH with full
-            # sudo. The hardened /etc/sudoers.d/brieftube only whitelists
-            # start/stop/restart/status for the 3 units — no daemon-reload.
-            #
-            # brieftube-log-bot is intentionally NOT restarted here: the
-            # main worker already runs its own log-bot polling loop
-            # (create_log_bot_application + _log_bot_poll_loop in main.py),
-            # and running both on the same token causes a 409 Conflict from
-            # Telegram. The standalone service is kept stopped.
-            sudo systemctl restart brieftube-worker
-            sleep 2
-
-            echo "→ Status:"
-            # --no-pager intentionally dropped: the hardened sudoers whitelist
-            # requires an exact argv match (no trailing args), and stdout is
-            # already non-TTY in CI so systemd doesn't invoke a pager anyway.
-            sudo systemctl status brieftube-worker || true
+      # Pi auto-updates via cron (polls GitHub every 5 min)
+      # No SSH needed — see vps/update-pi.sh
