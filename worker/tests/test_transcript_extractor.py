@@ -119,9 +119,9 @@ class TestShouldRetry:
     def test_rate_limited_retries(self):
         assert TranscriptExtractor.should_retry("rate_limited")
 
-    def test_video_unavailable_retries(self):
-        # Premiere / scheduled — retry when live
-        assert TranscriptExtractor.should_retry("video_unavailable")
+    def test_video_unavailable_no_retry(self):
+        # Private/deleted video — permanent failure, no retry
+        assert not TranscriptExtractor.should_retry("video_unavailable")
 
     def test_youtube_auth_required_retries(self):
         assert TranscriptExtractor.should_retry("youtube_auth_required")

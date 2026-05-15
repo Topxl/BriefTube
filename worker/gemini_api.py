@@ -275,7 +275,7 @@ class GeminiSummarizer:
         Returns:
             Tuple of (summary_text, error_message, model_used, cost_usd)
         """
-        if not transcript or len(transcript.strip()) < 50:
+        if not transcript or len(transcript.strip()) < 200:
             return None, "transcript_too_short", None, None
 
         prompt = build_summary_prompt(transcript, source_language, target_language, length_pref, style_pref, custom_instructions)

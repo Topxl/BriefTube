@@ -506,6 +506,9 @@ class TranscriptExtractor:
             if vtt_error == "video_is_live":
                 # Live stream in progress — no captions yet, skip Whisper entirely
                 return None, None, "video_is_live", 0.0
+            if vtt_error == "video_unavailable":
+                # Private/deleted video — skip Whisper, fail permanently
+                return None, None, "video_unavailable", 0.0
 
             # Step 4: Whisper API fallback (paid, uses Groq quota)
             if self.enable_whisper_fallback and self.whisper_transcriber:
@@ -762,6 +765,9 @@ class TranscriptExtractor:
                     return None, None, f"premiere_not_available_yet:{_hours_until_premiere(err)}"
                 if any(kw in err.lower() for kw in ("is a live stream", "live event", "no video formats found")):
                     return None, None, "video_is_live"
+                if "private video" in err.lower():
+                    logger.warning(f"yt-dlp subtitle ({label}): video is private — stopping proxy attempts")
+                    return None, None, "video_unavailable"
                 logger.warning(f"yt-dlp subtitle ({label}) failed: {err[:120]}")
             return None  # this country failed, try next
 
@@ -1026,7 +1032,7 @@ class TranscriptExtractor:
         retry_errors = [
             "no_transcript_available",  # Might be generated later
             "rate_limited",             # Temporary
-            "video_unavailable",        # Premiere / scheduled — retry when live
+            # NOTE: "video_unavailable" removed — private/deleted videos never become available
             "youtube_auth_required",    # YouTube bot-detection — transient, retry later
             "proxy_circuit_open",       # Proxy circuit breaker open — retry when proxy recovers
             # NOTE: "video_too_long_for_whisper" is intentionally NOT here — permanent failure

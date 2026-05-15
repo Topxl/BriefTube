@@ -72,7 +72,7 @@ class OpenRouterSummarizer:
             model_used is prefixed with "openrouter:" so it's distinguishable from
             direct Gemini calls in the processed_videos.model_used column.
         """
-        if not transcript or len(transcript.strip()) < 50:
+        if not transcript or len(transcript.strip()) < 200:
             return None, "transcript_too_short", None, None
 
         prompt = build_summary_prompt(transcript, source_language, target_language, length_pref, style_pref, custom_instructions)

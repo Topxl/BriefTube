@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-05-15
+
+FIX(worker): detect "Private video" in yt-dlp subtitle and audio download — fail immediately with video_unavailable instead of exhausting all 7 proxy IPs and retrying
+FIX(worker): private videos no longer fall through to Whisper fallback — skip Whisper when yt-dlp returns video_unavailable
+FIX(worker): remove video_unavailable from should_retry list — private/deleted videos never become available (premieres have their own premiere_not_available_yet error)
+FIX(worker): fail permanently on transcripts < 200 chars before calling any summarizer — avoids wasting Gemini/OpenRouter quota on noise transcripts
+FIX(worker): raise transcript_too_short threshold from 50 to 200 chars in gemini_api and openrouter_api
+
 ## 2026-04-30
 
 FEATURE(supabase-auth-templates): version-control all 13 Supabase Auth email templates under `supabase/auth-templates/` with a BriefTube-branded design (dark `#0a0a0a` background, `#111111` card, red `#ef4444` button, "Brief**Tube**" wordmark). Single Python generator (`_generate.py`) renders confirmation, magic-link, invite, recovery, email-change, reauthentication (uses `{{ .Token }}` OTP), and 7 notification templates from a shared style helper. `apply.sh` PATCHes the Supabase Management API in one call (`PATCH /v1/projects/{ref}/config/auth`). Templates were deployed live in this commit.

@@ -352,6 +352,9 @@ class WhisperTranscriber:
                 if "live event has ended" in err.lower():
                     logger.info(f"Audio download ({label}): live/ended stream — {err[:80]}")
                     return "live"
+                if "private video" in err.lower():
+                    logger.warning(f"Audio download ({label}): video is private — stopping proxy attempts")
+                    return "private"
                 # Per-IP failure — do NOT touch the circuit breaker counter here.
                 # The caller (pool iteration or geo-bypass) is responsible for
                 # deciding whether ALL attempts failed and reporting ONE whole-video
@@ -416,6 +419,8 @@ class WhisperTranscriber:
                 if result == "live":
                     report_proxy_success()
                     return "live"
+                if result == "private":
+                    return "private"
                 # None = failed this IP, continue to next
             # All pool IPs failed for this video — count as ONE whole-video failure
             # against the breaker, not N per-retry failures.
@@ -692,6 +697,8 @@ class WhisperTranscriber:
                 return None, None, "audio_unsupported_format", 0.0
             if dl_result == "geo_restricted":
                 return None, None, "audio_geo_restricted", 0.0
+            if dl_result == "private":
+                return None, None, "video_unavailable", 0.0
             if dl_result == "auth_required":
                 return None, None, "youtube_auth_required", 0.0
             if dl_result == "proxy_unavailable":

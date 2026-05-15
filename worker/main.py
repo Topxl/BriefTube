@@ -536,6 +536,17 @@ async def _process_video(
         )
         _t_transcript = time.monotonic() - _t0
 
+        # Fail permanently when transcript is too short to summarize.
+        # Transcripts under 200 chars are noise (ambient sound, single word, etc.)
+        # and no summarizer can produce a meaningful result from them.
+        _MIN_TRANSCRIPT_CHARS = 200
+        if len(transcript.strip()) < _MIN_TRANSCRIPT_CHARS:
+            logger.info(
+                f"[{video_id}] Transcript too short ({len(transcript)} chars) — failing permanently"
+            )
+            db.fail_job(job["id"], immediate=True, error_reason="transcript_too_short")
+            return
+
         # Backfill title from Invidious metadata if the job title is just the raw
         # video_id (happens when triggered via /api/process-video without a real title).
         invidious_title = transcript_extractor.last_video_metadata.get("title", "")
