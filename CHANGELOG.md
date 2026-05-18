@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-05-18
+
+CHORE: migrate monitoring scripts (health-check, db-health-check, uptime-monitor) from VPS (brieftube-vps) to Raspberry Pi (brieftube-pi)
+
 ## 2026-05-16
 
 FIX(worker): stop scanning channels for expired-trial users — get_active_channel_ids() now joins profiles and only returns channels with at least one eligible subscriber (paying or valid trial), eliminating wasted Gemini/Groq/TTS spend
