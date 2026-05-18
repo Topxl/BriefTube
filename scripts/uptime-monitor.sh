@@ -59,7 +59,7 @@ $timestamp
 Homepage: $homepage
 Logo: $logo
 
-Check: ssh brieftube-vps"
+Check: ssh brieftube-pi"
     echo "[$timestamp] ALERT: Site is DOWN (homepage=$homepage, logo=$logo)"
 elif [ "$current_status" = "UP" ] && [ "$prev_status" = "DOWN" ]; then
     send_telegram "🟢 <b>BriefTube RECOVERED</b>

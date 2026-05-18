@@ -180,10 +180,10 @@ check_ssl
 # --- Remote checks ---
 if [[ "$REMOTE" == true ]]; then
     echo ""
-    printf "${BOLD}  --- VPS Remote Checks (brieftube-vps) ---${RESET}\n"
+    printf "${BOLD}  --- Pi Remote Checks (brieftube-pi) ---${RESET}\n"
 
     # Systemd service status
-    service_status=$(ssh brieftube-vps "systemctl is-active brieftube-worker 2>/dev/null" 2>/dev/null) || service_status="unknown"
+    service_status=$(ssh brieftube-pi "systemctl is-active brieftube-worker 2>/dev/null" 2>/dev/null) || service_status="unknown"
     TOTAL=$((TOTAL + 1))
     if [[ "$service_status" == "active" ]]; then
         printf "  ${PASS}  %-30s  %s\n" "Worker service" "${GREEN}${service_status}${RESET}"
@@ -193,7 +193,7 @@ if [[ "$REMOTE" == true ]]; then
     fi
 
     # Disk usage
-    disk_usage=$(ssh brieftube-vps "df -h / | tail -1 | awk '{print \$5}'" 2>/dev/null) || disk_usage="unknown"
+    disk_usage=$(ssh brieftube-pi "df -h / | tail -1 | awk '{print \$5}'" 2>/dev/null) || disk_usage="unknown"
     disk_pct=${disk_usage//%/}
     TOTAL=$((TOTAL + 1))
     if [[ "$disk_pct" =~ ^[0-9]+$ ]] && [[ $disk_pct -lt 85 ]]; then
@@ -209,7 +209,7 @@ if [[ "$REMOTE" == true ]]; then
     # Recent worker logs (last 10 lines)
     echo ""
     printf "${BOLD}  --- Recent Worker Logs ---${RESET}\n"
-    ssh brieftube-vps "journalctl -u brieftube-worker --no-pager -n 10 2>/dev/null || tail -10 /home/brieftube/app/worker/worker.log 2>/dev/null || echo 'No logs found'" 2>/dev/null | while IFS= read -r line; do
+    ssh brieftube-pi "tail -10 /home/pi/brieftube/worker/worker.log 2>/dev/null || echo 'No logs found'" 2>/dev/null | while IFS= read -r line; do
         printf "    %s\n" "$line"
     done
 fi

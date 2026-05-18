@@ -17,8 +17,8 @@
 
 # ── Config ──────────────────────────────────────────────────────────────────────
 
-VPS_HOST="brieftube-vps"
-VPS_APP_DIR="/home/brieftube/app"
+VPS_HOST="brieftube-pi"
+VPS_APP_DIR="/home/pi/brieftube"
 TELEGRAM_BOT_TOKEN="${BRIEFTUBE_TELEGRAM_BOT_TOKEN:-}"
 TELEGRAM_CHAT_ID="${BRIEFTUBE_TELEGRAM_CHAT_ID:-}"
 STATE_FILE="/tmp/brieftube-db-state"
@@ -84,12 +84,12 @@ vps_query() {
 # ── SSH connectivity check ──────────────────────────────────────────────────────
 
 printf "\n${BOLD}BriefTube Database Health Check${RESET}\n"
-printf "VPS:    ${CYAN}%s${RESET}\n" "$VPS_HOST"
+printf "Pi:     ${CYAN}%s${RESET}\n" "$VPS_HOST"
 printf "Time:   %s\n\n" "$(date '+%Y-%m-%d %H:%M:%S')"
 
 if ! ssh -o ConnectTimeout="$SSH_TIMEOUT" -o BatchMode=yes "$VPS_HOST" "echo ok" > /dev/null 2>&1; then
     check_fail "SSH connectivity" "Cannot connect to $VPS_HOST"
-    printf "\n${RED}${BOLD}Cannot reach VPS -- aborting${RESET}\n\n"
+    printf "\n${RED}${BOLD}Cannot reach Pi -- aborting${RESET}\n\n"
 
     prev_status="OK"
     [ -f "$STATE_FILE" ] && prev_status=$(cat "$STATE_FILE")
@@ -99,7 +99,7 @@ if ! ssh -o ConnectTimeout="$SSH_TIMEOUT" -o BatchMode=yes "$VPS_HOST" "echo ok"
         send_telegram "🔴 <b>BriefTube DB Health Check</b>
 $(date '+%Y-%m-%d %H:%M:%S')
 
-Cannot SSH to VPS ($VPS_HOST).
+Cannot SSH to Pi ($VPS_HOST).
 All database checks skipped."
     fi
     exit 1
@@ -109,9 +109,9 @@ fi
 
 # Copy query script to VPS and run it
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-scp -o ConnectTimeout="$SSH_TIMEOUT" -q "${SCRIPT_DIR}/db-query.py" "$VPS_HOST":/home/brieftube/app/worker/_db_health.py 2>/dev/null
+scp -o ConnectTimeout="$SSH_TIMEOUT" -q "${SCRIPT_DIR}/db-query.py" "$VPS_HOST":/home/pi/brieftube/worker/_db_health.py 2>/dev/null
 
-METRICS_JSON=$(ssh -o ConnectTimeout="$SSH_TIMEOUT" -o BatchMode=yes "$VPS_HOST" 'cd /home/brieftube/app/worker && source venv/bin/activate && TOKEN=$(infisical login --method=universal-auth --client-id="${INFISICAL_UNIVERSAL_AUTH_CLIENT_ID}" --client-secret="${INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET}" --plain --silent 2>/dev/null) && infisical run --token="${TOKEN}" --projectId=089a5c93-5c51-4a24-8bf0-9d8bceb3a114 --env=prod --path=/worker -- python3 _db_health.py && rm -f _db_health.py 2>/dev/null' 2>/dev/null)
+METRICS_JSON=$(ssh -o ConnectTimeout="$SSH_TIMEOUT" -o BatchMode=yes "$VPS_HOST" 'source /home/pi/.brieftube-secrets.env 2>/dev/null; cd /home/pi/brieftube/worker && source venv/bin/activate && TOKEN=$(infisical login --method=universal-auth --client-id="${INFISICAL_UNIVERSAL_AUTH_CLIENT_ID}" --client-secret="${INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET}" --plain --silent 2>/dev/null) && infisical run --token="${TOKEN}" --projectId=089a5c93-5c51-4a24-8bf0-9d8bceb3a114 --env=prod --path=/worker -- python3 _db_health.py && rm -f _db_health.py 2>/dev/null' 2>/dev/null)
 # Extract only the JSON line
 METRICS_JSON=$(echo "$METRICS_JSON" | grep '^{' | tail -1)
 
@@ -237,7 +237,7 @@ $timestamp
 
 Database health check found critical issues:
 $(echo -e "$DETAIL_LOG")
-Check: ssh brieftube-vps"
+Check: ssh brieftube-pi"
     echo "[$timestamp] ALERT: Critical DB issues detected"
 elif [ "$current_status" != "CRITICAL" ] && [ "$prev_status" = "CRITICAL" ]; then
     send_telegram "🟢 <b>BriefTube DB RECOVERED</b>
