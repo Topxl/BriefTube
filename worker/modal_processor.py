@@ -36,7 +36,8 @@ brieftube_image = (
         "psutil>=5.9.0",
     )
     # Add worker source code into the image at build time (Modal 1.x API)
-    .add_local_dir("worker", remote_path="/worker")
+    # Exclude logs and cache files that change during build
+    .add_local_dir("worker", remote_path="/worker", ignore=["*.log", "*.log.*", "*.pyc", "__pycache__", "venv/", "tests/"])
 )
 
 

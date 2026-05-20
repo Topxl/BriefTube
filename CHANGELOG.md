@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-05-20
+
+FIX(modal): exclude *.log and cache files from add_local_dir to prevent build failure when worker.log is modified during Modal deploy
+
 ## 2026-05-18
 
 CHORE: migrate monitoring scripts (health-check, db-health-check, uptime-monitor) from VPS (brieftube-vps) to Raspberry Pi (brieftube-pi)
