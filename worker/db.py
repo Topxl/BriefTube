@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 import httpx
 from supabase import create_client, Client, ClientOptions
 
-from config import SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, FREE_CHANNELS_LIMIT
+from config import SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 
 logger = logging.getLogger(__name__)
 
@@ -574,15 +574,25 @@ def get_subscriber_languages(channel_id: str) -> list[dict]:
     user_ids = [s["user_id"] for s in subs.data]
     profiles = (
         sb.table("profiles")
-        .select("id, preferred_language, tts_voice, summary_length_pref, summary_style, summary_custom_instructions")
+        .select("id, preferred_language, tts_voice, subscription_status, trial_ends_at, summary_length_pref, summary_style, summary_custom_instructions")
         .in_("id", user_ids)
         .execute()
     )
 
-    # Build a lookup: user_id → profile
+    now_dt = datetime.now(timezone.utc)
+
+    # Build a lookup: user_id → profile (entitled users only)
     profile_by_id: dict[str, dict] = {}
     for p in (profiles.data or []):
-        profile_by_id[p["id"]] = p
+        status = p.get("subscription_status") or "free"
+        trial_str = p.get("trial_ends_at")
+        if status == "active":
+            profile_by_id[p["id"]] = p
+        elif status == "free" and trial_str:
+            trial_dt = datetime.fromisoformat(trial_str.replace("Z", "+00:00"))
+            if trial_dt > now_dt:
+                profile_by_id[p["id"]] = p
+        # else: expired trial or cancelled/past_due → skip
 
     # Build a lookup: user_id → subscription (channel-level overrides)
     sub_by_user: dict[str, dict] = {}
@@ -643,7 +653,6 @@ def create_deliveries_for_video(video_id: str, channel_id: str, language: str = 
 
     now_dt = datetime.now(timezone.utc)
     fully_entitled_ids: list[str] = []
-    trial_expired_users: list[dict] = []
 
     for p in (profiles.data or []):
         if (p.get("preferred_language") or "en") != language:
@@ -653,39 +662,14 @@ def create_deliveries_for_video(video_id: str, channel_id: str, language: str = 
 
         if status == "active":
             fully_entitled_ids.append(p["id"])
-        elif trial_str:
+        elif status == "free" and trial_str:
             trial_dt = datetime.fromisoformat(trial_str.replace("Z", "+00:00"))
             if trial_dt > now_dt:
-                fully_entitled_ids.append(p["id"])  # within trial
-            else:
-                trial_expired_users.append(p)  # trial expired — check channel count
-        else:
-            fully_entitled_ids.append(p["id"])  # permanent free plan, no trial
-
-    # For expired-trial users: only deliver if within their free channel limit
-    if trial_expired_users:
-        from collections import Counter
-        expired_ids = [p["id"] for p in trial_expired_users]
-        sub_counts_raw = (
-            sb.table("subscriptions")
-            .select("user_id")
-            .eq("active", True)
-            .in_("user_id", expired_ids)
-            .execute()
-        )
-        sub_counts: Counter[str] = Counter(
-            s["user_id"] for s in (sub_counts_raw.data or [])
-        )
-        for p in trial_expired_users:
-            max_ch = p.get("max_channels") or FREE_CHANNELS_LIMIT
-            count = sub_counts.get(p["id"], 0)
-            if count <= max_ch:
                 fully_entitled_ids.append(p["id"])
             else:
-                logger.info(
-                    f"Skipping delivery for {p['id']}: trial expired, "
-                    f"{count} channels > limit {max_ch}"
-                )
+                logger.info(f"Skipping delivery for {p['id']}: trial expired")
+        else:
+            logger.info(f"Skipping delivery for {p['id']}: not entitled (status={status})")
 
     matching_ids = fully_entitled_ids
     if not matching_ids:
