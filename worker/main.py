@@ -290,7 +290,10 @@ async def rss_loop(alert_system: MonitoringAlert):
 
     while True:
         try:
-            new = await asyncio.to_thread(rss_scanner.scan_all_channels)
+            new = await asyncio.wait_for(
+                asyncio.to_thread(rss_scanner.scan_all_channels),
+                timeout=600,  # 10 min max — if scan hangs, unblock the loop
+            )
             stats.record_rss_scan(new)
             if new:
                 logger.info(f"RSS: {new} new videos queued")
@@ -298,6 +301,8 @@ async def rss_loop(alert_system: MonitoringAlert):
                     f"📹 **{new} new videos** found and queued for processing",
                     level="SUCCESS"
                 )
+        except asyncio.TimeoutError:
+            logger.error("RSS scan timed out after 600s — skipping this cycle")
         except Exception as e:
             error_msg = str(e)
             logger.error(f"RSS loop error: {error_msg}")

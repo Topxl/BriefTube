@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-05-25
+
+FIX(worker): add timeout guards to RSS scanner to prevent scan loop from hanging indefinitely on blocked TCP connections — 3 layers: per-feed HTTP timeout (30s), total scan timeout (180s via as_completed), loop-level asyncio.wait_for (600s)
+
 ## 2026-05-20
 
 FIX(modal): exclude *.log and cache files from add_local_dir to prevent build failure when worker.log is modified during Modal deploy

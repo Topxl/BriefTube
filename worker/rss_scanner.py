@@ -4,9 +4,10 @@ import calendar
 import logging
 import re
 import time
+import urllib.request
 from datetime import datetime, timezone
 import feedparser
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FuturesTimeoutError
 
 import db
 from content_filter import is_music_title as is_likely_music
@@ -38,6 +39,8 @@ def extract_video_id(url: str) -> str | None:
 
 
 MAX_VIDEO_AGE_DAYS = 15  # Ignore videos published more than this many days ago
+_RSS_FETCH_TIMEOUT = 30   # seconds per feed — prevents hung TCP from blocking a thread
+_RSS_SCAN_TIMEOUT = 180   # seconds total for all feeds in one scan cycle
 
 
 def fetch_channel_videos(channel_id: str) -> list[dict]:
@@ -48,7 +51,10 @@ def fetch_channel_videos(channel_id: str) -> list[dict]:
       from weeks ago being re-queued when a new subscriber joins the channel.
     """
     rss_url = get_rss_url(channel_id)
-    feed = feedparser.parse(rss_url)
+    req = urllib.request.Request(rss_url)
+    with urllib.request.urlopen(req, timeout=_RSS_FETCH_TIMEOUT) as response:
+        content = response.read()
+    feed = feedparser.parse(content)
     now = time.time()
     max_age_cutoff = now - MAX_VIDEO_AGE_DAYS * 86400
 
@@ -116,12 +122,16 @@ def scan_all_channels():
     channel_videos: dict[str, list[dict]] = {}
     with ThreadPoolExecutor(max_workers=20) as executor:
         futures = {executor.submit(fetch_channel_videos, ch): ch for ch in valid_channel_ids}
-        for future in as_completed(futures):
-            ch = futures[future]
-            try:
-                channel_videos[ch] = future.result()
-            except Exception as e:
-                logger.error(f"Error fetching RSS for channel {ch}: {e}")
+        try:
+            for future in as_completed(futures, timeout=_RSS_SCAN_TIMEOUT):
+                ch = futures[future]
+                try:
+                    channel_videos[ch] = future.result()
+                except Exception as e:
+                    logger.error(f"Error fetching RSS for channel {ch}: {e}")
+        except FuturesTimeoutError:
+            timed_out = [ch for fut, ch in futures.items() if not fut.done()]
+            logger.warning(f"RSS scan timeout: {len(timed_out)} channels skipped (did not respond in {_RSS_SCAN_TIMEOUT}s)")
 
     # Detect first-time channels: channels where NONE of their current RSS videos
     # are in known_video_ids. On first scan, the full 15-day RSS backlog looks
