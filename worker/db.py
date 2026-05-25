@@ -908,51 +908,69 @@ def cleanup_undeliverable_deliveries() -> int:
     sb = get_client()
     cleaned = 0
 
-    # Skipped videos → DELETE silently (expected behaviour, not an error)
-    # Only look at recently processed videos — older ones are already cleaned up
-    recent_cutoff = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
-
-    skipped_videos = (
-        sb.table("processed_videos")
-        .select("video_id")
-        .eq("status", "skipped")
-        .gte("processed_at", recent_cutoff)
+    # Start from pending deliveries — smaller set than all processed_videos.
+    # Avoids the old approach of fetching all skipped/failed videos (no date limit
+    # needed since we work from the delivery side).
+    all_pending = (
+        sb.table("deliveries")
+        .select("id, video_id")
+        .eq("status", "pending")
         .execute()
+        .data or []
     )
-    if skipped_videos.data:
-        skipped_ids = [v["video_id"] for v in skipped_videos.data]
-        for i in range(0, len(skipped_ids), 100):
-            batch = skipped_ids[i : i + 100]
-            res = (
-                sb.table("deliveries")
-                .delete()
-                .in_("status", ["pending", "failed"])
-                .in_("video_id", batch)
-                .execute()
-            )
-            cleaned += len(res.data or [])
+    if not all_pending:
+        return 0
 
-    # Failed videos → mark as failed (real processing error)
-    failed_videos = (
+    pending_video_ids = list({d["video_id"] for d in all_pending})
+    pending_by_video: dict[str, list[str]] = {}
+    for d in all_pending:
+        pending_by_video.setdefault(d["video_id"], []).append(d["id"])
+
+    # Fetch the status of every video that has a pending delivery
+    video_status_rows = (
         sb.table("processed_videos")
-        .select("video_id")
-        .eq("status", "failed")
-        .gte("processed_at", recent_cutoff)
+        .select("video_id, status, audio_url, processed_at")
+        .in_("video_id", pending_video_ids)
         .execute()
+        .data or []
     )
-    if failed_videos.data:
-        failed_ids = [v["video_id"] for v in failed_videos.data]
-        # Process in batches of 100 to stay within PostgREST limits
-        for i in range(0, len(failed_ids), 100):
-            batch = failed_ids[i : i + 100]
-            res = (
-                sb.table("deliveries")
-                .update({"status": "failed"})
-                .eq("status", "pending")
-                .in_("video_id", batch)
-                .execute()
-            )
-            cleaned += len(res.data or [])
+    video_info: dict[str, dict] = {}
+    for v in video_status_rows:
+        # Keep the row with audio_url if multiple language rows exist for the same video_id
+        existing = video_info.get(v["video_id"])
+        if not existing or (v.get("audio_url") and not existing.get("audio_url")):
+            video_info[v["video_id"]] = v
+
+    stale_cutoff = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+    to_delete: list[str] = []
+    to_fail: list[str] = []
+
+    for vid, delivery_ids in pending_by_video.items():
+        info = video_info.get(vid)
+        if not info:
+            continue
+        vstatus = info.get("status")
+        if vstatus == "skipped":
+            to_delete.extend(delivery_ids)
+        elif vstatus == "failed":
+            to_fail.extend(delivery_ids)
+        elif vstatus == "completed" and not info.get("audio_url"):
+            # Completed but no audio and stale — outside delivery window, will never be sent
+            if (info.get("processed_at") or "") < stale_cutoff:
+                to_delete.extend(delivery_ids)
+
+    for i in range(0, len(to_delete), 100):
+        res = sb.table("deliveries").delete().in_("id", to_delete[i:i+100]).execute()
+        cleaned += len(res.data or [])
+
+    for i in range(0, len(to_fail), 100):
+        res = (
+            sb.table("deliveries")
+            .update({"status": "failed"})
+            .in_("id", to_fail[i:i+100])
+            .execute()
+        )
+        cleaned += len(res.data or [])
 
     # Disconnected platform connections → deliveries for those platforms can never be sent
     disconnected_conns = (

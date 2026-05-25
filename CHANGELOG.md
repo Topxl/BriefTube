@@ -2,6 +2,7 @@
 
 ## 2026-05-25
 
+FIX(worker): rewrite cleanup_undeliverable_deliveries to start from pending deliveries instead of video table — removes 30-day restriction so old stuck deliveries (skipped/failed videos, completed with no audio older than 7 days) are always cleaned up
 FIX(worker): block deliveries to expired-trial users — remove free-plan fallback in create_deliveries_for_video (trial expired = no delivery, regardless of channel count), add entitlement filter to get_subscriber_languages so expired users don't influence language processing, deactivate subscriptions for 1 user whose trial expired May 22
 FIX(worker): add timeout guards to RSS scanner to prevent scan loop from hanging indefinitely on blocked TCP connections — 3 layers: per-feed HTTP timeout (30s), total scan timeout (180s via as_completed), loop-level asyncio.wait_for (600s)
 
