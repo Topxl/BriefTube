@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-05-26
+
+FIX(worker): fix file descriptor leak in RSS scanner — add `Connection: close` header to urlopen requests to prevent HTTP keep-alive sockets from accumulating in Python's global urllib pool (1018/1024 FDs were open sockets after 16h of 5-min scans)
+FIX(vps): increase LimitNOFILE from 1024 to 65536 in brieftube-worker-pi.service as safety net against future FD exhaustion
+
 ## 2026-05-25
 
 FIX(worker): rewrite cleanup_undeliverable_deliveries to start from pending deliveries instead of video table — removes 30-day restriction so old stuck deliveries (skipped/failed videos, completed with no audio older than 7 days) are always cleaned up

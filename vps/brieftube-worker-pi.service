@@ -11,6 +11,7 @@ EnvironmentFile=/home/pi/.brieftube-secrets.env
 ExecStart=/home/pi/brieftube/vps/run-worker-pi.sh
 Restart=on-failure
 RestartSec=10
+LimitNOFILE=65536
 StandardOutput=append:/home/pi/brieftube/worker/worker.log
 StandardError=append:/home/pi/brieftube/worker/worker.log
 

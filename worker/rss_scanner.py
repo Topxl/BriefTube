@@ -51,7 +51,7 @@ def fetch_channel_videos(channel_id: str) -> list[dict]:
       from weeks ago being re-queued when a new subscriber joins the channel.
     """
     rss_url = get_rss_url(channel_id)
-    req = urllib.request.Request(rss_url)
+    req = urllib.request.Request(rss_url, headers={"Connection": "close"})
     with urllib.request.urlopen(req, timeout=_RSS_FETCH_TIMEOUT) as response:
         content = response.read()
     feed = feedparser.parse(content)
