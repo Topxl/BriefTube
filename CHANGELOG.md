@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-05-28
+
+FIX(worker): fix Modal dispatch — replace local import with modal.Function.lookup() so the worker connects to the deployed app instead of an unhydrated local object
+
 ## 2026-05-26
 
 FIX(worker): fix file descriptor leak in RSS scanner — add `Connection: close` header to urlopen requests to prevent HTTP keep-alive sockets from accumulating in Python's global urllib pool (1018/1024 FDs were open sockets after 16h of 5-min scans)

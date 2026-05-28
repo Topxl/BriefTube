@@ -24,8 +24,11 @@ import psutil
 from config import RSS_CHECK_INTERVAL, TELEGRAM_BOT_TOKEN, LOG_BOT_TOKEN, SUPABASE_URL, ADMIN_TELEGRAM_CHAT_ID, MAX_CONCURRENT_VIDEOS, MAX_CPU_PERCENT, MAX_LOAD_PER_CPU, MIN_FREE_RAM_MB, CPU_CHECK_INTERVAL, HEALTH_PORT, WORKER_INSTANCE, APP_URL, WORKER_API_SECRET, PUSH_NOTIFY_SECRET
 
 # Modal.com compute offloading — optional, falls back to local if unavailable
+# Use Function.lookup() to connect to the *deployed* app instead of importing
+# the local object (which is unhydrated and always fails without modal serve).
 try:
-    from modal_processor import compute_video as _modal_compute_video
+    import modal as _modal
+    _modal_compute_video = _modal.Function.lookup("brieftube", "compute_video")
     _MODAL_ENABLED = True
 except Exception:
     _MODAL_ENABLED = False
