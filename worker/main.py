@@ -1294,6 +1294,8 @@ async def delivery_loop(alert_system: MonitoringAlert):
                     else:
                         deliveries = []  # Give up this cycle, retry next iteration
                 except Exception as e:
+                    if _is_quota_exceeded(e):
+                        raise  # Propagate immediately — no point retrying a quota block
                     if attempt < max_retries - 1:
                         logger.warning(f"Delivery fetch failed (attempt {attempt + 1}/{max_retries}): {e}")
                         db.reset_client()  # Force reconnect before retry
