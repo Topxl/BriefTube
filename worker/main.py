@@ -1198,9 +1198,10 @@ async def delivery_loop(alert_system: MonitoringAlert):
     global _delivery_last_beat, _delivery_restart_backoff
     logger.info("Telegram Deliverer started")
 
-    _cleanup_counter = 0       # Run delivery cleanup every N cycles
-    _recover_counter = 0       # Run delivery recovery every N cycles
-    _audio_cleanup_counter = 0  # Run audio file cleanup every N cycles
+    _cleanup_counter = 0           # Run delivery cleanup every N cycles
+    _recover_counter = 0           # Run delivery recovery every N cycles
+    _audio_cleanup_counter = 0     # Run audio file cleanup every N cycles
+    _channel_videos_cleanup_counter = 0  # Run channel_videos cleanup every N cycles
     # Run first cleanup 5min after startup, then every 2h.
     # Using epoch-0 ensures the first check (after 5min warmup) triggers immediately.
     _last_r2_cleanup = datetime.now(timezone.utc) - timedelta(hours=2) + timedelta(minutes=5)
@@ -1235,6 +1236,19 @@ async def delivery_loop(alert_system: MonitoringAlert):
                     await asyncio.to_thread(db.recover_failed_deliveries)
                 except Exception as e:
                     logger.warning(f"Recovery error (non-fatal): {e}")
+
+            # Periodically clean up old channel_videos rows (discovery inbox).
+            # Rows older than 30 days are no longer needed; without cleanup the
+            # table grows by ~6k rows/day indefinitely.
+            _channel_videos_cleanup_counter += 1
+            if _channel_videos_cleanup_counter >= 240:  # every ~1h (240 × 15s sleep)
+                _channel_videos_cleanup_counter = 0
+                try:
+                    deleted = await asyncio.to_thread(db.cleanup_old_channel_videos, 30)
+                    if deleted:
+                        logger.info(f"channel_videos cleanup: deleted {deleted} rows > 30 days")
+                except Exception as e:
+                    logger.warning(f"channel_videos cleanup error (non-fatal): {e}")
 
             # Get pending deliveries with retry on connection errors.
             # wait_for(60s) prevents an indefinite hang if the DB connection is stuck

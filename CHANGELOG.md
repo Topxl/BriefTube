@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-05-29
+
+FIX(worker): reduce Supabase egress ~3 GB/month — flip get_pending_deliveries() to query pending deliveries first (exits immediately when queue empty, saves ~2.1 GB/month vs loading 1 000 completed video_ids every 15s), replace get_all_known_video_ids() with targeted filter_known_video_ids() that checks only RSS-discovered IDs (~2 000 vs 47k rows, saves ~800 MB/month), add hourly cleanup_old_channel_videos() to purge channel_videos rows > 30 days (immediate purge removed 210k stale rows)
+
 ## 2026-05-28
 
 FIX(worker): fix Modal dispatch — replace local import with modal.Function.lookup() so the worker connects to the deployed app instead of an unhydrated local object

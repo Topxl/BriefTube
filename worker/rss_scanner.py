@@ -107,10 +107,6 @@ def scan_all_channels():
     for ch in invalid:
         logger.warning(f"Skipping invalid channel_id (not a UC… ID): {ch!r}")
 
-    # Load known video IDs once — avoids 3000+ individual DB queries per scan
-    known_video_ids = db.get_all_known_video_ids()
-    logger.info(f"Loaded {len(known_video_ids)} known video IDs into memory")
-
     # Load recent titles per channel (last 2h) for re-upload deduplication
     # Channels sometimes delete + re-upload the same video → new video_id, same title
     recent_titles_by_channel = db.get_recent_titles_by_channel(hours=2)
@@ -132,6 +128,17 @@ def scan_all_channels():
         except FuturesTimeoutError:
             timed_out = [ch for fut, ch in futures.items() if not fut.done()]
             logger.warning(f"RSS scan timeout: {len(timed_out)} channels skipped (did not respond in {_RSS_SCAN_TIMEOUT}s)")
+
+    # Check only the video IDs actually found in this scan cycle — avoids loading
+    # the entire processed_videos table (47k+ rows) when a targeted IN() query on
+    # ~2 000 IDs is ~99% cheaper in egress.
+    all_discovered_ids = [v["video_id"] for vids in channel_videos.values() for v in vids]
+    known_video_ids: set[str] = db.filter_known_video_ids(all_discovered_ids)
+    logger.info(
+        f"Checked {len(all_discovered_ids)} RSS video IDs — "
+        f"{len(known_video_ids)} already known, "
+        f"{len(all_discovered_ids) - len(known_video_ids)} potentially new"
+    )
 
     # Detect first-time channels: channels where NONE of their current RSS videos
     # are in known_video_ids. On first scan, the full 15-day RSS backlog looks

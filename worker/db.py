@@ -167,6 +167,32 @@ def get_all_known_video_ids() -> set[str]:
     return known
 
 
+def filter_known_video_ids(video_ids: list[str]) -> set[str]:
+    """Return the subset of video_ids already present in processed_videos.
+
+    Cheaper alternative to get_all_known_video_ids() when only a bounded set
+    of IDs needs checking (e.g. the videos found in the current RSS scan cycle).
+    A typical scan finds ≤15 videos per channel; checking ~2 000 targeted IDs
+    is ~99% less egress than loading all 47k+ rows unconditionally.
+    """
+    if not video_ids:
+        return set()
+    sb = get_client()
+    known: set[str] = set()
+    # IN() batched at 500 to stay within PostgREST URL length limits
+    for i in range(0, len(video_ids), 500):
+        batch = video_ids[i:i + 500]
+        res = (
+            sb.table("processed_videos")
+            .select("video_id")
+            .in_("video_id", batch)
+            .execute()
+        )
+        for row in (res.data or []):
+            known.add(row["video_id"])
+    return known
+
+
 def get_recent_titles_by_channel(hours: int = 2) -> dict[str, set[str]]:
     """Return {channel_id: {title_lower, ...}} for videos seen in the last N hours.
 
@@ -776,40 +802,38 @@ def create_deliveries_for_video(video_id: str, channel_id: str, language: str = 
 def get_pending_deliveries(limit: int = 20) -> list[dict]:
     """Get pending deliveries for completed videos.
 
-    Strategy: start from completed videos (source of truth) then find pending
-    deliveries for them. This avoids the old approach of taking the oldest
-    pending deliveries (which could all be for not-yet-processed videos,
-    blocking newer deliveries for recently completed ones indefinitely).
+    Strategy: query pending deliveries first (fast, indexed on status).
+    When the queue is idle (0 pending), this returns immediately with a single
+    cheap DB call instead of first loading 1 000 completed video_ids unconditionally.
     """
     sb = get_client()
 
-    # 1. Get recently completed video IDs — deliveries can only be sent for these
-    completed_res = (
-        sb.table("processed_videos")
-        .select("video_id")
-        .eq("status", "completed")
-        .order("processed_at", desc=True)
-        .limit(1000)
-        .execute()
-    )
-    completed_ids_list = [r["video_id"] for r in (completed_res.data or [])]
-    if not completed_ids_list:
-        return []
-
-    completed_ids = set(completed_ids_list)
-
-    # 2. Fetch pending deliveries for those completed videos (oldest first)
+    # 1. Fetch pending deliveries (oldest first) — fast exit when queue is empty
     raw_deliveries = (
         sb.table("deliveries")
         .select("id, user_id, video_id, language, platform, audio_required")
         .eq("status", "pending")
-        .in_("video_id", completed_ids_list)
         .order("created_at")
         .limit(limit * 5)
         .execute()
         .data or []
     )
 
+    if not raw_deliveries:
+        return []
+
+    # 2. Filter to only deliveries whose video is actually completed
+    candidate_video_ids = list({d["video_id"] for d in raw_deliveries})
+    completed_res = (
+        sb.table("processed_videos")
+        .select("video_id")
+        .eq("status", "completed")
+        .in_("video_id", candidate_video_ids)
+        .execute()
+    )
+    completed_ids = {r["video_id"] for r in (completed_res.data or [])}
+
+    raw_deliveries = [d for d in raw_deliveries if d["video_id"] in completed_ids]
     if not raw_deliveries:
         return []
 
@@ -1739,6 +1763,34 @@ def get_stale_r2_urls(days: int = 7, limit: int = 100) -> list[dict]:
     unsafe_ids = {r["video_id"] for r in (unsafe_res.data or [])}
 
     return [r for r in candidates if r["video_id"] not in unsafe_ids][:limit]
+
+
+def cleanup_old_channel_videos(days: int = 30) -> int:
+    """Delete channel_videos rows older than `days` days.
+
+    channel_videos is a discovery inbox — once a video is in processed_videos
+    the inbox row is no longer needed. Without cleanup the table grows by ~6k
+    rows/day indefinitely, bloating storage.
+    Deletes in batches of 500 to avoid long-running transactions.
+    Returns the total number of rows deleted.
+    """
+    sb = get_client()
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    deleted = 0
+    while True:
+        # Supabase REST deletes return the affected rows; batch to stay within limits
+        res = (
+            sb.table("channel_videos")
+            .delete()
+            .lt("created_at", cutoff)
+            .limit(500)
+            .execute()
+        )
+        batch = len(res.data or [])
+        deleted += batch
+        if batch < 500:
+            break
+    return deleted
 
 
 def clear_audio_url(video_id: str, language: str) -> None:
