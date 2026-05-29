@@ -2,6 +2,7 @@
 
 ## 2026-05-29
 
+FEATURE(worker): add psycopg2 direct-PostgreSQL fallback (db_pg.py) to bypass PostgREST egress quota (HTTP 402) — when SUPABASE_DB_URL is set, db.py swaps all functions for raw SQL implementations over the session pooler (aws-1-us-west-1.pooler.supabase.com:5432); lets the worker keep processing + delivering during a quota block
 FIX(worker): silence log spam during Supabase quota block — detect exceed_egress_quota (HTTP 402) in all loop error handlers (RSS, Processor, Delivery, WebSub, critical monitor) and sleep 30min instead of retrying every 10-15s; also suppress individual critical monitor warnings for quota errors
 FIX(db): VACUUM FULL processed_videos + channel_videos freed 182 MB (455 MB → 273 MB, 55% of free plan limit); nulled 7 719 stale transcript_text rows (108 MB → 8 MB)
 FIX(worker): reduce Supabase egress ~3 GB/month — flip get_pending_deliveries() to query pending deliveries first (exits immediately when queue empty, saves ~2.1 GB/month vs loading 1 000 completed video_ids every 15s), replace get_all_known_video_ids() with targeted filter_known_video_ids() that checks only RSS-discovered IDs (~2 000 vs 47k rows, saves ~800 MB/month), add hourly cleanup_old_channel_videos() to purge channel_videos rows > 30 days (immediate purge removed 210k stale rows)

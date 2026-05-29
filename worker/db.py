@@ -1803,3 +1803,18 @@ def clear_audio_url(video_id: str, language: str) -> None:
         .eq("language", language)
         .execute()
     )
+
+
+# ── Direct PostgreSQL override ──────────────────────────────────
+# When SUPABASE_DB_URL is set, replace all public functions with psycopg2
+# implementations that bypass the PostgREST quota enforcement layer.
+# All callers (main.py, rss_scanner.py) do `import db; db.fn()` so
+# overriding names in this module's namespace is sufficient.
+from config import SUPABASE_DB_URL as _SUPABASE_DB_URL  # noqa: E402
+
+if _SUPABASE_DB_URL:
+    try:
+        from db_pg import *  # noqa: F401, F403, E402
+        logger.info("db: psycopg2 direct connection active — PostgREST bypassed")
+    except Exception as _pg_err:
+        logger.warning(f"db_pg load failed ({_pg_err}) — using supabase-py")

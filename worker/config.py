@@ -17,6 +17,9 @@ COOKIES_DIR.mkdir(exist_ok=True)
 # Supabase
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+# Direct PostgreSQL connection (bypasses PostgREST quota enforcement)
+# Format: postgresql://postgres.[ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres
+SUPABASE_DB_URL = os.getenv("SUPABASE_DB_URL", "")
 
 # Telegram — main public bot (user-facing)
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
