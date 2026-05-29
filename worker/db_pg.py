@@ -376,7 +376,7 @@ def get_telegram_chat_ids_for_video(video_id: str) -> list[str]:
     user_ids = [s["user_id"] for s in subs]
     conns = _q("""
         SELECT external_id FROM platform_connections
-        WHERE user_id = ANY(%s) AND platform='telegram' AND connected=true
+        WHERE user_id = ANY(%s::uuid[]) AND platform='telegram' AND connected=true
     """, (user_ids,))
     return [c["external_id"] for c in conns]
 
@@ -494,7 +494,7 @@ def get_platform_connections_for_users(user_ids: list[str]) -> list[dict]:
         return []
     return _q("""
         SELECT user_id, platform, external_id, credentials
-        FROM platform_connections WHERE user_id = ANY(%s) AND connected=true
+        FROM platform_connections WHERE user_id = ANY(%s::uuid[]) AND connected=true
     """, (user_ids,))
 
 
@@ -534,7 +534,7 @@ def create_deliveries_for_video(video_id: str, channel_id: str, language: str = 
 
     existing = _q("""
         SELECT user_id, COALESCE(platform,'telegram') AS platform
-        FROM deliveries WHERE video_id=%s AND language=%s AND user_id=ANY(%s)
+        FROM deliveries WHERE video_id=%s AND language=%s AND user_id=ANY(%s::uuid[])
     """, (video_id, language, user_ids))
     existing_pairs = {(r["user_id"], r["platform"]) for r in existing}
 
@@ -545,7 +545,7 @@ def create_deliveries_for_video(video_id: str, channel_id: str, language: str = 
 
     connections = _q("""
         SELECT user_id, platform FROM platform_connections
-        WHERE user_id=ANY(%s) AND connected=true
+        WHERE user_id=ANY(%s::uuid[]) AND connected=true
     """, (ids_for_conn,)) if ids_for_conn else []
 
     to_insert: list[tuple] = []
@@ -608,11 +608,11 @@ def get_pending_deliveries(limit: int = 20) -> list[dict]:
             deduped.append(d)
 
     user_ids = list({d["user_id"] for d in deduped})
-    profiles = _q("SELECT id, tts_voice FROM profiles WHERE id=ANY(%s)", (user_ids,))
+    profiles = _q("SELECT id, tts_voice FROM profiles WHERE id=ANY(%s::uuid[])", (user_ids,))
     profile_map = {p["id"]: p for p in profiles}
     conns = _q("""
         SELECT user_id, platform, external_id, credentials
-        FROM platform_connections WHERE user_id=ANY(%s) AND connected=true
+        FROM platform_connections WHERE user_id=ANY(%s::uuid[]) AND connected=true
     """, (user_ids,))
     conn_map = {(c["user_id"], c["platform"]): c for c in conns}
 
