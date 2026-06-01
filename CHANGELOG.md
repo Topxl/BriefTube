@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-06-02
+
+FIX(worker): R2 proxy off by default — Cloudflare reachability restored on the Pi network, so R2_PROXY_HTTP no longer falls back to YOUTUBE_PROXY_HTTP (was forcing all R2 uploads through the residential proxy unnecessarily); set R2_PROXY_HTTP explicitly to re-enable during a future Cloudflare block
+
 ## 2026-06-01
 
 FIX(worker): route R2 uploads through HTTP proxy when R2_PROXY_HTTP is set (falls back to YOUTUBE_PROXY_HTTP) — workaround for a network/ISP block of the Cloudflare IP range (TCP 443 to 172.64.0.0/13 blackholed while ICMP + non-CF hosts work); lets audio uploads + deliveries continue from an unblocked residential proxy IP
