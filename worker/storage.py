@@ -26,24 +26,35 @@ from config import (
     R2_SECRET_ACCESS_KEY,
     R2_BUCKET_NAME,
     R2_PUBLIC_URL,
+    R2_PROXY_HTTP,
 )
 
 logger = logging.getLogger(__name__)
 
 
 def _client():
-    """Return a boto3 S3 client pointed at Cloudflare R2."""
+    """Return a boto3 S3 client pointed at Cloudflare R2.
+
+    When R2_PROXY_HTTP is set, all R2 traffic is routed through that HTTP proxy.
+    This is a workaround for networks that block the Cloudflare IP range
+    (e.g. an ISP/router blackholing TCP 443 to 172.64.0.0/13) — the proxy exits
+    from an unblocked residential IP. Costs proxy bandwidth, so only enable while
+    the underlying network block is active.
+    """
     if not R2_ACCOUNT_ID or not R2_ACCESS_KEY_ID or not R2_SECRET_ACCESS_KEY:
         raise RuntimeError(
             "Cloudflare R2 credentials not configured. "
             "Set R2_ACCOUNT_ID, R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY in .env"
         )
+    config_kwargs = {"signature_version": "s3v4"}
+    if R2_PROXY_HTTP:
+        config_kwargs["proxies"] = {"http": R2_PROXY_HTTP, "https": R2_PROXY_HTTP}
     return boto3.client(
         "s3",
         endpoint_url=f"https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com",
         aws_access_key_id=R2_ACCESS_KEY_ID,
         aws_secret_access_key=R2_SECRET_ACCESS_KEY,
-        config=Config(signature_version="s3v4"),
+        config=Config(**config_kwargs),
         region_name="auto",
     )
 

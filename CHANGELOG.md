@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-06-01
+
+FIX(worker): route R2 uploads through HTTP proxy when R2_PROXY_HTTP is set (falls back to YOUTUBE_PROXY_HTTP) — workaround for a network/ISP block of the Cloudflare IP range (TCP 443 to 172.64.0.0/13 blackholed while ICMP + non-CF hosts work); lets audio uploads + deliveries continue from an unblocked residential proxy IP
+
 ## 2026-05-29
 
 FEATURE(worker): add psycopg2 direct-PostgreSQL fallback (db_pg.py) to bypass PostgREST egress quota (HTTP 402) — when SUPABASE_DB_URL is set, db.py swaps all functions for raw SQL implementations over the session pooler (aws-1-us-west-1.pooler.supabase.com:5432); lets the worker keep processing + delivering during a quota block

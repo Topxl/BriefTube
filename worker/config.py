@@ -37,6 +37,9 @@ R2_BUCKET_NAME = os.getenv("R2_BUCKET_NAME", "brieftube-audio")
 # Public URL of the bucket (R2.dev domain or custom domain, no trailing slash)
 # e.g. "https://pub-xxxx.r2.dev" or "https://audio.brief-tube.com"
 R2_PUBLIC_URL = os.getenv("R2_PUBLIC_URL", "")
+# Optional HTTP proxy for R2 traffic — workaround when the local network blocks
+# the Cloudflare IP range. Falls back to YOUTUBE_PROXY_HTTP if not set explicitly.
+R2_PROXY_HTTP = os.getenv("R2_PROXY_HTTP", "") or os.getenv("YOUTUBE_PROXY_HTTP", "")
 
 # Plan limits (must match SiteConfig in src/site-config.ts)
 FREE_CHANNELS_LIMIT = int(os.getenv("FREE_CHANNELS_LIMIT", "5"))
