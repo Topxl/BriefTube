@@ -38,22 +38,40 @@ def _get_pool() -> psycopg2.pool.ThreadedConnectionPool:
 
 
 def reset_client() -> None:
-    global _pool
-    if _pool and not _pool.closed:
-        _pool.closeall()
-    _pool = None
-    logger.info("psycopg2 pool reset")
+    """No-op for direct psycopg2.
+
+    The supabase-py code path calls reset_client() after HTTP/2 GOAWAY errors
+    to drop the stale REST connection. psycopg2 pooled connections don't have
+    that problem, and tearing down the pool while connections are checked out
+    causes 'trying to put unkeyed connection' + connection leaks that exhaust
+    the pool. Bad connections are dropped individually in _Conn.__exit__.
+    """
+    return
 
 
 class _Conn:
-    """Context manager: borrow a connection from the pool, return it after."""
+    """Context manager: borrow a connection, return it to the SAME pool.
+
+    Records the pool it borrowed from so a concurrent pool recreation can't
+    cause the connection to be returned to a different pool ('unkeyed
+    connection'). Broken connections are discarded (close=True) instead of
+    being returned to the pool.
+    """
     def __enter__(self):
-        self._conn = _get_pool().getconn()
+        self._pool = _get_pool()
+        self._conn = self._pool.getconn()
         self._conn.autocommit = True
         return self._conn
 
-    def __exit__(self, *_):
-        _get_pool().putconn(self._conn)
+    def __exit__(self, exc_type, *_):
+        try:
+            self._pool.putconn(self._conn, close=exc_type is not None)
+        except Exception as e:
+            logger.warning(f"putconn failed (non-fatal), closing connection: {e}")
+            try:
+                self._conn.close()
+            except Exception:
+                pass
 
 
 def _q(sql: str, params=None, *, fetchall: bool = True) -> list[dict]:
