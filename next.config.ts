@@ -174,6 +174,14 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   typedRoutes: true,
   images: {
+    // Disable Vercel Image Optimization. Nearly every image we render is a
+    // YouTube thumbnail (img.youtube.com / i.ytimg.com) or a Google/avatar CDN
+    // image (yt3.ggpht.com, lh3.googleusercontent.com, ui-avatars.com) — these
+    // are already WebP-optimized and served from Google's CDN. Re-optimizing
+    // them burned the Hobby plan's transformation quota for ~zero benefit.
+    // With unoptimized, <Image> serves the source URL directly (no quota, no
+    // extra latency). remotePatterns is kept so the URLs stay allow-listed.
+    unoptimized: true,
     formats: ["image/avif", "image/webp"],
     minimumCacheTTL: 60 * 60 * 24 * 7, // 7 days
     remotePatterns: [

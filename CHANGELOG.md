@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-06-05
+
+FIX(web): disable Vercel Image Optimization (`images.unoptimized: true`) — nearly all rendered images are already-optimized YouTube thumbnails + Google/avatar CDN images; re-optimizing them exhausted the Hobby plan transformation quota for ~zero benefit. <Image> now serves source URLs directly (no quota, lower latency)
+
 ## 2026-06-02
 
 FIX(worker): R2 proxy off by default — Cloudflare reachability restored on the Pi network, so R2_PROXY_HTTP no longer falls back to YOUTUBE_PROXY_HTTP (was forcing all R2 uploads through the residential proxy unnecessarily); set R2_PROXY_HTTP explicitly to re-enable during a future Cloudflare block
