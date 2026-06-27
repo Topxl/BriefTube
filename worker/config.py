@@ -50,7 +50,7 @@ TRIAL_DAYS = int(os.getenv("TRIAL_DAYS", "30"))
 DEFAULT_TTS_VOICE = os.getenv("TTS_VOICE", "fr-FR-DeniseNeural")
 
 # RSS
-RSS_CHECK_INTERVAL = int(os.getenv("RSS_CHECK_INTERVAL", "1800"))  # 30 minutes (WebSub handles real-time)
+RSS_CHECK_INTERVAL = int(os.getenv("RSS_CHECK_INTERVAL", "7200"))  # 2 hours (WebSub handles real-time; RSS is a safety net)
 
 # Concurrent video processing (how many videos to process simultaneously)
 MAX_CONCURRENT_VIDEOS = int(os.getenv("MAX_CONCURRENT_VIDEOS", "12"))

@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-06-27
+
+FIX(worker): scope RSS scan to active channels only — `scan_all_channels()` now fetches feeds + processed_videos lookups for channels with an eligible subscriber instead of every subscribed channel; the prior behaviour fetched thousands of feeds whose videos were all discarded at the active filter, burning ~99% of Supabase egress (5 GB Free-plan quota exhausted on 26 Jun, restricting the project with 522/402)
+CHORE(worker): raise default RSS_CHECK_INTERVAL 1800s → 7200s (30 min → 2h) — WebSub push handles real-time; the periodic RSS scan is only a safety net, so a longer interval cuts egress 4× with negligible freshness impact
+
 ## 2026-06-05
 
 FIX(web): disable Vercel Image Optimization (`images.unoptimized: true`) — nearly all rendered images are already-optimized YouTube thumbnails + Google/avatar CDN images; re-optimizing them exhausted the Hobby plan transformation quota for ~zero benefit. <Image> now serves source URLs directly (no quota, lower latency)

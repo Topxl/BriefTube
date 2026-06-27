@@ -95,9 +95,15 @@ def scan_all_channels():
     Fetches all RSS feeds in parallel (up to 50 concurrent HTTP requests)
     then processes results sequentially for DB writes.
     """
-    channel_ids = db.get_all_channel_ids()
+    # Only scan channels that have at least one *eligible* subscriber (active
+    # paying user or unexpired trial). Fetching every subscribed channel — even
+    # those whose only subscribers churned — wasted ~99% of RSS egress: thousands
+    # of feeds fetched + processed_videos lookups, all discarded at the active
+    # filter below. Scoping the scan to active channels keeps egress proportional
+    # to the actual paying audience.
     active_channel_ids = db.get_active_channel_ids()
-    logger.info(f"Scanning {len(channel_ids)} channels ({len(active_channel_ids)} active)...")
+    channel_ids = list(active_channel_ids)
+    logger.info(f"Scanning {len(channel_ids)} active channels...")
 
     # Drop invalid channel IDs before doing any work — these are names or URLs
     # accidentally stored in the DB (no UCxxx format). Log once so admins can
@@ -188,7 +194,9 @@ def scan_all_channels():
 
             logger.info(f"New video: {video['title']} ({vid})")
 
-            # Always record in channel_videos (inbox for all channels)
+            # Record in channel_videos (discovery inbox). The scan is now scoped
+            # to active channels only, so every channel reaching this point is
+            # active — no separate active-channel guard needed below.
             inbox_batch.append({
                 "video_id": vid,
                 "channel_id": channel_id,
@@ -201,11 +209,6 @@ def scan_all_channels():
             })
 
             try:
-                # Only process videos from active channels
-                if channel_id not in active_channel_ids:
-                    known_video_ids.add(vid)
-                    continue
-
                 # First-time channel guard: cap at 1 video to prevent backlog flood.
                 # RSS feeds are newest-first, so the first video we encounter is the
                 # latest. Subsequent scans will pick up new videos normally.
