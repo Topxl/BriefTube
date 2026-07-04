@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-07-05
+
+FEATURE: Add `scripts/curator.ts` CLI — manage a user's subscriptions (add/remove channels with prod-identical RSS skip-backfill) and enqueue single videos for processing + delivery, using the service role key; plus a `curator` Claude skill documenting the thematic-curation workflow (resolve handles/video IDs via yt-dlp, no --aha on bulk adds, verify worker pickup)
+
 ## 2026-07-04
 
 FIX(worker): stop log spam during total Supabase outage — broaden `_is_quota_exceeded` into `_is_db_unreachable` (now also matches pooler ECIRCUITBREAKER, psycopg2 connect timeout, and Cloudflare 522, not just the 402 egress quota) so all loops back off 30 min instead of retrying every 10-15s; delivery loop sleeps in heartbeat-refreshing chunks so the watchdog no longer kills and restarts it mid-backoff, and the watchdog skips restarts when its own queue check fails with a DB-unreachable error
