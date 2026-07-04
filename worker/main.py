@@ -202,14 +202,26 @@ _DEFAULT_VOICES: dict[str, str] = {
 }
 
 
-_QUOTA_SLEEP = 1800  # 30 min between retries when Supabase quota is exceeded
+_QUOTA_SLEEP = 1800  # 30 min between retries when Supabase is unreachable (quota block, outage)
 
 
-def _is_quota_exceeded(error: Exception | str) -> bool:
-    """Return True when Supabase has blocked the project for quota violation (HTTP 402)."""
-    return "exceed_egress_quota" in str(error) or (
-        "JSON could not be generated" in str(error) and "402" in str(error)
-    )
+def _is_db_unreachable(error: Exception | str) -> bool:
+    """Return True when Supabase is unreachable at the project level.
+
+    Covers the egress-quota block (HTTP 402), a down/paused project behind
+    Cloudflare (522), and the pooler refusing connections (circuit breaker,
+    connect timeout). These conditions affect every query — retrying in a
+    tight loop only spams the log and keeps the pooler circuit breaker
+    tripped, so callers should sleep _QUOTA_SLEEP instead.
+    """
+    msg = str(error).lower()
+    if "exceed_egress_quota" in msg:
+        return True
+    if "json could not be generated" in msg and ("402" in msg or "522" in msg):
+        return True
+    if "ecircuitbreaker" in msg or "too many authentication failures" in msg:
+        return True
+    return "connection to server at" in msg and "timeout expired" in msg
 
 
 def _resolve_tts_voice(voice: str | None, language: str) -> str | None:
@@ -318,8 +330,8 @@ async def rss_loop(alert_system: MonitoringAlert):
             logger.error("RSS scan timed out after 600s — skipping this cycle")
         except Exception as e:
             error_msg = str(e)
-            if _is_quota_exceeded(e):
-                logger.warning(f"RSS loop: Supabase quota exceeded — sleeping {_QUOTA_SLEEP//60}min")
+            if _is_db_unreachable(e):
+                logger.warning(f"RSS loop: Supabase unreachable — sleeping {_QUOTA_SLEEP//60}min")
                 await asyncio.sleep(_QUOTA_SLEEP)
                 continue
             logger.error(f"RSS loop error: {error_msg}")
@@ -1039,8 +1051,8 @@ async def websub_loop(alert_system: MonitoringAlert):
                 if new or renewed:
                     logger.info(f"WebSub: {new} new subscriptions, {renewed} renewed")
         except Exception as e:
-            if _is_quota_exceeded(e):
-                logger.warning(f"WebSub loop: Supabase quota exceeded — sleeping {_QUOTA_SLEEP//60}min")
+            if _is_db_unreachable(e):
+                logger.warning(f"WebSub loop: Supabase unreachable — skipping this cycle")
             else:
                 logger.error(f"WebSub loop error: {e}")
 
@@ -1123,8 +1135,12 @@ async def processor_loop(alert_system: MonitoringAlert):
             asyncio.create_task(_do(job))
 
         except Exception as e:
-            if _is_quota_exceeded(e):
-                logger.warning(f"Processor loop: Supabase quota exceeded — sleeping {_QUOTA_SLEEP//60}min")
+            if _is_db_unreachable(e):
+                logger.warning(f"Processor loop: Supabase unreachable — sleeping {_QUOTA_SLEEP//60}min")
+                try:
+                    semaphore.release()
+                except ValueError:
+                    pass
                 await asyncio.sleep(_QUOTA_SLEEP)
                 continue
             logger.error(f"Processor loop error: {e}")
@@ -1294,7 +1310,7 @@ async def delivery_loop(alert_system: MonitoringAlert):
                     else:
                         deliveries = []  # Give up this cycle, retry next iteration
                 except Exception as e:
-                    if _is_quota_exceeded(e):
+                    if _is_db_unreachable(e):
                         raise  # Propagate immediately — no point retrying a quota block
                     if attempt < max_retries - 1:
                         logger.warning(f"Delivery fetch failed (attempt {attempt + 1}/{max_retries}): {e}")
@@ -1445,9 +1461,15 @@ async def delivery_loop(alert_system: MonitoringAlert):
 
         except Exception as e:
             error_msg = str(e)
-            if _is_quota_exceeded(e):
-                logger.warning(f"Delivery loop: Supabase quota exceeded — sleeping {_QUOTA_SLEEP//60}min")
-                await asyncio.sleep(_QUOTA_SLEEP)
+            if _is_db_unreachable(e):
+                logger.warning(f"Delivery loop: Supabase unreachable — sleeping {_QUOTA_SLEEP//60}min")
+                # Sleep in short chunks while refreshing the heartbeat so the
+                # watchdog doesn't declare the loop stuck and restart it —
+                # each restart would immediately re-hit the dead DB and spam.
+                _outage_deadline = time.monotonic() + _QUOTA_SLEEP
+                while time.monotonic() < _outage_deadline:
+                    _delivery_last_beat = time.monotonic()
+                    await asyncio.sleep(30)
                 continue
             logger.error(f"Delivery loop error: {error_msg}")
 
@@ -1501,6 +1523,10 @@ async def _supervised_delivery_loop(alert_system: MonitoringAlert):
                             _delivery_restart_backoff = 1  # Reset backoff
                             continue
                     except Exception as e:
+                        if _is_db_unreachable(e):
+                            # DB outage — restarting the loop won't reach the
+                            # DB either, it would just re-hammer the pooler.
+                            continue
                         logger.warning(f"Could not check queue status: {e}")
                         # Proceed with restart on DB error
 
@@ -2181,9 +2207,8 @@ async def critical_monitor_loop(alert_system: MonitoringAlert):
                 else:
                     _clear("auth_broken")
             except Exception as e:
-                if not _is_quota_exceeded(e):
-                    if not _is_quota_exceeded(e):
-                        logger.warning(f"Critical monitor (auth): {e}")
+                if not _is_db_unreachable(e):
+                    logger.warning(f"Critical monitor (auth): {e}")
 
             # 2. Deliveries stuck — status='sending' AND created_at < now - 15min
             try:
@@ -2200,9 +2225,8 @@ async def critical_monitor_loop(alert_system: MonitoringAlert):
                 else:
                     _clear("deliveries_stuck")
             except Exception as e:
-                if not _is_quota_exceeded(e):
-                    if not _is_quota_exceeded(e):
-                        logger.warning(f"Critical monitor (deliveries stuck): {e}")
+                if not _is_db_unreachable(e):
+                    logger.warning(f"Critical monitor (deliveries stuck): {e}")
 
             # 3. Processing queue stuck — status='processing' AND created_at < now - 30min
             try:
@@ -2219,9 +2243,8 @@ async def critical_monitor_loop(alert_system: MonitoringAlert):
                 else:
                     _clear("processing_stuck")
             except Exception as e:
-                if not _is_quota_exceeded(e):
-                    if not _is_quota_exceeded(e):
-                        logger.warning(f"Critical monitor (processing stuck): {e}")
+                if not _is_db_unreachable(e):
+                    logger.warning(f"Critical monitor (processing stuck): {e}")
 
             # 4. High failure rate — >20 failed videos in the last hour
             try:
@@ -2238,9 +2261,8 @@ async def critical_monitor_loop(alert_system: MonitoringAlert):
                 else:
                     _clear("high_failure_rate")
             except Exception as e:
-                if not _is_quota_exceeded(e):
-                    if not _is_quota_exceeded(e):
-                        logger.warning(f"Critical monitor (failure rate): {e}")
+                if not _is_db_unreachable(e):
+                    logger.warning(f"Critical monitor (failure rate): {e}")
 
             # 5. No deliveries at all — 0 sent deliveries in 6h with active subscriptions
             try:
@@ -2261,9 +2283,8 @@ async def critical_monitor_loop(alert_system: MonitoringAlert):
                 else:
                     _clear("no_deliveries")
             except Exception as e:
-                if not _is_quota_exceeded(e):
-                    if not _is_quota_exceeded(e):
-                        logger.warning(f"Critical monitor (no deliveries): {e}")
+                if not _is_db_unreachable(e):
+                    logger.warning(f"Critical monitor (no deliveries): {e}")
 
             # 6. Worker memory/CPU
             try:
@@ -2289,9 +2310,8 @@ async def critical_monitor_loop(alert_system: MonitoringAlert):
                 else:
                     _clear("high_memory")
             except Exception as e:
-                if not _is_quota_exceeded(e):
-                    if not _is_quota_exceeded(e):
-                        logger.warning(f"Critical monitor (system): {e}")
+                if not _is_db_unreachable(e):
+                    logger.warning(f"Critical monitor (system): {e}")
 
             # 7. Stripe webhooks stopped — no webhook received in 12h
             try:
@@ -2316,9 +2336,8 @@ async def critical_monitor_loop(alert_system: MonitoringAlert):
                         "Vérifier la configuration webhook dans le dashboard Stripe.",
                     )
             except Exception as e:
-                if not _is_quota_exceeded(e):
-                    if not _is_quota_exceeded(e):
-                        logger.warning(f"Critical monitor (stripe webhooks): {e}")
+                if not _is_db_unreachable(e):
+                    logger.warning(f"Critical monitor (stripe webhooks): {e}")
 
             # 8. Web app health — check homepage and login page
             try:
@@ -2342,9 +2361,8 @@ async def critical_monitor_loop(alert_system: MonitoringAlert):
                 else:
                     _clear("web_app_down")
             except Exception as e:
-                if not _is_quota_exceeded(e):
-                    if not _is_quota_exceeded(e):
-                        logger.warning(f"Critical monitor (web health): {e}")
+                if not _is_db_unreachable(e):
+                    logger.warning(f"Critical monitor (web health): {e}")
 
             # 9. No payments in 7 days
             try:
@@ -2365,9 +2383,8 @@ async def critical_monitor_loop(alert_system: MonitoringAlert):
                 else:
                     _clear("no_payments_7d")
             except Exception as e:
-                if not _is_quota_exceeded(e):
-                    if not _is_quota_exceeded(e):
-                        logger.warning(f"Critical monitor (payments): {e}")
+                if not _is_db_unreachable(e):
+                    logger.warning(f"Critical monitor (payments): {e}")
 
             # 10. Web server errors — check systemd logs for 5xx
             try:
@@ -2391,14 +2408,13 @@ async def critical_monitor_loop(alert_system: MonitoringAlert):
                 else:
                     _clear("web_errors_high")
             except Exception as e:
-                if not _is_quota_exceeded(e):
-                    if not _is_quota_exceeded(e):
-                        logger.warning(f"Critical monitor (web errors): {e}")
+                if not _is_db_unreachable(e):
+                    logger.warning(f"Critical monitor (web errors): {e}")
 
             _first_run = False
 
         except Exception as e:
-            if _is_quota_exceeded(e):
+            if _is_db_unreachable(e):
                 logger.warning(f"Critical monitor: Supabase quota exceeded — sleeping {_QUOTA_SLEEP//60}min")
                 await asyncio.sleep(_QUOTA_SLEEP)
                 continue
