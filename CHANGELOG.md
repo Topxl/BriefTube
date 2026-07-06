@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-07-06
+
+FIX(worker): reduce PostgreSQL load on the Supabase Free "Nano" compute to stop recurring Unhealthy outages — lower `MAX_CONCURRENT_VIDEOS` default 12 → 4 and psycopg2 pool `maxconn` 10 → 8, capping concurrent Postgres backends + write bursts that saturate the Nano's ~0.5 GB RAM under load spikes (crashing Postgres → project Unhealthy → manual restart needed). Root cause was compute RAM, NOT egress (0.83/5 GB used); the 26-Jun egress fix still holds.
+CHORE(scripts): curator.ts backfill upserts now run sequentially (not `Promise.all`) to avoid a burst of concurrent upserts on the Nano Postgres during bulk curation (25+ channels)
+
 ## 2026-07-05
 
 FEATURE: Add `scripts/curator.ts` CLI — manage a user's subscriptions (add/remove channels with prod-identical RSS skip-backfill) and enqueue single videos for processing + delivery, using the service role key; plus a `curator` Claude skill documenting the thematic-curation workflow (resolve handles/video IDs via yt-dlp, no --aha on bulk adds, verify worker pickup)

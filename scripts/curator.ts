@@ -229,21 +229,22 @@ async function cmdAddChannel(
         (v): v is { videoId: string; title: string | null } => !!v.videoId,
       );
     if (videos.length > 0) {
-      await Promise.all(
-        videos.map((v) =>
-          supabase.from("processed_videos").upsert(
-            {
-              video_id: v.videoId,
-              channel_id: info.channelId,
-              video_title: "[pre-subscription]",
-              video_url: `https://www.youtube.com/watch?v=${v.videoId}`,
-              status: "skipped",
-              language: userLang,
-            },
-            { onConflict: "video_id,language", ignoreDuplicates: true },
-          ),
-        ),
-      );
+      // Séquentiel (pas Promise.all) : évite une rafale d'upserts concurrents
+      // sur le Postgres "Nano" gratuit lors d'une curation bulk (25+ chaînes).
+      for (const v of videos) {
+        // eslint-disable-next-line no-await-in-loop -- throttle volontaire : upserts séquentiels pour ménager le Postgres Nano
+        await supabase.from("processed_videos").upsert(
+          {
+            video_id: v.videoId,
+            channel_id: info.channelId,
+            video_title: "[pre-subscription]",
+            video_url: `https://www.youtube.com/watch?v=${v.videoId}`,
+            status: "skipped",
+            language: userLang,
+          },
+          { onConflict: "video_id,language", ignoreDuplicates: true },
+        );
+      }
       latestVideo = videos[0];
     }
   } catch (e) {

@@ -28,8 +28,13 @@ _pool: psycopg2.pool.ThreadedConnectionPool | None = None
 def _get_pool() -> psycopg2.pool.ThreadedConnectionPool:
     global _pool
     if _pool is None or _pool.closed:
+        # maxconn kept modest (8) to cap concurrent PostgreSQL backends on the
+        # Supabase Free "Nano" compute (~0.5 GB RAM). Peak checkout ≈
+        # MAX_CONCURRENT_VIDEOS (4) + delivery + rss/monitor loops, so 8 leaves
+        # headroom without exhausting the pool. Bump alongside MAX_CONCURRENT_VIDEOS
+        # if Supabase compute is upgraded.
         _pool = psycopg2.pool.ThreadedConnectionPool(
-            minconn=1, maxconn=10,
+            minconn=1, maxconn=8,
             dsn=SUPABASE_DB_URL,
             connect_timeout=15,
         )

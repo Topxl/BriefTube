@@ -53,7 +53,12 @@ DEFAULT_TTS_VOICE = os.getenv("TTS_VOICE", "fr-FR-DeniseNeural")
 RSS_CHECK_INTERVAL = int(os.getenv("RSS_CHECK_INTERVAL", "7200"))  # 2 hours (WebSub handles real-time; RSS is a safety net)
 
 # Concurrent video processing (how many videos to process simultaneously)
-MAX_CONCURRENT_VIDEOS = int(os.getenv("MAX_CONCURRENT_VIDEOS", "12"))
+# Kept low (4) to limit concurrent PostgreSQL backends + write bursts on the
+# Supabase Free "Nano" compute (~0.5 GB RAM shared across Postgres/PostgREST/
+# Realtime/pooler). Higher values saturate the Nano's memory under load spikes
+# (e.g. bulk curation), crashing Postgres → project goes Unhealthy. Raise this
+# only after upgrading Supabase compute (Micro/Small).
+MAX_CONCURRENT_VIDEOS = int(os.getenv("MAX_CONCURRENT_VIDEOS", "4"))
 
 # Worker mode — "full" (scanner + processor + deliverer) or "processor" (processor only)
 # Multiple "processor" instances can run in parallel on the same machine or different VPS.
