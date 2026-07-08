@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-07-08
+
+FIX(db): add `idx_processed_videos_created_at` index — the RSS scanner's `get_recent_titles_by_channel` did a full seq scan of ~49k rows every cycle (267 active channels now), hitting `canceling statement due to statement timeout` on the Nano and cascading into a Supabase-unreachable state. Query is now a sub-ms range scan (migration `20260708_processed_videos_created_at_index.sql`, applied to prod CONCURRENTLY).
+FIX(worker): bot no longer loses videos silently when Supabase is down — `handle_message` catches DB-unreachable errors on the profile lookup (and wraps `handle_video_request`) and tells the user to resend in a few minutes instead of failing without any reply (Telegram does not redeliver, so the video was lost). Prevents the false "queued" acknowledgement too.
+FEATURE(worker): add `supabase_watchdog.py` + `vps/run-watchdog.sh` — a cron watchdog that probes the DB and, if it is unreachable for 2 consecutive runs, restarts the project via the Supabase Management API then bounces the worker so it leaves its 30-min backoff. Self-heals the recurring Nano Unhealthy state without manual intervention (cooldown-guarded).
+
 ## 2026-07-06
 
 FIX(worker): reduce PostgreSQL load on the Supabase Free "Nano" compute to stop recurring Unhealthy outages — lower `MAX_CONCURRENT_VIDEOS` default 12 → 4 and psycopg2 pool `maxconn` 10 → 8, capping concurrent Postgres backends + write bursts that saturate the Nano's ~0.5 GB RAM under load spikes (crashing Postgres → project Unhealthy → manual restart needed). Root cause was compute RAM, NOT egress (0.83/5 GB used); the 26-Jun egress fix still holds.

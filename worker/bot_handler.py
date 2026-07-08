@@ -1299,8 +1299,20 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     text = update.message.text.strip()
     logger.info(f"Message from chat_id={chat_id}: {text[:100]!r}")
 
-    # Check if user is connected
-    profile = await asyncio.to_thread(_get_profile_by_chat_id, chat_id)
+    # Check if user is connected.
+    # Guard against DB-unreachable (Supabase Unhealthy): the profile lookup is the
+    # first DB touch, so it fails first when Postgres is down. Telegram will NOT
+    # redeliver this message, so instead of dropping the user's video silently we
+    # tell them to resend once the service is back.
+    try:
+        profile = await asyncio.to_thread(_get_profile_by_chat_id, chat_id)
+    except Exception as e:
+        logger.error(f"Profile lookup failed for chat_id={chat_id} — DB likely unreachable: {e}")
+        await update.message.reply_text(
+            "Service temporarily unavailable. Please resend your video in a few "
+            "minutes — nothing was lost, it just could not be queued right now."
+        )
+        return
     if not profile:
         logger.warning(f"Message from unconnected chat_id={chat_id}")
         await update.message.reply_text(
@@ -1315,7 +1327,17 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if video_match:
         video_id = video_match.group(1)
         logger.info(f"Video request: video_id={video_id} from user={profile['id']}")
-        await handle_video_request(update, profile, video_id)
+        try:
+            await handle_video_request(update, profile, video_id)
+        except Exception as e:
+            # DB went down mid-request (after the profile lookup succeeded):
+            # tell the user to resend rather than leaving them with a false
+            # "queued" acknowledgement and no actual job.
+            logger.error(f"[{video_id}] Video request failed — DB likely unreachable: {e}")
+            await update.message.reply_text(
+                "A temporary problem prevented queuing your video. "
+                "Please resend it in a few minutes."
+            )
         return
 
     # Check for channel URL or @handle
