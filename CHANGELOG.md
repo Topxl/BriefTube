@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-07-10
+
+FIX(worker): stop YouTube RSS-throttle 404 spam — scanning ~267 active channels with 20 concurrent feed requests made YouTube return transient 404s for valid channels (they return 200 when fetched individually). `fetch_channel_videos` now retries transient 404/429/5xx with jittered backoff, and scan concurrency is lowered 20 → 10 to stay under the per-IP burst throttle. Reduces missed RSS discovery + log noise; WebSub still handles real-time.
+
 ## 2026-07-08
 
 FIX(db): add `idx_processed_videos_created_at` index — the RSS scanner's `get_recent_titles_by_channel` did a full seq scan of ~49k rows every cycle (267 active channels now), hitting `canceling statement due to statement timeout` on the Nano and cascading into a Supabase-unreachable state. Query is now a sub-ms range scan (migration `20260708_processed_videos_created_at_index.sql`, applied to prod CONCURRENTLY).

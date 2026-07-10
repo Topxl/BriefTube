@@ -2,8 +2,10 @@
 
 import calendar
 import logging
+import random
 import re
 import time
+import urllib.error
 import urllib.request
 from datetime import datetime, timezone
 import feedparser
@@ -41,6 +43,10 @@ def extract_video_id(url: str) -> str | None:
 MAX_VIDEO_AGE_DAYS = 15  # Ignore videos published more than this many days ago
 _RSS_FETCH_TIMEOUT = 30   # seconds per feed — prevents hung TCP from blocking a thread
 _RSS_SCAN_TIMEOUT = 180   # seconds total for all feeds in one scan cycle
+_RSS_FETCH_RETRIES = 2    # retries on transient throttle errors (YouTube 404/429/5xx)
+# YouTube throttles bursts of feed requests and returns transient errors — even
+# for perfectly valid channels — so these codes are retried, not treated as fatal.
+_RSS_TRANSIENT_CODES = frozenset({404, 429, 500, 502, 503})
 
 
 def fetch_channel_videos(channel_id: str) -> list[dict]:
@@ -49,11 +55,23 @@ def fetch_channel_videos(channel_id: str) -> list[dict]:
     - Future videos (Premieres, scheduled) are skipped — picked up once live.
     - Videos older than MAX_VIDEO_AGE_DAYS are skipped — prevents RSS entries
       from weeks ago being re-queued when a new subscriber joins the channel.
+    - Transient throttle errors (404/429/5xx) are retried with jittered backoff;
+      scanning hundreds of feeds in a burst makes YouTube return these for valid
+      channels, and a single retry usually succeeds.
     """
     rss_url = get_rss_url(channel_id)
-    req = urllib.request.Request(rss_url, headers={"Connection": "close"})
-    with urllib.request.urlopen(req, timeout=_RSS_FETCH_TIMEOUT) as response:
-        content = response.read()
+    content = None
+    for attempt in range(_RSS_FETCH_RETRIES + 1):
+        try:
+            req = urllib.request.Request(rss_url, headers={"Connection": "close"})
+            with urllib.request.urlopen(req, timeout=_RSS_FETCH_TIMEOUT) as response:
+                content = response.read()
+            break
+        except urllib.error.HTTPError as e:
+            if e.code in _RSS_TRANSIENT_CODES and attempt < _RSS_FETCH_RETRIES:
+                time.sleep(1.5 * (attempt + 1) + random.uniform(0, 0.8))
+                continue
+            raise
     feed = feedparser.parse(content)
     now = time.time()
     max_age_cutoff = now - MAX_VIDEO_AGE_DAYS * 86400
@@ -118,11 +136,14 @@ def scan_all_channels():
     recent_titles_by_channel = db.get_recent_titles_by_channel(hours=2)
     logger.info(f"Loaded recent titles for {len(recent_titles_by_channel)} channels (2h window)")
 
-    # Fetch all RSS feeds in parallel — limit concurrency to avoid CPU saturation.
-    # 50 threads caused load 10-16 on the VPS (99% CPU, blocking all processing).
-    # 20 threads keeps load < 4 while still being 20x faster than sequential.
+    # Fetch all RSS feeds in parallel — limit concurrency to avoid CPU saturation
+    # AND to stay under YouTube's per-IP burst throttle. 50 threads caused load
+    # 10-16 on the VPS; 20 threads throttled YouTube (transient 404s across most
+    # of the ~267 active channels). 10 threads keeps load low, spreads the burst
+    # so YouTube stops 404-throttling, and RSS is only a 2h safety net anyway
+    # (WebSub handles real-time), so raw speed does not matter.
     channel_videos: dict[str, list[dict]] = {}
-    with ThreadPoolExecutor(max_workers=20) as executor:
+    with ThreadPoolExecutor(max_workers=10) as executor:
         futures = {executor.submit(fetch_channel_videos, ch): ch for ch in valid_channel_ids}
         try:
             for future in as_completed(futures, timeout=_RSS_SCAN_TIMEOUT):
