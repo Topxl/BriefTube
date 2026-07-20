@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-07-20
+
+FIX(worker): stop Telegram bot returning "Service temporarily unavailable" during Supabase egress-quota outages — `bot_handler.py` had several ad-hoc `db.get_client()` queries (profile lookup, on-demand video check, delivery upsert, channel-name lookup) that bypassed the psycopg2/pooler fallback in `db.py`, so they still hit PostgREST and failed with 402 even while the rest of the pipeline kept working via the direct connection. Routed them through `db.get_profile_by_telegram`, `db.get_processed_video`, `db.upsert_delivery` (new), and `db.get_channel_name` (new) — all mirrored in `db_pg.py` so they use the psycopg2 bypass when `SUPABASE_DB_URL` is set.
+
 ## 2026-07-10
 
 FIX(worker): stop YouTube RSS-throttle 404 spam — scanning ~267 active channels with 20 concurrent feed requests made YouTube return transient 404s for valid channels (they return 200 when fetched individually). `fetch_channel_videos` now retries transient 404/429/5xx with jittered backoff, and scan concurrency is lowered 20 → 10 to stay under the per-IP burst throttle. Reduces missed RSS discovery + log noise; WebSub still handles real-time.

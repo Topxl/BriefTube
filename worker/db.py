@@ -1282,11 +1282,53 @@ def get_profile_by_telegram(telegram_chat_id: str) -> dict | None:
     user_id = conn_res.data[0]["user_id"]
     res = (
         sb.table("profiles")
-        .select("id, subscription_status, trial_ends_at, max_channels, preferred_language, tts_voice, favorite_languages")
+        .select("id, email, subscription_status, trial_ends_at, max_channels, preferred_language, tts_voice, favorite_languages, summary_length_pref, summary_style, summary_custom_instructions")
         .eq("id", user_id)
         .execute()
     )
     return res.data[0] if res.data else None
+
+
+def get_channel_name(channel_id: str, user_id: str | None = None) -> str | None:
+    """Look up channel_name from subscriptions, optionally scoped to a user."""
+    sb = get_client()
+    query = sb.table("subscriptions").select("channel_name").eq("channel_id", channel_id)
+    if user_id:
+        query = query.eq("user_id", user_id)
+    res = query.limit(1).execute()
+    return res.data[0]["channel_name"] if res.data else None
+
+
+def upsert_delivery(user_id: str, video_id: str, language: str, source: str = "on_demand") -> None:
+    """Insert or reset a delivery to pending, clearing sent_at on conflict.
+
+    supabase-py's upsert() doesn't clear sent_at on conflict, leaving the row
+    permanently stuck, so we check for an existing row and UPDATE it instead.
+    """
+    sb = get_client()
+    existing = (
+        sb.table("deliveries")
+        .select("id")
+        .eq("user_id", user_id)
+        .eq("video_id", video_id)
+        .maybe_single()
+        .execute()
+    )
+    if existing and existing.data:
+        sb.table("deliveries").update({
+            "status": "pending",
+            "source": source,
+            "language": language,
+            "sent_at": None,
+        }).eq("id", existing.data["id"]).execute()
+    else:
+        sb.table("deliveries").insert({
+            "user_id": user_id,
+            "video_id": video_id,
+            "status": "pending",
+            "source": source,
+            "language": language,
+        }).execute()
 
 
 def count_shares_today(user_id: str) -> int:
@@ -1348,7 +1390,7 @@ def get_processed_video(video_id: str, language: str) -> dict | None:
     sb = get_client()
     res = (
         sb.table("processed_videos")
-        .select("video_id, video_title, channel_id, summary, audio_url, language")
+        .select("video_id, video_title, channel_id, summary, audio_url, language, status")
         .eq("video_id", video_id)
         .eq("language", language)
         .execute()

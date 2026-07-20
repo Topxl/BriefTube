@@ -4,8 +4,8 @@ import pytest
 from unittest.mock import MagicMock, patch
 from datetime import datetime, timezone, timedelta
 
+import db
 from bot_handler import (
-    _upsert_delivery,
     _calc_success_rate,
     _is_pro,
     _get_plan_label,
@@ -84,7 +84,7 @@ class TestGetPlanLabel:
         assert label == "Free"
 
 
-# ── _upsert_delivery ──────────────────────────────────────────────────────────
+# ── db.upsert_delivery ────────────────────────────────────────────────────────
 
 def _make_sb_mock(existing_id: str | None = None, execute_returns_none: bool = False):
     """Build a chainable Supabase mock for deliveries queries."""
@@ -115,13 +115,15 @@ class TestUpsertDelivery:
     def test_insert_when_no_existing(self):
         """No existing delivery → INSERT is called."""
         sb, chain = _make_sb_mock(existing_id=None)
-        _upsert_delivery(sb, "user-1", "video-1", "fr")
+        with patch.object(db, "get_client", return_value=sb):
+            db.upsert_delivery("user-1", "video-1", "fr")
         chain.insert.assert_called_once()
 
     def test_update_when_existing(self):
         """Existing delivery → UPDATE is called, not INSERT."""
         sb, chain = _make_sb_mock(existing_id="delivery-uuid-123")
-        _upsert_delivery(sb, "user-1", "video-1", "fr")
+        with patch.object(db, "get_client", return_value=sb):
+            db.upsert_delivery("user-1", "video-1", "fr")
         chain.update.assert_called_once()
         chain.insert.assert_not_called()
 
@@ -129,13 +131,15 @@ class TestUpsertDelivery:
         """Regression: execute() returning None must not raise AttributeError."""
         sb, chain = _make_sb_mock(execute_returns_none=True)
         # Must not raise
-        _upsert_delivery(sb, "user-1", "video-1", "fr")
+        with patch.object(db, "get_client", return_value=sb):
+            db.upsert_delivery("user-1", "video-1", "fr")
         chain.insert.assert_called_once()
 
     def test_update_resets_status_to_pending(self):
         """UPDATE payload must set status=pending and sent_at=None."""
         sb, chain = _make_sb_mock(existing_id="delivery-uuid-123")
-        _upsert_delivery(sb, "user-1", "video-1", "en")
+        with patch.object(db, "get_client", return_value=sb):
+            db.upsert_delivery("user-1", "video-1", "en")
         update_call = chain.update.call_args[0][0]
         assert update_call["status"] == "pending"
         assert update_call["sent_at"] is None
@@ -144,7 +148,8 @@ class TestUpsertDelivery:
     def test_insert_includes_all_fields(self):
         """INSERT payload must include user_id, video_id, status, language."""
         sb, chain = _make_sb_mock(existing_id=None)
-        _upsert_delivery(sb, "user-abc", "vid-xyz", "th")
+        with patch.object(db, "get_client", return_value=sb):
+            db.upsert_delivery("user-abc", "vid-xyz", "th")
         insert_call = chain.insert.call_args[0][0]
         assert insert_call["user_id"] == "user-abc"
         assert insert_call["video_id"] == "vid-xyz"

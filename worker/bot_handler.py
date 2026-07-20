@@ -907,25 +907,7 @@ def _calc_success_rate(summary: dict) -> int:
 
 def _get_profile_by_chat_id(chat_id: str) -> dict | None:
     """Look up a connected profile by telegram chat_id via platform_connections."""
-    sb = db.get_client()
-    conn_res = (
-        sb.table("platform_connections")
-        .select("user_id")
-        .eq("platform", "telegram")
-        .eq("external_id", chat_id)
-        .eq("connected", True)
-        .execute()
-    )
-    if not conn_res.data:
-        return None
-    user_id = conn_res.data[0]["user_id"]
-    res = (
-        sb.table("profiles")
-        .select("id, email, subscription_status, trial_ends_at, max_channels, preferred_language, tts_voice, favorite_languages, summary_length_pref, summary_style, summary_custom_instructions")
-        .eq("id", user_id)
-        .execute()
-    )
-    return res.data[0] if res.data else None
+    return db.get_profile_by_telegram(chat_id)
 
 
 def _is_pro(profile: dict) -> bool:
@@ -1085,49 +1067,9 @@ async def _get_channel_avatar(channel_id: str) -> str | None:
     return m.group(1) if m else None
 
 
-def _upsert_delivery(sb, user_id: str, video_id: str, language: str) -> None:
-    """Insert or reset a delivery to pending.
-
-    The supabase-py upsert() doesn't clear sent_at on conflict, leaving the
-    row permanently stuck. Instead we check for an existing row and UPDATE it,
-    or INSERT if it doesn't exist yet.
-    """
-    existing = (
-        sb.table("deliveries")
-        .select("id")
-        .eq("user_id", user_id)
-        .eq("video_id", video_id)
-        .maybe_single()
-        .execute()
-    )
-    if existing and existing.data:
-        sb.table("deliveries").update({
-            "status": "pending",
-            "source": "on_demand",
-            "language": language,
-            "sent_at": None,
-        }).eq("id", existing.data["id"]).execute()
-    else:
-        sb.table("deliveries").insert({
-            "user_id": user_id,
-            "video_id": video_id,
-            "status": "pending",
-            "source": "on_demand",
-            "language": language,
-        }).execute()
-
-
 def _get_channel_name_from_subscription(channel_id: str) -> str:
     """Return channel_name from subscriptions table, fallback to channel_id."""
-    sb = db.get_client()
-    res = (
-        sb.table("subscriptions")
-        .select("channel_name")
-        .eq("channel_id", channel_id)
-        .limit(1)
-        .execute()
-    )
-    return res.data[0]["channel_name"] if res.data else channel_id
+    return db.get_channel_name(channel_id) or channel_id
 
 
 async def _get_channel_name_from_rss(channel_id: str) -> str | None:
@@ -1166,32 +1108,24 @@ async def handle_video_request(update: Update, profile: dict, video_id: str) -> 
             )
             return
 
-    sb = db.get_client()
     video_url = f"https://www.youtube.com/watch?v={video_id}"
     user_language = profile.get("preferred_language") or "fr"
     user_tts_voice = profile.get("tts_voice") or None
 
     # Check if video already exists in the user's language
-    existing = (
-        sb.table("processed_videos")
-        .select("status, channel_id")
-        .eq("video_id", video_id)
-        .eq("language", user_language)
-        .execute()
-    )
+    video_row = db.get_processed_video(video_id, user_language)
 
-    if existing.data:
-        video_row = existing.data[0]
+    if video_row:
         if video_row["status"] == "completed":
             logger.info(f"[{video_id}] Already completed — queuing delivery for user={user_id}")
-            _upsert_delivery(sb, user_id, video_id, user_language)
+            db.upsert_delivery(user_id, video_id, user_language)
             await update.message.reply_text(
                 "This video was already summarized. Sending you the audio now..."
             )
             return
         elif video_row["status"] in ("pending", "processing"):
             logger.info(f"[{video_id}] Already in queue (status={video_row['status']}) — adding delivery for user={user_id}")
-            _upsert_delivery(sb, user_id, video_id, user_language)
+            db.upsert_delivery(user_id, video_id, user_language)
             await update.message.reply_text(
                 "This video is being processed. You'll receive the audio summary shortly."
             )
@@ -1234,13 +1168,7 @@ async def handle_video_request(update: Update, profile: dict, video_id: str) -> 
         summary_style=profile.get("summary_style"),
         summary_custom_instructions=profile.get("summary_custom_instructions"),
     )
-    sb.table("deliveries").upsert({
-        "user_id": user_id,
-        "video_id": video_id,
-        "status": "pending",
-        "source": "on_demand",
-        "language": user_language,
-    }, on_conflict="user_id,video_id").execute()
+    db.upsert_delivery(user_id, video_id, user_language)
     logger.info(f"[{video_id}] On-demand queued — delivery will be sent when processing completes")
 
 
@@ -1615,9 +1543,7 @@ async def handle_share_set_lang_callback(update: Update, context: ContextTypes.D
             return
 
         # Also queue delivery so the user receives the audio
-        await asyncio.to_thread(
-            lambda: _upsert_delivery(db.get_client(), profile["id"], video_id, new_lang)
-        )
+        await asyncio.to_thread(db.upsert_delivery, profile["id"], video_id, new_lang)
 
         url = f"{APP_URL}/s/{share['short_id']}"
         try:
@@ -1649,7 +1575,7 @@ async def handle_share_set_lang_callback(update: Update, context: ContextTypes.D
         queued = db.enqueue_video_for_language(
             video_id, youtube_url, video_title, channel_id, new_lang, tts_voice=tts_voice
         )
-        _upsert_delivery(db.get_client(), profile["id"], video_id, new_lang)
+        db.upsert_delivery(profile["id"], video_id, new_lang)
         return queued
 
     queued = await asyncio.to_thread(_queue_new_lang)
@@ -1817,17 +1743,7 @@ async def handle_setlang_callback(update: Update, context: ContextTypes.DEFAULT_
     if not profile:
         return
 
-    def _queue_lang_delivery() -> None:
-        sb = db.get_client()
-        sb.table("deliveries").upsert({
-            "user_id": profile["id"],
-            "video_id": video_id,
-            "status": "pending",
-            "source": "on_demand",
-            "language": new_lang,
-        }, on_conflict="user_id,video_id").execute()
-
-    await asyncio.to_thread(_queue_lang_delivery)
+    await asyncio.to_thread(db.upsert_delivery, profile["id"], video_id, new_lang)
 
     # Restore Options keyboard (language updated so all callbacks stay coherent)
     rows = [
@@ -2078,19 +1994,8 @@ async def handle_unsubch_callback(update: Update, context: ContextTypes.DEFAULT_
         await query.message.reply_text("Connect your BriefTube account first (/start).")
         return
 
-    def _get_channel_name() -> str:
-        sb = db.get_client()
-        name_res = (
-            sb.table("subscriptions")
-            .select("channel_name")
-            .eq("channel_id", channel_id)
-            .eq("user_id", profile["id"])
-            .limit(1)
-            .execute()
-        )
-        return name_res.data[0]["channel_name"] if name_res.data else channel_id
-
-    channel_name = await asyncio.to_thread(_get_channel_name)
+    channel_name = await asyncio.to_thread(db.get_channel_name, channel_id, profile["id"])
+    channel_name = channel_name or channel_id
 
     deactivated = await asyncio.to_thread(
         db.unsubscribe_channel, profile["id"], channel_id

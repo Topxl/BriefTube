@@ -364,7 +364,7 @@ def has_audio_subscribers(channel_id: str, language: str) -> bool:
 
 def get_processed_video(video_id: str, language: str) -> dict | None:
     rows = _q("""
-        SELECT video_id, video_title, channel_id, summary, audio_url, language
+        SELECT video_id, video_title, channel_id, summary, audio_url, language, status
         FROM processed_videos WHERE video_id=%s AND language=%s
     """, (video_id, language))
     return rows[0] if rows else None
@@ -730,13 +730,40 @@ def count_on_demand_this_month(user_id: str) -> int:
 
 def get_profile_by_telegram(telegram_chat_id: str) -> dict | None:
     rows = _q("""
-        SELECT p.id, p.subscription_status, p.trial_ends_at, p.max_channels,
-               p.preferred_language, p.tts_voice, p.favorite_languages
+        SELECT p.id, p.email, p.subscription_status, p.trial_ends_at, p.max_channels,
+               p.preferred_language, p.tts_voice, p.favorite_languages,
+               p.summary_length_pref, p.summary_style, p.summary_custom_instructions
         FROM platform_connections pc
         JOIN profiles p ON p.id = pc.user_id
         WHERE pc.platform='telegram' AND pc.external_id=%s AND pc.connected=true
     """, (telegram_chat_id,))
     return rows[0] if rows else None
+
+
+def get_channel_name(channel_id: str, user_id: str | None = None) -> str | None:
+    """Look up channel_name from subscriptions, optionally scoped to a user."""
+    if user_id:
+        rows = _q(
+            "SELECT channel_name FROM subscriptions WHERE channel_id=%s AND user_id=%s LIMIT 1",
+            (channel_id, user_id),
+        )
+    else:
+        rows = _q(
+            "SELECT channel_name FROM subscriptions WHERE channel_id=%s LIMIT 1",
+            (channel_id,),
+        )
+    return rows[0]["channel_name"] if rows else None
+
+
+def upsert_delivery(user_id: str, video_id: str, language: str, source: str = "on_demand") -> None:
+    """Insert or reset a delivery to pending, clearing sent_at on conflict."""
+    _exec("""
+        INSERT INTO deliveries (user_id, video_id, status, source, language, sent_at)
+        VALUES (%s, %s, 'pending', %s, %s, NULL)
+        ON CONFLICT (user_id, video_id) DO UPDATE SET
+            status = 'pending', source = EXCLUDED.source,
+            language = EXCLUDED.language, sent_at = NULL
+    """, (user_id, video_id, source, language))
 
 
 # ── Subscriptions helpers ───────────────────────────────────────
