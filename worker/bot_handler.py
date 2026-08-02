@@ -910,36 +910,48 @@ def _get_profile_by_chat_id(chat_id: str) -> dict | None:
     return db.get_profile_by_telegram(chat_id)
 
 
+def _parse_trial_end(trial_ends_at) -> "datetime | None":
+    """Parse a trial_ends_at value into an aware datetime, or None.
+
+    Profiles come from `db.get_profile_by_telegram`, which is a psycopg2
+    query when SUPABASE_DB_URL is set (returns a `datetime`) and a PostgREST
+    query otherwise (returns an ISO string). Handle both — string-only
+    parsing raised on datetimes and silently downgraded trial users to Free.
+    """
+    from datetime import datetime, timezone
+    if not trial_ends_at:
+        return None
+    try:
+        ends = (
+            datetime.fromisoformat(trial_ends_at.replace("Z", "+00:00"))
+            if isinstance(trial_ends_at, str)
+            else trial_ends_at
+        )
+        return ends.replace(tzinfo=timezone.utc) if ends.tzinfo is None else ends
+    except Exception as e:
+        logger.warning(f"Unparseable trial_ends_at ({trial_ends_at!r}): {e} (non-fatal)")
+        return None
+
+
 def _is_pro(profile: dict) -> bool:
     """Return True if the user has an active subscription OR an active trial."""
     from datetime import datetime, timezone
     if profile.get("subscription_status") == "active":
         return True
-    trial_ends_at = profile.get("trial_ends_at")
-    if trial_ends_at:
-        try:
-            ends = datetime.fromisoformat(trial_ends_at.replace("Z", "+00:00"))
-            return datetime.now(timezone.utc) <= ends
-        except Exception:
-            pass
-    return False
+    ends = _parse_trial_end(profile.get("trial_ends_at"))
+    return ends is not None and datetime.now(timezone.utc) <= ends
 
 
 def _get_plan_label(profile: dict) -> str:
     """Return a human-readable plan label: Pro / Trial (Xd left) / Free."""
+    from datetime import datetime, timezone
     if profile.get("subscription_status") == "active":
         return "Pro"
-    trial_ends_at = profile.get("trial_ends_at")
-    if trial_ends_at:
-        from datetime import datetime, timezone
-        try:
-            ends = datetime.fromisoformat(trial_ends_at.replace("Z", "+00:00"))
-            now = datetime.now(timezone.utc)
-            days_left = (ends - now).days
-            if days_left >= 0:
-                return f"Trial · {days_left}d left"
-        except Exception:
-            pass
+    ends = _parse_trial_end(profile.get("trial_ends_at"))
+    if ends is not None:
+        days_left = (ends - datetime.now(timezone.utc)).days
+        if days_left >= 0:
+            return f"Trial · {days_left}d left"
     return "Free"
 
 
