@@ -44,8 +44,9 @@ src/generated
 .playwright-mcp
 
 # Python
-worker/__pycache__/
-worker/tests/__pycache__/
+__pycache__/
+*.py[cod]
+.pytest_cache/
 worker/venv/
 worker/*.log
 worker/*.log.*
