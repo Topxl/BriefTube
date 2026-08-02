@@ -1,7 +1,13 @@
 # Changelog
 
+## 2026-08-02
+
+FIX(worker): stop premiere/live jobs retrying forever — `pick_next_processing_job()` returns `created_at` as a `datetime` under the psycopg2 bypass (PostgREST returned an ISO string), so `main.py`'s `created_at.replace("Z", "+00:00")` raised `TypeError`, was swallowed by a bare `except`, and pinned `job_age_hours` to `0.0`. Both age-based give-up guards (7 days for premieres, 48h for live streams) were therefore dead code under `SUPABASE_DB_URL`. Five cancelled premieres had been re-picked every 2h since 18–31 July — 47 snooze cycles each, ~36 wasted transcript-cascade errors per hour. Extracted `_job_age_hours()` which accepts both `datetime` and ISO string.
+FIX(worker): add a hard age backstop to `snooze_job()` in both `db.py` and `db_pg.py` — snoozing never increments `attempts`, so any snooze path with no age guard of its own (the 30-min TTS/rate-limit snoozes) could loop indefinitely. Jobs snoozed past 7 days now fail permanently with `snooze_expired`.
+
 ## 2026-07-20
 
+FIX(worker): scope `get_websub_subscriptions` to active channel IDs instead of loading the whole `websub_subscriptions` table every hour — 2624 rows tracked vs. 273 actually active, ~90% wasted egress on every `websub_loop` cycle (24x/day). Also mirrored in `db_pg.py` so it uses the psycopg2 bypass like the rest of the worker's DB calls, since it previously always hit PostgREST directly even with `SUPABASE_DB_URL` set. Part of the response to the recurring Supabase Free-tier egress-quota outages (see below).
 FIX(worker): stop Telegram bot returning "Service temporarily unavailable" during Supabase egress-quota outages — `bot_handler.py` had several ad-hoc `db.get_client()` queries (profile lookup, on-demand video check, delivery upsert, channel-name lookup) that bypassed the psycopg2/pooler fallback in `db.py`, so they still hit PostgREST and failed with 402 even while the rest of the pipeline kept working via the direct connection. Routed them through `db.get_profile_by_telegram`, `db.get_processed_video`, `db.upsert_delivery` (new), and `db.get_channel_name` (new) — all mirrored in `db_pg.py` so they use the psycopg2 bypass when `SUPABASE_DB_URL` is set.
 
 ## 2026-07-10

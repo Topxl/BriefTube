@@ -22,6 +22,10 @@ from config import SUPABASE_DB_URL
 
 logger = logging.getLogger(__name__)
 
+# A job may be snoozed (requeued without failing) for at most this long before
+# it is failed permanently. Matches the 7-day premiere guard in main.py.
+_SNOOZE_MAX_AGE_HOURS = 7 * 24
+
 _pool: psycopg2.pool.ThreadedConnectionPool | None = None
 
 
@@ -463,6 +467,28 @@ def complete_job(job_id: str):
 
 
 def snooze_job(job_id: str, hours: int = 0, minutes: int = 0) -> None:
+    """Requeue a job with a retry_after delay, without counting it as a failure.
+
+    Backstop: a job that has been snoozed past _SNOOZE_MAX_AGE_HOURS fails
+    permanently. Snoozing never increments `attempts`, so without this a video
+    that is never going to become available (cancelled premiere, dead live)
+    would be re-picked every 2h forever.
+    """
+    rows = _q("SELECT created_at FROM processing_queue WHERE id=%s", (job_id,))
+    if rows:
+        created = rows[0].get("created_at")
+        if created is not None:
+            if created.tzinfo is None:
+                created = created.replace(tzinfo=timezone.utc)
+            age_hours = (datetime.now(timezone.utc) - created).total_seconds() / 3600
+            if age_hours > _SNOOZE_MAX_AGE_HOURS:
+                logger.warning(
+                    f"Job {job_id} still snoozing after {age_hours:.0f}h "
+                    f"(max {_SNOOZE_MAX_AGE_HOURS}h) — failing permanently"
+                )
+                fail_job(job_id, immediate=True, error_reason="snooze_expired")
+                return
+
     retry_after = datetime.now(timezone.utc) + timedelta(hours=hours, minutes=minutes)
     _exec("UPDATE processing_queue SET status='queued', retry_after=%s, started_at=NULL WHERE id=%s",
           (retry_after, job_id))
@@ -833,3 +859,15 @@ def get_stale_r2_urls(days: int = 7, limit: int = 100) -> list[dict]:
     unsafe = _q("SELECT video_id FROM deliveries WHERE video_id=ANY(%s) AND status='pending'", (video_ids,))
     unsafe_ids = {r["video_id"] for r in unsafe}
     return [r for r in candidates if r["video_id"] not in unsafe_ids][:limit]
+
+
+# ── WebSub ───────────────────────────────────────────────────────
+
+def get_websub_subscriptions(channel_ids: list[str]) -> dict[str, dict]:
+    if not channel_ids:
+        return {}
+    rows = _q(
+        "SELECT channel_id, status, expires_at FROM websub_subscriptions WHERE channel_id = ANY(%s)",
+        (channel_ids,)
+    )
+    return {r["channel_id"]: {"status": r["status"], "expires_at": r["expires_at"]} for r in rows}

@@ -72,7 +72,7 @@ async def sync_subscriptions(session: aiohttp.ClientSession) -> tuple[int, int]:
     if not channel_ids:
         return 0, 0
 
-    existing = db.get_websub_subscriptions()
+    existing = db.get_websub_subscriptions(channel_ids)
     now = datetime.now(timezone.utc)
     renew_threshold = now + timedelta(seconds=_RENEW_BEFORE_SECONDS)
 

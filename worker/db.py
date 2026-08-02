@@ -9,6 +9,10 @@ from config import SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 
 logger = logging.getLogger(__name__)
 
+# A job may be snoozed (requeued without failing) for at most this long before
+# it is failed permanently. Matches the 7-day premiere guard in main.py.
+_SNOOZE_MAX_AGE_HOURS = 7 * 24
+
 _client: Client = None
 
 
@@ -504,10 +508,38 @@ def snooze_job(job_id: str, hours: int = 0, minutes: int = 0) -> None:
 
     Does NOT increment attempts — this is not a failure, just a wait.
     Used for: premiere/scheduled videos, transient rate limits, TTS outages.
+
+    Backstop: a job snoozed past _SNOOZE_MAX_AGE_HOURS fails permanently.
+    Since attempts is never incremented, a video that will never become
+    available would otherwise be re-picked forever.
     """
     from datetime import datetime, timezone, timedelta
-    retry_after = (datetime.now(timezone.utc) + timedelta(hours=hours, minutes=minutes)).isoformat()
     sb = get_client()
+
+    res = sb.table("processing_queue").select("created_at").eq("id", job_id).execute()
+    if res.data:
+        created_raw = res.data[0].get("created_at")
+        if created_raw:
+            try:
+                created = (
+                    datetime.fromisoformat(created_raw.replace("Z", "+00:00"))
+                    if isinstance(created_raw, str)
+                    else created_raw
+                )
+                if created.tzinfo is None:
+                    created = created.replace(tzinfo=timezone.utc)
+                age_hours = (datetime.now(timezone.utc) - created).total_seconds() / 3600
+                if age_hours > _SNOOZE_MAX_AGE_HOURS:
+                    logger.warning(
+                        f"Job {job_id} still snoozing after {age_hours:.0f}h "
+                        f"(max {_SNOOZE_MAX_AGE_HOURS}h) — failing permanently"
+                    )
+                    fail_job(job_id, immediate=True, error_reason="snooze_expired")
+                    return
+            except Exception as e:
+                logger.warning(f"Snooze age check failed for job {job_id}: {e} (non-fatal)")
+
+    retry_after = (datetime.now(timezone.utc) + timedelta(hours=hours, minutes=minutes)).isoformat()
     sb.table("processing_queue").update({
         "status": "queued",
         "retry_after": retry_after,
@@ -1654,28 +1686,28 @@ def get_subscription_count(user_id: str) -> int:
 
 # ── WebSub Subscriptions ────────────────────────────────────────
 
-def get_websub_subscriptions() -> dict[str, dict]:
-    """Return all WebSub subscriptions as {channel_id: {status, expires_at}}.
+def get_websub_subscriptions(channel_ids: list[str]) -> dict[str, dict]:
+    """Return WebSub subscriptions for the given channel_ids as {channel_id: {status, expires_at}}.
 
-    Paginated — websub_subscriptions can exceed 1 000 rows.
+    Scoped to channel_ids (the currently active channels) instead of loading the
+    whole table — websub_subscriptions accumulates rows for channels that no
+    longer have an eligible subscriber, so an unscoped load was ~90% wasted egress.
     """
+    if not channel_ids:
+        return {}
     sb = get_client()
     result: dict[str, dict] = {}
-    offset = 0
-    while True:
+    # IN() batched at 500 to stay within PostgREST URL length limits
+    for i in range(0, len(channel_ids), 500):
+        batch = channel_ids[i:i + 500]
         res = (
             sb.table("websub_subscriptions")
             .select("channel_id, status, expires_at")
-            .range(offset, offset + 999)
+            .in_("channel_id", batch)
             .execute()
         )
-        if not res.data:
-            break
-        for row in res.data:
+        for row in (res.data or []):
             result[row["channel_id"]] = {"status": row["status"], "expires_at": row["expires_at"]}
-        if len(res.data) < 1000:
-            break
-        offset += 1000
     return result
 
 

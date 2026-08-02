@@ -224,6 +224,30 @@ def _is_db_unreachable(error: Exception | str) -> bool:
     return "connection to server at" in msg and "timeout expired" in msg
 
 
+def _job_age_hours(job: dict) -> float:
+    """Return how long a job has been queued, in hours (0.0 if unknown).
+
+    `created_at` comes back as a `datetime` under the psycopg2 layer (db_pg)
+    and as an ISO string under supabase-py. Handle both — the previous
+    string-only parsing raised on datetime objects, silently pinning the age
+    to 0.0 and disabling every age-based give-up guard.
+    """
+    created = job.get("created_at")
+    if not created:
+        return 0.0
+    try:
+        if isinstance(created, str):
+            created = datetime.fromisoformat(created.replace("Z", "+00:00"))
+        if created.tzinfo is None:
+            created = created.replace(tzinfo=timezone.utc)
+        return (datetime.now(timezone.utc) - created).total_seconds() / 3600
+    except Exception:
+        logger.warning(
+            f"Unparseable created_at ({created!r}) on job {job.get('id')} (non-fatal)"
+        )
+        return 0.0
+
+
 def _resolve_tts_voice(voice: str | None, language: str) -> str | None:
     """Return a TTS voice that is intelligible for the target language.
 
@@ -661,16 +685,7 @@ async def _process_video(
                     hours = int(error.split(":")[1])
                 except (IndexError, ValueError):
                     hours = 2
-                job_age_hours = 0.0
-                try:
-                    created_dt = datetime.fromisoformat(
-                        job.get("created_at", "").replace("Z", "+00:00")
-                    )
-                    job_age_hours = (
-                        datetime.now(timezone.utc) - created_dt
-                    ).total_seconds() / 3600
-                except Exception:
-                    pass
+                job_age_hours = _job_age_hours(job)
                 if job_age_hours > 7 * 24:
                     logger.info(
                         f"[{video_id}] Premiere stale (>7 days) — failing permanently: {video_title[:80]}"
@@ -687,16 +702,7 @@ async def _process_video(
             # Snooze for 2h, but give up after 48h — the stream has ended by then
             # and will never get a transcript (or it's a permanent live channel).
             if error == "video_is_live":
-                job_age_hours = 0.0
-                try:
-                    created_dt = datetime.fromisoformat(
-                        job.get("created_at", "").replace("Z", "+00:00")
-                    )
-                    job_age_hours = (
-                        datetime.now(timezone.utc) - created_dt
-                    ).total_seconds() / 3600
-                except Exception:
-                    pass
+                job_age_hours = _job_age_hours(job)
                 if job_age_hours > 48:
                     logger.info(
                         f"[{video_id}] Live stream stale (>48h) — failing permanently: {video_title[:80]}"
