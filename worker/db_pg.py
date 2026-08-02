@@ -627,7 +627,36 @@ def create_deliveries_for_video(video_id: str, channel_id: str, language: str = 
         logger.info(f"Video {video_id}: {len(to_insert)} deliveries created")
 
 
+def _attach_summaries(results: list[dict]) -> list[dict]:
+    """Load `summary` for the rows about to be returned, and only those.
+
+    Summaries average ~2.4 kB. Fetching them for the whole candidate window
+    (5x limit) on every 15s poll is what made a stuck delivery so expensive:
+    see get_pending_deliveries.
+    """
+    if not results:
+        return results
+    video_ids = list({r["video_id"] for r in results})
+    rows = _q("""
+        SELECT video_id, language, summary
+        FROM processed_videos WHERE status='completed' AND video_id=ANY(%s)
+    """, (video_ids,))
+    smap = {(r["video_id"], r.get("language") or "fr"): r["summary"] for r in rows}
+    for r in results:
+        r["summary"] = smap.get((r["video_id"], r["language"]))
+    return results
+
+
 def get_pending_deliveries(limit: int = 20) -> list[dict]:
+    """Return deliverable pending deliveries, newest metadata attached.
+
+    `summary` is fetched last, for the returned rows only. A delivery that can
+    never be dispatched — no platform connection, no row matching its language —
+    is skipped here but stays 'pending' forever, so it never leaves the head of
+    ORDER BY created_at. Loading summaries before those filters meant re-reading
+    the same dead rows' full text every 15s: measured at ~7 GB/month of egress,
+    against a 5 GB Free-tier quota.
+    """
     raw = _q("""
         SELECT id, user_id, video_id, language, platform, audio_required
         FROM deliveries WHERE status='pending'
@@ -638,7 +667,7 @@ def get_pending_deliveries(limit: int = 20) -> list[dict]:
 
     video_ids = list({d["video_id"] for d in raw})
     pv = _q("""
-        SELECT video_id, language, video_title, channel_id, summary, audio_url
+        SELECT video_id, language, video_title, channel_id, audio_url
         FROM processed_videos WHERE status='completed' AND video_id=ANY(%s)
     """, (video_ids,))
     video_map = {(v["video_id"], v.get("language") or "fr"): v for v in pv}
@@ -687,13 +716,12 @@ def get_pending_deliveries(limit: int = 20) -> list[dict]:
             "language": lang,
             "video_title": v["video_title"],
             "channel_id": v["channel_id"],
-            "summary": v["summary"],
             "audio_url": v["audio_url"],
             "audio_required": d.get("audio_required", True),
         })
         if len(results) >= limit:
             break
-    return results
+    return _attach_summaries(results)
 
 
 def claim_delivery(delivery_id: str) -> bool:

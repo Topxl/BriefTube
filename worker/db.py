@@ -831,12 +831,44 @@ def create_deliveries_for_video(video_id: str, channel_id: str, language: str = 
         )
 
 
+def _attach_summaries(results: list[dict]) -> list[dict]:
+    """Load `summary` for the rows about to be returned, and only those.
+
+    Summaries average ~2.4 kB. Fetching them for the whole candidate window
+    (5x limit) on every 15s poll is what made a stuck delivery so expensive:
+    see get_pending_deliveries.
+    """
+    if not results:
+        return results
+    sb = get_client()
+    video_ids = list({r["video_id"] for r in results})
+    rows = (
+        sb.table("processed_videos")
+        .select("video_id, language, summary")
+        .eq("status", "completed")
+        .in_("video_id", video_ids)
+        .execute()
+        .data or []
+    )
+    smap = {(r["video_id"], r.get("language") or "fr"): r["summary"] for r in rows}
+    for r in results:
+        r["summary"] = smap.get((r["video_id"], r["language"]))
+    return results
+
+
 def get_pending_deliveries(limit: int = 20) -> list[dict]:
     """Get pending deliveries for completed videos.
 
     Strategy: query pending deliveries first (fast, indexed on status).
     When the queue is idle (0 pending), this returns immediately with a single
     cheap DB call instead of first loading 1 000 completed video_ids unconditionally.
+
+    `summary` is fetched last, for the returned rows only. A delivery that can
+    never be dispatched — no platform connection, no row matching its language —
+    is skipped below but stays 'pending' forever, so it never leaves the head of
+    ORDER BY created_at. Loading summaries before those filters meant re-reading
+    the same dead rows' full text every 15s: measured at ~7 GB/month of egress,
+    against a 5 GB Free-tier quota.
     """
     sb = get_client()
 
@@ -883,12 +915,13 @@ def get_pending_deliveries(limit: int = 20) -> list[dict]:
     if not raw_deliveries:
         return []
 
-    # Build a fast lookup for video metadata keyed by (video_id, language)
+    # Build a fast lookup for video metadata keyed by (video_id, language).
+    # `summary` is deliberately excluded here — see _attach_summaries.
     needed_pairs = list({(d["video_id"], d.get("language", "fr")) for d in raw_deliveries})
     needed_video_ids = list({p[0] for p in needed_pairs})
     pv_rows = (
         sb.table("processed_videos")
-        .select("video_id, language, video_title, channel_id, summary, audio_url")
+        .select("video_id, language, video_title, channel_id, audio_url")
         .eq("status", "completed")
         .in_("video_id", needed_video_ids)
         .execute()
@@ -940,13 +973,12 @@ def get_pending_deliveries(limit: int = 20) -> list[dict]:
             "language": lang,
             "video_title": v["video_title"],
             "channel_id": v["channel_id"],
-            "summary": v["summary"],
             "audio_url": v["audio_url"],
             "audio_required": d.get("audio_required", True),
         })
         if len(results) >= limit:
             break
-    return results
+    return _attach_summaries(results)
 
 
 def cleanup_undeliverable_deliveries() -> int:

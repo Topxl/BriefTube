@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-08-03
+
+FIX(worker): stop `get_pending_deliveries` reading summaries in bulk — it loaded `summary` (~2.4 kB/row) for the whole candidate window (5x limit) before the dispatchability filters ran, on every 15s poll. A delivery that can never be dispatched (no platform connection, no row matching its language) is skipped but stays `pending` forever, so it never leaves the head of `ORDER BY created_at` and its full text was re-read around the clock. Measured at 7.14 GB/month against a 5 GB Free-tier quota — the direct cause of the `exceed_egress_quota` 402 that has blocked Supabase Auth (and therefore all dashboard logins) since 16 July. Summaries are now fetched last, for the returned rows only (<= limit), in both `db.py` and `db_pg.py`. Regression tests in `tests/test_delivery_egress.py`.
+
 ## 2026-08-02
 
 CHORE: untrack 17 compiled `.pyc` files under `worker/tests/__pycache__/` — they predated the `.gitignore` rule, so git kept tracking them and they showed up modified after every test run. Broadened the ignore rules to generic `__pycache__/`, `*.py[cod]` and `.pytest_cache/` so `scripts/` is covered too.
