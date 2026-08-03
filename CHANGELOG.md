@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-08-04
+
+FIX(pwa): declare real PNG icons (192, 512 and a maskable 512) in `app/manifest.ts` — the manifest only offered `/favicon.ico` with `sizes: "any"`, which Android refuses as an install icon, so adding BriefTube to a phone home screen produced the browser's generic icon. Icons generated from `public/logo.svg` into `public/icons/`.
+
 ## 2026-08-03
 
 FIX(worker): stop `get_pending_deliveries` reading summaries in bulk — it loaded `summary` (~2.4 kB/row) for the whole candidate window (5x limit) before the dispatchability filters ran, on every 15s poll. A delivery that can never be dispatched (no platform connection, no row matching its language) is skipped but stays `pending` forever, so it never leaves the head of `ORDER BY created_at` and its full text was re-read around the clock. Measured at 7.14 GB/month against a 5 GB Free-tier quota — the direct cause of the `exceed_egress_quota` 402 that has blocked Supabase Auth (and therefore all dashboard logins) since 16 July. Summaries are now fetched last, for the returned rows only (<= limit), in both `db.py` and `db_pg.py`. Regression tests in `tests/test_delivery_egress.py`.
