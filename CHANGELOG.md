@@ -2,6 +2,8 @@
 
 ## 2026-08-04
 
+CHORE(ci): delete the dead `Deploy Web` workflow — it had failed on every run since 2026-05-15 (pnpm version conflict between `action-setup` and `packageManager`) while deploys kept working, because the site is deployed by Vercel's native Git integration. Repairing it would have added a second competing deploy per push. `.claude/rules/deploy.md` updated: a red Actions run is not a failed deploy.
+
 FIX(pwa): declare real PNG icons (192, 512 and a maskable 512) in `app/manifest.ts` — the manifest only offered `/favicon.ico` with `sizes: "any"`, which Android refuses as an install icon, so adding BriefTube to a phone home screen produced the browser's generic icon. Icons generated from `public/logo.svg` into `public/icons/`.
 
 ## 2026-08-03
