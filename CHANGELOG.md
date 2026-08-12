@@ -2,6 +2,8 @@
 
 ## 2026-08-12
 
+FIX(worker): a summary delivered in a language other than the user's own was voiced with their profile voice — a French voice reading a Thai summary, which is unlistenable. The delivery loop now resolves the voice from the delivery's language through `_resolve_tts_voice()`. The generated file also carries the language in its name, so the cache lookup (which already expected `video_{id}_{lang}.mp3`) finds it and two languages of the same video stop overwriting each other. Voice and file stem now come from a single `_delivery_audio_params()`.
+
 FIX(worker): picking a new language from the bot's Options menu promised "Generating summary in X…" but only queued the delivery — `handle_setlang_callback` never created the job, so the delivery stayed pending forever and no summary was ever generated. The queue-in-another-language logic is now shared with the share-link picker through `_queue_video_language()`, which inserts the `processed_videos` row, enqueues the job, then queues the delivery.
 
 FIX(worker): on-demand video requests sent to the Telegram bot always failed with "A temporary problem prevented queuing your video". `db_pg.upsert_delivery` used `ON CONFLICT (user_id, video_id)` while the `deliveries` unique constraint is `(user_id, video_id, platform)`, so Postgres raised 42P10 on every call. The bot's catch-all handler reported it as a transient DB outage, hiding a schema mismatch since 2026-07-31. Both implementations now name `platform` explicitly; the supabase-py path also scopes its existing-row lookup to the platform so a pre-existing `web` row is no longer reset instead of the Telegram one.

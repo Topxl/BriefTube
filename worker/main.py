@@ -266,6 +266,19 @@ def _resolve_tts_voice(voice: str | None, language: str) -> str | None:
     return default or voice
 
 
+def _delivery_audio_params(delivery: dict) -> tuple[str | None, str]:
+    """Return (voice, file stem) for a delivery's audio.
+
+    Both values live here because the cache lookup and the on-the-fly
+    generation must agree on the file name, and the voice has to follow the
+    delivery's language, not the user's profile default -- a French voice
+    reading a Thai summary produces unusable audio.
+    """
+    language = delivery.get("language") or "fr"
+    voice = _resolve_tts_voice(delivery.get("tts_voice"), language)
+    return voice, f"video_{delivery['video_id']}_{language}"
+
+
 # ── Video failure notification ────────────────────────────────
 
 # Human-readable labels for common error codes
@@ -866,7 +879,7 @@ async def _process_video(
                 audio_path = await text_to_audio(
                     clean_summary,
                     voice=tts_voice,
-                    output_filename=f"video_{video_id}"
+                    output_filename=f"video_{video_id}_{user_language}"
                 )
                 _t_audio = time.monotonic() - _t0 - _t_transcript - _t_summary
 
@@ -1351,14 +1364,15 @@ async def delivery_loop(alert_system: MonitoringAlert):
                     mode = "audio" if audio_required else "text-only"
                     logger.info(
                         f"[{video_id}] Delivering to {d.get('platform', '?')} "
-                        f"user={d['user_id'][:8]}… mode={mode}"
+                        f"user={d['user_id'][:8]}… mode={mode} lang={delivery_language}"
                     )
 
                     audio_path: Path | None = None
+                    voice, audio_stem = _delivery_audio_params(d)
 
                     if audio_required:
                         # Get or download audio file (one file per video+language)
-                        audio_path = Path(__file__).parent / "audio" / f"video_{video_id}_{delivery_language}.mp3"
+                        audio_path = Path(__file__).parent / "audio" / f"{audio_stem}.mp3"
 
                         if not audio_path.exists() and audio_url and audio_url.startswith("http"):
                             async with _http_session.get(audio_url) as resp:
@@ -1369,9 +1383,8 @@ async def delivery_loop(alert_system: MonitoringAlert):
 
                         if not audio_path.exists():
                             if d.get("summary"):
-                                voice = d.get("tts_voice") or None
                                 audio_path = await text_to_audio(
-                                    d["summary"], voice=voice, output_filename=f"video_{video_id}"
+                                    d["summary"], voice=voice, output_filename=audio_stem
                                 )
                             else:
                                 logger.warning(f"No audio for {video_id} — marking failed")
