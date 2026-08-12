@@ -809,15 +809,22 @@ def get_channel_name(channel_id: str, user_id: str | None = None) -> str | None:
     return rows[0]["channel_name"] if rows else None
 
 
-def upsert_delivery(user_id: str, video_id: str, language: str, source: str = "on_demand") -> None:
-    """Insert or reset a delivery to pending, clearing sent_at on conflict."""
+def upsert_delivery(
+    user_id: str, video_id: str, language: str,
+    source: str = "on_demand", platform: str = "telegram",
+) -> None:
+    """Insert or reset a delivery to pending, clearing sent_at on conflict.
+
+    The unique constraint is (user_id, video_id, platform) -- one row per
+    delivery channel -- so ON CONFLICT must name all three columns.
+    """
     _exec("""
-        INSERT INTO deliveries (user_id, video_id, status, source, language, sent_at)
-        VALUES (%s, %s, 'pending', %s, %s, NULL)
-        ON CONFLICT (user_id, video_id) DO UPDATE SET
+        INSERT INTO deliveries (user_id, video_id, status, source, language, platform, sent_at)
+        VALUES (%s, %s, 'pending', %s, %s, %s, NULL)
+        ON CONFLICT (user_id, video_id, platform) DO UPDATE SET
             status = 'pending', source = EXCLUDED.source,
             language = EXCLUDED.language, sent_at = NULL
-    """, (user_id, video_id, source, language))
+    """, (user_id, video_id, source, language, platform))
 
 
 # ── Subscriptions helpers ───────────────────────────────────────

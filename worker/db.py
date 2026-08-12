@@ -1363,11 +1363,18 @@ def get_channel_name(channel_id: str, user_id: str | None = None) -> str | None:
     return res.data[0]["channel_name"] if res.data else None
 
 
-def upsert_delivery(user_id: str, video_id: str, language: str, source: str = "on_demand") -> None:
+def upsert_delivery(
+    user_id: str, video_id: str, language: str,
+    source: str = "on_demand", platform: str = "telegram",
+) -> None:
     """Insert or reset a delivery to pending, clearing sent_at on conflict.
 
     supabase-py's upsert() doesn't clear sent_at on conflict, leaving the row
     permanently stuck, so we check for an existing row and UPDATE it instead.
+
+    Rows are unique per (user_id, video_id, platform), so the lookup must be
+    scoped to the platform -- otherwise a pre-existing `web` row gets reset
+    instead of the Telegram one and nothing is delivered to the bot.
     """
     sb = get_client()
     existing = (
@@ -1375,6 +1382,7 @@ def upsert_delivery(user_id: str, video_id: str, language: str, source: str = "o
         .select("id")
         .eq("user_id", user_id)
         .eq("video_id", video_id)
+        .eq("platform", platform)
         .maybe_single()
         .execute()
     )
@@ -1392,6 +1400,7 @@ def upsert_delivery(user_id: str, video_id: str, language: str, source: str = "o
             "status": "pending",
             "source": source,
             "language": language,
+            "platform": platform,
         }).execute()
 
 

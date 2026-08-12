@@ -156,3 +156,19 @@ class TestUpsertDelivery:
         assert insert_call["status"] == "pending"
         assert insert_call["language"] == "th"
         assert insert_call["source"] == "on_demand"
+
+    def test_insert_sets_platform(self):
+        """Rows are unique per (user_id, video_id, platform) -- platform must be explicit."""
+        sb, chain = _make_sb_mock(existing_id=None)
+        with patch.object(db, "get_client", return_value=sb):
+            db.upsert_delivery("user-abc", "vid-xyz", "fr")
+        assert chain.insert.call_args[0][0]["platform"] == "telegram"
+
+    def test_lookup_scoped_to_platform(self):
+        """The existing-row lookup must filter on platform, not just user + video."""
+        sb, chain = _make_sb_mock(existing_id=None)
+        with patch.object(db, "get_client", return_value=sb):
+            db.upsert_delivery("user-abc", "vid-xyz", "fr", platform="web")
+        eq_filters = {call[0][0]: call[0][1] for call in chain.eq.call_args_list}
+        assert eq_filters["platform"] == "web"
+        assert chain.insert.call_args[0][0]["platform"] == "web"

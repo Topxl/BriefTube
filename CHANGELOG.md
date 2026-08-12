@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-08-12
+
+FIX(worker): on-demand video requests sent to the Telegram bot always failed with "A temporary problem prevented queuing your video". `db_pg.upsert_delivery` used `ON CONFLICT (user_id, video_id)` while the `deliveries` unique constraint is `(user_id, video_id, platform)`, so Postgres raised 42P10 on every call. The bot's catch-all handler reported it as a transient DB outage, hiding a schema mismatch since 2026-07-31. Both implementations now name `platform` explicitly; the supabase-py path also scopes its existing-row lookup to the platform so a pre-existing `web` row is no longer reset instead of the Telegram one.
+
 ## 2026-08-04
 
 CHORE(ci): delete the dead `Deploy Web` workflow — it had failed on every run since 2026-05-15 (pnpm version conflict between `action-setup` and `packageManager`) while deploys kept working, because the site is deployed by Vercel's native Git integration. Repairing it would have added a second competing deploy per push. `.claude/rules/deploy.md` updated: a red Actions run is not a failed deploy.
