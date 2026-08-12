@@ -9,6 +9,7 @@ from bot_handler import (
     _calc_success_rate,
     _is_pro,
     _get_plan_label,
+    _queue_video_language,
 )
 
 
@@ -163,6 +164,29 @@ class TestUpsertDelivery:
         with patch.object(db, "get_client", return_value=sb):
             db.upsert_delivery("user-abc", "vid-xyz", "fr")
         assert chain.insert.call_args[0][0]["platform"] == "telegram"
+
+    def test_queue_language_creates_job_not_just_delivery(self):
+        """Regression: picking a new language must queue generation, not only the delivery."""
+        base = {"video_id": "vid-1", "video_title": "Title", "channel_id": "chan-1"}
+        with patch.object(db, "get_any_processed_video", return_value=base), \
+             patch.object(db, "insert_new_video") as insert, \
+             patch.object(db, "enqueue_video_for_language", return_value=True) as enqueue, \
+             patch.object(db, "upsert_delivery") as upsert:
+            result = _queue_video_language("user-1", "vid-1", "th", "th-TH-PremwadeeNeural")
+        assert result is True
+        assert insert.call_args[1]["language"] == "th"
+        assert enqueue.call_args[0][4] == "th"
+        assert upsert.call_args[0] == ("user-1", "vid-1", "th")
+
+    def test_queue_language_returns_none_when_video_unknown(self):
+        """No base row → nothing queued, and the caller can tell."""
+        with patch.object(db, "get_any_processed_video", return_value=None), \
+             patch.object(db, "insert_new_video") as insert, \
+             patch.object(db, "upsert_delivery") as upsert:
+            result = _queue_video_language("user-1", "vid-1", "th")
+        assert result is None
+        insert.assert_not_called()
+        upsert.assert_not_called()
 
     def test_lookup_scoped_to_platform(self):
         """The existing-row lookup must filter on platform, not just user + video."""

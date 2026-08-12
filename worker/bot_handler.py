@@ -1505,6 +1505,35 @@ async def handle_share_lang_callback(update: Update, context: ContextTypes.DEFAU
         pass
 
 
+def _queue_video_language(
+    user_id: str, video_id: str, new_lang: str, tts_voice: str | None = None
+) -> bool | None:
+    """Queue a video for generation in another language, then queue its delivery.
+
+    Blocking — call through asyncio.to_thread. Returns True when a new job was
+    created, False when one was already running, and None when the video is
+    unknown (no processed row to copy the title/channel from).
+
+    Both the Options language picker and the share language picker go through
+    here: queueing the delivery alone leaves it pending forever with no job
+    behind it, since the summary in that language never gets generated.
+    """
+    base = db.get_any_processed_video(video_id)
+    if not base:
+        return None
+
+    video_title = base.get("video_title", video_id)
+    channel_id = base.get("channel_id", "")
+    youtube_url = f"https://www.youtube.com/watch?v={video_id}"
+
+    db.insert_new_video(video_id, channel_id, video_title, youtube_url, language=new_lang)
+    queued = db.enqueue_video_for_language(
+        video_id, youtube_url, video_title, channel_id, new_lang, tts_voice=tts_voice
+    )
+    db.upsert_delivery(user_id, video_id, new_lang)
+    return queued
+
+
 async def handle_share_set_lang_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Switch share link language — if already processed: show link; if not: queue generation."""
     query = update.callback_query
@@ -1569,28 +1598,15 @@ async def handle_share_set_lang_callback(update: Update, context: ContextTypes.D
         return
 
     # ── Case 2: not yet processed — queue generation ────────────────
-    base = await asyncio.to_thread(db.get_any_processed_video, video_id)
-    if not base:
+    queued = await asyncio.to_thread(
+        _queue_video_language, profile["id"], video_id, new_lang, profile.get("tts_voice")
+    )
+    if queued is None:
         try:
             await query.message.edit_reply_markup(reply_markup=None)
         except Exception:
             pass
         return
-
-    video_title = base.get("video_title", video_id)
-    channel_id = base.get("channel_id", "")
-    youtube_url = f"https://www.youtube.com/watch?v={video_id}"
-    tts_voice = profile.get("tts_voice")
-
-    def _queue_new_lang() -> bool:
-        db.insert_new_video(video_id, channel_id, video_title, youtube_url, language=new_lang)
-        queued = db.enqueue_video_for_language(
-            video_id, youtube_url, video_title, channel_id, new_lang, tts_voice=tts_voice
-        )
-        db.upsert_delivery(profile["id"], video_id, new_lang)
-        return queued
-
-    queued = await asyncio.to_thread(_queue_new_lang)
 
     status_text = (
         f"Generating in {lang_label}... You'll receive it shortly and can share it then."
@@ -1755,7 +1771,18 @@ async def handle_setlang_callback(update: Update, context: ContextTypes.DEFAULT_
     if not profile:
         return
 
-    await asyncio.to_thread(db.upsert_delivery, profile["id"], video_id, new_lang)
+    if already_done:
+        await asyncio.to_thread(db.upsert_delivery, profile["id"], video_id, new_lang)
+    else:
+        # The alert above promised a summary, so the generation has to be queued
+        # too — a delivery on its own stays pending forever with no job behind it.
+        queued = await asyncio.to_thread(
+            _queue_video_language, profile["id"], video_id, new_lang, profile.get("tts_voice")
+        )
+        if queued is None:
+            logger.warning(f"[{video_id}] setlang {new_lang}: video unknown, nothing queued")
+        else:
+            logger.info(f"[{video_id}] setlang {new_lang}: queued={queued} for user={profile['id']}")
 
     # Restore Options keyboard (language updated so all callbacks stay coherent)
     rows = [

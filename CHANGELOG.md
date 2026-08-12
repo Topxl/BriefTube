@@ -2,6 +2,8 @@
 
 ## 2026-08-12
 
+FIX(worker): picking a new language from the bot's Options menu promised "Generating summary in X…" but only queued the delivery — `handle_setlang_callback` never created the job, so the delivery stayed pending forever and no summary was ever generated. The queue-in-another-language logic is now shared with the share-link picker through `_queue_video_language()`, which inserts the `processed_videos` row, enqueues the job, then queues the delivery.
+
 FIX(worker): on-demand video requests sent to the Telegram bot always failed with "A temporary problem prevented queuing your video". `db_pg.upsert_delivery` used `ON CONFLICT (user_id, video_id)` while the `deliveries` unique constraint is `(user_id, video_id, platform)`, so Postgres raised 42P10 on every call. The bot's catch-all handler reported it as a transient DB outage, hiding a schema mismatch since 2026-07-31. Both implementations now name `platform` explicitly; the supabase-py path also scopes its existing-row lookup to the platform so a pre-existing `web` row is no longer reset instead of the Telegram one.
 
 ## 2026-08-04
