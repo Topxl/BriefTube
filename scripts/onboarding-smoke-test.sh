@@ -11,6 +11,11 @@
 #   5. Worker Health — Worker responding on VPS (via SSH)
 #   6. External Services — Supabase DB, Stripe API reachable
 
+# Un seul passage a la fois : cron ne doit jamais empiler des instances si un
+# appel reseau pend (voir db-health-check.sh, 1300 process empiles en 81 h).
+exec 9> /tmp/brieftube-onboarding.lock
+flock -n 9 || exit 0
+
 # ── Config ──────────────────────────────────────────────────────────────────────
 
 SITE_URL="${BRIEFTUBE_URL:-https://www.brief-tube.com}"
@@ -317,7 +322,7 @@ printf "\n${BOLD}── Worker Health (via SSH) ──${RESET}\n"
 
 # 14. Worker health endpoint
 start_time=$(date +%s%N)
-worker_health=$(ssh -o ConnectTimeout=5 -o BatchMode=yes brieftube-vps "curl -sf --max-time 5 http://localhost:8080/health" 2>/dev/null)
+worker_health=$(timeout -k 5 20 ssh -n -o ConnectTimeout=5 -o BatchMode=yes brieftube-vps "curl -sf --max-time 5 http://localhost:8080/health" 2>/dev/null)
 end_time=$(date +%s%N)
 time_ms=$(( (end_time - start_time) / 1000000 ))
 ssh_exit=$?
@@ -334,7 +339,7 @@ fi
 
 # 15. Worker services check
 start_time=$(date +%s%N)
-worker_services=$(ssh -o ConnectTimeout=5 -o BatchMode=yes brieftube-vps "curl -sf --max-time 5 http://localhost:8080/services" 2>/dev/null)
+worker_services=$(timeout -k 5 20 ssh -n -o ConnectTimeout=5 -o BatchMode=yes brieftube-vps "curl -sf --max-time 5 http://localhost:8080/services" 2>/dev/null)
 end_time=$(date +%s%N)
 time_ms=$(( (end_time - start_time) / 1000000 ))
 ssh_exit=$?

@@ -2,6 +2,11 @@
 # BriefTube Uptime Monitor
 # Run via cron every 5 minutes: */5 * * * * /path/to/uptime-monitor.sh
 
+# Un seul passage a la fois : cron ne doit jamais empiler des instances si un
+# appel reseau pend (voir db-health-check.sh, 1300 process empiles en 81 h).
+exec 9> /tmp/brieftube-uptime.lock
+flock -n 9 || exit 0
+
 # Config - set these env vars or edit directly
 SITE_URL="${BRIEFTUBE_URL:-https://www.brief-tube.com}"
 TELEGRAM_BOT_TOKEN="${BRIEFTUBE_TELEGRAM_BOT_TOKEN:-}"

@@ -10,6 +10,11 @@
 #   4. Auth callback route exists (not a 500 crash)
 #   5. OAuth state cookie is set by the Google auth endpoint
 
+# Un seul passage a la fois : cron ne doit jamais empiler des instances si un
+# appel reseau pend (voir db-health-check.sh, 1300 process empiles en 81 h).
+exec 9> /tmp/brieftube-auth-smoke.lock
+flock -n 9 || exit 0
+
 # ── Config ──────────────────────────────────────────────────────────────────────
 
 SITE_URL="${BRIEFTUBE_URL:-https://www.brief-tube.com}"
