@@ -15,6 +15,15 @@
 #   5. Processing backlog (pending job count)
 #   6. Delivery success rate (last 24h)
 
+# ── Verrou d'instance unique ────────────────────────────────────────────────────
+# Ceinture de securite : meme si un appel distant echappait a son timeout, cron
+# ne peut plus empiler une seconde instance toutes les 15 minutes.
+exec 9> /tmp/brieftube-db-health.lock
+if ! flock -n 9; then
+    echo "$(date '+%Y-%m-%d %H:%M:%S') deja en cours -- passage ignore" >&2
+    exit 0
+fi
+
 # ── Config ──────────────────────────────────────────────────────────────────────
 
 VPS_HOST="brieftube-pi"
@@ -23,6 +32,14 @@ TELEGRAM_BOT_TOKEN="${BRIEFTUBE_TELEGRAM_BOT_TOKEN:-}"
 TELEGRAM_CHAT_ID="${BRIEFTUBE_TELEGRAM_CHAT_ID:-}"
 STATE_FILE="/tmp/brieftube-db-state"
 SSH_TIMEOUT=10
+# ConnectTimeout ne couvre QUE l'etablissement de la connexion. Une commande
+# distante qui pend (infisical login sans TTY) laisse le ssh vivant a l'infini :
+# mesure le 2026-08-17, 326 ssh et 980 shells empiles en 81 h, plus 980 process
+# infisical cote Pi. Tout appel distant doit donc porter son propre timeout.
+CMD_TIMEOUT=180
+SCP_TIMEOUT=60
+REMOTE_LOGIN_TIMEOUT=45
+REMOTE_RUN_TIMEOUT=90
 
 # ── Colors ──────────────────────────────────────────────────────────────────────
 
@@ -77,7 +94,8 @@ send_telegram() {
 # The snippet must print a single value to stdout.
 vps_query() {
     local python_code="$1"
-    ssh -o ConnectTimeout="$SSH_TIMEOUT" -o BatchMode=yes "$VPS_HOST" \
+    timeout -k 10 "$CMD_TIMEOUT" \
+        ssh -n -o ConnectTimeout="$SSH_TIMEOUT" -o BatchMode=yes "$VPS_HOST" \
         "cd ${VPS_APP_DIR}/worker && source venv/bin/activate && python3 -c '${python_code}'" 2>/dev/null
 }
 
@@ -87,7 +105,7 @@ printf "\n${BOLD}BriefTube Database Health Check${RESET}\n"
 printf "Pi:     ${CYAN}%s${RESET}\n" "$VPS_HOST"
 printf "Time:   %s\n\n" "$(date '+%Y-%m-%d %H:%M:%S')"
 
-if ! ssh -o ConnectTimeout="$SSH_TIMEOUT" -o BatchMode=yes "$VPS_HOST" "echo ok" > /dev/null 2>&1; then
+if ! timeout -k 5 30 ssh -n -o ConnectTimeout="$SSH_TIMEOUT" -o BatchMode=yes "$VPS_HOST" "echo ok" > /dev/null 2>&1; then
     check_fail "SSH connectivity" "Cannot connect to $VPS_HOST"
     printf "\n${RED}${BOLD}Cannot reach Pi -- aborting${RESET}\n\n"
 
@@ -109,9 +127,16 @@ fi
 
 # Copy query script to VPS and run it
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-scp -o ConnectTimeout="$SSH_TIMEOUT" -q "${SCRIPT_DIR}/db-query.py" "$VPS_HOST":/home/pi/brieftube/worker/_db_health.py 2>/dev/null
+timeout -k 10 "$SCP_TIMEOUT" \
+    scp -o ConnectTimeout="$SSH_TIMEOUT" -q "${SCRIPT_DIR}/db-query.py" "$VPS_HOST":/home/pi/brieftube/worker/_db_health.py 2>/dev/null
 
-METRICS_JSON=$(ssh -o ConnectTimeout="$SSH_TIMEOUT" -o BatchMode=yes "$VPS_HOST" 'source /home/pi/.brieftube-secrets.env 2>/dev/null; cd /home/pi/brieftube/worker && source venv/bin/activate && TOKEN=$(infisical login --method=universal-auth --client-id="${INFISICAL_UNIVERSAL_AUTH_CLIENT_ID}" --client-secret="${INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET}" --plain --silent 2>/dev/null) && infisical run --token="${TOKEN}" --projectId=089a5c93-5c51-4a24-8bf0-9d8bceb3a114 --env=prod --path=/worker -- python3 _db_health.py && rm -f _db_health.py 2>/dev/null' 2>/dev/null)
+# Chaque etage porte son timeout : le local coupe le ssh, les deux distants
+# coupent infisical. Sans le timeout distant, tuer le ssh laisse le process
+# infisical vivant sur le Pi. Le -n ferme stdin, pour qu'aucun outil distant
+# ne puisse attendre une saisie qui ne viendra jamais depuis cron.
+METRICS_JSON=$(timeout -k 10 "$CMD_TIMEOUT" \
+    ssh -n -o ConnectTimeout="$SSH_TIMEOUT" -o BatchMode=yes "$VPS_HOST" \
+    'source /home/pi/.brieftube-secrets.env 2>/dev/null; cd /home/pi/brieftube/worker && source venv/bin/activate && TOKEN=$(timeout -k 5 '"$REMOTE_LOGIN_TIMEOUT"' infisical login --method=universal-auth --client-id="${INFISICAL_UNIVERSAL_AUTH_CLIENT_ID}" --client-secret="${INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET}" --plain --silent 2>/dev/null) && timeout -k 10 '"$REMOTE_RUN_TIMEOUT"' infisical run --token="${TOKEN}" --projectId=089a5c93-5c51-4a24-8bf0-9d8bceb3a114 --env=prod --path=/worker -- python3 _db_health.py; rc=$?; rm -f _db_health.py 2>/dev/null; exit $rc' 2>/dev/null)
 # Extract only the JSON line
 METRICS_JSON=$(echo "$METRICS_JSON" | grep '^{' | tail -1)
 
