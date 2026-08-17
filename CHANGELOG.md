@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-08-17
+
+FIX(scripts): give every remote call in `db-health-check.sh` its own timeout — it leaked one `ssh` per run. `ConnectTimeout` only covers connection setup, so the remote `infisical login` (which hangs forever, see below) left the local `ssh` alive indefinitely. Measured: 326 `ssh` plus 980 shells stacked over 81 h on the workstation (1306 processes, 3.7 GB RAM, `cron.service` at 1631 tasks), and 981 `infisical` plus 653 `_db_health.py` on the Pi. Timeouts now wrap the local `ssh`/`scp` **and** the remote `infisical login` / `infisical run` — killing the `ssh` alone leaves the remote process running. `ssh -n` closes stdin so no remote tool can wait on input that never comes from cron. The health check had returned no result at all for 3.4 days and nothing flagged it.
+
+FIX(scripts): add a non-blocking `flock` guard to all four cron-driven scripts (`db-health-check`, `uptime-monitor`, `auth-smoke-test`, `onboarding-smoke-test`). Even if a network call ever escapes its timeout again, cron can no longer stack a second instance. The two `ssh` calls in `onboarding-smoke-test.sh` also get `timeout` and `-n`; 18 `curl` calls across these scripts still lack `--max-time`, which the lock now contains.
+
+FIX(worker): make `run-worker-pi.sh` fail loudly instead of hanging at startup. The Infisical CLI hangs on a futex when its local state (`~/.infisical` plus keyring) is corrupted — observed on the Pi with 8 threads parked and **no socket open**, while the same auth call returned `HTTP 200` in 0.9 s via curl. systemd reported the unit `active` with no worker process alive. `infisical login` now runs under `timeout 60` with stdin closed, and the script exits non-zero on an empty token so systemd sees the failure and retries. Recovery when it recurs: move `~/.infisical` aside (rename, never delete) — the CLI recreates it and login drops back to 1 s. Note that the worker runs under `exec infisical run`, so killing `infisical` on the Pi kills production.
+
 ## 2026-08-12
 
 FIX(worker): a summary delivered in a language other than the user's own was voiced with their profile voice — a French voice reading a Thai summary, which is unlistenable. The delivery loop now resolves the voice from the delivery's language through `_resolve_tts_voice()`. The generated file also carries the language in its name, so the cache lookup (which already expected `video_{id}_{lang}.mp3`) finds it and two languages of the same video stop overwriting each other. Voice and file stem now come from a single `_delivery_audio_params()`.
