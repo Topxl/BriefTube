@@ -1,0 +1,85 @@
+# Build context for the `web` service (repo root). Everything listed here is
+# either regenerated inside the image, useless to the build, or secret.
+
+# --- dependencies & build output ---
+node_modules
+.pnp
+.pnp.js
+.next
+out
+build
+dist
+*.tsbuildinfo
+
+# --- secrets & local env ---
+.env
+.env.*
+!.env.example
+.infisical.json
+.env.sentry-build-plugin
+*.pem
+
+# --- browser extension (separate project, 190+ MB, not part of the web build) ---
+extension
+
+# --- version control & CI ---
+.git
+.gitignore
+.github
+.husky
+.vercel
+ci-artifacts
+
+# --- python worker (built from its own context, see worker/.dockerignore) ---
+worker/venv
+worker/__pycache__
+worker/audio
+worker/cookies
+worker/cache
+worker/transcripts
+worker/test_outputs
+worker/test_pipeline_output
+worker/kokoro_models
+__pycache__
+*.py[cod]
+.pytest_cache
+
+# --- logs ---
+*.log
+*.log.*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# --- tests & tooling artefacts ---
+coverage
+test-results
+playwright-report
+.playwright-mcp
+e2e
+__tests__
+test
+screenshots
+
+# --- editor / agent configuration ---
+.claude
+.cursor
+.vscode
+.agents
+_bmad
+_bmad-output
+.audit-marketing
+conductor.json
+
+# --- docs not needed at build time ---
+# CHANGELOG.md is kept: src/lib/letters/data-collector.ts reads it at runtime.
+docs
+*.md
+!README.md
+!CHANGELOG.md
+
+# --- misc ---
+.DS_Store
+Dockerfile
+docker-compose.yml
+.dockerignore

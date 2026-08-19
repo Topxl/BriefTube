@@ -1,0 +1,111 @@
+################################################################################
+# BriefTube — self-hosted stack
+#
+#   cp .env.example .env     # then fill in the MINIMAL block at the top of it
+#   docker compose up -d
+#
+# Two services:
+#   web    — Next.js 16 app on port 3000 (Dockerfile at the repo root)
+#   worker — Python pipeline: RSS scan, transcript, Gemini summary, TTS,
+#            Telegram delivery. Exposes /health on port 8080 (worker/Dockerfile).
+#
+# Supabase stays an external dependency: create a free project at
+# https://supabase.com/dashboard, apply migrations/, and paste the keys in .env.
+################################################################################
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      # NEXT_PUBLIC_* is inlined into the browser bundle at build time, so these
+      # travel as build args rather than plain runtime env. Change one in .env
+      # and rebuild:  docker compose up -d --build web
+      args:
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
+        NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:-}
+        NEXT_PUBLIC_EMAIL_CONTACT: ${NEXT_PUBLIC_EMAIL_CONTACT:-}
+        NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${NEXT_PUBLIC_VAPID_PUBLIC_KEY:-}
+        NEXT_PUBLIC_POSTHOG_KEY: ${NEXT_PUBLIC_POSTHOG_KEY:-}
+        NEXT_PUBLIC_POSTHOG_HOST: ${NEXT_PUBLIC_POSTHOG_HOST:-}
+        SKIP_ENV_VALIDATION: ${SKIP_ENV_VALIDATION:-true}
+      # app/sitemap.tsx is prerendered against Supabase during `next build`.
+      # The service role key is mounted as a BuildKit secret rather than passed
+      # as an arg, so it never ends up in an image layer.
+      secrets:
+        - supabase_service_role_key
+    image: brieftube-web:local
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      start_period: 40s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  worker:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    image: brieftube-worker:local
+    restart: unless-stopped
+    env_file: .env
+    # The worker calls back into the web app (push notifications, /api/process-video).
+    # Inside the compose network the app answers on http://web:3000 — override
+    # APP_URL in .env if you front the app with a public domain.
+    environment:
+      APP_URL: ${APP_URL:-http://web:3000}
+    depends_on:
+      web:
+        condition: service_started
+    ports:
+      # /health and /logs — used by the admin panel (VPS_WORKER_URL) and uptime probes
+      - "${WORKER_HEALTH_PORT:-8080}:8080"
+    volumes:
+      # Generated MP3s. Kept on disk when Cloudflare R2 is not configured, since
+      # the Telegram deliverer then reads the local file.
+      - ./worker/audio:/app/audio
+      # Optional Netscape-format youtube.txt for age-restricted videos.
+      - ./worker/cookies:/app/cookies
+      # Transcript cache + store, so a restart does not re-pay for transcription.
+      - ./worker/cache:/app/cache
+      - ./worker/transcripts:/app/transcripts
+    healthcheck:
+      # /health answers 401 when WORKER_API_SECRET is set, so the token travels
+      # with the probe. Empty secret means the endpoint is open and this still works.
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS -H \"Authorization: Bearer $${WORKER_API_SECRET}\" http://127.0.0.1:8080/health > /dev/null || exit 1",
+        ]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+secrets:
+  # Sourced from SUPABASE_SERVICE_ROLE_KEY in .env, consumed only by the web
+  # build. Requires Docker Compose v2.23.1 or newer.
+  supabase_service_role_key:
+    environment: SUPABASE_SERVICE_ROLE_KEY
