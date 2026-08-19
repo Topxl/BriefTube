@@ -1,278 +1,175 @@
 <p align="center">
-  <img src="public/logo.svg" width="80" alt="BriefTube Logo" />
+  <img src="public/logo.svg" width="80" alt="BriefTube" />
 </p>
 
 <h1 align="center">BriefTube</h1>
 
 <p align="center">
-  YouTube videos, summarized as audio, delivered to your Telegram.
+  <b>Follow YouTube channels without watching them.</b><br />
+  Every new upload gets summarized, turned into audio, and pushed to you.
 </p>
 
 <p align="center">
-  <a href="https://github.com/Topxl/BriefTube/stargazers"><img src="https://img.shields.io/github/stars/Topxl/BriefTube?style=social" alt="GitHub Stars" /></a>
+  <a href="https://github.com/Topxl/BriefTube/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue" alt="License AGPL-3.0" /></a>
   &nbsp;
-  <a href="https://github.com/Topxl/BriefTube/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue" alt="License" /></a>
+  <a href="https://github.com/Topxl/BriefTube/stargazers"><img src="https://img.shields.io/github/stars/Topxl/BriefTube?style=flat&color=yellow" alt="Stars" /></a>
   &nbsp;
-  <a href="https://github.com/Topxl/BriefTube/issues"><img src="https://img.shields.io/github/issues/Topxl/BriefTube" alt="Issues" /></a>
+  <img src="https://img.shields.io/badge/self--hosted-docker-2496ED?logo=docker&logoColor=white" alt="Self-hosted with Docker" />
   &nbsp;
-  <a href="https://github.com/Topxl/BriefTube/graphs/contributors"><img src="https://img.shields.io/github/contributors/Topxl/BriefTube" alt="Contributors" /></a>
+  <img src="https://img.shields.io/badge/runs%20on-Raspberry%20Pi-C51A4A?logo=raspberrypi&logoColor=white" alt="Runs on a Raspberry Pi" />
+</p>
+
+<p align="center">
+  <a href="#quick-start-docker">Self-host</a> ·
+  <a href="#how-it-works">How it works</a> ·
+  <a href="#configuration">Configuration</a> ·
+  <a href="https://www.brief-tube.com">Hosted version</a>
 </p>
 
 ---
 
-BriefTube monitors your favorite YouTube channels, generates AI-powered summaries using Google Gemini, converts them to natural-sounding audio with neural TTS voices, and delivers everything to your Telegram — fully automated.
+<p align="center">
+  <img src="screenshots/desktop_1920_above_fold.png" width="820" alt="BriefTube landing page" />
+</p>
+
+## What it does
+
+You subscribe to a YouTube channel. From then on, every video it publishes is:
+
+1. **Detected** within minutes, over RSS. No YouTube API quota, no polling cost.
+2. **Transcribed**, through a five-source cascade that falls back to Whisper only when everything free has failed.
+3. **Summarized** by Gemini, in the language _you_ picked, at the length and style you picked.
+4. **Voiced** with neural TTS into a 2 to 4 minute audio file.
+5. **Delivered** to Telegram, Slack, Discord, Notion, WhatsApp, a private podcast feed, or the web dashboard.
+
+The result is a podcast of the videos you never had time to watch.
+
+## Why this exists
+
+Summarizing a single video is a solved problem — NotebookLM and Gemini do it for free.
+
+What nobody does for free is the _standing subscription_: pick 20 channels once, then never think about it again, and get audio in your ears while you commute. That is the whole point of this codebase, and it is why the interesting parts are the RSS scanner, the transcript cascade, and the delivery queue rather than the LLM call.
 
 ## Features
 
-- **AI-Powered Summaries** — Google Gemini generates detailed video summaries
-- **Natural Audio** — Microsoft Edge neural TTS voices (multi-language)
-- **Telegram Delivery** — Audio summaries sent directly to your Telegram
-- **RSS Monitoring** — Automatically detects new videos from subscribed channels
-- **Multi-Language** — Support for English, French, and more TTS voices
-- **Channel Management** — Subscribe to unlimited YouTube channels
-- **Shared Processing** — Videos summarized once, delivered to all subscribers
-- **Zero API Cost** — Gemini via browser automation, Edge TTS is free
-- **Full SaaS Platform** — Complete authentication, billing, and admin dashboard
+|                        |                                                                                                                                                     |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Transcript cascade** | `youtube-transcript-api` → Invidious → Piped → `yt-dlp` → Whisper. Each step is free until the last one. Cost per video is logged.                  |
+| **15 languages**       | Summarize a Japanese video into French. Source language is detected, target is your choice.                                                         |
+| **Tunable summaries**  | Length (brief / standard / detailed / auto), style (key points / actionable / narrative), plus free-form instructions. Set globally or per channel. |
+| **6 delivery targets** | Telegram (voice notes), Slack, Discord, Notion, WhatsApp, private RSS podcast feed.                                                                 |
+| **Music filtering**    | Detects music videos with no speech and skips them instead of burning Whisper minutes.                                                              |
+| **Runs on a Pi**       | The worker is designed for a Raspberry Pi 4. Whisper is offloaded to [Modal](https://modal.com) so the Pi never does heavy compute.                 |
+| **Browser extension**  | Send any video to your queue from the YouTube page.                                                                                                 |
+| **AI support agent**   | An in-app assistant answering from a self-managed knowledge base, escalating to email when it cannot.                                               |
 
-## Tech Stack
+## Quick start (Docker)
 
-| Component  | Technology                                                  |
-| ---------- | ----------------------------------------------------------- |
-| Frontend   | Next.js 15, React 19, TypeScript, TailwindCSS v4, shadcn/ui |
-| Backend    | Next.js API Routes, Server Actions                          |
-| Database   | Supabase PostgreSQL with Prisma ORM                         |
-| Auth       | Better Auth (email/password, magic links, OAuth)            |
-| Caching    | Redis (Upstash)                                             |
-| Worker     | Python, Playwright, edge-tts, feedparser                    |
-| AI         | Google Gemini (browser automation)                          |
-| Telegram   | python-telegram-bot                                         |
-| Payments   | Stripe subscriptions                                        |
-| Deployment | Vercel (web) + Docker (worker)                              |
-| Testing    | Vitest (unit) + Playwright (e2e)                            |
-
-## Quick Start
-
-### Prerequisites
-
-- Node.js 18+ and pnpm
-- PostgreSQL database (or Supabase)
-- Redis instance (local or Upstash)
-- Python 3.10+ (for worker)
-
-### Web App Setup
+**Prerequisites:** Docker, a free [Supabase](https://supabase.com) project, a [Telegram bot token](https://t.me/BotFather), and a [Gemini API key](https://aistudio.google.com/apikey). Budget 10 minutes.
 
 ```bash
-# Clone repository
 git clone https://github.com/Topxl/BriefTube.git
 cd BriefTube
-
-# Install dependencies
-pnpm install
-
-# Configure environment
-cp .env-template .env
-# Edit .env with your credentials (see Environment Variables section)
-
-# Setup database
-pnpm prisma:migrate
-pnpm prisma:seed
-
-# Start development server
-pnpm dev
+./scripts/setup.sh
 ```
 
-Visit http://localhost:3000
+The script copies `.env.example` to `.env` and walks you through what to fill in. Then apply the database schema — **one file**, pasted into the Supabase SQL Editor:
 
-### Worker Setup (Python)
+```
+migrations/00000000_initial_schema.sql
+```
 
-The worker handles RSS scanning, AI summarization, TTS, and Telegram delivery.
+Then bring it up:
 
 ```bash
-cd worker
-
-# Configure
-cp .env.example .env
-# Edit .env with your Supabase and Telegram credentials
-
-# Using Docker (recommended)
-docker compose up -d
-
-# Or manually
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
-playwright install chromium
-
-# Authenticate with Gemini (one-time)
-python scripts/save_cookies.py
-
-# Start worker
-python main.py
-```
-
-## Environment Variables
-
-### Web App (.env)
-
-```bash
-# Database
-DATABASE_URL="postgresql://..."
-
-# Redis (required for caching)
-REDIS_URL="redis://localhost:6379"  # or Upstash URL
-
-# Better Auth
-BETTER_AUTH_SECRET="..."  # Generate: node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
-BETTER_AUTH_URL="http://localhost:3000"
-
-# OAuth (optional)
-GITHUB_CLIENT_ID="..."
-GITHUB_CLIENT_SECRET="..."
-
-# Email (Resend)
-RESEND_API_KEY="..."
-EMAIL_FROM="noreply@yourdomain.com"
-
-# Stripe
-STRIPE_SECRET_KEY="sk_test_..."
-STRIPE_WEBHOOK_SECRET="whsec_..."
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_test_..."
-```
-
-### Worker (.env)
-
-```bash
-# Supabase
-SUPABASE_URL="https://xxxxx.supabase.co"
-SUPABASE_SERVICE_ROLE_KEY="eyJ..."
-
-# Telegram Bot
-TELEGRAM_BOT_TOKEN="123456:ABC..."
-
-# Google Gemini API (optional - for API mode instead of browser)
-GEMINI_API_KEY="AIzaSy..."
-
-# Groq API (for Whisper transcription fallback)
-GROQ_API_KEY="gsk_..."
-
-# TTS Voice (default: fr-FR-DeniseNeural)
-TTS_VOICE="fr-FR-DeniseNeural"
-
-# RSS check interval in seconds (default: 300)
-RSS_CHECK_INTERVAL=300
-```
-
-## Project Structure
-
-```
-BriefTube/
-├── app/                          # Next.js App Router
-│   ├── (logged-in)/              # Protected routes
-│   │   └── dashboard/            # User dashboard
-│   ├── api/                      # API routes
-│   │   └── brieftube/            # BriefTube-specific APIs
-│   ├── auth/                     # Authentication pages
-│   └── page.tsx                  # Landing page
-├── src/
-│   ├── components/               # React components
-│   │   ├── ui/                   # shadcn/ui components
-│   │   └── nowts/                # Custom components
-│   ├── features/                 # Feature modules
-│   │   ├── youtube-summary/      # YouTube summary feature
-│   │   ├── dialog-manager/       # Global dialog system
-│   │   └── form/                 # Form components (TanStack Form)
-│   ├── lib/                      # Utilities
-│   │   ├── auth/                 # Better Auth config
-│   │   ├── supabase/             # Supabase client
-│   │   ├── actions/              # Server actions
-│   │   └── mail/                 # Email utilities
-│   └── types/                    # TypeScript types
-├── worker/                       # Python worker
-│   ├── main.py                   # Orchestrator (4 concurrent tasks)
-│   ├── rss_scanner.py            # YouTube RSS monitoring
-│   ├── gemini_browser.py         # Gemini AI via Playwright
-│   ├── tts_processor.py          # Text-to-speech (edge-tts)
-│   ├── telegram_deliverer.py     # Audio delivery
-│   ├── bot_handler.py            # Telegram bot commands
-│   ├── db.py                     # Supabase client
-│   ├── Dockerfile                # Container setup
-│   └── docker-compose.yml        # Docker deployment
-├── prisma/
-│   ├── schema/                   # Prisma schema files
-│   ├── migrations/               # Database migrations
-│   └── seed.ts                   # Database seeding
-├── emails/                       # React Email templates
-├── __tests__/                    # Vitest unit tests
-├── e2e/                          # Playwright e2e tests
-└── public/                       # Static assets
-```
-
-## How It Works
-
-```
-YouTube RSS Feed → New video detected
-                        ↓
-              Gemini AI summarization
-              (browser automation)
-                        ↓
-              Edge TTS (text → audio)
-                        ↓
-              Telegram bot delivers audio
-              + thumbnail + video link
-```
-
-## Development Commands
-
-```bash
-# Development
-pnpm dev              # Start dev server with Turbopack
-pnpm build            # Build for production
-pnpm start            # Start production server
-
-# Database
-pnpm prisma:migrate   # Run migrations
-pnpm prisma:generate  # Generate Prisma client
-pnpm prisma:seed      # Seed database
-
-# Testing
-pnpm test:ci          # Run unit tests (CI mode)
-pnpm test:e2e:ci      # Run e2e tests (headless)
-
-# Code Quality
-pnpm ts               # TypeScript check
-pnpm lint             # ESLint with auto-fix
-pnpm clean            # Run lint + typecheck + format
-
-# Stripe Webhooks (development)
-pnpm stripe-webhooks  # Forward Stripe events to localhost
-```
-
-## Deployment
-
-### Web App (Vercel)
-
-1. Push to GitHub
-2. Import project in Vercel
-3. Configure environment variables
-4. Deploy
-
-### Worker (Docker)
-
-```bash
-cd worker
 docker compose up -d
 ```
 
-Or use any Python hosting service (Railway, Fly.io, etc.)
+The dashboard is on `http://localhost:3000`, the worker health endpoint on `http://localhost:8080/health`.
+
+Only three services are actually required: **Supabase**, **Gemini**, and **Telegram**. Stripe, Resend, Sentry, PostHog, Slack, Discord, Notion and WhatsApp are all optional — leave them blank and the matching features simply switch off.
+
+> **Note on Supabase.** BriefTube does not bundle its own database. It relies on Supabase for Postgres, auth, row-level security and file storage. The free tier is enough for personal use. See [`migrations/README.md`](migrations/README.md).
+
+## How it works
+
+```
+                    ┌──────────────────────────────────────────┐
+                    │  Next.js dashboard (web)                  │
+                    │  subscriptions · settings · audio player  │
+                    └────────────────────┬─────────────────────┘
+                                         │
+                              ┌──────────▼──────────┐
+                              │      Supabase       │
+                              │  Postgres + Auth +  │
+                              │   Storage + RLS     │
+                              └──────────▲──────────┘
+                                         │
+   ┌─────────────────────────────────────┴─────────────────────────────────────┐
+   │  Python worker — three independent async loops                            │
+   │                                                                            │
+   │   1. RSS scanner ──► new video found ──► processing_queue                  │
+   │                                                                            │
+   │   2. Processor   ──► transcript cascade ──► Gemini summary ──► TTS         │
+   │                      (yt-api → Invidious → Piped → yt-dlp → Whisper)       │
+   │                                                                            │
+   │   3. Deliverer   ──► Telegram · Slack · Discord · Notion · WhatsApp · RSS  │
+   └────────────────────────────────────────────────────────────────────────────┘
+```
+
+The three loops are decoupled through the database, so a failing delivery never blocks a summary and a Gemini outage never loses a video. Jobs get 3 attempts; deterministic failures (transcripts disabled, video unavailable, music with no speech) fail immediately instead of retrying forever, and temporary ones (premieres, live streams, rate limits) are snoozed.
+
+## Tech stack
+
+**Web** — Next.js 16 (App Router), TypeScript strict, TailwindCSS v4, Shadcn/UI, TanStack Query + Form, nuqs, Stripe, React Email + Resend.
+
+**Worker** — Python 3.12, asyncio, `python-telegram-bot`, `yt-dlp`, Edge TTS / Kokoro, Modal for GPU offload.
+
+**Data** — Supabase (Postgres 17, Auth, Storage, Realtime). 33 tables, RLS on every one of them.
+
+**AI** — Gemini 2.5 Flash for summaries, with OpenRouter as fallback. Groq or Modal Whisper for transcription of last resort.
+
+## Project structure
+
+```
+app/                Next.js App Router pages
+  dashboard/        User dashboard
+  dashboard/admin/  Admin panel
+  api/              API routes
+src/
+  components/       UI components (ui/ = Shadcn, nowts/ = custom)
+  features/         Feature-scoped logic
+  lib/              Supabase, auth, Stripe, rate limiting
+worker/             Python worker
+  main.py           Three async loops + health HTTP server
+  transcript_*.py   Transcript cascade
+  *_deliverer.py    One file per delivery platform
+  db.py / db_pg.py  Supabase REST client and direct psycopg2 client
+migrations/         Database schema (start with 00000000_initial_schema.sql)
+extension/          Browser extension
+```
+
+## Configuration
+
+Every variable is documented inline in [`.env.example`](.env.example), marked `REQUIRED` or `OPTIONAL`, with a link to the console where you get it.
 
 ## Contributing
 
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+Read [`CONTRIBUTING.md`](CONTRIBUTING.md) first. Two things matter:
+
+- Run `pnpm clean` before opening a pull request (lint, typecheck, format).
+- Add a line to `CHANGELOG.md`. This one is strictly enforced.
+
+## Project status
+
+**Maintained casually.** The hosted service at [brief-tube.com](https://www.brief-tube.com) stays online and I keep the worker healthy, but I am not actively building new features.
+
+Pull requests are welcome and I will review them. Issues may sit for a while. If you need this to move in a particular direction, forking is a perfectly good answer — that is what the license is for.
+
+## Hosted version
+
+[brief-tube.com](https://www.brief-tube.com) runs this exact codebase. Paying for it buys you the not-running-it, not the software: managed infrastructure, a shared Telegram bot, and API keys you do not have to obtain yourself. Self-hosting gives you every feature.
 
 ## License
 
-BriefTube is open source under the [AGPL-3.0 license](LICENSE).
-
----
-
-Built with ❤️ by the BriefTube team
+[AGPL-3.0](LICENSE). You can run it, modify it, and host it for yourself or others. If you offer it as a network service, you have to publish your changes.
