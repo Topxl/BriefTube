@@ -160,9 +160,12 @@ else
 fi
 
 # Supabase auth health (401 = no API key but service is UP)
+# Defaults to the hosted instance. Self-hosters and forks: export
+# BRIEFTUBE_SUPABASE_URL (or NEXT_PUBLIC_SUPABASE_URL) to point elsewhere.
+SUPABASE_URL="${BRIEFTUBE_SUPABASE_URL:-${NEXT_PUBLIC_SUPABASE_URL:-https://zetpgbrzehchzxodwbps.supabase.co}}"
 TOTAL=$((TOTAL + 1))
 _sb_start=$(date +%s%N)
-_sb_code=$(curl -s -o /dev/null -w "%{http_code}" --max-time "$TIMEOUT" "https://zetpgbrzehchzxodwbps.supabase.co/auth/v1/health" 2>/dev/null) || _sb_code="000"
+_sb_code=$(curl -s -o /dev/null -w "%{http_code}" --max-time "$TIMEOUT" "${SUPABASE_URL}/auth/v1/health" 2>/dev/null) || _sb_code="000"
 _sb_end=$(date +%s%N)
 _sb_elapsed=$(( (_sb_end - _sb_start) / 1000000 ))
 if [[ "$_sb_code" == "200" || "$_sb_code" == "401" ]]; then

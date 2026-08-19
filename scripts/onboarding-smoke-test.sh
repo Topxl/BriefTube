@@ -19,7 +19,9 @@ flock -n 9 || exit 0
 # ── Config ──────────────────────────────────────────────────────────────────────
 
 SITE_URL="${BRIEFTUBE_URL:-https://www.brief-tube.com}"
-SUPABASE_URL="https://zetpgbrzehchzxodwbps.supabase.co"
+# Defaults to the hosted instance. Self-hosters and forks: export
+# BRIEFTUBE_SUPABASE_URL (or NEXT_PUBLIC_SUPABASE_URL) to point elsewhere.
+SUPABASE_URL="${BRIEFTUBE_SUPABASE_URL:-${NEXT_PUBLIC_SUPABASE_URL:-https://zetpgbrzehchzxodwbps.supabase.co}}"
 TELEGRAM_BOT_TOKEN="${BRIEFTUBE_TELEGRAM_BOT_TOKEN:-}"
 TELEGRAM_CHAT_ID="${BRIEFTUBE_TELEGRAM_CHAT_ID:-}"
 STATE_FILE="/tmp/brieftube-onboarding-state"

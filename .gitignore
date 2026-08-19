@@ -24,8 +24,14 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# local env files
-.env*.local
+# Environment files — deny everything, then allow the templates back.
+# Blanket rule on purpose: this repo is public, and a single .env.production
+# slipping through would leak every key at once.
+.env
+.env.*
+*.env
+!.env.example
+!*.env.example
 
 
 # typescript
@@ -88,3 +94,11 @@ conductor.json
 start-tunnel.sh
 # content/ - Now tracked for posts, docs, and changelog
 docs/
+# Internal working documents — not part of the public project
+.env-template
+SIMPLIFICATION-PLAN.md
+INTEGRATION-SUPABASE.md
+_bmad-output/
+scripts/conductor-*.sh
+MARKETING-AUDIT.md
+.audit-marketing/

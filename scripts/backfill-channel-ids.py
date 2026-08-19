@@ -18,7 +18,8 @@ from urllib.request import urlopen, Request
 from urllib.parse import quote
 from supabase import create_client
 
-SUPABASE_URL = "https://zetpgbrzehchzxodwbps.supabase.co"
+# Defaults to the hosted instance; override with SUPABASE_URL in the environment.
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://zetpgbrzehchzxodwbps.supabase.co")
 SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
 
 if not SUPABASE_KEY:

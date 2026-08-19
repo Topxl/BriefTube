@@ -17,11 +17,13 @@ jobs:
       NODE_ENV: "production"
       SKIP_ENV_VALIDATION: "true"
       ENABLE_TEST_AUTH: "true"
-      # Supabase — public URL/anon key are safe to hardcode (NEXT_PUBLIC_* = embedded in client bundle).
+      # Supabase — placeholders on purpose. This repo is public: a real project URL as a
+      # fallback would send any manually-triggered run from a fork straight at production.
+      # Set repository secrets to point this at a throwaway Supabase project instead.
       # Service role key fallback is a non-empty placeholder so createAdminClient() doesn't throw;
       # Supabase will return { data: null, error } on 401, pages render with empty data gracefully.
-      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://zetpgbrzehchzxodwbps.supabase.co' }}
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpldHBnYnJ6ZWhjaHp4b2R3YnBzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5NjE0ODgsImV4cCI6MjA4NjUzNzQ4OH0.uiUihVeTDmO0AQU30O19CLDwgpqqr7ZZPSZlS-JwR2U' }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIn0.ci_placeholder_signature' }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || 'ci_placeholder_service_role_key' }}
       DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgresql://placeholder:placeholder@localhost:5432/placeholder' }}
       # Email
@@ -48,9 +50,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 9
+        uses: pnpm/action-setup@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
