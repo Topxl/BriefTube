@@ -1,0 +1,72 @@
+name: Feature request
+description: Suggest an idea or an improvement for BriefTube.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A note on expectations, so nobody wastes their time.
+
+        BriefTube is in light maintenance. The hosted service keeps running and security
+        fixes get attention, but the maintainer is not actively building new features.
+        A good feature request may sit open for a long time, and it may be closed if it
+        would grow the maintenance surface without someone to carry it.
+
+        That is exactly why the last question below matters: a request that comes with
+        someone willing to implement it has a real chance of shipping.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Preflight
+      options:
+        - label: I searched the existing issues and discussions and did not find this request.
+          required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: >
+        Describe the situation you are in, not the solution you already have in mind.
+        Concrete beats abstract.
+      placeholder: >
+        I subscribe to a channel that posts several videos a day and my Telegram becomes
+        unusable. I would like the summaries batched into one daily digest.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like to happen?
+      description: Your proposed behaviour, and where it would live (web app, worker, bot, extension).
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered
+      description: Workarounds you tried, other tools that do this, or why the obvious approach does not work.
+
+  - type: dropdown
+    id: contribution
+    attributes:
+      label: Would you be willing to implement this yourself?
+      description: >
+        Honest answers only — "no" is a perfectly fine answer and will not get the issue closed.
+        It just sets expectations for everyone.
+      options:
+        - "Yes — I would like to open a pull request for it"
+        - "Maybe — with some guidance on where to start"
+        - "No — I am only suggesting the idea"
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Mockups, links, prior art, or details that would help whoever picks this up.

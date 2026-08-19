@@ -1,0 +1,126 @@
+name: Bug report
+description: Something in BriefTube does not work the way it should.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a report.
+
+        Before you continue:
+
+        - Search [existing issues](https://github.com/Topxl/BriefTube/issues?q=is%3Aissue) — someone may have hit this already.
+        - **Never paste secrets.** Logs and env dumps often contain Supabase service-role keys,
+          Telegram bot tokens, Stripe keys or signed audio URLs. Redact them.
+        - This project is maintained on a best-effort basis. A well-described bug with a
+          reproduction is far more likely to get looked at than one without.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Preflight
+      options:
+        - label: I searched the existing issues and did not find a duplicate.
+          required: true
+        - label: I removed every credential, token and personal identifier from the details below.
+          required: true
+
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: How are you running BriefTube?
+      options:
+        - Cloud — the hosted service at brief-tube.com
+        - Self-hosted — Docker (docker compose)
+        - Self-hosted — manual (pnpm dev / python main.py)
+        - Not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Which part is affected?
+      description: Pick the closest one. If you cannot tell, choose "Not sure".
+      options:
+        - Web app (Next.js — dashboard, landing, auth)
+        - Web app — billing (Stripe checkout, plans, webhooks)
+        - Worker — RSS scanning / video detection
+        - Worker — transcript extraction (YouTube API, Invidious, Piped, yt-dlp, Whisper)
+        - Worker — summarization (Gemini / OpenRouter)
+        - Worker — text-to-speech and audio upload
+        - Telegram bot (commands, connection flow)
+        - Delivery (Telegram, Discord, Slack, Notion, WhatsApp)
+        - Browser extension
+        - Database / migrations
+        - Documentation
+        - Not sure
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version / commit
+      description: >
+        Self-hosted: output of `git rev-parse --short HEAD`.
+        Cloud: write "cloud" and the approximate date and time (with timezone) you saw the bug.
+      placeholder: "4c6a681 — or: cloud, 2026-08-19 14:30 UTC"
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you expected, and what you got instead.
+      placeholder: |
+        Expected: the summary is delivered to Telegram a few minutes after the video goes live.
+        Actual: the video shows as "completed" in the dashboard but nothing arrives.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: >
+        Numbered steps. If a specific YouTube video or channel triggers it, include the URL —
+        the pipeline behaves very differently depending on whether a video has a native
+        transcript, is a premiere, is a live stream, or is music.
+      placeholder: |
+        1. Subscribe to https://www.youtube.com/@example
+        2. Wait for a new video, or trigger a manual summary from the dashboard
+        3. Open the Telegram chat
+        4. Nothing arrives; the dashboard shows the video as completed
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: >
+        Worker: `tail -100 worker/worker.log` (or `docker compose logs --tail=100 worker`).
+        Web: the browser console and the network tab of the failing request.
+        **Redact tokens, keys and signed URLs before pasting.**
+      render: text
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Only relevant for self-hosted setups. Skip it for the cloud service.
+      placeholder: |
+        OS: Debian 12 (Raspberry Pi 5)
+        Node: v24.8.0
+        Python: 3.12.3
+        Browser: Firefox 141
+        Database: Supabase hosted / local Postgres 16
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Screenshots, related issues, workarounds you found, or a guess at the cause.

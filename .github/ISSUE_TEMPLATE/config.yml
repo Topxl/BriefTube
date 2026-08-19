@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions, ideas and general discussion
+    url: https://github.com/Topxl/BriefTube/discussions
+    about: Ask how something works, share a setup, or float an idea before opening an issue.
+  - name: Support for the hosted service (brief-tube.com)
+    url: https://www.brief-tube.com/dashboard
+    about: >
+      Account, billing or delivery problems on the hosted service go through the in-app
+      chat once you are signed in — not through GitHub issues. Never post account
+      details or payment information in a public issue.
+  - name: Report a security vulnerability
+    url: https://github.com/Topxl/BriefTube/security/advisories/new
+    about: Report privately through GitHub Security Advisories. Please do not open a public issue.
