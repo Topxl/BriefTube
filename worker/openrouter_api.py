@@ -40,20 +40,27 @@ class OpenRouterSummarizer:
         "deepseek/deepseek-v3.2":       {"input": 0.26, "output": 1.10},
     }
 
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        base_url: Optional[str] = None,
+        models: Optional[list] = None,
+    ):
         self.api_key = api_key or os.environ.get("OPENROUTER_API_KEY")
         if not self.api_key:
             raise ValueError("OPENROUTER_API_KEY not set")
 
-        self.client = OpenAI(
-            api_key=self.api_key,
-            base_url="https://openrouter.ai/api/v1",
-            default_headers={
-                "HTTP-Referer": "https://brief-tube.com",
-                "X-Title": "BriefTube",
-            },
-        )
-        logger.info("OpenRouter summarizer initialized")
+        self.base_url = base_url or "https://openrouter.ai/api/v1"
+        if models:
+            self.MODELS = models
+        # Tag used in model_used so the DB column stays distinguishable.
+        self.provider_tag = "groq" if "groq" in self.base_url else "openrouter"
+
+        headers = {"X-Title": "BriefTube"}
+        if self.provider_tag == "openrouter":
+            headers["HTTP-Referer"] = "https://brief-tube.com"
+        self.client = OpenAI(api_key=self.api_key, base_url=self.base_url, default_headers=headers)
+        logger.info(f"{self.provider_tag} summarizer initialized ({self.base_url})")
 
     def summarize(
         self,
@@ -84,19 +91,25 @@ class OpenRouterSummarizer:
         for model_name in models_to_try:
             try:
                 logger.info(
-                    f"[OpenRouter] Attempting with model: {model_name} "
+                    f"[{self.provider_tag}] Attempting with model: {model_name} "
                     f"(length_pref={length_pref}, max_tokens={max_tokens})"
+                )
+                # gpt-oss is a reasoning model: cap reasoning or max_tokens is
+                # eaten by the chain of thought and content comes back empty.
+                extra = (
+                    {"reasoning_effort": "low"} if "gpt-oss" in model_name else {}
                 )
                 response = self.client.chat.completions.create(
                     model=model_name,
                     messages=[{"role": "user", "content": prompt}],
                     max_tokens=max_tokens,
                     temperature=0.7,
+                    extra_body=extra,
                 )
                 summary = response.choices[0].message.content.strip()
 
                 if len(summary) < 100:
-                    logger.warning(f"[OpenRouter] Summary too short ({len(summary)} chars), trying next model")
+                    logger.warning(f"[{self.provider_tag}] Summary too short ({len(summary)} chars), trying next model")
                     continue
 
                 cost_usd: Optional[float] = None
@@ -115,17 +128,17 @@ class OpenRouterSummarizer:
                     pass
 
                 logger.info(
-                    f"✅ [OpenRouter] Summary with {model_name}: {len(summary)} chars, "
+                    f"✅ [{self.provider_tag}] Summary with {model_name}: {len(summary)} chars, "
                     f"cost=${cost_usd if cost_usd is not None else '?'}"
                 )
-                return summary, None, f"openrouter:{model_name}", cost_usd
+                return summary, None, f"{self.provider_tag}:{model_name}", cost_usd
 
             except Exception as e:
                 err_str = str(e).lower()
                 is_rate_limit = "429" in err_str or "rate" in err_str or "quota" in err_str
                 if not is_rate_limit:
                     all_rate_limited = False
-                logger.error(f"[OpenRouter] Failed with {model_name}: {e}")
+                logger.error(f"[{self.provider_tag}] Failed with {model_name}: {e}")
                 continue
 
         if all_rate_limited:

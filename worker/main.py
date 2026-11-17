@@ -52,7 +52,8 @@ import rss_scanner
 import storage
 import db
 import websub_manager
-from datetime import datetime, time as datetime_time, timedelta, timezone
+from datetime import datetime, timedelta, timezone
+from typing import Optional
 
 # ── Delivery loop watchdog ─────────────────────────────────────
 # Updated at the start of every delivery_loop iteration.
@@ -432,6 +433,7 @@ async def _process_video(
     gemini_summarizer: GeminiSummarizer,
     openrouter_summarizer: "OpenRouterSummarizer | None",
     alert_system: MonitoringAlert,
+    groq_summarizer: "OpenRouterSummarizer | None" = None,
 ) -> None:
     """Process one video job: transcript → Gemini summary → TTS → upload → mark done."""
     video_id = job["video_id"]
@@ -799,10 +801,27 @@ async def _process_video(
                 db.fail_job(job["id"], immediate=True, error_reason="transcript_too_short")
                 return
 
-            # Gemini failed — try OpenRouter as fallback
-            if openrouter_summarizer:
+            # Gemini failed — try Groq (free) then OpenRouter as fallbacks
+            gq_error: Optional[str] = None
+            or_error: Optional[str] = None
+            if groq_summarizer:
                 logger.warning(
-                    f"[{video_id}] Gemini failed ({summary_error}) — trying OpenRouter fallback"
+                    f"[{video_id}] Gemini failed ({summary_error}) — trying Groq fallback"
+                )
+                summary, gq_error, model_used, summary_cost_usd = await asyncio.to_thread(
+                    groq_summarizer.summarize,
+                    transcript=transcript,
+                    source_language=source_lang,
+                    target_language=user_language,
+                    length_pref=summary_length_pref,
+                    style_pref=summary_style,
+                    custom_instructions=summary_custom_instructions,
+                )
+                if summary:
+                    logger.info(f"[{video_id}] Groq summary: {len(summary)} chars")
+            if not summary and openrouter_summarizer:
+                logger.warning(
+                    f"[{video_id}] Groq fallback failed ({gq_error}) — trying OpenRouter fallback"
                 )
                 summary, or_error, model_used, summary_cost_usd = await asyncio.to_thread(
                     openrouter_summarizer.summarize,
@@ -813,23 +832,17 @@ async def _process_video(
                     style_pref=summary_style,
                     custom_instructions=summary_custom_instructions,
                 )
-                if not summary:
-                    # Both Gemini and OpenRouter failed
-                    if summary_error == "rate_limited" or or_error == "rate_limited":
-                        logger.warning(f"[{video_id}] All summarizers rate-limited — snoozed 30min")
-                        db.snooze_job(job["id"], minutes=30)
-                        return
-                    raise Exception(
-                        f"All summarizers failed: gemini={summary_error}, openrouter={or_error}"
-                    )
-                logger.info(f"[{video_id}] OpenRouter summary: {len(summary)} chars")
-            else:
-                # No OpenRouter — degrade gracefully
-                if summary_error == "rate_limited":
-                    logger.warning(f"[{video_id}] Gemini rate-limited, no OpenRouter — snoozed 30min")
+                if summary:
+                    logger.info(f"[{video_id}] OpenRouter summary: {len(summary)} chars")
+            if not summary:
+                # All summarizers failed
+                if "rate_limited" in (summary_error, gq_error, or_error):
+                    logger.warning(f"[{video_id}] All summarizers rate-limited — snoozed 30min")
                     db.snooze_job(job["id"], minutes=30)
                     return
-                raise Exception(f"Summary generation failed: {summary_error}")
+                raise Exception(
+                    f"All summarizers failed: gemini={summary_error}, groq={gq_error}, openrouter={or_error}"
+                )
 
         logger.info(f"[{video_id}] Summary: {len(summary)} chars")
         _t_summary = time.monotonic() - _t0 - _t_transcript
@@ -1071,7 +1084,7 @@ async def websub_loop(alert_system: MonitoringAlert):
                     logger.info(f"WebSub: {new} new subscriptions, {renewed} renewed")
         except Exception as e:
             if _is_db_unreachable(e):
-                logger.warning(f"WebSub loop: Supabase unreachable — skipping this cycle")
+                logger.warning("WebSub loop: Supabase unreachable — skipping this cycle")
             else:
                 logger.error(f"WebSub loop error: {e}")
 
@@ -1110,6 +1123,18 @@ async def processor_loop(alert_system: MonitoringAlert):
     except ValueError:
         logger.warning("OPENROUTER_API_KEY not set — OpenRouter fallback disabled")
 
+    # Initialize Groq LLM fallback (free tier, same key as Whisper transcription)
+    groq_summarizer = None
+    try:
+        groq_summarizer = OpenRouterSummarizer(
+            api_key=os.environ.get("GROQ_API_KEY"),
+            base_url="https://api.groq.com/openai/v1",
+            models=["openai/gpt-oss-120b", "qwen/qwen3.8-27b"],
+        )
+        logger.info("Groq summarizer ready (fallback, free tier)")
+    except ValueError:
+        logger.warning("GROQ_API_KEY not set — Groq fallback disabled")
+
     # Semaphore: at most MAX_CONCURRENT_VIDEOS tasks running at once
     semaphore = asyncio.Semaphore(MAX_CONCURRENT_VIDEOS)
 
@@ -1136,7 +1161,7 @@ async def processor_loop(alert_system: MonitoringAlert):
             async def _do(j: dict) -> None:
                 try:
                     await asyncio.wait_for(
-                        _process_video(j, transcript_extractor, gemini_summarizer, openrouter_summarizer, alert_system),
+                        _process_video(j, transcript_extractor, gemini_summarizer, openrouter_summarizer, alert_system, groq_summarizer),
                         timeout=VIDEO_TIMEOUT,
                     )
                 except asyncio.TimeoutError:
@@ -1538,7 +1563,7 @@ async def _supervised_delivery_loop(alert_system: MonitoringAlert):
                         pending = await asyncio.to_thread(db.get_pending_deliveries, 1)
                         if not pending:
                             # Queue is empty — not truly stuck, just reset timer
-                            logger.debug(f"Delivery loop idle (no pending deliveries), resetting timer")
+                            logger.debug("Delivery loop idle (no pending deliveries), resetting timer")
                             _delivery_restart_backoff = 1  # Reset backoff
                             continue
                     except Exception as e:
@@ -2220,7 +2245,7 @@ async def critical_monitor_loop(alert_system: MonitoringAlert):
                     await _send_critical(
                         "auth_broken",
                         "No signups in 24h",
-                        f"0 new users in the last 24 hours.",
+                        "0 new users in the last 24 hours.",
                         "Check auth flow, Google OAuth, and Supabase Auth status.",
                     )
                 else:
@@ -2672,7 +2697,6 @@ async def processor_main():
 
 
 if __name__ == "__main__":
-    import sys
     worker_mode = os.getenv("WORKER_MODE", "full")
     if worker_mode == "processor":
         asyncio.run(processor_main())
