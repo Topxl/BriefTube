@@ -13,12 +13,10 @@ import json
 import math
 import os
 import random
-import re
 import logging
 import shutil
 import subprocess
 import tempfile
-import time
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -36,9 +34,7 @@ from youtube_utils import (
     is_direct_blocked,
     mark_direct_blocked,
     is_geo_restricted as _is_geo_restricted,
-    get_geo_proxy_urls_for_language as _get_geo_proxy_urls,
     get_proxy_retry_count as _get_retry_count,
-    get_random_static_proxy_url as _get_random_proxy,
     iter_static_proxy_urls as _iter_static_proxy_urls,
     run_geo_bypass as _run_geo_bypass,
 )
@@ -317,8 +313,14 @@ class WhisperTranscriber:
         # Geo-restricted → try country proxies ordered by video's source language.
         # Bot-detected   → single regular rotating proxy (YOUTUBE_PROXY_HTTP).
         # Circuit breaker → skip if proxy has failed 5+ times (502, timeout, etc)
-        def _proxy_download(proxy_url: str, label: str):
-            """One yt-dlp audio download attempt via proxy_url. Returns True/live/None."""
+        def _proxy_download(proxy_url: str | None, label: str, plain: bool = False):
+            """One yt-dlp audio download attempt via proxy_url. Returns True/live/None.
+
+            plain=True drops the extractor overrides: yt-dlp then uses its default
+            clients, which is what works on the Pi IP since yt-dlp 2026.10.26. The
+            forced web_safari client needs the bgutil PoToken server, which is not
+            running on the Pi, so it answers "Requested format is not available".
+            """
             attempt_opts: dict = {
                 'format': 'bestaudio/best',
                 'postprocessors': [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'opus'}],
@@ -339,6 +341,8 @@ class WhisperTranscriber:
                 },
                 'proxy': proxy_url,
             }
+            if plain:
+                attempt_opts.pop('extractor_args', None)
             if _cookies_file.exists():
                 attempt_opts['cookiefile'] = str(_cookies_file)
             try:
@@ -427,6 +431,17 @@ class WhisperTranscriber:
             logger.warning(
                 f"Audio download: all {len(proxy_urls)} pool IPs failed — giving up"
             )
+            # Last resort: one direct attempt. Direct clients were skipped because
+            # the IP was flagged up to 12h earlier; a newer yt-dlp or a lifted
+            # block makes this one cheap probe worth the few seconds.
+            logger.info("Audio download: last resort — one direct attempt")
+            result = _proxy_download(None, "direct-retry", plain=True)
+            if result is True:
+                report_proxy_success()
+                return True
+            if result == "live":
+                report_proxy_success()
+                return "live"
             report_proxy_failure()
             http_proxy = None
         else:
