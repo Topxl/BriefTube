@@ -55,6 +55,9 @@ class OpenRouterSummarizer:
             self.MODELS = models
         # Tag used in model_used so the DB column stays distinguishable.
         self.provider_tag = "groq" if "groq" in self.base_url else "openrouter"
+        if self.provider_tag == "groq":
+            # Free tier: zero cost, keep the DB column honest.
+            self.PRICING = {m: {"input": 0.0, "output": 0.0} for m in self.MODELS}
 
         headers = {"X-Title": "BriefTube"}
         if self.provider_tag == "openrouter":
